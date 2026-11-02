@@ -23,7 +23,7 @@ return [
         'delete_question' => 'Delete :name? Rules stop sending to it.',
         'type' => 'Type',
         'name' => 'Name',
-        'name_placeholder' => 'e.g. #deploys',
+        'name_placeholder' => 'e.g. On-call',
         'config' => [
             'webhook_url' => 'Webhook URL',
             'url' => 'Endpoint URL',

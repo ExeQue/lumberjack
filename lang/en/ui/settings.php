@@ -72,7 +72,7 @@ return [
     ],
     'alerts' => [
         'title' => 'Alerts',
-        'channels_description' => 'Channels only this project uses, such as a webhook to the app itself. The team\'s shared channels are on the team\'s Alerts page and can be picked in the rules above too.',
+        'channels_description' => 'Channels only this project uses, such as a webhook to the app itself. The team\'s shared channels are on the team\'s Alerts page and can be picked in the rules below too.',
     ],
     'triage' => [
         'title' => 'Automatic triage',

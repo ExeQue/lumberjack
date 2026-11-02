@@ -92,7 +92,7 @@ class WebhookDriver implements ChannelDriver
                 ->withBody($body, 'application/json')
                 ->post($url);
         } catch (Throwable) {
-            throw AlertDeliveryFailedException::status($channel->name, 0);
+            throw AlertDeliveryFailedException::unreachable($channel->name);
         }
 
         if (! $response->successful()) {

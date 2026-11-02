@@ -74,9 +74,11 @@ class AlertController
     {
         Gate::authorize('administer', $channel->team);
 
-        return $action->execute($channel)
+        $failure = $action->execute($channel);
+
+        return $failure === null
             ? back()->with('status', __('alerts.test_sent'))
-            : back()->withErrors(['channel' => __('alerts.test_failed')]);
+            : back()->withErrors(['channel' => $failure]);
     }
 
     public function updateRule(UpdateAlertRuleRequest $request, AlertRule $rule, UpdateAlertRuleAction $action): RedirectResponse
