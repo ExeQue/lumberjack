@@ -51,8 +51,21 @@ export default function Setup({
                                     required
                                     autoFocus
                                     autoComplete="off"
-                                    placeholder="LUMBERJACK_SETUP_TOKEN"
+                                    spellCheck={false}
+                                    className="font-mono"
+                                    aria-describedby="token-hint"
                                 />
+                                <p
+                                    id="token-hint"
+                                    className="text-xs text-muted-foreground"
+                                >
+                                    The value of LUMBERJACK_SETUP_TOKEN. With
+                                    Docker and no token of your own, it is
+                                    printed in the log on first start:{' '}
+                                    <code className="font-mono">
+                                        docker compose logs lumberjack
+                                    </code>
+                                </p>
                                 <InputError message={errors.token} />
                             </div>
                         )}
