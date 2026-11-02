@@ -34,6 +34,8 @@ export default defineConfig({
     },
 
     vite: {
+        // Not the app's vite.config.ts: its plugins (Wayfinder runs artisan) have no place in the docs.
+        configFile: false,
         server: {
             watch: {
                 ignored: [
