@@ -1,3 +1,5 @@
+<p align="center"><img src="./art/cover.jpg" alt="Lumberjack - every layer of your Laravel app, ring by ring: errors, performance and logs on your own server" width="100%"></p>
+
 # Lumberjack
 
 Self-hosted error tracking, logs and performance monitoring for Laravel.
