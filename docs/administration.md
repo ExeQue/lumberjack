@@ -1,0 +1,112 @@
+# Setup and system administration
+
+## First-run setup
+
+A Lumberjack without any users sends every page to `/setup`. There you choose the
+name, email and password of the first system administrator. There is no default
+account and no default password. The administrator starts without a team and
+lands on **Administration > All teams**, where the teams are created.
+
+### Protect setup with a token
+
+Between starting Lumberjack and completing setup, whoever opens it first becomes
+its administrator. On anything reachable from outside, set a setup token:
+
+```dotenv
+LUMBERJACK_SETUP_TOKEN=a-long-random-string
+```
+
+Setup then asks for the token as well. Generate one with, for example,
+`openssl rand -hex 24`.
+
+### The setup flag
+
+Once the first user exists, Lumberjack writes the file:
+
+```
+storage/app/setup/complete
+```
+
+From then on no request asks the database whether setup is done. If the file is
+missing but users exist, Lumberjack checks the database once and writes the file
+again, so a lost file heals itself.
+
+To have Lumberjack check its setup again, delete the file, either through the
+storage mount or with:
+
+```bash
+php artisan setup:clear
+```
+
+`php artisan migrate:fresh` deletes the flag too.
+
+## What `/setup` does on a running Lumberjack
+
+| State                              | `/setup`                                                         |
+| ---------------------------------- | ---------------------------------------------------------------- |
+| No users                           | Setup form (asks for the token when one is set)                  |
+| Users, but no active administrator | Recovery: open only with `LUMBERJACK_SETUP_TOKEN`; otherwise 404 |
+| An active administrator exists     | 404, as if the page did not exist                                |
+
+An administrator is active when they are not suspended.
+
+Recovery is never open without the token. Otherwise anyone who found `/setup` on
+a Lumberjack that lost its last administrator could make themselves one and see
+every team. When the flag is set and no token is configured, `/setup` answers 404
+from the flag alone, without a database query, and both `GET` and `POST` are rate
+limited, so requests to it cost no more than any other 404.
+
+### Lost the last administrator?
+
+From a shell on the server (or `docker compose exec lumberjack ...`):
+
+```bash
+php artisan lumberjack:make-admin someone@example.com
+```
+
+Or set `LUMBERJACK_SETUP_TOKEN` and create a new administrator through `/setup`.
+
+Lumberjack guards against getting there: the last active administrator cannot
+take administration away from themselves, be suspended, or delete their own
+account.
+
+## Command line
+
+| Command                                              | What it does                                                                                                      |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `php artisan lumberjack:create-user --admin`         | Creates a user with a personal team; `--admin` makes them an administrator. The first user created is always one. |
+| `php artisan lumberjack:make-admin {email}`          | Makes an existing user an administrator.                                                                          |
+| `php artisan lumberjack:make-admin {email} --revoke` | Takes administration away, unless they are the last active administrator.                                         |
+| `php artisan setup:clear`                            | Deletes the setup flag.                                                                                           |
+
+## Administration pages
+
+Administrators see an **Administration** section in the sidebar. Everything they
+do there is written to the audit log.
+
+- **All teams:** every team with its owner, members, projects and errors of the
+  last 24 hours. Open a team to work in it, delete it with all its data, or create
+  one. The owner can be an existing user, or the email of someone without an
+  account: the team then waits without members, and that person is invited to own
+  it.
+- **All users:** search, invite someone to a team, send a password reset link,
+  require a new password, make or revoke administrators, suspend or reinstate.
+  Administrators cannot do any of that to their own account.
+- **Audit log:** who did what, and when.
+
+Administrators can see every team and project, whether or not they are members.
+
+### Accounts come by invitation
+
+There is no public registration. Accounts come from first-run setup, an
+invitation, or the command line.
+
+### Suspending a user
+
+A suspended user is signed out at once (database sessions end immediately, others
+on their next request), cannot sign in, and their MCP tokens stop working.
+
+### Requiring a new password
+
+A user whose password an administrator requires to be changed can only reach the
+security settings until they choose a new one.

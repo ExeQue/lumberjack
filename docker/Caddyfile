@@ -1,0 +1,17 @@
+{
+	auto_https off
+	admin off
+	frankenphp
+}
+
+:8080 {
+	root * /app/public
+	encode zstd br gzip
+
+	# Browsers reach Reverb through the same host and port as the app. Only the
+	# WebSocket path is forwarded; Reverb's HTTP API (/apps) stays inside.
+	@reverb path /app/*
+	reverse_proxy @reverb 127.0.0.1:8081
+
+	php_server
+}

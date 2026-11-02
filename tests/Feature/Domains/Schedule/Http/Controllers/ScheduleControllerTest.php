@@ -1,0 +1,52 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Domains\Projects\Models\Project;
+use App\Domains\Schedule\Http\Controllers\ScheduleController;
+use App\Domains\Schedule\Models\ScheduledTask;
+use App\Domains\Schedule\Models\ScheduledTaskRun;
+use App\Domains\Teams\Enums\TeamRole;
+use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
+
+covers(ScheduleController::class);
+
+beforeEach(function () {
+    $this->project = Project::factory()->create();
+    $this->task = ScheduledTask::factory()->for($this->project)->create();
+    ScheduledTaskRun::factory()->for($this->task, 'task')->count(3)->create();
+});
+
+describe('the schedule page', function () {
+    it('lists the tasks with their recent runs, and the runs of the selected task', function () {
+        $user = User::factory()->inTeam($this->project->team)->create();
+
+        $this->actingAs($user)
+            ->get(route('schedule.index', ['project' => $this->project, 'task' => $this->task->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('schedule/index')
+                ->where('tasks.0.name', 'artisan reports:send')
+                ->where('tasks.0.recent', ['finished', 'finished', 'finished'])
+                ->has('runs', 3));
+    });
+});
+
+describe('forgetting a task', function () {
+    it('deletes the task and its runs', function () {
+        $admin = User::factory()->inTeam($this->project->team)->create();
+
+        $this->actingAs($admin)->delete(route('schedule.destroy', [$this->project, $this->task]))->assertRedirect();
+
+        expect(ScheduledTask::count())->toBe(0)->and(ScheduledTaskRun::count())->toBe(0);
+    });
+
+    it('is refused to a member who cannot administer the project', function () {
+        $member = User::factory()->inTeam($this->project->team, TeamRole::Member)->create();
+
+        $this->actingAs($member)->delete(route('schedule.destroy', [$this->project, $this->task]))->assertForbidden();
+
+        expect(ScheduledTask::count())->toBe(1);
+    });
+});

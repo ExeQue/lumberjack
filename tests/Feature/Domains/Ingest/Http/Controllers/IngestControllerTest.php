@@ -1,0 +1,246 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Domains\Ingest\Http\Controllers\IngestController;
+use App\Domains\Issues\Enums\IssueSource;
+use App\Domains\Issues\Enums\IssueStatus;
+use App\Domains\Issues\Models\Issue;
+use App\Domains\Issues\Models\Occurrence;
+use App\Domains\Jobs\Enums\JobRunStatus;
+use App\Domains\Jobs\Models\JobRun;
+use App\Domains\Logs\Models\LogChannel;
+use App\Domains\Logs\Models\LogEntry;
+use App\Domains\Performance\Models\QueryRun;
+use App\Domains\Performance\Models\RequestRun;
+use App\Domains\Projects\Models\Project;
+use App\Domains\Schedule\Enums\ScheduledRunStatus;
+use App\Domains\Schedule\Models\ScheduledTask;
+use Tests\Support\Ingest\BuildsIngestPayloads;
+
+covers(IngestController::class);
+
+uses(BuildsIngestPayloads::class);
+
+beforeEach(function () {
+    $this->project = Project::factory()->withToken('lj_srv_test-token')->create(['allowed_origins' => ['https://app.example.test']]);
+    $this->auth = ['Authorization' => 'Bearer lj_srv_test-token'];
+});
+
+describe('server ingest', function () {
+    it('rejects an unknown token', function () {
+        $this->postJson('/api/ingest', $this->batch([]), ['Authorization' => 'Bearer nope'])->assertUnauthorized();
+    });
+
+    it('stores every event type of a batch', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'request', 'trace_id' => 't1', 'timestamp' => now()->getTimestamp(), 'method' => 'get', 'route' => '/dashboard', 'url' => 'https://x.test/dashboard', 'status' => 200, 'duration_ms' => 12.5],
+            ['type' => 'query', 'trace_id' => 't1', 'timestamp' => now()->getTimestamp(), 'connection' => 'mysql', 'sql' => 'select * from users where id in (?, ?, ?)', 'duration_ms' => 1.2],
+            ['type' => 'log', 'trace_id' => 't1', 'timestamp' => now()->getTimestamp(), 'channel' => 'default', 'level' => 'warning', 'message' => 'Slow thing'],
+            ['type' => 'job', 'status' => 'processed', 'uuid' => '0d9c7a1e-1111-4222-8333-944455556666', 'name' => 'App\\Jobs\\Foo', 'queue' => 'default', 'attempt' => 1, 'duration_ms' => 800, 'timestamp' => now()->getTimestamp()],
+            $this->exceptionEvent(),
+        ]), $this->auth)->assertStatus(202)->assertJson(['accepted' => 5]);
+
+        $request = RequestRun::sole();
+        expect($request->method)->toBe('GET')
+            ->and($request->duration_us)->toBe(12_500)
+            ->and($request->environment)->toBe('production')
+            ->and(QueryRun::sole()->sql)->toBe('select * from users where id in (?)')
+            ->and(LogEntry::sole()->message)->toBe('Slow thing')
+            ->and(JobRun::sole()->status)->toBe(JobRunStatus::Processed)
+            ->and(Issue::sole()->source)->toBe(IssueSource::Server);
+    });
+
+    it('scrubs secrets from exception context', function () {
+        $this->postJson('/api/ingest', $this->batch([$this->exceptionEvent()]), $this->auth)->assertStatus(202);
+
+        expect(Issue::sole()->occurrences()->sole()->context['request']['headers']['Authorization'])->toBe('[filtered]');
+    });
+
+    it('accepts a gzip compressed body', function () {
+        $body = gzencode(json_encode($this->batch([$this->exceptionEvent()])));
+
+        $this->call('POST', '/api/ingest', [], [], [], [
+            'HTTP_AUTHORIZATION' => 'Bearer lj_srv_test-token',
+            'HTTP_CONTENT_ENCODING' => 'gzip',
+            'CONTENT_TYPE' => 'application/json',
+        ], $body)->assertStatus(202);
+
+        expect(Issue::count())->toBe(1);
+    });
+
+    it('rejects a batch with an unknown event type', function () {
+        $this->postJson('/api/ingest', $this->batch([['type' => 'telepathy']]), $this->auth)->assertUnprocessable();
+    });
+
+    it('records an agent heartbeat', function () {
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'version' => '0.1.0'], $this->auth)->assertOk();
+
+        expect($this->project->agents()->sole()->host)->toBe('web-2');
+    });
+
+    it('keeps named agents on one host apart', function () {
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'name' => 'web'], $this->auth)->assertOk();
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'name' => 'queue'], $this->auth)->assertOk();
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'name' => 'queue'], $this->auth)->assertOk();
+
+        expect($this->project->agents()->orderBy('name')->pluck('name')->all())->toBe(['queue', 'web']);
+    });
+});
+
+describe('grouping and regressions', function () {
+    it('groups the same exception into one issue', function () {
+        $this->postJson('/api/ingest', $this->batch([$this->exceptionEvent(message: 'Order 12 failed'), $this->exceptionEvent(message: 'Order 99 failed')]), $this->auth);
+
+        $issue = Issue::sole();
+        expect($issue->occurrences_count)->toBe(2)
+            ->and($issue->occurrences()->count())->toBe(2);
+    });
+
+    it('re-opens a resolved issue as a regression', function () {
+        $this->postJson('/api/ingest', $this->batch([$this->exceptionEvent()]), $this->auth);
+        Issue::sole()->update(['status' => IssueStatus::Resolved, 'resolved_at' => now()]);
+
+        $this->postJson('/api/ingest', $this->batch([$this->exceptionEvent()]), $this->auth);
+
+        $issue = Issue::sole();
+        expect($issue->status)->toBe(IssueStatus::Open)
+            ->and($issue->regressed_at)->not->toBeNull()
+            ->and($issue->resolved_at)->toBeNull();
+    });
+
+    it('keeps an ignored issue ignored', function () {
+        $this->postJson('/api/ingest', $this->batch([$this->exceptionEvent()]), $this->auth);
+        Issue::sole()->update(['status' => IssueStatus::Ignored, 'ignored_at' => now()]);
+
+        $this->postJson('/api/ingest', $this->batch([$this->exceptionEvent()]), $this->auth);
+
+        expect(Issue::sole()->status)->toBe(IssueStatus::Ignored)
+            ->and(Issue::sole()->occurrences_count)->toBe(2);
+    });
+});
+
+describe('logs', function () {
+    it('keeps a line for an unknown channel in default with the name it was sent to', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'log', 'channel' => 'mailchimp-sync', 'level' => 'info', 'message' => 'Synced'],
+        ]), $this->auth);
+
+        $entry = LogEntry::sole();
+        expect($entry->channel->name)->toBe(LogChannel::DEFAULT)
+            ->and($entry->sent_channel)->toBe('mailchimp-sync');
+    });
+
+    it('makes an issue of a line at error and above', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'log', 'channel' => 'default', 'level' => 'error', 'message' => 'Capture failed for order 88213'],
+            ['type' => 'log', 'channel' => 'default', 'level' => 'error', 'message' => 'Capture failed for order 11'],
+        ]), $this->auth);
+
+        $issue = Issue::sole();
+        expect($issue->source)->toBe(IssueSource::Log)
+            ->and($issue->occurrences_count)->toBe(2);
+    });
+
+    it('keeps the sent channel name on an issue from an unknown channel', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'log', 'channel' => 'payments', 'level' => 'error', 'message' => 'Payment provider timed out'],
+        ]), $this->auth);
+
+        expect(Occurrence::sole()->context['log'])->toMatchArray(['channel' => LogChannel::DEFAULT, 'sent_channel' => 'payments']);
+    });
+});
+
+describe('jobs', function () {
+    it('links a failed attempt to the issue its exception became', function () {
+        $uuid = '0d9c7a1e-1111-4222-8333-944455556666';
+
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'job', 'status' => 'queued', 'uuid' => $uuid, 'name' => 'App\\Jobs\\Foo', 'queue' => 'default', 'timestamp' => now()->getTimestamp()],
+            ['type' => 'job', 'status' => 'processing', 'uuid' => $uuid, 'name' => 'App\\Jobs\\Foo', 'queue' => 'default', 'attempt' => 1, 'timestamp' => now()->getTimestamp()],
+            ['type' => 'job', 'status' => 'failed', 'uuid' => $uuid, 'name' => 'App\\Jobs\\Foo', 'queue' => 'default', 'attempt' => 1, 'duration_ms' => 50, 'timestamp' => now()->getTimestamp(), 'exception' => $this->exceptionEvent()],
+        ]), $this->auth);
+
+        $run = JobRun::sole();
+        expect($run->status)->toBe(JobRunStatus::Failed)
+            ->and($run->queued_at)->not->toBeNull()
+            ->and($run->started_at)->not->toBeNull()
+            ->and($run->occurrence_id)->toBe(Issue::sole()->occurrences()->sole()->id);
+    });
+});
+
+describe('scheduled tasks', function () {
+    it('records a scheduled task run sent by the agent', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'schedule', 'status' => 'finished', 'uuid' => '5c1e9b8a-1111-4222-8333-944455556666', 'name' => 'artisan backup:run', 'expression' => '0 3 * * *', 'exit_code' => 0, 'duration_ms' => 900, 'timestamp' => now()->getTimestamp()],
+        ]), $this->auth)->assertStatus(202);
+
+        expect(ScheduledTask::sole()->name)->toBe('artisan backup:run')
+            ->and(ScheduledTask::sole()->last_status)->toBe(ScheduledRunStatus::Finished);
+    });
+});
+
+describe('browser ingest', function () {
+    it('refuses an origin the project does not allow', function () {
+        $this->postJson('/api/ingest/browser?key='.$this->project->public_key, $this->batch([$this->exceptionEvent('TypeError')]), ['Origin' => 'https://evil.test'])
+            ->assertForbidden();
+    });
+
+    it('accepts errors from an allowed origin with CORS headers', function () {
+        $this->postJson('/api/ingest/browser?key='.$this->project->public_key, $this->batch([$this->exceptionEvent('TypeError')]), ['Origin' => 'https://app.example.test'])
+            ->assertStatus(202)
+            ->assertHeader('Access-Control-Allow-Origin', 'https://app.example.test');
+
+        expect(Issue::sole()->source)->toBe(IssueSource::Browser);
+    });
+
+    it('answers a bot like anyone else but stores nothing', function (string $agent) {
+        $this->postJson('/api/ingest/browser?key='.$this->project->public_key, $this->batch([$this->exceptionEvent('TypeError')]), ['Origin' => 'https://app.example.test', 'User-Agent' => $agent])
+            ->assertStatus(202)
+            ->assertJson(['accepted' => 0]);
+
+        expect(Issue::count())->toBe(0);
+    })->with([
+        'Googlebot' => 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+        'headless Chrome' => 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/120.0.0.0 Safari/537.36',
+        'Lighthouse' => 'Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36 Chrome-Lighthouse',
+        'no user agent' => '',
+    ]);
+
+    it('stores errors from a real browser', function () {
+        $this->postJson('/api/ingest/browser?key='.$this->project->public_key, $this->batch([$this->exceptionEvent('TypeError')]), ['Origin' => 'https://app.example.test', 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'])
+            ->assertJson(['accepted' => 1]);
+
+        expect(Issue::count())->toBe(1);
+    });
+
+    it('does not accept non-error events from a browser', function () {
+        $this->postJson('/api/ingest/browser?key='.$this->project->public_key, $this->batch([['type' => 'log', 'message' => 'x']]), ['Origin' => 'https://app.example.test'])
+            ->assertUnprocessable();
+    });
+});
+
+describe('extra secret fields', function () {
+    it('masks the project\'s own secret fields as well as the defaults', function () {
+        $this->project->update(['scrub_keys' => ['cpr']]);
+        $event = $this->exceptionEvent();
+        $event['context']['session'] = ['customer_cpr' => '010190-1234', 'cart_id' => 7];
+
+        $this->postJson('/api/ingest', $this->batch([$event]), $this->auth)->assertStatus(202);
+
+        $context = Issue::sole()->occurrences()->sole()->context;
+        expect($context['session']['customer_cpr'])->toBe('[filtered]')
+            ->and($context['session']['cart_id'])->toBe(7)
+            ->and($context['request']['headers']['Authorization'])->toBe('[filtered]');
+    });
+
+    it('saves extra secret fields from the settings page', function () {
+        $user = App\Models\User::factory()->inTeam($this->project->team)->create();
+
+        $this->actingAs($user)->put(route('projects.settings.update', $this->project), [
+            'name' => 'Shop', 'slug' => 'shop', 'allowed_origins' => [], 'scrub_keys' => ['CPR', 'iban'],
+        ])->assertSessionHasNoErrors();
+
+        expect($this->project->refresh()->scrub_keys)->toBe(['cpr', 'iban']);
+    });
+});

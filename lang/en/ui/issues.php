@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'label' => 'Label',
+    'all_labels' => 'All labels',
+    'notes_count' => '{1} 1 note|[2,*] :count notes',
+    'title' => 'Issues',
+    'status' => 'Status',
+    'source' => 'Source',
+    'all_sources' => 'All',
+    'release' => 'Release',
+    'all_releases' => 'All releases',
+    'assigned' => 'Assigned',
+    'assigned_all' => 'Everyone',
+    'assigned_me' => 'Assigned to me',
+    'assigned_none' => 'Unassigned',
+    'search' => 'Search message, class or number',
+    'sort' => [
+        'label' => 'Sort',
+        'last_seen' => 'Last seen',
+        'occurrences' => 'Most occurrences',
+        'first_seen' => 'First seen',
+    ],
+    'columns' => [
+        'select' => 'Select',
+        'issue' => 'Issue',
+        'last_24h' => 'Last 24 h',
+        'occurrences' => 'Occurrences',
+        'last_seen' => 'Last seen',
+        'first_seen' => 'First seen',
+        'assignee' => 'Assignee',
+    ],
+    'select_all' => 'Select all',
+    'select_issue' => 'Select :title',
+    'trend' => ':count occurrences in the last 24 hours',
+    'resolve_selected' => 'Resolve selected',
+    'ignore_selected' => 'Ignore selected',
+    'reopen_selected' => 'Re-open selected',
+    'empty_title' => 'No issues here',
+    'empty_body' => 'Nothing matches these filters.',
+];

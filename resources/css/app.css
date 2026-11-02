@@ -1,0 +1,232 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+    --color-ground: var(--lj-ground);
+    --color-panel: var(--lj-panel);
+    --color-panel-2: var(--lj-panel-2);
+    --color-rail: var(--lj-rail);
+    --color-line: var(--lj-line);
+    --color-line-strong: var(--lj-line-strong);
+    --color-ink: var(--lj-ink);
+    --color-ink-2: var(--lj-ink-2);
+    --color-ink-3: var(--lj-ink-3);
+    --color-amber: var(--lj-amber);
+    --color-amber-ink: var(--lj-amber-ink);
+    --color-err: var(--lj-err);
+    --color-err-bg: var(--lj-err-bg);
+    --color-err-line: var(--lj-err-line);
+    --color-warn: var(--lj-warn);
+    --color-warn-bg: var(--lj-warn-bg);
+    --color-warn-line: var(--lj-warn-line);
+    --color-ok: var(--lj-ok);
+    --color-ok-bg: var(--lj-ok-bg);
+    --color-ok-line: var(--lj-ok-line);
+    --color-info: var(--lj-info);
+    --color-info-bg: var(--lj-info-bg);
+    --color-info-line: var(--lj-info-line);
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+    --lj-ground: #f6f7f8;
+    --lj-panel: #ffffff;
+    --lj-panel-2: #f0f2f4;
+    --lj-rail: #fbfbfc;
+    --lj-line: #e2e5e9;
+    --lj-line-strong: #cdd2d8;
+    --lj-ink: #15181c;
+    --lj-ink-2: #4a535c;
+    --lj-ink-3: #5f6872;
+    --lj-amber: #b86e00;
+    --lj-amber-ink: #ffffff;
+    --lj-err: #c2352a;
+    --lj-err-bg: #fdecea;
+    --lj-err-line: #f3c3be;
+    --lj-warn: #8a5a00;
+    --lj-warn-bg: #fff4db;
+    --lj-warn-line: #eed59b;
+    --lj-ok: #1e7a50;
+    --lj-ok-bg: #e6f6ee;
+    --lj-ok-line: #b4e0c9;
+    --lj-info: #1f5fb8;
+    --lj-info-bg: #e8f0fc;
+    --lj-info-line: #bcd2f2;
+    --background: var(--lj-ground);
+    --foreground: var(--lj-ink);
+    --card: var(--lj-panel);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: var(--lj-amber);
+    --primary-foreground: var(--lj-amber-ink);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.577 0.245 27.325);
+    --border: var(--lj-line);
+    --input: oklch(0.922 0 0);
+    --ring: var(--lj-amber);
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.87 0 0);
+}
+
+.dark {
+    --lj-ground: #0e1012;
+    --lj-panel: #161a1e;
+    --lj-panel-2: #1c2126;
+    --lj-rail: #121518;
+    --lj-line: #262c32;
+    --lj-line-strong: #333a41;
+    --lj-ink: #e7eaee;
+    --lj-ink-2: #a3acb5;
+    --lj-ink-3: #8a939c;
+    --lj-amber: #f0a93b;
+    --lj-amber-ink: #1a1206;
+    --lj-err: #f2705f;
+    --lj-err-bg: #2a1715;
+    --lj-err-line: #5a2c27;
+    --lj-warn: #e8b341;
+    --lj-warn-bg: #2a2312;
+    --lj-warn-line: #5a4720;
+    --lj-ok: #47c08a;
+    --lj-ok-bg: #13261d;
+    --lj-ok-line: #1e4a36;
+    --lj-info: #6aa5f5;
+    --lj-info-bg: #141f30;
+    --lj-info-line: #22406a;
+    --background: var(--lj-ground);
+    --foreground: var(--lj-ink);
+    --card: var(--lj-panel);
+    --card-foreground: var(--lj-ink);
+    --popover: var(--lj-panel-2);
+    --popover-foreground: var(--lj-ink);
+    --primary: var(--lj-amber);
+    --primary-foreground: var(--lj-amber-ink);
+    --secondary: var(--lj-panel-2);
+    --secondary-foreground: var(--lj-ink);
+    --muted: var(--lj-panel-2);
+    --muted-foreground: var(--lj-ink-3);
+    --accent: var(--lj-panel-2);
+    --accent-foreground: var(--lj-ink);
+    --destructive: var(--lj-err-bg);
+    --destructive-foreground: var(--lj-err);
+    --border: var(--lj-line);
+    --input: var(--lj-line-strong);
+    --ring: var(--lj-amber);
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+    --sidebar: var(--lj-rail);
+    --sidebar-foreground: var(--lj-ink);
+    --sidebar-primary: oklch(0.985 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: var(--lj-panel-2);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: var(--lj-line);
+    --sidebar-ring: oklch(0.439 0 0);
+}
+
+@layer base {
+    /* Tailwind v4 leaves the default cursor on buttons; everything clickable gets the pointer. */
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']),
+    [role='tab'],
+    [role='switch'],
+    [role='menuitem'],
+    a[href],
+    select:not(:disabled),
+    summary,
+    label[for],
+    input[type='checkbox']:not(:disabled),
+    input[type='radio']:not(:disabled) {
+        cursor: pointer;
+    }
+
+    button:disabled,
+    select:disabled,
+    input:disabled {
+        cursor: not-allowed;
+    }
+
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}

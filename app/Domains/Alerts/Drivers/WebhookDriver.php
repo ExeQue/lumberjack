@@ -1,0 +1,102 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domains\Alerts\Drivers;
+
+use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\IssueAlert;
+use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
+use App\Domains\Alerts\Models\NotificationChannel;
+use App\Domains\Shared\Rules\PublicUrl;
+use Illuminate\Support\Facades\Http;
+use Override;
+use Throwable;
+
+/**
+ * POSTs each alert as JSON to the app's own endpoint, so it can react, e.g.
+ * turn a status banner on while an issue escalates. Signed with the channel's
+ * secret: X-Lumberjack-Signature is "sha256=" and the HMAC of
+ * "{X-Lumberjack-Timestamp}.{body}".
+ */
+class WebhookDriver implements ChannelDriver
+{
+    public const string VERSION = '1';
+
+    #[Override]
+    public function rules(): array
+    {
+        return [
+            'url' => ['required', 'url', 'max:2000', new PublicUrl()],
+        ];
+    }
+
+    #[Override]
+    public function send(NotificationChannel $channel, IssueAlert $alert): void
+    {
+        $issue = $alert->issue;
+
+        $this->post($channel, [
+            'event' => $alert->type->value,
+            'project' => ['id' => $issue->project->uuid, 'slug' => $issue->project->slug, 'name' => $issue->project->name],
+            'environment' => $alert->environment,
+            'issue' => [
+                'id' => $issue->uuid,
+                'reference' => $issue->number !== null ? $issue->reference() : null,
+                'title' => $issue->title,
+                'message' => $issue->message,
+                'status' => $issue->status->value,
+                'source' => $issue->source->value,
+                'escalating' => $issue->isEscalating(),
+                'occurrences' => $issue->occurrences_count,
+                'first_seen_at' => $issue->first_seen_at->toIso8601String(),
+                'last_seen_at' => $issue->last_seen_at->toIso8601String(),
+                'url' => $alert->url,
+            ],
+            'burst' => $alert->burst,
+            'status_change' => $alert->statusChange !== null ? ['status' => $alert->statusChange->value, 'by' => $alert->actor] : null,
+            'note' => $alert->note !== null ? ['by' => $alert->noteAuthor(), 'body' => $alert->noteBody()] : null,
+        ]);
+    }
+
+    #[Override]
+    public function sendTest(NotificationChannel $channel): void
+    {
+        $this->post($channel, ['event' => 'test', 'message' => __('alerts.test_message', ['channel' => $channel->name])]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function post(NotificationChannel $channel, array $payload): void
+    {
+        $url = (string) ($channel->config['url'] ?? '');
+
+        // Checked again on every send: the host may resolve somewhere else by now.
+        if (! PublicUrl::allows($url)) {
+            throw AlertDeliveryFailedException::notPublic($channel->name);
+        }
+
+        $body = (string) json_encode(['version' => self::VERSION, 'sent_at' => now()->toIso8601String(), ...$payload], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $timestamp = (string) now()->getTimestamp();
+
+        try {
+            $response = Http::timeout(10)
+                ->withoutRedirecting()
+                ->withHeaders([
+                    'User-Agent' => 'Lumberjack-Webhook/'.self::VERSION,
+                    'X-Lumberjack-Event' => (string) $payload['event'],
+                    'X-Lumberjack-Timestamp' => $timestamp,
+                    'X-Lumberjack-Signature' => 'sha256='.hash_hmac('sha256', $timestamp.'.'.$body, (string) ($channel->config['secret'] ?? '')),
+                ])
+                ->withBody($body, 'application/json')
+                ->post($url);
+        } catch (Throwable) {
+            throw AlertDeliveryFailedException::status($channel->name, 0);
+        }
+
+        if (! $response->successful()) {
+            throw AlertDeliveryFailedException::status($channel->name, $response->status());
+        }
+    }
+}

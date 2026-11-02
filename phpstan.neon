@@ -1,0 +1,21 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - bootstrap/app.php
+        - config/
+        - database/
+        - routes/
+
+    level: 7
+
+    ignoreErrors:
+        # The project writes conditional query clauses fluently, ->when($cond)->where(...),
+        # without a callback (see CLAUDE.md). Larastan cannot type the HigherOrderWhenProxy
+        # that returns, so this one template error is expected; anything else is not.
+        -
+            identifier: argument.templateType
+            message: '#TWhenReturnType#'

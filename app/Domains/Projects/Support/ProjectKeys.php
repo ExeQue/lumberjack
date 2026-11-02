@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domains\Projects\Support;
+
+use Illuminate\Support\Str;
+
+/**
+ * The secret server token and the public browser key of a project.
+ */
+final class ProjectKeys
+{
+    public static function newServerToken(): string
+    {
+        return 'lj_srv_'.Str::random(40);
+    }
+
+    public static function newPublicKey(): string
+    {
+        return 'pk_'.Str::lower(Str::random(24));
+    }
+
+    public static function hash(string $token): string
+    {
+        return hash('sha256', $token);
+    }
+}
