@@ -20,6 +20,7 @@ use App\Domains\Mcp\Http\Controllers\McpTokenController;
 use App\Domains\Overview\Http\Controllers\OverviewController;
 use App\Domains\Performance\Http\Controllers\QueryController;
 use App\Domains\Performance\Http\Controllers\RouteController;
+use App\Domains\Performance\Http\Controllers\TraceController;
 use App\Domains\Projects\Http\Controllers\ProjectController;
 use App\Domains\Projects\Http\Controllers\ProjectSettingsController;
 use App\Domains\Repositories\Http\Controllers\RepositoryController;
@@ -60,6 +61,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('routes', RouteController::class)->name('routes.index');
         Route::get('queries', QueryController::class)->name('queries.index');
+        Route::get('traces/{trace}', TraceController::class)->where('trace', '[A-Za-z0-9._:-]{1,64}')->name('traces.show');
         Route::get('jobs', JobController::class)->name('jobs.index');
         Route::get('schedule', [ScheduleController::class, 'index'])->name('schedule.index');
         Route::get('commands', CommandController::class)->name('commands.index');

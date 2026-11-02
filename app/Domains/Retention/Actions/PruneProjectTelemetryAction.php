@@ -36,7 +36,7 @@ class PruneProjectTelemetryAction
         $deleted['occurrences'] = $this->deleter->delete('occurrences', fn ($q) => $q->where('project_id', $project->id)->where('occurred_at', '<', $errorsCutoff));
 
         $performanceCutoff = $before($days(RetentionCategory::Performance));
-        foreach (['request_runs', 'query_runs'] as $table) {
+        foreach (['request_runs', 'query_runs', 'span_runs'] as $table) {
             $deleted[$table] = $this->deleter->delete($table, fn ($q) => $q->where('project_id', $project->id)->where('occurred_at', '<', $performanceCutoff));
         }
 

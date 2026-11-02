@@ -1,4 +1,4 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage, Link } from '@inertiajs/react';
 import { CircleDot } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
@@ -48,6 +48,7 @@ import {
 } from '@/routes/issues';
 import { store as storeNote } from '@/routes/issues/notes';
 import { show as projectShow } from '@/routes/projects';
+import { show as traceShow } from '@/routes/traces';
 import type {
     IssueNote,
     IssueSummary,
@@ -1140,7 +1141,21 @@ export default function IssueShow({
                                                 <td
                                                     className={`${tdClass} font-mono text-xs`}
                                                 >
-                                                    {o.trace_id ?? '-'}
+                                                    {o.trace_id ? (
+                                                        <Link
+                                                            href={
+                                                                traceShow([
+                                                                    project.uuid,
+                                                                    o.trace_id,
+                                                                ]).url
+                                                            }
+                                                            className="text-amber hover:underline"
+                                                        >
+                                                            {o.trace_id}
+                                                        </Link>
+                                                    ) : (
+                                                        '-'
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}

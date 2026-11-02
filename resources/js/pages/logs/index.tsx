@@ -27,6 +27,7 @@ import {
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { index as logsIndex } from '@/routes/logs';
+import { show as traceShow } from '@/routes/traces';
 import {
     settings as projectSettings,
     show as projectShow,
@@ -446,7 +447,19 @@ export default function LogsIndex({
                                                         l.trace_id ?? undefined
                                                     }
                                                 >
-                                                    {l.trace_id ?? ''}
+                                                    {l.trace_id && (
+                                                        <Link
+                                                            href={
+                                                                traceShow([
+                                                                    project.uuid,
+                                                                    l.trace_id,
+                                                                ]).url
+                                                            }
+                                                            className="hover:text-amber hover:underline"
+                                                        >
+                                                            {l.trace_id}
+                                                        </Link>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}

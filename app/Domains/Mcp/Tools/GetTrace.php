@@ -19,7 +19,7 @@ class GetTrace extends Tool
 
     protected string $name = 'get_trace';
 
-    protected string $description = 'Everything recorded under one trace id: the request or job, then queries, log lines and exceptions in time order.';
+    protected string $description = 'Everything recorded under one trace id: the request or job, then queries, spans (cache reads and writes, outgoing HTTP calls, mail, notifications, Redis commands), log lines and exceptions in time order, each with offset_us from the start of the trace.';
 
     public function __construct(private readonly TraceQuery $trace)
     {

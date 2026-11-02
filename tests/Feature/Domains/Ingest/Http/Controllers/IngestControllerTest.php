@@ -16,6 +16,7 @@ use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Schedule\Enums\ScheduledRunStatus;
 use App\Domains\Schedule\Models\ScheduledTask;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\Ingest\BuildsIngestPayloads;
 
 covers(IngestController::class);
@@ -49,6 +50,20 @@ describe('server ingest', function () {
             ->and(LogEntry::sole()->message)->toBe('Slow thing')
             ->and(JobRun::sole()->status)->toBe(JobRunStatus::Processed)
             ->and(Issue::sole()->source)->toBe(IssueSource::Server);
+    });
+
+    it('stores spans on their trace, and skips a span of a kind it does not know', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'span', 'trace_id' => 't1', 'timestamp' => now()->getTimestamp(), 'kind' => 'http', 'name' => 'POST', 'target' => 'api.stripe.com/v1/charges', 'duration_ms' => 182.4, 'attributes' => ['status' => 201]],
+            ['type' => 'span', 'trace_id' => 't1', 'timestamp' => now()->getTimestamp(), 'kind' => 'cache', 'name' => 'miss', 'target' => 'cart:7'],
+            ['type' => 'span', 'trace_id' => 't1', 'timestamp' => now()->getTimestamp(), 'kind' => 'telepathy', 'name' => 'x', 'target' => 'y'],
+        ]), $this->auth)->assertStatus(202);
+
+        $spans = DB::table('span_runs')->orderBy('id')->get();
+        expect($spans)->toHaveCount(2)
+            ->and($spans[0]->duration_us)->toBe(182_400)
+            ->and(json_decode((string) $spans[0]->attributes, true))->toBe(['status' => 201])
+            ->and($spans[1]->duration_us)->toBeNull();
     });
 
     it('scrubs secrets from exception context', function () {

@@ -28,7 +28,7 @@ class IngestBatchRequest extends FormRequest
             'release' => ['nullable', 'string', 'max:64'],
             'host' => ['nullable', 'string', 'max:255'],
             'events' => ['required', 'array', 'max:'.self::MAX_EVENTS],
-            'events.*.type' => ['required', 'string', 'in:request,query,exception,job,log,schedule,command'],
+            'events.*.type' => ['required', 'string', 'in:request,query,exception,job,log,schedule,command,span'],
         ];
     }
 

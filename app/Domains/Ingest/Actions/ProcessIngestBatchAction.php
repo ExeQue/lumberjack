@@ -13,10 +13,12 @@ use App\Domains\Jobs\Actions\RecordJobEventAction;
 use App\Domains\Live\Actions\BroadcastProjectChangeAction;
 use App\Domains\Live\Enums\ChangeKind;
 use App\Domains\Logs\Actions\RecordLogLineAction;
+use App\Domains\Performance\Enums\SpanKind;
 use App\Domains\Performance\Support\SqlNormalizer;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Schedule\Actions\RecordScheduleEventAction;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use Throwable;
 
 /**
@@ -49,6 +51,7 @@ class ProcessIngestBatchAction
 
         $requests = [];
         $queries = [];
+        $spans = [];
         $touched = [];
 
         foreach ($events as $event) {
@@ -67,6 +70,7 @@ class ProcessIngestBatchAction
                 match ($type) {
                     'request' => $requests[] = $this->requestRow($project, $event, $envelope),
                     'query' => $queries[] = $this->queryRow($project, $event, $envelope),
+                    'span' => $spans[] = $this->spanRow($project, $event, $envelope),
                     'exception' => $this->recordOccurrenceAction->execute($project, $this->signalFactory->fromException($event, $envelope, $fromBrowser ? IssueSource::Browser : IssueSource::Server, $project->scrub_keys ?? [])),
                     'job' => $this->recordJobEventAction->execute($project, $event, $envelope),
                     'log' => $this->recordLogLineAction->execute($project, $event, $envelope),
@@ -91,6 +95,10 @@ class ProcessIngestBatchAction
             DB::table('query_runs')->insert($chunk);
         }
 
+        foreach (array_chunk($spans, self::INSERT_CHUNK) as $chunk) {
+            DB::table('span_runs')->insert($chunk);
+        }
+
         $this->broadcastChanges($project, $touched);
     }
 
@@ -112,6 +120,30 @@ class ProcessIngestBatchAction
             'status_code' => max(0, min(999, (int) ($event['status'] ?? 0))),
             'duration_us' => Envelope::micros($event['duration_ms'] ?? 0),
             'memory_peak' => isset($event['memory_peak']) && is_numeric($event['memory_peak']) ? (int) $event['memory_peak'] : null,
+            'occurred_at' => Envelope::time($event['timestamp'] ?? null)->format('Y-m-d H:i:s.v'),
+        ];
+    }
+
+    /**
+     * A cache read, outgoing call, mail, notification or Redis command on a trace.
+     *
+     * @param  array<string, mixed>  $event
+     * @return array<string, mixed>
+     */
+    private function spanRow(Project $project, array $event, Envelope $envelope): array
+    {
+        $kind = SpanKind::tryFrom((string) ($event['kind'] ?? '')) ?? throw new InvalidArgumentException('Unknown span kind.');
+        $attributes = is_array($event['attributes'] ?? null) ? array_slice($event['attributes'], 0, 20, true) : null;
+
+        return [
+            'project_id' => $project->id,
+            'trace_id' => Envelope::short($event['trace_id'] ?? null),
+            'environment' => $envelope->environment,
+            'kind' => $kind->value,
+            'name' => mb_substr((string) ($event['name'] ?? ''), 0, 64),
+            'target' => mb_substr((string) ($event['target'] ?? ''), 0, 255),
+            'duration_us' => isset($event['duration_ms']) && is_numeric($event['duration_ms']) ? Envelope::micros($event['duration_ms']) : null,
+            'attributes' => $attributes !== null ? json_encode($attributes) : null,
             'occurred_at' => Envelope::time($event['timestamp'] ?? null)->format('Y-m-d H:i:s.v'),
         ];
     }
