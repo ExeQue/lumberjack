@@ -136,6 +136,15 @@ describe('required password change', function () {
         $this->actingAs($user)->get(route('projects.index'))->assertRedirect(route('security.edit'));
     });
 
+    test('after signing in, it goes straight to choosing a new password', function () {
+        $user = User::factory()->create(['password_change_required' => true]);
+
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password']);
+
+        $this->get(route('projects.index'))->assertRedirect(route('security.edit'));
+        $this->get(route('security.edit'))->assertOk();
+    });
+
     test('changing the password lifts the requirement', function () {
         $user = User::factory()->create(['password_change_required' => true]);
 

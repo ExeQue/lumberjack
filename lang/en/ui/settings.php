@@ -7,6 +7,13 @@ return [
     'toc' => 'Sections',
     'actions' => 'Actions',
     'days' => '{1} 1 day|[2,*] :count days',
+    'account' => [
+        'title' => 'Profile and security',
+        'description' => 'Your name, email, password, two-factor authentication and how Lumberjack looks for you.',
+        'profile' => 'Profile',
+        'security' => 'Security',
+        'appearance' => 'Appearance',
+    ],
     'general' => [
         'title' => 'General',
         'name' => 'Name',

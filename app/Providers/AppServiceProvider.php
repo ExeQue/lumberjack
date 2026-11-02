@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Domains\Administration\Http\Middleware\RedirectToSetup;
+use App\Domains\Administration\Listeners\ConfirmPasswordOnLogin;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Database\Events\DatabaseRefreshed;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\Date;
@@ -41,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
 
         // A wiped database has no users, so first-run setup has to come back with it.
         Event::listen(DatabaseRefreshed::class, RedirectToSetup::forget(...));
+        Event::listen(Login::class, ConfirmPasswordOnLogin::class);
 
         // A system administrator may do anything: they run this Lumberjack.
         Gate::before(fn (User $user): ?bool => $user->isAdmin() ? true : null);

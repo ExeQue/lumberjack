@@ -1,78 +1,66 @@
 import { Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
-import Heading from '@/components/heading';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { TopBar } from '@/components/lj/top-bar';
+import { PageTitle } from '@/components/lj/ui';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { PageBody } from '@/layouts/lumberjack-layout';
+import { useT } from '@/lib/i18n';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
-import type { NavItem } from '@/types';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: edit(),
-        icon: null,
-    },
-    {
-        title: 'Security',
-        href: editSecurity(),
-        icon: null,
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-        icon: null,
-    },
-];
+const sections = [
+    { key: 'profile', href: edit() },
+    { key: 'security', href: editSecurity() },
+    { key: 'appearance', href: editAppearance() },
+] as const;
 
+/**
+ * Your own account, laid out like the rest of Lumberjack: a top bar, a title, and the
+ * sections on the left as in a project's settings.
+ */
 export default function SettingsLayout({ children }: PropsWithChildren) {
+    const t = useT();
     const { isCurrentOrParentUrl } = useCurrentUrl();
 
     return (
-        <div className="px-4 py-6">
-            <Heading
-                title="Settings"
-                description="Manage your profile and account settings"
-            />
-
-            <div className="flex flex-col lg:flex-row lg:space-x-12">
-                <aside className="w-full max-w-xl lg:w-48">
+        <>
+            <TopBar crumbs={[{ label: t('settings.account.title') }]} />
+            <PageBody>
+                <PageTitle
+                    title={t('settings.account.title')}
+                    description={t('settings.account.description')}
+                />
+                <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
                     <nav
-                        className="flex flex-col space-y-1 space-x-0"
-                        aria-label="Settings"
+                        aria-label={t('settings.account.title')}
+                        className="flex flex-wrap gap-1 lg:flex-col"
                     >
-                        {sidebarNavItems.map((item, index) => (
-                            <Button
-                                key={`${toUrl(item.href)}-${index}`}
-                                size="sm"
-                                variant="ghost"
-                                asChild
-                                className={cn('w-full justify-start', {
-                                    'bg-muted': isCurrentOrParentUrl(item.href),
-                                })}
-                            >
-                                <Link href={item.href}>
-                                    {item.icon && (
-                                        <item.icon className="h-4 w-4" />
+                        {sections.map((section) => {
+                            const current = isCurrentOrParentUrl(section.href);
+
+                            return (
+                                <Link
+                                    key={toUrl(section.href)}
+                                    href={section.href}
+                                    aria-current={current ? 'page' : undefined}
+                                    className={cn(
+                                        'rounded-md px-2.5 py-1.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink',
+                                        current &&
+                                            'bg-panel-2 font-medium text-ink shadow-[inset_2px_0_0_var(--lj-amber)]',
                                     )}
-                                    {item.title}
+                                >
+                                    {t(`settings.account.${section.key}`)}
                                 </Link>
-                            </Button>
-                        ))}
+                            );
+                        })}
                     </nav>
-                </aside>
-
-                <Separator className="my-6 lg:hidden" />
-
-                <div className="flex-1 md:max-w-2xl">
-                    <section className="max-w-xl space-y-12">
+                    <section className="flex max-w-xl min-w-0 flex-col gap-12">
                         {children}
                     </section>
                 </div>
-            </div>
-        </div>
+            </PageBody>
+        </>
     );
 }
