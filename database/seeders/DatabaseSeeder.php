@@ -65,7 +65,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Demo',
             'slug' => 'demo',
             'public_key' => self::PUBLIC_KEY,
-            'allowed_origins' => ['http://localhost:3000', 'https://lumberjack.test', 'https://lumberjack-laravel.test'],
+            'allowed_origins' => ['http://localhost:3000', 'https://lumberjack.test', 'https://laravel-lumberjack.test'],
         ]);
 
         AlertRule::factory()->for($project)->create();
