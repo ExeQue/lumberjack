@@ -38,7 +38,7 @@ jobs:
           fetch-depth: 0   # for lastUpdated timestamps
 
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -51,7 +51,7 @@ jobs:
 
       - name: Upload the artifact
         if: github.event_name != 'pull_request' && !github.event.repository.private
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: .vitepress/dist
 
@@ -72,4 +72,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
