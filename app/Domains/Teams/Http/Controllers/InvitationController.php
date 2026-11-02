@@ -63,6 +63,9 @@ class InvitationController
                 'email' => $invitation->email,
                 'role' => $invitation->role->value,
                 'has_account' => User::query()->where('email', $invitation->email)->exists(),
+                // Signed in as someone else: they are offered to sign out, not to accept.
+                'signed_in_as' => $request->user()?->email,
+                'for_you' => $request->user() === null || $this->isFor($invitation, $request->user()),
             ],
         ]);
     }
@@ -77,6 +80,12 @@ class InvitationController
 
         $user = $request->user();
 
+        // An invitation is for its email address: a forwarded link does not let someone
+        // else join, and nobody joins a team by clicking while signed in as another account.
+        if ($user !== null && ! $this->isFor($invitation, $user)) {
+            return back()->withErrors(['token' => __('teams.invitation_wrong_account', ['email' => $invitation->email])]);
+        }
+
         if ($user === null) {
             if (User::query()->where('email', $invitation->email)->exists()) {
                 return redirect()->guest(route('login'));
@@ -89,5 +98,10 @@ class InvitationController
         $accept->execute($token, $user);
 
         return redirect()->route('projects.index');
+    }
+
+    private function isFor(TeamInvitation $invitation, User $user): bool
+    {
+        return mb_strtolower($user->email) === mb_strtolower($invitation->email);
     }
 }

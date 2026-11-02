@@ -10,6 +10,7 @@ return [
         'error_rate' => 'Error rate',
         'error_rate_note' => '{0} No exceptions recorded, 5xx share of requests|{1} 1 exception recorded, 5xx share of requests|[2,*] :count exceptions recorded, 5xx share of requests',
         'p95' => 'p95 response time',
+        'p95_none' => 'No requests in the period.',
         'p95_note' => 'p50 :p50, p99 :p99',
         'failed_jobs' => 'Failed jobs',
         'failed_jobs_note' => '{1} :rate of 1 job run, :stuck stuck|[0,*] :rate of :count job runs, :stuck stuck',

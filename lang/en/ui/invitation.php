@@ -9,6 +9,9 @@ return [
     'expired_body' => 'This invitation has expired or no longer exists. Ask whoever invited you to send a new one.',
     'has_account' => 'You already have an account with this email.',
     'log_in' => 'Log in to accept',
+    'wrong_account' => 'This invitation is for :email, and you are signed in as :me. Sign out to accept it with :email.',
+    // Button
+    'log_out' => 'Sign out',
     'name' => 'Name',
     'password' => 'Password',
     'password_confirmation' => 'Confirm password',

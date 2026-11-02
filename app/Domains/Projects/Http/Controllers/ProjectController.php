@@ -48,8 +48,9 @@ class ProjectController
                 'name' => $project->name,
                 'open_issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->count(),
                 'errors' => DB::table('occurrences')->where('project_id', $project->id)->where('occurred_at', '>=', $since)->count(),
-                'p95' => (int) ($latency->p95 ?? 0),
-                'job_failure_rate' => $runs > 0 ? round((clone $jobs)->whereStatus(JobRunStatus::Failed)->count() / $runs, 4) : 0.0,
+                // Null, not 0, where nothing was measured: no requests has no p95.
+                'p95' => $latency?->p95 !== null ? (int) $latency->p95 : null,
+                'job_failure_rate' => $runs > 0 ? round((clone $jobs)->whereStatus(JobRunStatus::Failed)->count() / $runs, 4) : null,
                 'error_series' => TimeSeries::count(DB::table('occurrences')->where('project_id', $project->id), Period::Day),
                 'agents' => $project->agents->count(),
                 'offline_agents' => $offline->pluck('host')->values()->all(),

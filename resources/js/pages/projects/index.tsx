@@ -38,8 +38,8 @@ type ProjectCard = {
     name: string;
     open_issues: number;
     errors: number;
-    p95: number;
-    job_failure_rate: number;
+    p95: number | null;
+    job_failure_rate: number | null;
     error_series: SeriesPoint[];
     agents: number;
     offline_agents: string[];
@@ -187,18 +187,25 @@ export default function ProjectsIndex({
                                             },
                                             {
                                                 label: t('projects.p95'),
-                                                value: formatDuration(
-                                                    project.p95,
-                                                ),
+                                                value:
+                                                    project.p95 === null
+                                                        ? '-'
+                                                        : formatDuration(
+                                                              project.p95,
+                                                          ),
                                                 tone: '',
                                             },
                                             {
                                                 label: t(
                                                     'projects.job_failures',
                                                 ),
-                                                value: formatPercent(
-                                                    project.job_failure_rate,
-                                                ),
+                                                value:
+                                                    project.job_failure_rate ===
+                                                    null
+                                                        ? '-'
+                                                        : formatPercent(
+                                                              project.job_failure_rate,
+                                                          ),
                                                 tone: '',
                                             },
                                         ].map((metric) => (

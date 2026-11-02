@@ -326,6 +326,8 @@ export function Sparkline({
     height?: number;
 }) {
     const max = Math.max(1, ...values);
+    // Nothing happened: a quiet line, not one in the alarm color.
+    const quiet = values.every((v) => v === 0);
     const points = values
         .map(
             (v, i) =>
@@ -345,7 +347,7 @@ export function Sparkline({
             <polyline
                 points={points}
                 fill="none"
-                stroke={color}
+                stroke={quiet ? 'var(--lj-line-strong)' : color}
                 strokeWidth={1.5}
                 vectorEffect="non-scaling-stroke"
             />

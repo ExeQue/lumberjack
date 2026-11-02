@@ -392,14 +392,22 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                     />
                     <StatCard
                         label={t('overview.kpis.p95')}
-                        value={formatDuration(overview.p95)}
-                        note={joinNotes(
-                            t('overview.kpis.p95_note', {
-                                p50: formatDuration(overview.p50),
-                                p99: formatDuration(overview.p99),
-                            }),
-                            trend(overview.p95, previous.p95),
-                        )}
+                        value={
+                            overview.requests > 0
+                                ? formatDuration(overview.p95)
+                                : '-'
+                        }
+                        note={
+                            overview.requests > 0
+                                ? joinNotes(
+                                      t('overview.kpis.p95_note', {
+                                          p50: formatDuration(overview.p50),
+                                          p99: formatDuration(overview.p99),
+                                      }),
+                                      trend(overview.p95, previous.p95),
+                                  )
+                                : t('overview.kpis.p95_none')
+                        }
                     />
                     <StatCard
                         label={t('overview.kpis.failed_jobs')}

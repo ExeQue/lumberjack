@@ -1,4 +1,4 @@
-import { Form, Head, setLayoutProps, usePage } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { useT } from '@/lib/i18n';
+import { translate, useT } from '@/lib/i18n';
 import { accept } from '@/routes/invitations';
-import { login } from '@/routes';
+import { login, logout } from '@/routes';
 
 type Props = {
     token: string;
@@ -17,6 +17,8 @@ type Props = {
         email: string;
         role: 'owner' | 'admin' | 'member';
         has_account: boolean;
+        signed_in_as: string | null;
+        for_you: boolean;
     } | null;
 };
 
@@ -25,23 +27,31 @@ export default function InvitationShow({ token, invitation }: Props) {
     const { auth } = usePage<{ auth: { user: { name: string } | null } }>()
         .props;
 
-    setLayoutProps(
-        invitation === null
-            ? {
-                  title: t('invitation.expired_title'),
-                  description: t('invitation.expired_body'),
-              }
-            : {
-                  title: t('invitation.title', { team: invitation.team }),
-                  description: t('invitation.description', {
-                      email: invitation.email,
-                      role: t(`common.roles.${invitation.role}`),
-                  }),
-              },
-    );
-
     if (invitation === null) {
         return <Head title={t('invitation.expired_title')} />;
+    }
+
+    if (!invitation.for_you) {
+        return (
+            <>
+                <Head
+                    title={t('invitation.title', { team: invitation.team })}
+                />
+                <div className="flex flex-col gap-4 text-center text-sm">
+                    <p role="status">
+                        {t('invitation.wrong_account', {
+                            email: invitation.email,
+                            me: invitation.signed_in_as ?? '',
+                        })}
+                    </p>
+                    <Form {...logout.form()}>
+                        <Button type="submit" className="w-full">
+                            {t('invitation.log_out')}
+                        </Button>
+                    </Form>
+                </div>
+            </>
+        );
     }
 
     if (auth.user === null && invitation.has_account) {
@@ -128,3 +138,25 @@ export default function InvitationShow({ token, invitation }: Props) {
         </>
     );
 }
+
+// The title and line under it, worked out from the page's props: dynamic layout props would
+// outlive this page (they survive a sign-out from here onto the login page).
+InvitationShow.layout = (
+    props: Props & { translations: Parameters<typeof translate>[0] },
+) => {
+    const t = (key: string, replace?: Record<string, string>) =>
+        translate(props.translations, key, replace);
+
+    return props.invitation === null
+        ? {
+              title: t('invitation.expired_title'),
+              description: t('invitation.expired_body'),
+          }
+        : {
+              title: t('invitation.title', { team: props.invitation.team }),
+              description: t('invitation.description', {
+                  email: props.invitation.email,
+                  role: t(`common.roles.${props.invitation.role}`),
+              }),
+          };
+};

@@ -55,12 +55,22 @@ describe('accepting', function () {
         $this->assertAuthenticatedAs($user);
     });
 
-    it('lets a signed-in user accept as themselves', function () {
-        $existing = User::factory()->inTeam()->create();
+    it('lets the invited user accept while signed in', function () {
+        $existing = User::factory()->inTeam()->create(['email' => 'New@Example.test']);
 
         $this->actingAs($existing)->post(route('invitations.accept', $this->token))->assertRedirect(route('projects.index'));
 
         expect($existing->belongsToTeam($this->owner->currentTeam))->toBeTrue();
+    });
+
+    it('does not let someone signed in as another account accept it', function () {
+        $other = User::factory()->inTeam()->create();
+
+        $this->actingAs($other)->get(route('invitations.show', $this->token))
+            ->assertInertia(fn ($page) => $page->where('invitation.for_you', false)->where('invitation.signed_in_as', $other->email));
+        $this->actingAs($other)->post(route('invitations.accept', $this->token))->assertSessionHasErrors('token');
+
+        expect($other->fresh()->belongsToTeam($this->owner->currentTeam))->toBeFalse();
     });
 
     it('refuses an expired invitation', function () {
