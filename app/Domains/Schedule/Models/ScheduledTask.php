@@ -52,6 +52,12 @@ class ScheduledTask extends Model
     public const int GRACE_SECONDS = 300;
 
     /**
+     * How long after its time a run shows as late: the scheduler starts on the minute
+     * and reports a moment later, so a few seconds is no delay.
+     */
+    public const int LATE_AFTER_SECONDS = 60;
+
+    /**
      * A task the scheduler has not reported for this long is taken off the schedule,
      * so a removed task stops being flagged.
      */

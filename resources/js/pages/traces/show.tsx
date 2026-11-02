@@ -60,6 +60,14 @@ type Props = {
             host: string | null;
             offset_us: number | null;
         }[];
+        runs: {
+            kind: 'command' | 'schedule';
+            name: string | null;
+            status: string;
+            duration_us: number | null;
+            host: string | null;
+            offset_us: number | null;
+        }[];
         timeline: Entry[];
     };
 };
@@ -103,6 +111,7 @@ export default function TraceShow({ project, trace }: Props) {
     const t = useT();
     const request = trace.requests[0];
     const job = trace.jobs[0];
+    const run = trace.runs[0];
     const entries = trace.timeline;
 
     // The axis spans the root (request or job) and everything on the trace.
@@ -110,6 +119,7 @@ export default function TraceShow({ project, trace }: Props) {
         1,
         request ? (request.offset_us ?? 0) + request.duration_us : 0,
         job ? (job.offset_us ?? 0) + (job.duration_us ?? 0) : 0,
+        run ? (run.offset_us ?? 0) + (run.duration_us ?? 0) : 0,
         ...entries.map((e) => (e.offset_us ?? 0) + (e.duration_us ?? 0)),
     );
 
@@ -157,6 +167,8 @@ export default function TraceShow({ project, trace }: Props) {
                             </span>
                         ) : job ? (
                             <Mono>{job.name}</Mono>
+                        ) : run?.name ? (
+                            <Mono>{run.name}</Mono>
                         ) : (
                             t('traces.title')
                         )
@@ -166,7 +178,9 @@ export default function TraceShow({ project, trace }: Props) {
                             ? `${request.status} · ${formatDuration(request.duration_us)}${request.host ? ` · ${request.host}` : ''}`
                             : job
                               ? `${job.status} · ${formatDuration(job.duration_us)}${job.host ? ` · ${job.host}` : ''}`
-                              : t('traces.description')
+                              : run
+                                ? `${t(`traces.roots.${run.kind}`)} · ${run.status} · ${formatDuration(run.duration_us)}${run.host ? ` · ${run.host}` : ''}`
+                                : t('traces.description')
                     }
                 />
 

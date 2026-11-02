@@ -72,7 +72,7 @@ class ScheduleController
      */
     private function task(ScheduledTask $task): array
     {
-        $late = $task->next_run_at !== null && $task->next_run_at->isPast() && ($task->last_run_at === null || $task->last_run_at->lt($task->next_run_at));
+        $late = $task->next_run_at !== null && $task->next_run_at->lt(now()->subSeconds(ScheduledTask::LATE_AFTER_SECONDS)) && ($task->last_run_at === null || $task->last_run_at->lt($task->next_run_at));
 
         return [
             'id' => $task->id,

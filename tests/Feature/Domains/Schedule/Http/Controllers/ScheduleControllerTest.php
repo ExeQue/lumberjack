@@ -33,6 +33,21 @@ describe('the schedule page', function () {
     });
 });
 
+describe('a late task', function () {
+    it('is late a minute after its time, not in the seconds it takes to start and report', function () {
+        $user = User::factory()->inTeam($this->project->team)->create();
+        $this->task->update(['next_run_at' => now()->subSeconds(10), 'last_run_at' => now()->subMinutes(5)]);
+
+        $this->actingAs($user)->get(route('schedule.index', $this->project))
+            ->assertInertia(fn (Assert $page) => $page->where('tasks.0.late', false));
+
+        $this->task->update(['next_run_at' => now()->subMinutes(2)]);
+
+        $this->actingAs($user)->get(route('schedule.index', $this->project))
+            ->assertInertia(fn (Assert $page) => $page->where('tasks.0.late', true));
+    });
+});
+
 describe('forgetting a task', function () {
     it('deletes the task and its runs', function () {
         $admin = User::factory()->inTeam($this->project->team)->create();

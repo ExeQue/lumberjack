@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { useProjectLive } from '@/lib/use-project-live';
 import { index as commandsIndex } from '@/routes/commands';
 import { show as issueShow } from '@/routes/issues';
+import { show as traceShow } from '@/routes/traces';
 import { show as projectShow } from '@/routes/projects';
 import type {
     DashboardFilters,
@@ -462,21 +463,38 @@ export default function CommandsIndex({
                                                         'text-right',
                                                     )}
                                                 >
-                                                    {run.issue && (
-                                                        <Link
-                                                            href={
-                                                                issueShow([
-                                                                    project.uuid,
-                                                                    run.issue,
-                                                                ]).url
-                                                            }
-                                                            className="text-xs text-amber hover:underline"
-                                                        >
-                                                            {t(
-                                                                'commands.runs.view_issue',
-                                                            )}
-                                                        </Link>
-                                                    )}
+                                                    <span className="inline-flex gap-3">
+                                                        {run.trace_id && (
+                                                            <Link
+                                                                href={
+                                                                    traceShow([
+                                                                        project.uuid,
+                                                                        run.trace_id,
+                                                                    ]).url
+                                                                }
+                                                                className="text-xs text-ink-2 hover:text-amber hover:underline"
+                                                            >
+                                                                {t(
+                                                                    'traces.open',
+                                                                )}
+                                                            </Link>
+                                                        )}
+                                                        {run.issue && (
+                                                            <Link
+                                                                href={
+                                                                    issueShow([
+                                                                        project.uuid,
+                                                                        run.issue,
+                                                                    ]).url
+                                                                }
+                                                                className="text-xs text-amber hover:underline"
+                                                            >
+                                                                {t(
+                                                                    'commands.runs.view_issue',
+                                                                )}
+                                                            </Link>
+                                                        )}
+                                                    </span>
                                                 </td>
                                             </tr>
                                         );

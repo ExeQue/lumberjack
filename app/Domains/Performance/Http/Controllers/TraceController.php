@@ -24,7 +24,7 @@ class TraceController
 
         $data = $query->get($project->id, $trace);
 
-        abort_if($data['requests'] === [] && $data['jobs'] === [] && $data['timeline'] === [], 404);
+        abort_if($data['requests'] === [] && $data['jobs'] === [] && $data['runs'] === [] && $data['timeline'] === [], 404);
 
         return Inertia::render('traces/show', [
             'project' => $presenter->header($project, $request->user()),

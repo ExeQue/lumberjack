@@ -7,6 +7,7 @@ return [
     'description' => 'Everything that happened under this trace, on one time axis.',
     'request' => 'Request',
     'job' => 'Job',
+    'roots' => ['command' => 'Artisan command', 'schedule' => 'Scheduled task'],
     'timeline' => 'Timeline',
     'timeline_hint' => 'Bars show how long each step took, placed where it started.',
     'empty' => 'Nothing was recorded on this trace besides the request itself.',

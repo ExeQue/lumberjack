@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domains\Performance\Queries;
 
+use App\Domains\Commands\Models\CommandRun;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Logs\Models\LogEntry;
 use App\Domains\Performance\Models\QueryRun;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Performance\Models\SpanRun;
+use App\Domains\Schedule\Models\ScheduledTaskRun;
 use Carbon\CarbonInterface;
 
 /**
@@ -21,7 +23,7 @@ class TraceQuery
     public const int LIMIT = 500;
 
     /**
-     * @return array{requests: list<array<string, mixed>>, jobs: list<array<string, mixed>>, timeline: list<array<string, mixed>>}
+     * @return array{requests: list<array<string, mixed>>, jobs: list<array<string, mixed>>, runs: list<array<string, mixed>>, timeline: list<array<string, mixed>>}
      */
     public function get(int $projectId, string $traceId): array
     {
@@ -29,6 +31,12 @@ class TraceQuery
 
         $requests = RequestRun::query()->tap($scope)->orderBy('occurred_at')->limit(10)->get();
         $jobs = JobRun::query()->tap($scope)->orderBy('started_at')->limit(10)->get();
+        // An Artisan command or a scheduled task can be the trace's root too.
+        $runs = collect()
+            ->concat(CommandRun::query()->tap($scope)->orderBy('started_at')->limit(10)->get()
+                ->map(fn (CommandRun $c): array => ['kind' => 'command', 'name' => $c->name, 'status' => $c->status->value, 'duration_us' => $c->duration_us, 'host' => $c->host, '_ts' => $c->started_at]))
+            ->concat(ScheduledTaskRun::query()->tap($scope)->with('task')->orderBy('started_at')->limit(10)->get()
+                ->map(fn (ScheduledTaskRun $r): array => ['kind' => 'schedule', 'name' => $r->task?->name, 'status' => $r->status->value, 'duration_us' => $r->duration_us, 'host' => $r->host, '_ts' => $r->started_at]));
 
         $timeline = collect()
             ->concat(QueryRun::query()->tap($scope)->orderBy('occurred_at')->limit(self::LIMIT)->get()
@@ -44,6 +52,7 @@ class TraceQuery
         $starts = [
             ...$requests->pluck('occurred_at')->all(),
             ...$jobs->pluck('started_at')->filter()->all(),
+            ...$runs->pluck('_ts')->filter()->all(),
             ...$timeline->pluck('_ts')->filter()->all(),
         ];
         $origin = $starts === [] ? null : collect($starts)->min();
@@ -71,6 +80,12 @@ class TraceQuery
                 'started_at' => $j->started_at?->toIso8601String(), 'host' => $j->host,
                 'offset_us' => $offset($j->started_at),
             ])->all()),
+            'runs' => array_values($runs->map(function (array $run) use ($offset): array {
+                $run['offset_us'] = $offset($run['_ts'] ?? null);
+                unset($run['_ts']);
+
+                return $run;
+            })->all()),
             'timeline' => array_values($timeline),
         ];
     }
