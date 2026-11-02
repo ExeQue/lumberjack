@@ -10,72 +10,76 @@
 # host.docker.internal as the host: localhost is the container itself.
 
 services:
-  lumberjack:
-    image: ghcr.io/exeque/lumberjack:latest
-    restart: unless-stopped
-    ports:
-      - "${LUMBERJACK_PORT:-8080}:8080"
-    environment:
-      APP_URL: ${APP_URL:?set APP_URL to the address people open Lumberjack on}
-      APP_KEY: ${APP_KEY:?generate one with: docker run --rm ghcr.io/exeque/lumberjack php artisan key:generate --show}
-      LUMBERJACK_SETUP_TOKEN: ${LUMBERJACK_SETUP_TOKEN:-}
-      DB_HOST: ${DB_HOST:-postgres}
-      DB_PORT: ${DB_PORT:-5432}
-      DB_DATABASE: ${DB_DATABASE:-lumberjack}
-      DB_USERNAME: ${DB_USERNAME:-lumberjack}
-      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
-      REDIS_HOST: ${REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      # Queue workers: ingest handles incoming telemetry, background the rest.
-      HORIZON_INGEST_PROCESSES: ${HORIZON_INGEST_PROCESSES:-10}
-      HORIZON_BACKGROUND_PROCESSES: ${HORIZON_BACKGROUND_PROCESSES:-4}
-      MAIL_MAILER: ${MAIL_MAILER:-smtp}
-      MAIL_HOST: ${MAIL_HOST:-}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USERNAME: ${MAIL_USERNAME:-}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-lumberjack@example.com}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Lumberjack}
-    volumes:
-      - lumberjack-storage:/app/storage
-    # Lets DB_HOST / REDIS_HOST=host.docker.internal reach services on this server.
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    lumberjack:
+        image: ghcr.io/exeque/lumberjack:latest
+        restart: unless-stopped
+        ports:
+            - '${LUMBERJACK_PORT:-8080}:8080'
+        environment:
+            APP_URL: '${APP_URL:?set APP_URL to the address people open Lumberjack on}'
+            APP_KEY: '${APP_KEY:?generate one with docker run --rm ghcr.io/exeque/lumberjack php artisan key:generate --show}'
+            LUMBERJACK_SETUP_TOKEN: ${LUMBERJACK_SETUP_TOKEN:-}
+            DB_HOST: ${DB_HOST:-postgres}
+            DB_PORT: ${DB_PORT:-5432}
+            DB_DATABASE: ${DB_DATABASE:-lumberjack}
+            DB_USERNAME: ${DB_USERNAME:-lumberjack}
+            DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+            REDIS_HOST: ${REDIS_HOST:-redis}
+            REDIS_PORT: ${REDIS_PORT:-6379}
+            REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+            # Queue workers: ingest handles incoming telemetry, background the rest.
+            HORIZON_INGEST_PROCESSES: ${HORIZON_INGEST_PROCESSES:-10}
+            HORIZON_BACKGROUND_PROCESSES: ${HORIZON_BACKGROUND_PROCESSES:-4}
+            MAIL_MAILER: ${MAIL_MAILER:-smtp}
+            MAIL_HOST: ${MAIL_HOST:-}
+            MAIL_PORT: ${MAIL_PORT:-587}
+            MAIL_USERNAME: ${MAIL_USERNAME:-}
+            MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+            MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-lumberjack@example.com}
+            MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Lumberjack}
+        volumes:
+            - lumberjack-storage:/app/storage
+        # Lets DB_HOST / REDIS_HOST=host.docker.internal reach services on this server.
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
 
-  postgres:
-    image: postgres:18-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_DATABASE:-lumberjack}
-      POSTGRES_USER: ${DB_USERNAME:-lumberjack}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
-    volumes:
-      - postgres-data:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+    postgres:
+        image: postgres:18-alpine
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-lumberjack}
+            POSTGRES_USER: ${DB_USERNAME:-lumberjack}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+        volumes:
+            - postgres-data:/var/lib/postgresql
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}',
+                ]
+            interval: 5s
+            timeout: 3s
+            retries: 20
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+    redis:
+        image: redis:7-alpine
+        restart: unless-stopped
+        command: ['redis-server', '--appendonly', 'yes']
+        volumes:
+            - redis-data:/data
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 5s
+            timeout: 3s
+            retries: 20
 
 volumes:
-  lumberjack-storage:
-  postgres-data:
-  redis-data:
+    lumberjack-storage:
+    postgres-data:
+    redis-data:

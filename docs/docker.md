@@ -13,52 +13,52 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
 
 1. Copy the compose file and the example settings:
 
-   ```bash
-   curl -O https://raw.githubusercontent.com/exeque/lumberjack/main/compose.yaml
-   curl -o .env.docker https://raw.githubusercontent.com/exeque/lumberjack/main/.env.docker.example
-   ```
+    ```bash
+    curl -O https://raw.githubusercontent.com/exeque/lumberjack/main/compose.yaml
+    curl -o .env.docker https://raw.githubusercontent.com/exeque/lumberjack/main/.env.docker.example
+    ```
 
 2. Generate an application key and put it in `.env.docker` as `APP_KEY`:
 
-   ```bash
-   docker run --rm ghcr.io/exeque/lumberjack php artisan key:generate --show
-   ```
+    ```bash
+    docker run --rm ghcr.io/exeque/lumberjack php artisan key:generate --show
+    ```
 
 3. Fill in `APP_URL` (the address people open Lumberjack on) and `DB_PASSWORD`.
 
 4. Start it:
 
-   ```bash
-   docker compose --env-file .env.docker up -d
-   ```
+    ```bash
+    docker compose --env-file .env.docker up -d
+    ```
 
 5. Point your reverse proxy at port 8080 (see below).
 
 6. Read the setup token from the log and open `APP_URL/setup`:
 
-   ```bash
-   docker compose logs lumberjack | grep -A2 'setup token'
-   ```
+    ```bash
+    docker compose logs lumberjack | grep -A2 'setup token'
+    ```
 
-   Setup creates the first administrator with credentials of your own choosing.
-   See [administration.md](administration.md).
+    Setup creates the first administrator with credentials of your own choosing.
+    See [administration.md](administration.md).
 
 ## Settings
 
 Everything is set through environment variables in `.env.docker`.
 
-| Variable | Default | |
-|---|---|---|
-| `APP_URL` | (required) | The public address, e.g. `https://lumberjack.example.com` |
-| `APP_KEY` | (required) | Encryption key. Keep it: changing it signs everyone out and breaks stored secrets |
-| `DB_PASSWORD` | (required) | Password of the bundled Postgres |
-| `LUMBERJACK_SETUP_TOKEN` | generated | Locks first-run setup. Without one, a token is generated on first start, printed in the log and kept in `storage/app/setup/token` |
-| `LUMBERJACK_PORT` | `8080` | Port on the host |
-| `HORIZON_INGEST_PROCESSES` | `10` | Most workers for incoming telemetry |
-| `HORIZON_BACKGROUND_PROCESSES` | `4` | Most workers for everything else (alerts, pruning) |
-| `MAIL_*` | | SMTP for invitations, password resets and e-mail alerts |
-| `TRUSTED_PROXIES` | private ranges | Proxies whose `X-Forwarded-*` headers are believed; `*` for any |
-| `LUMBERJACK_MIGRATE` | `true` | Run database migrations on start |
+| Variable                       | Default        |                                                                                                                                   |
+| ------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_URL`                      | (required)     | The public address, e.g. `https://lumberjack.example.com`                                                                         |
+| `APP_KEY`                      | (required)     | Encryption key. Keep it: changing it signs everyone out and breaks stored secrets                                                 |
+| `DB_PASSWORD`                  | (required)     | Password of the bundled Postgres                                                                                                  |
+| `LUMBERJACK_SETUP_TOKEN`       | generated      | Locks first-run setup. Without one, a token is generated on first start, printed in the log and kept in `storage/app/setup/token` |
+| `LUMBERJACK_PORT`              | `8080`         | Port on the host                                                                                                                  |
+| `HORIZON_INGEST_PROCESSES`     | `10`           | Most workers for incoming telemetry                                                                                               |
+| `HORIZON_BACKGROUND_PROCESSES` | `4`            | Most workers for everything else (alerts, pruning)                                                                                |
+| `MAIL_*`                       |                | SMTP for invitations, password resets and e-mail alerts                                                                           |
+| `TRUSTED_PROXIES`              | private ranges | Proxies whose `X-Forwarded-*` headers are believed; `*` for any                                                                   |
+| `LUMBERJACK_MIGRATE`           | `true`         | Run database migrations on start                                                                                                  |
 
 ### Your own Postgres or Redis
 
@@ -117,11 +117,11 @@ If the proxy does not run on the same host or in a private network, set
 
 ## Data and backups
 
-| Volume | Holds |
-|---|---|
-| `postgres-data` | Everything Lumberjack records. Back this up: `docker compose exec postgres pg_dump -U lumberjack lumberjack > backup.sql` |
-| `redis-data` | Queues and cache; Lumberjack recovers without it |
-| `lumberjack-storage` | The setup flag and token, uploaded files |
+| Volume               | Holds                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `postgres-data`      | Everything Lumberjack records. Back this up: `docker compose exec postgres pg_dump -U lumberjack lumberjack > backup.sql` |
+| `redis-data`         | Queues and cache; Lumberjack recovers without it                                                                          |
+| `lumberjack-storage` | The setup flag and token, uploaded files                                                                                  |
 
 ## Updating
 
@@ -148,12 +148,12 @@ docker compose exec lumberjack php artisan setup:clear
 Supervisord runs four processes and restarts any that stops. All of them log to
 the container's output (`docker compose logs lumberjack`).
 
-| Process | |
-|---|---|
-| web | FrankenPHP on port 8080; forwards `/app` to Reverb |
-| reverb | WebSockets, on 127.0.0.1:8081 inside the container only |
-| horizon | Queue workers |
-| scheduler | `schedule:work` |
+| Process   |                                                         |
+| --------- | ------------------------------------------------------- |
+| web       | FrankenPHP on port 8080; forwards `/app` to Reverb      |
+| reverb    | WebSockets, on 127.0.0.1:8081 inside the container only |
+| horizon   | Queue workers                                           |
+| scheduler | `schedule:work`                                         |
 
 Reverb's credentials are derived from `APP_KEY`, so there is nothing to set for
 them. Its HTTP API is not reachable from outside the container.
