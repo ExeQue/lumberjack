@@ -11,20 +11,143 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
 
 ## Start
 
-1. Copy the compose file and the example settings:
+1. In a new folder, create `compose.yaml` with this content (it is also in the
+   repository as [`compose.yaml`](https://github.com/ExeQue/lumberjack/blob/main/compose.yaml)):
 
-    ```bash
-    curl -O https://raw.githubusercontent.com/exeque/lumberjack/main/compose.yaml
-    curl -o .env.docker https://raw.githubusercontent.com/exeque/lumberjack/main/.env.docker.example
+    <!-- compose.yaml -->
+
+    ```yaml
+    # Lumberjack with its own Postgres and Redis. Put a reverse proxy (with TLS) in
+    # front of port 8080; WebSockets for live updates use the same port.
+    #
+    #   cp .env.docker.example .env.docker   # then fill it in
+    #   docker compose --env-file .env.docker up -d
+    #   docker compose logs lumberjack       # shows the setup token on first start
+    #
+    # To use a Postgres or Redis you already run, point DB_* / REDIS_* at it and
+    # remove the service (and its depends_on entry). On this same server, use
+    # host.docker.internal as the host: localhost is the container itself.
+
+    services:
+        lumberjack:
+            image: ghcr.io/exeque/lumberjack:latest
+            restart: unless-stopped
+            ports:
+                - '${LUMBERJACK_PORT:-8080}:8080'
+            environment:
+                APP_URL: '${APP_URL:?set APP_URL to the address people open Lumberjack on}'
+                APP_KEY: '${APP_KEY:?generate one with docker run --rm ghcr.io/exeque/lumberjack php artisan key:generate --show}'
+                LUMBERJACK_SETUP_TOKEN: ${LUMBERJACK_SETUP_TOKEN:-}
+                DB_HOST: ${DB_HOST:-postgres}
+                DB_PORT: ${DB_PORT:-5432}
+                DB_DATABASE: ${DB_DATABASE:-lumberjack}
+                DB_USERNAME: ${DB_USERNAME:-lumberjack}
+                DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+                REDIS_HOST: ${REDIS_HOST:-redis}
+                REDIS_PORT: ${REDIS_PORT:-6379}
+                REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+                # Queue workers: ingest handles incoming telemetry, background the rest.
+                HORIZON_INGEST_PROCESSES: ${HORIZON_INGEST_PROCESSES:-2}
+                HORIZON_BACKGROUND_PROCESSES: ${HORIZON_BACKGROUND_PROCESSES:-2}
+                MAIL_MAILER: ${MAIL_MAILER:-smtp}
+                MAIL_HOST: ${MAIL_HOST:-}
+                MAIL_PORT: ${MAIL_PORT:-587}
+                MAIL_USERNAME: ${MAIL_USERNAME:-}
+                MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+                MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-lumberjack@example.com}
+                MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Lumberjack}
+            volumes:
+                - lumberjack-storage:/app/storage
+            # Lets DB_HOST / REDIS_HOST=host.docker.internal reach services on this server.
+            extra_hosts:
+                - 'host.docker.internal:host-gateway'
+            depends_on:
+                postgres:
+                    condition: service_healthy
+                redis:
+                    condition: service_healthy
+
+        postgres:
+            image: postgres:18-alpine
+            restart: unless-stopped
+            environment:
+                POSTGRES_DB: ${DB_DATABASE:-lumberjack}
+                POSTGRES_USER: ${DB_USERNAME:-lumberjack}
+                POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+            volumes:
+                - postgres-data:/var/lib/postgresql
+            healthcheck:
+                test:
+                    [
+                        'CMD-SHELL',
+                        'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}',
+                    ]
+                interval: 5s
+                timeout: 3s
+                retries: 20
+
+        redis:
+            image: redis:7-alpine
+            restart: unless-stopped
+            command: ['redis-server', '--appendonly', 'yes']
+            volumes:
+                - redis-data:/data
+            healthcheck:
+                test: ['CMD', 'redis-cli', 'ping']
+                interval: 5s
+                timeout: 3s
+                retries: 20
+
+    volumes:
+        lumberjack-storage:
+        postgres-data:
+        redis-data:
     ```
 
-2. Generate an application key and put it in `.env.docker` as `APP_KEY`:
+2. Create `.env.docker` beside it ([`.env.docker.example`](https://github.com/ExeQue/lumberjack/blob/main/.env.docker.example)):
+
+    <!-- .env.docker.example -->
+
+    ```dotenv
+    # Settings for compose.yaml. Copy to .env.docker and fill in.
+
+    # The address people open Lumberjack on, as the reverse proxy serves it.
+    APP_URL=https://lumberjack.example.com
+
+    # docker run --rm ghcr.io/exeque/lumberjack php artisan key:generate --show
+    APP_KEY=
+
+    # Password of the bundled Postgres (or of your own, with DB_HOST set).
+    DB_PASSWORD=
+
+    # Optional: lock first-run setup with a token of your own. Without one, the
+    # container makes one on first start and prints it in its log.
+    LUMBERJACK_SETUP_TOKEN=
+
+    # Port on the host the reverse proxy connects to.
+    LUMBERJACK_PORT=8080
+
+    # Queue workers at most: ingest handles incoming telemetry, background the rest.
+    # Raise them on a busy server.
+    HORIZON_INGEST_PROCESSES=2
+    HORIZON_BACKGROUND_PROCESSES=2
+
+    # Mail, for invitations, password resets and e-mail alerts.
+    MAIL_HOST=
+    MAIL_PORT=587
+    MAIL_USERNAME=
+    MAIL_PASSWORD=
+    MAIL_FROM_ADDRESS=lumberjack@example.com
+    ```
+
+3. Generate an application key and put it in `.env.docker` as `APP_KEY`:
 
     ```bash
     docker run --rm ghcr.io/exeque/lumberjack php artisan key:generate --show
     ```
 
-3. Fill in `APP_URL` (the address people open Lumberjack on) and `DB_PASSWORD`.
+    Also fill in `APP_URL` (the address people open Lumberjack on) and
+    `DB_PASSWORD`.
 
 4. Start it:
 
@@ -43,6 +166,15 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
     Setup creates the first administrator with credentials of your own choosing.
     See [administration.md](administration.md).
 
+### While the image is private
+
+The image on GHCR is private for now. Sign in to the registry before steps 3
+and 4, with a GitHub token that has the `read:packages` scope:
+
+```bash
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+```
+
 ## Settings
 
 Everything is set through environment variables in `.env.docker`.
@@ -54,8 +186,8 @@ Everything is set through environment variables in `.env.docker`.
 | `DB_PASSWORD`                  | (required)     | Password of the bundled Postgres                                                                                                  |
 | `LUMBERJACK_SETUP_TOKEN`       | generated      | Locks first-run setup. Without one, a token is generated on first start, printed in the log and kept in `storage/app/setup/token` |
 | `LUMBERJACK_PORT`              | `8080`         | Port on the host                                                                                                                  |
-| `HORIZON_INGEST_PROCESSES`     | `10`           | Most workers for incoming telemetry                                                                                               |
-| `HORIZON_BACKGROUND_PROCESSES` | `4`            | Most workers for everything else (alerts, pruning)                                                                                |
+| `HORIZON_INGEST_PROCESSES`     | `2`            | Most workers for incoming telemetry                                                                                               |
+| `HORIZON_BACKGROUND_PROCESSES` | `2`            | Most workers for everything else (alerts, pruning)                                                                                |
 | `MAIL_*`                       |                | SMTP for invitations, password resets and e-mail alerts                                                                           |
 | `TRUSTED_PROXIES`              | private ranges | Proxies whose `X-Forwarded-*` headers are believed; `*` for any                                                                   |
 | `LUMBERJACK_MIGRATE`           | `true`         | Run database migrations on start                                                                                                  |

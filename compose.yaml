@@ -28,8 +28,8 @@ services:
             REDIS_PORT: ${REDIS_PORT:-6379}
             REDIS_PASSWORD: ${REDIS_PASSWORD:-}
             # Queue workers: ingest handles incoming telemetry, background the rest.
-            HORIZON_INGEST_PROCESSES: ${HORIZON_INGEST_PROCESSES:-10}
-            HORIZON_BACKGROUND_PROCESSES: ${HORIZON_BACKGROUND_PROCESSES:-4}
+            HORIZON_INGEST_PROCESSES: ${HORIZON_INGEST_PROCESSES:-2}
+            HORIZON_BACKGROUND_PROCESSES: ${HORIZON_BACKGROUND_PROCESSES:-2}
             MAIL_MAILER: ${MAIL_MAILER:-smtp}
             MAIL_HOST: ${MAIL_HOST:-}
             MAIL_PORT: ${MAIL_PORT:-587}

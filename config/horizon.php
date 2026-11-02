@@ -239,12 +239,12 @@ return [
         // Worker counts are environment variables, so a small server can run fewer.
         'production' => [
             'ingest' => [
-                'maxProcesses' => (int) env('HORIZON_INGEST_PROCESSES', 10),
+                'maxProcesses' => (int) env('HORIZON_INGEST_PROCESSES', 2),
                 'balanceMaxShift' => 2,
                 'balanceCooldown' => 3,
             ],
             'background' => [
-                'maxProcesses' => (int) env('HORIZON_BACKGROUND_PROCESSES', 4),
+                'maxProcesses' => (int) env('HORIZON_BACKGROUND_PROCESSES', 2),
             ],
         ],
 
