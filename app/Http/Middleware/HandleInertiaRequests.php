@@ -62,6 +62,8 @@ class HandleInertiaRequests extends Middleware
                 'name' => $team->name,
                 'role' => $user->roleIn($team)?->value,
                 'can_administer' => $user->canAdministerTeam($team),
+                // A system administrator looking into a team they are not in.
+                'visiting' => $user->isAdmin() && ! $team->members()->whereKey($user->id)->exists(),
                 'projects' => $team->projects()->orderBy('name')->get(['uuid', 'slug', 'name'])->toArray(),
             ],
             'sidebar_project' => fn (): ?array => $this->sidebarProject($request),

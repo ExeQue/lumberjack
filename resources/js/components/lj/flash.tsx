@@ -31,7 +31,10 @@ export function FlashMessages() {
 
     useEffect(() => {
         if (flash?.status) {
-            toast.success(flash.status);
+            // Fortify reports with keys ("two-factor-authentication-enabled"); say them in words.
+            const key = `common.statuses.${flash.status}`;
+            const said = t(key);
+            toast.success(said === key ? flash.status : said);
         }
 
         if (flash?.secret) {

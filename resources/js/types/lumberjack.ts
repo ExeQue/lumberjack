@@ -177,6 +177,7 @@ export type TeamShared = {
     uuid: string;
     name: string;
     role: 'owner' | 'admin' | 'member' | null;
+    visiting?: boolean;
     can_administer: boolean;
     projects: { uuid: string; slug: string; name: string }[];
 };

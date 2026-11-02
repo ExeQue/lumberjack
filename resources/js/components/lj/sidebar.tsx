@@ -314,7 +314,11 @@ export function Sidebar() {
                             {auth.user.name}
                         </span>
                         <span className="text-[11px] text-ink-3">
-                            {team?.role ? t(`common.roles.${team.role}`) : ''}
+                            {team?.visiting
+                                ? t('common.roles.system_admin')
+                                : team?.role
+                                  ? t(`common.roles.${team.role}`)
+                                  : ''}
                         </span>
                     </span>
                 </DropdownMenuTrigger>
