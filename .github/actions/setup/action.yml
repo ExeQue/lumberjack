@@ -18,7 +18,7 @@ runs:
 
     # vendor/ itself is cached: with an unchanged composer.lock, no install runs at all.
     - id: vendor
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: vendor
         key: vendor-${{ runner.os }}-php8.5-${{ hashFiles('composer.lock') }}
@@ -39,7 +39,7 @@ runs:
 
     - if: inputs.node == 'true'
       id: node-modules
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: node_modules
         key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
