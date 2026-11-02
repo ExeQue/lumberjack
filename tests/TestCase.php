@@ -19,6 +19,9 @@ abstract class TestCase extends BaseTestCase
 
         Http::preventStrayRequests();
 
+        // Pages render without a frontend build (CI tests run without one).
+        $this->withoutVite();
+
         // Each test decides for itself whether this Lumberjack is set up.
         Storage::fake('setup');
     }
