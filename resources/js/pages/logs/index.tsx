@@ -18,7 +18,12 @@ import {
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import { formatDateTime, formatNumber, formatTime } from '@/lib/format';
+import {
+    formatDateTime,
+    formatNumber,
+    formatTime,
+    interpolateLogMessage,
+} from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { index as logsIndex } from '@/routes/logs';
@@ -403,8 +408,14 @@ export default function LogsIndex({
                                                 </td>
                                                 <td className="max-w-0 border-b border-line/60 px-3 py-2">
                                                     <div className="flex min-w-0 flex-col gap-0.5">
-                                                        <span className="break-words whitespace-pre-wrap text-ink">
-                                                            {l.message}
+                                                        <span
+                                                            className="break-words whitespace-pre-wrap text-ink"
+                                                            title={l.message}
+                                                        >
+                                                            {interpolateLogMessage(
+                                                                l.message,
+                                                                l.context,
+                                                            )}
                                                         </span>
                                                         {l.sent_channel && (
                                                             <span className="text-warn">

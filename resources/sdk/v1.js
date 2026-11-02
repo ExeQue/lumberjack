@@ -182,8 +182,10 @@
             var url =
                 config.endpoint + '?key=' + encodeURIComponent(config.key);
 
-            // sendBeacon survives page unloads; it sends text/plain, so no CORS preflight.
-            if (!(navigator.sendBeacon && navigator.sendBeacon(url, body))) {
+            // fetch with keepalive survives a page unload like sendBeacon, but without cookies
+            // (a beacon always sends them, and some browsers and extensions drop beacons to
+            // another site). A string body is text/plain, so there is no CORS preflight.
+            if (typeof fetch === 'function') {
                 fetch(url, {
                     method: 'POST',
                     body: body,
@@ -191,6 +193,8 @@
                     mode: 'cors',
                     credentials: 'omit',
                 }).catch(function () {});
+            } else if (navigator.sendBeacon) {
+                navigator.sendBeacon(url, body);
             }
         }
     }

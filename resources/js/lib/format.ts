@@ -110,3 +110,29 @@ export function formatTime(
         ? `${base}.${String(date.getMilliseconds()).padStart(3, '0')}`
         : base;
 }
+
+/**
+ * A log message with its PSR-3 placeholders ({order}) filled from the context, the way the
+ * line reads once logged. Placeholders the context has no scalar for stay as they are.
+ */
+export function interpolateLogMessage(
+    message: string,
+    context: Record<string, unknown> | null | undefined,
+): string {
+    if (!context) {
+        return message;
+    }
+
+    return message.replace(
+        /\{([A-Za-z0-9_.]+)\}/g,
+        (placeholder, key: string) => {
+            const value = context[key];
+
+            return typeof value === 'string' ||
+                typeof value === 'number' ||
+                typeof value === 'boolean'
+                ? String(value)
+                : placeholder;
+        },
+    );
+}
