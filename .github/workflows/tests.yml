@@ -9,10 +9,39 @@ on:
 permissions:
   contents: read
 
-jobs:
-  ci:
-    runs-on: ubuntu-latest
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
+  # Lint, types and the production build of the frontend (Wayfinder needs PHP).
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node: 'true'
+      - run: php artisan wayfinder:generate --with-form
+      - run: npm run check
+      - run: npm run types:check
+      - run: npm run build
+
+  # Code style and static analysis of the PHP.
+  stan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: vendor/bin/pint --parallel --test
+      - run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+  tests:
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:18-alpine
@@ -27,52 +56,15 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 20
-
     env:
       DB_CONNECTION: pgsql
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
-        with:
-          php-version: '8.5'
-          extensions: pdo_pgsql, redis, pcntl, intl
-          tools: composer:v2
-          coverage: none
-
-      - name: Setup Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22'
-          cache: npm
-
-      - name: Locate the Composer cache
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer downloads
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-${{ runner.os }}-
-
-      - name: Setup Application
-        run: |
-          composer install --no-interaction --prefer-dist
-          cp .env.example .env
-          php artisan key:generate
-          npm ci
-          npm run build
-
-      - name: Run CI Checks
-        run: composer ci:check
+      - uses: ./.github/actions/setup
+      - run: php artisan test --parallel

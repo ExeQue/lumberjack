@@ -1,0 +1,49 @@
+name: Set up Lumberjack
+description: PHP with vendor/, and optionally Node with node_modules/, restored from cache when the lock files are unchanged.
+
+inputs:
+  node:
+    description: Also set up Node and install node_modules
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+      with:
+        php-version: '8.5'
+        extensions: pdo_pgsql, redis, pcntl, intl
+        tools: composer:v2
+        coverage: none
+
+    # vendor/ itself is cached: with an unchanged composer.lock, no install runs at all.
+    - id: vendor
+      uses: actions/cache@v4
+      with:
+        path: vendor
+        key: vendor-${{ runner.os }}-php8.5-${{ hashFiles('composer.lock') }}
+
+    - if: steps.vendor.outputs.cache-hit != 'true'
+      shell: bash
+      run: composer install --no-interaction --prefer-dist --no-progress
+
+    - shell: bash
+      run: |
+        cp .env.example .env
+        php artisan key:generate --ansi
+
+    - if: inputs.node == 'true'
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: '22'
+
+    - if: inputs.node == 'true'
+      id: node-modules
+      uses: actions/cache@v4
+      with:
+        path: node_modules
+        key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
+    - if: inputs.node == 'true' && steps.node-modules.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm ci --no-audit --no-fund
