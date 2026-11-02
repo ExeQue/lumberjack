@@ -57,14 +57,14 @@ describe('project administration', function () {
             ->and($other->refresh()->issuePrefix())->toBe('API');
     });
 
-    it('gives new projects a prefix of their own, even when two names shorten alike', function () {
+    it('gives new projects the initials of their name as prefix, unique in the team', function () {
         ['user' => $user, 'project' => $project] = $this->memberWithProject();
 
         $first = app(CreateProjectAction::class)->execute($project->team, 'Eazy Photo')['project'];
         $second = app(CreateProjectAction::class)->execute($project->team, 'Eazy Photographers')['project'];
 
-        expect($first->issuePrefix())->toBe('EAZYPHOT')
-            ->and($second->issuePrefix())->toBe('EAZYPHO2');
+        expect($first->issuePrefix())->toBe('EP')
+            ->and($second->issuePrefix())->toBe('EP2');
     });
 });
 

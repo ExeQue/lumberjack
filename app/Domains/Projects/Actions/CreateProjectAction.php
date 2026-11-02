@@ -49,12 +49,15 @@ class CreateProjectAction
     }
 
     /**
-     * DEMO from demo-shop: the slug's letters and digits, at most 8, made unique in the
-     * team (DEMO2) so a reference points at one issue.
+     * As the create dialog suggests: several words give their initials (billing-api: BA),
+     * one word itself (demo: DEMO), at most 8, made unique in the team (BA2) so a
+     * reference points at one issue.
      */
     private function uniquePrefix(Team $team, string $slug): string
     {
-        $base = mb_substr(strtoupper((string) preg_replace('/[^a-z0-9]/i', '', $slug)), 0, 8);
+        $words = array_values(array_filter(preg_split('/[^A-Z0-9]+/', strtoupper($slug)) ?: []));
+        $letters = count($words) > 1 ? implode('', array_map(fn (string $w): string => $w[0], $words)) : ($words[0] ?? '');
+        $base = mb_substr($letters, 0, 8);
         $base = preg_match('/^[A-Z]/', $base) === 1 ? $base : 'P'.mb_substr($base, 0, 7);
         $prefix = $base;
         $suffix = 2;

@@ -16,7 +16,8 @@ describe('creating a project', function () {
 
         $this->actingAs($user)->post(route('projects.store'), ['name' => 'Eazy Photo', 'issue_prefix' => 'ep'])
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('secret');
+            ->assertSessionHas('secret')
+            ->assertRedirectContains('section=install');
 
         expect(Project::query()->where('name', 'Eazy Photo')->sole()->issuePrefix())->toBe('EP');
     });

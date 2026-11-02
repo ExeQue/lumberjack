@@ -40,7 +40,7 @@ return [
     'install' => [
         'title' => 'Installation',
         'description' => 'The package collects exceptions, requests, queries, jobs and logs. The agent runs once per server.',
-        'step_package' => '1. Install the package from the private repository',
+        'step_package' => '1. Install the package (from its GitHub repository, so Composer needs access to it)',
         'step_env' => '2. Put the URL and keys in .env',
         'step_agent' => '3. Run the agent under Supervisor on every server',
         'step_browser' => '4. Browser errors: put the directive in the <head> of your layout',

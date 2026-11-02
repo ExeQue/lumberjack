@@ -202,7 +202,9 @@ function Code({ label, children }: { label: string; children: string }) {
 
 type SectionKey = (typeof SECTIONS)[number];
 
-const STORED_SECTION = 'lumberjack.settings.section';
+// Per project: another project's last section (say, the danger zone) is no place to open on.
+const storedSectionKey = (project: string) =>
+    `lumberjack.settings.section.${project}`;
 
 const isSection = (value: string | null): value is SectionKey =>
     value !== null && (SECTIONS as readonly string[]).includes(value);
@@ -211,7 +213,7 @@ const isSection = (value: string | null): value is SectionKey =>
  * The open section: from the address, else the one open before a save
  * redirected back without it, else the first.
  */
-const sectionFromHash = (): SectionKey => {
+const sectionFromHash = (project: string, pageUrl = ''): SectionKey => {
     if (typeof window === 'undefined') {
         return 'general';
     }
@@ -222,8 +224,19 @@ const sectionFromHash = (): SectionKey => {
         return hash;
     }
 
+    // ?section=install, from a redirect, which cannot carry #install. Read from
+    // Inertia's page URL: the address bar may not show the redirect yet on the first render.
+    const asked = new URL(
+        pageUrl || window.location.href,
+        window.location.origin,
+    ).searchParams.get('section');
+
+    if (isSection(asked)) {
+        return asked;
+    }
+
     try {
-        const stored = window.sessionStorage.getItem(STORED_SECTION);
+        const stored = window.sessionStorage.getItem(storedSectionKey(project));
 
         return isSection(stored) ? stored : 'general';
     } catch {
@@ -233,29 +246,40 @@ const sectionFromHash = (): SectionKey => {
 
 export default function ProjectSettings(props: Props) {
     const t = useT();
-    const [active, setActive] = useState<SectionKey>(sectionFromHash);
+    const uuid = props.project.uuid;
+    const pageUrl = usePage().url;
+    const [active, setActive] = useState<SectionKey>(() =>
+        sectionFromHash(uuid, pageUrl),
+    );
 
     // Back and forward between sections, and links to #section on this page.
     useEffect(() => {
-        const onHashChange = () => setActive(sectionFromHash());
+        const onHashChange = () => setActive(sectionFromHash(uuid));
         window.addEventListener('hashchange', onHashChange);
 
         return () => window.removeEventListener('hashchange', onHashChange);
-    }, []);
+    }, [uuid]);
 
     // Keep the open section in the address and for this tab, so a save that
     // redirects back opens it again.
     useEffect(() => {
         try {
-            window.sessionStorage.setItem(STORED_SECTION, active);
+            window.sessionStorage.setItem(storedSectionKey(uuid), active);
         } catch {
             // Storage can be refused; the address still carries the section.
         }
 
-        if (window.location.hash.slice(1) !== active) {
-            window.history.replaceState(window.history.state, '', `#${active}`);
+        if (
+            window.location.hash.slice(1) !== active ||
+            window.location.search !== ''
+        ) {
+            window.history.replaceState(
+                window.history.state,
+                '',
+                `${window.location.pathname}#${active}`,
+            );
         }
-    }, [active]);
+    }, [active, uuid]);
     const { team } = usePage<{ team: TeamShared }>().props;
     const { project } = props;
 
@@ -644,7 +668,8 @@ function InstallSection({ settings }: Props) {
             description={t('settings.install.description')}
         >
             <Code label={t('settings.install.step_package')}>
-                composer require exeque/laravel-lumberjack
+                {`composer config repositories.lumberjack vcs https://github.com/ExeQue/laravel-lumberjack
+composer require exeque/laravel-lumberjack`}
             </Code>
             <Code
                 label={t('settings.install.step_env')}

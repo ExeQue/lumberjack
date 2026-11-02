@@ -64,7 +64,9 @@ class ProjectController
     {
         ['project' => $project, 'token' => $token] = $action->execute($request->user()->currentTeam, $request->string('name')->toString(), $request->string('issue_prefix')->toString());
 
-        return redirect()->route('projects.settings', $project)
+        // A new project starts on how to install the SDK, with its keys.
+        // (A query, not #install: a redirect drops the fragment.)
+        return redirect()->route('projects.settings', [$project, 'section' => 'install'])
             ->with('status', __('projects.created'))
             ->with('secret', ['label' => __('projects.server_token'), 'value' => $token]);
     }

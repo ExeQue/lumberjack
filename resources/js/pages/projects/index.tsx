@@ -58,8 +58,16 @@ export default function ProjectsIndex({
     // The prefix follows the name until it is edited by hand.
     const [prefix, setPrefix] = useState('');
     const [prefixEdited, setPrefixEdited] = useState(false);
+    // Several words give their initials (Billing API: BA), one word itself (Demo: DEMO).
     const suggestPrefix = (name: string) => {
-        const letters = name.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const words = name
+            .toUpperCase()
+            .split(/[^A-Z0-9]+/)
+            .filter(Boolean);
+        const letters =
+            words.length > 1
+                ? words.map((word) => word[0]).join('')
+                : (words[0] ?? '');
         return (/^[A-Z]/.test(letters) ? letters : `P${letters}`).slice(0, 8);
     };
 
