@@ -26,7 +26,10 @@ class TeamController
         $user = $request->user();
         $team = $user->currentTeam;
 
-        abort_if($team === null, 404);
+        // In no team yet: they join one by invitation.
+        if ($team === null) {
+            return Inertia::render('team/none');
+        }
 
         $policies = $team->retentionPolicies()->whereNull('project_id')->get();
 

@@ -72,12 +72,12 @@ account.
 
 ## Command line
 
-| Command                                              | What it does                                                                                                      |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `php artisan lumberjack:create-user --admin`         | Creates a user with a personal team; `--admin` makes them an administrator. The first user created is always one. |
-| `php artisan lumberjack:make-admin {email}`          | Makes an existing user an administrator.                                                                          |
-| `php artisan lumberjack:make-admin {email} --revoke` | Takes administration away, unless they are the last active administrator.                                         |
-| `php artisan setup:clear`                            | Deletes the setup flag.                                                                                           |
+| Command                                              | What it does                                                                                                                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `php artisan lumberjack:create-user --admin`         | Creates a user; `--admin` makes them an administrator (the first user created always is one), `--team="Name"` makes them the owner of a new team. Otherwise they are in no team until invited. |
+| `php artisan lumberjack:make-admin {email}`          | Makes an existing user an administrator.                                                                                                                                                       |
+| `php artisan lumberjack:make-admin {email} --revoke` | Takes administration away, unless they are the last active administrator.                                                                                                                      |
+| `php artisan setup:clear`                            | Deletes the setup flag.                                                                                                                                                                        |
 
 ## Administration pages
 
@@ -97,6 +97,9 @@ do there is written to the audit log.
 Administrators can see every team and project, whether or not they are members.
 
 ### Accounts come by invitation
+
+There are no personal teams: someone belongs to the teams they were invited to, and an
+account in no team sees a page saying so until an invitation arrives.
 
 There is no public registration. Accounts come from first-run setup, an
 invitation, or the command line.

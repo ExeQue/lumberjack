@@ -11,10 +11,10 @@ use Illuminate\Support\Facades\DB;
 
 class CreateTeamAction
 {
-    public function execute(User $owner, string $name, bool $personal = false): Team
+    public function execute(User $owner, string $name): Team
     {
-        return DB::transaction(function () use ($owner, $name, $personal): Team {
-            $team = Team::create(['name' => $name, 'personal' => $personal]);
+        return DB::transaction(function () use ($owner, $name): Team {
+            $team = Team::create(['name' => $name]);
             $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
 
             $owner->unsetRelation('teams');

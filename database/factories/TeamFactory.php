@@ -16,12 +16,6 @@ class TeamFactory extends Factory
     {
         return [
             'name' => fake()->company(),
-            'personal' => false,
         ];
-    }
-
-    public function personal(): static
-    {
-        return $this->state(fn () => ['personal' => true]);
     }
 }

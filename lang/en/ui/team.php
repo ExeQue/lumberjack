@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 return [
     'title' => 'Members and tokens',
+    'none' => [
+        'title' => 'Not in a team yet',
+        'body' => 'You join a team when someone invites you to it. Ask a team owner or an administrator of this Lumberjack for an invitation; it arrives by email.',
+    ],
     'heading' => 'Team: :team',
     'actions' => 'Actions',
     'members' => [

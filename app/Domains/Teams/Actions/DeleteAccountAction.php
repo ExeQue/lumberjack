@@ -10,9 +10,9 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Deletes someone's account along with the teams only they are in (their personal team,
- * say) and those teams' projects, whose telemetry is purged in the background. A team
- * with other members is left to them; the request checks it has another owner first.
+ * Deletes someone's account along with the teams only they are in and those teams'
+ * projects, whose telemetry is purged in the background. A team with other members
+ * is left to them; the request checks it has another owner first.
  */
 class DeleteAccountAction
 {

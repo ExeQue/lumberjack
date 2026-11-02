@@ -24,12 +24,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property string $uuid
  * @property string $name
- * @property bool $personal
  * @property-read Membership $pivot  set when loaded through a user's teams
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['name', 'personal'])]
+#[Fillable(['name'])]
 #[UseFactory(TeamFactory::class)]
 class Team extends Model
 {
@@ -51,7 +50,6 @@ class Team extends Model
     protected function casts(): array
     {
         return [
-            'personal' => 'boolean',
         ];
     }
 

@@ -45,8 +45,7 @@ class SetupController
                 return null;
             }
 
-            // No team: the administrator creates the teams this Lumberjack needs themselves.
-            return $createUser->execute($request->string('name')->toString(), $request->string('email')->toString(), $request->string('password')->toString(), personalTeam: false, admin: true);
+            return $createUser->execute($request->string('name')->toString(), $request->string('email')->toString(), $request->string('password')->toString(), admin: true);
         }));
 
         abort_if($user === null, 404);

@@ -52,7 +52,7 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        $team = Team::factory()->personal()->create(['name' => 'Local Team']);
+        $team = Team::factory()->create(['name' => 'Local Team']);
 
         foreach (self::MEMBERS as $member) {
             User::factory()->inTeam($team, $member['role'])->create(['name' => $member['name'], 'email' => $member['email'], 'password' => self::PASSWORD]);

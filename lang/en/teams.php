@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'personal_team_name' => ":name's team",
     'roles' => ['owner' => 'Owner', 'admin' => 'Admin', 'member' => 'Member'],
     'invitation' => [
         'subject' => 'You are invited to :team on Lumberjack',

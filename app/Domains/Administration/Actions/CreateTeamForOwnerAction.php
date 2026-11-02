@@ -35,7 +35,7 @@ class CreateTeamForOwnerAction
         $team = $owner !== null
             ? $this->createTeam->execute($owner, $name)
             : DB::transaction(function () use ($admin, $name, $ownerEmail): Team {
-                $team = Team::create(['name' => $name, 'personal' => false]);
+                $team = Team::create(['name' => $name]);
                 $this->invite->execute($team, $ownerEmail, TeamRole::Owner, $admin, allowOwner: true);
 
                 return $team;

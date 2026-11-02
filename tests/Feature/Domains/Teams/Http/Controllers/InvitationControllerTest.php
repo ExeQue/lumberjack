@@ -51,7 +51,9 @@ describe('accepting', function () {
 
         $user = User::query()->where('email', 'new@example.test')->sole();
         expect($user->roleIn($this->owner->currentTeam))->toBe(TeamRole::Member)
-            ->and($user->current_team_id)->toBe($this->owner->current_team_id);
+            ->and($user->current_team_id)->toBe($this->owner->current_team_id)
+            // Only the team they were invited to: there are no personal teams.
+            ->and($user->teams()->count())->toBe(1);
         $this->assertAuthenticatedAs($user);
     });
 
