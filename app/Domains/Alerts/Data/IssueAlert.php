@@ -58,6 +58,38 @@ final readonly class IssueAlert
         return $this->burst === null ? null : trans_choice('alerts.messages.burst', $this->burst, ['minutes' => DetectEscalationAction::WINDOW_MINUTES]);
     }
 
+    /**
+     * The alert as plain parts each channel formats its own way: a title (what happened),
+     * the issue (DEMO-42 · title) and lines of detail (the burst, the message, a note).
+     *
+     * @return array{title: string, subject: string, body: list<string>}
+     */
+    public function summary(): array
+    {
+        $issue = $this->issue;
+        $subject = ($issue->number !== null ? $issue->reference().' · ' : '').$issue->title;
+
+        $body = match (true) {
+            $this->statusChange !== null, $this->note !== null => array_filter([$this->note !== null ? $this->noteBody() : null]),
+            default => array_filter([$this->burstLine(), $issue->message, $this->triageSummary]),
+        };
+
+        return ['title' => $this->headline(), 'subject' => $subject, 'body' => array_values(array_map('strval', $body))];
+    }
+
+    /**
+     * How loudly a phone should announce it: an escalation is urgent, a note or a status
+     * change is quiet, a new or returning issue is normal.
+     */
+    public function urgency(): string
+    {
+        return match (true) {
+            $this->type === AlertRuleType::Escalation && $this->note === null && $this->statusChange === null => 'high',
+            $this->note !== null || $this->statusChange !== null => 'low',
+            default => 'normal',
+        };
+    }
+
     public function headline(): string
     {
         // A status change, or a note given with one, reads as what happened to the issue.

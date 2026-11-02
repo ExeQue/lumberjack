@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 use App\Domains\Alerts\Drivers\DiscordDriver;
 use App\Domains\Alerts\Drivers\MailDriver;
+use App\Domains\Alerts\Drivers\NtfyDriver;
+use App\Domains\Alerts\Drivers\PushoverDriver;
+use App\Domains\Alerts\Drivers\SlackDriver;
+use App\Domains\Alerts\Drivers\TeamsDriver;
+use App\Domains\Alerts\Drivers\TelegramDriver;
 use App\Domains\Alerts\Drivers\WebhookDriver;
 
 return [
@@ -22,6 +27,11 @@ return [
         'mail' => MailDriver::class,
         'discord' => DiscordDriver::class,
         'webhook' => WebhookDriver::class,
+        'slack' => SlackDriver::class,
+        'teams' => TeamsDriver::class,
+        'telegram' => TelegramDriver::class,
+        'ntfy' => NtfyDriver::class,
+        'pushover' => PushoverDriver::class,
     ],
 
     /*

@@ -61,7 +61,7 @@ describe('channels of one project', function () {
         AlertRule::factory()->for($this->shop)->create();
 
         $this->actingAs($admin)->get(route('alerts.index'))->assertInertia(fn (Assert $page) => $page
-            ->has('channels', 1)->where('channels.0.type', 'mail')->where('types', ['mail', 'discord']));
+            ->has('channels', 1)->where('channels.0.type', 'mail')->where('types', ['mail', 'discord', 'slack', 'teams', 'telegram', 'ntfy', 'pushover']));
 
         $this->actingAs($admin)->get(route('projects.settings', $this->shop))->assertInertia(fn (Assert $page) => $page
             ->has('alerts.channels', 1)->where('alerts.channels.0.type', 'webhook')

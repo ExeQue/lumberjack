@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 class SaveNotificationChannelAction
 {
     /** Config fields that are no secret; the edit form shows them filled in. */
-    public const array VISIBLE = ['sender_name'];
+    public const array VISIBLE = ['sender_name', 'chat_id'];
 
     /**
      * @param  array<string, string|null>  $config  validated against the driver's rules; null or empty keeps the stored value

@@ -33,7 +33,12 @@ class NotificationChannelPresenter
         return match ($channel->type) {
             ChannelType::Mail => (string) ($channel->config['address'] ?? ''),
             ChannelType::Discord => preg_replace('#/webhooks/(\d+)/.*$#', '/webhooks/$1/••••', (string) ($channel->config['webhook_url'] ?? '')) ?? '',
-            ChannelType::Webhook => (string) ($channel->config['url'] ?? ''),
+            ChannelType::Webhook, ChannelType::Ntfy => (string) ($channel->config['url'] ?? ''),
+            // The rest are secrets in a URL or a token: only where they go.
+            ChannelType::Slack => 'hooks.slack.com/••••',
+            ChannelType::Teams => (string) (parse_url((string) ($channel->config['webhook_url'] ?? ''), PHP_URL_HOST) ?? '').'/••••',
+            ChannelType::Telegram => 'chat '.($channel->config['chat_id'] ?? '?'),
+            ChannelType::Pushover => 'user ••••'.substr((string) ($channel->config['user_key'] ?? ''), -4),
         };
     }
 }

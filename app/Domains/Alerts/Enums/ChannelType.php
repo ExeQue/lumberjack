@@ -9,6 +9,11 @@ enum ChannelType: string
     case Mail = 'mail';
     case Discord = 'discord';
     case Webhook = 'webhook';
+    case Slack = 'slack';
+    case Teams = 'teams';
+    case Telegram = 'telegram';
+    case Ntfy = 'ntfy';
+    case Pushover = 'pushover';
 
     public function label(): string
     {

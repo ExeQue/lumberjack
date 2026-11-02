@@ -8,7 +8,7 @@ return [
         'description' => 'Each project picks which alerts go where, and can add channels of its own such as a webhook, in its settings.',
     ],
     'title' => 'Alerts',
-    'types' => ['mail' => 'Mail', 'discord' => 'Discord', 'webhook' => 'Webhook'],
+    'types' => ['mail' => 'Mail', 'discord' => 'Discord', 'webhook' => 'Webhook', 'slack' => 'Slack', 'teams' => 'Microsoft Teams', 'telegram' => 'Telegram', 'ntfy' => 'ntfy', 'pushover' => 'Pushover'],
     'channels' => [
         'edit' => 'Edit',
         'keep_hint' => 'Leave empty to keep the current value.',
@@ -30,6 +30,14 @@ return [
             'sender_name' => 'Sender name',
             'sender_name_hint' => 'The name the message comes from. Empty means Lumberjack.',
             'address' => 'Email address',
+            'bot_token' => 'Bot token',
+            'chat_id' => 'Chat id',
+            'chat_id_hint' => 'A group or channel id (groups start with -), or @name of a public channel. The bot has to be a member.',
+            'access_token' => 'Access token',
+            'access_token_hint' => 'Only for a protected topic. Empty means none.',
+            'user_key' => 'User or group key',
+            'app_token' => 'Application token',
+            'app_token_hint' => 'From an application you create at pushover.net/apps.',
         ],
         // Button
         'add' => 'Add channel',

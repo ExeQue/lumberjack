@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domains\Alerts\Drivers;
+
+use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\IssueAlert;
+use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
+use App\Domains\Alerts\Models\NotificationChannel;
+use Illuminate\Http\Client\PendingRequest;
+use Override;
+
+/**
+ * Pushover: a push to a user's (or group's) devices, sent with an application token made
+ * at pushover.net/apps.
+ */
+class PushoverDriver implements ChannelDriver
+{
+    use SendsHttp;
+
+    public const string API = 'https://api.pushover.net/1/messages.json';
+
+    #[Override]
+    public function rules(): array
+    {
+        return [
+            'user_key' => ['required', 'string', 'regex:/^[A-Za-z0-9]{30}$/'],
+            'app_token' => ['required', 'string', 'regex:/^[A-Za-z0-9]{30}$/'],
+        ];
+    }
+
+    #[Override]
+    public function send(NotificationChannel $channel, IssueAlert $alert): void
+    {
+        ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
+
+        $this->post($channel, [
+            'title' => mb_substr($title, 0, 250),
+            'message' => mb_substr(implode("\n", [$subject, ...$body]), 0, 1024),
+            'url' => $alert->url,
+            'url_title' => __('alerts.open_issue'),
+            // Pushover's -1 (quiet) to 1 (high, bypasses quiet hours).
+            'priority' => match ($alert->urgency()) {
+                'high' => 1,
+                'low' => -1,
+                default => 0,
+            },
+        ]);
+    }
+
+    #[Override]
+    public function sendTest(NotificationChannel $channel): void
+    {
+        $this->post($channel, ['title' => 'Lumberjack', 'message' => __('alerts.test_message', ['channel' => $channel->name])]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $message
+     */
+    private function post(NotificationChannel $channel, array $message): void
+    {
+        $this->deliver($channel, fn (PendingRequest $http) => $http->asForm()->post(self::API, [
+            'token' => (string) ($channel->config['app_token'] ?? ''),
+            'user' => (string) ($channel->config['user_key'] ?? ''),
+            ...$message,
+        ]));
+    }
+}

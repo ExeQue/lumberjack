@@ -1,0 +1,87 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domains\Alerts\Drivers;
+
+use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\IssueAlert;
+use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
+use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
+use App\Domains\Alerts\Models\NotificationChannel;
+use App\Domains\Shared\Rules\PublicUrl;
+use Illuminate\Http\Client\PendingRequest;
+use Override;
+
+/**
+ * Microsoft Teams through a Workflows webhook ("Post to a channel when a webhook request
+ * is received"), which replaced the Office 365 connectors: an Adaptive Card.
+ */
+class TeamsDriver implements ChannelDriver
+{
+    use SendsHttp;
+
+    #[Override]
+    public function rules(): array
+    {
+        return [
+            'webhook_url' => ['required', 'url', 'starts_with:https://', new PublicUrl()],
+        ];
+    }
+
+    #[Override]
+    public function send(NotificationChannel $channel, IssueAlert $alert): void
+    {
+        ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
+
+        $this->post($channel, $this->card([
+            ['type' => 'TextBlock', 'text' => $title, 'weight' => 'Bolder', 'size' => 'Medium', 'wrap' => true, 'color' => $alert->urgency() === 'high' ? 'Attention' : 'Default'],
+            ['type' => 'TextBlock', 'text' => $subject, 'fontType' => 'Monospace', 'wrap' => true],
+            ...array_map(fn (string $line): array => ['type' => 'TextBlock', 'text' => $line, 'wrap' => true, 'isSubtle' => true], $body),
+        ], $alert->url));
+    }
+
+    #[Override]
+    public function sendTest(NotificationChannel $channel): void
+    {
+        $this->post($channel, $this->card([
+            ['type' => 'TextBlock', 'text' => __('alerts.test_message', ['channel' => $channel->name]), 'wrap' => true],
+        ]));
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $body
+     * @return array<string, mixed>
+     */
+    private function card(array $body, ?string $url = null): array
+    {
+        return [
+            'type' => 'message',
+            'attachments' => [[
+                'contentType' => 'application/vnd.microsoft.card.adaptive',
+                'content' => array_filter([
+                    '$schema' => 'http://adaptivecards.io/schemas/adaptive-card.json',
+                    'type' => 'AdaptiveCard',
+                    'version' => '1.4',
+                    'body' => $body,
+                    'actions' => $url !== null ? [['type' => 'Action.OpenUrl', 'title' => __('alerts.open_issue'), 'url' => $url]] : null,
+                ]),
+            ]],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function post(NotificationChannel $channel, array $payload): void
+    {
+        $url = (string) ($channel->config['webhook_url'] ?? '');
+
+        // Checked again on every send: the host may resolve somewhere else by now.
+        if (! PublicUrl::allows($url)) {
+            throw AlertDeliveryFailedException::notPublic($channel->name);
+        }
+
+        $this->deliver($channel, fn (PendingRequest $http) => $http->withoutRedirecting()->post($url, $payload));
+    }
+}

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'channel_types' => ['mail' => 'Mail', 'discord' => 'Discord', 'webhook' => 'Webhook'],
+    'channel_types' => ['mail' => 'Mail', 'discord' => 'Discord', 'webhook' => 'Webhook', 'slack' => 'Slack', 'teams' => 'Microsoft Teams', 'telegram' => 'Telegram', 'ntfy' => 'ntfy', 'pushover' => 'Pushover'],
     'webhook_secret' => 'Webhook signing secret',
     'webhook_needs_project' => 'A webhook belongs to one project; add it in that project\'s settings.',
     'webhook_not_public' => 'The URL must be http or https and point at a public address.',

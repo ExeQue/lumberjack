@@ -9,7 +9,7 @@ Self-hosted error tracking, logs and performance monitoring for Laravel.
 - **Performance:** routes, queries (with the line that ran them and N+1 hints),
   jobs, scheduled tasks and commands.
 - **Logs:** searchable, live.
-- **Alerts:** e-mail, Discord and signed webhooks, per project.
+- **Alerts:** e-mail, Slack, Microsoft Teams, Discord, Telegram, ntfy, Pushover and signed webhooks, per project.
 - **MCP:** agents can triage issues, write notes and open repository issues.
 
 Applications send to Lumberjack with the Laravel SDK,

@@ -56,6 +56,23 @@ const configField: Record<
         type: 'url',
         placeholder: 'https://app.example.com/lumberjack/webhook',
     },
+    slack: {
+        key: 'webhook_url',
+        type: 'url',
+        placeholder: 'https://hooks.slack.com/services/...',
+    },
+    teams: {
+        key: 'webhook_url',
+        type: 'url',
+        placeholder: 'https://....logic.azure.com/workflows/...',
+    },
+    telegram: {
+        key: 'bot_token',
+        type: 'password',
+        placeholder: '123456789:AA...',
+    },
+    ntfy: { key: 'url', type: 'url', placeholder: 'https://ntfy.sh/my-topic' },
+    pushover: { key: 'user_key', type: 'password', placeholder: 'u...' },
 };
 
 // Optional, non-secret fields after the main one.
@@ -69,6 +86,31 @@ const extraFields: Record<
             type: 'text',
             placeholder: 'Lumberjack',
             maxLength: 80,
+        },
+    ],
+    telegram: [
+        {
+            key: 'chat_id',
+            type: 'text',
+            placeholder: '-1001234567890',
+            maxLength: 64,
+        },
+    ],
+    // Secrets too: left empty when editing, they keep what is stored.
+    ntfy: [
+        {
+            key: 'access_token',
+            type: 'password',
+            placeholder: 'tk_...',
+            maxLength: 200,
+        },
+    ],
+    pushover: [
+        {
+            key: 'app_token',
+            type: 'password',
+            placeholder: 'a...',
+            maxLength: 30,
         },
     ],
 };
