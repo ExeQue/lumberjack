@@ -31,6 +31,10 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 5
+    ignore:
+      # The types follow the Node version Lumberjack runs on (22), not the newest one.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       npm:
         update-types:

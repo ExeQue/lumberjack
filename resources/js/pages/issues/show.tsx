@@ -1,5 +1,5 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { Github } from 'lucide-react';
+import { CircleDot } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { LabelEditor } from '@/components/lj/labels';
@@ -835,7 +835,7 @@ export default function IssueShow({
                                 rel="noreferrer"
                                 className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-panel-2 px-3 font-medium text-ink hover:bg-line"
                             >
-                                <Github
+                                <CircleDot
                                     className="size-3.5"
                                     aria-hidden="true"
                                 />
@@ -847,7 +847,7 @@ export default function IssueShow({
                                     onClick={createRepoIssue}
                                     disabled={creatingRepoIssue}
                                 >
-                                    <Github
+                                    <CircleDot
                                         className="size-3.5"
                                         aria-hidden="true"
                                     />
