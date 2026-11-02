@@ -63,6 +63,7 @@ class JobController
                 'host' => $r->host,
                 'parameters' => $r->parameters,
                 'issue' => $r->occurrence?->issue?->uuid,
+                'trace_id' => $r->trace_id,
             ])->all(),
         ]);
     }

@@ -34,7 +34,7 @@ class TraceQuery
             ->concat(QueryRun::query()->tap($scope)->orderBy('occurred_at')->limit(self::LIMIT)->get()
                 ->map(fn (QueryRun $q): array => ['type' => 'query', 'at' => $q->occurred_at->format('H:i:s.v'), 'duration_us' => $q->duration_us, 'connection' => $q->connection, 'sql' => $q->sql, 'location' => $q->location, '_ts' => $q->occurred_at]))
             ->concat(LogEntry::query()->tap($scope)->with('channel')->orderBy('occurred_at')->limit(self::LIMIT)->get()
-                ->map(fn (LogEntry $l): array => ['type' => 'log', 'at' => $l->occurred_at->format('H:i:s.v'), 'level' => $l->level->key(), 'channel' => $l->channel?->name, 'message' => $l->message, '_ts' => $l->occurred_at]))
+                ->map(fn (LogEntry $l): array => ['type' => 'log', 'at' => $l->occurred_at->format('H:i:s.v'), 'level' => $l->level->key(), 'channel' => $l->channel?->name, 'message' => $l->message, 'context' => $l->context, '_ts' => $l->occurred_at]))
             ->concat(Occurrence::query()->tap($scope)->with('issue')->orderBy('occurred_at')->limit(50)->get()
                 ->map(fn (Occurrence $o): array => ['type' => 'exception', 'at' => $o->occurred_at->format('H:i:s.v'), 'issue' => $o->issue?->uuid, 'reference' => $o->issue?->reference(), 'title' => $o->issue?->title, 'message' => $o->issue?->message, '_ts' => $o->occurred_at]))
             ->concat(SpanRun::query()->tap($scope)->orderBy('occurred_at')->limit(self::LIMIT)->get()

@@ -32,6 +32,7 @@ type Entry = {
     level?: string;
     message?: string | null;
     channel?: string | null;
+    context?: Record<string, unknown> | null;
     // exception
     issue?: string | null;
     reference?: string | null;
@@ -308,7 +309,10 @@ export default function TraceShow({ project, trace }: Props) {
                         {entry.channel}
                     </span>
                     <span className="truncate text-ink">
-                        {interpolateLogMessage(entry.message ?? '', null)}
+                        {interpolateLogMessage(
+                            entry.message ?? '',
+                            entry.context,
+                        )}
                     </span>
                 </span>
             );

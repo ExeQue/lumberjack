@@ -123,6 +123,7 @@ export type JobStat = {
 export type JobRunRow = {
     id: number;
     uuid: string;
+    trace_id?: string | null;
     name: string;
     status:
         | 'queued'

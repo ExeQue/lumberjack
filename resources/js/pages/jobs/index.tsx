@@ -27,6 +27,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useProjectLive } from '@/lib/use-project-live';
 import { show as issueShow } from '@/routes/issues';
+import { show as traceShow } from '@/routes/traces';
 import { index as jobsIndex } from '@/routes/jobs';
 import { show as projectShow } from '@/routes/projects';
 import type {
@@ -564,21 +565,36 @@ export default function JobsIndex({
                                             <td
                                                 className={`${tdClass} text-right`}
                                             >
-                                                {r.issue && (
-                                                    <Link
-                                                        href={
-                                                            issueShow([
-                                                                project.uuid,
-                                                                r.issue,
-                                                            ]).url
-                                                        }
-                                                        className="text-xs text-amber hover:underline"
-                                                    >
-                                                        {t(
-                                                            'jobs.runs.view_issue',
-                                                        )}
-                                                    </Link>
-                                                )}
+                                                <span className="inline-flex gap-3">
+                                                    {r.trace_id && (
+                                                        <Link
+                                                            href={
+                                                                traceShow([
+                                                                    project.uuid,
+                                                                    r.trace_id,
+                                                                ]).url
+                                                            }
+                                                            className="text-xs text-ink-2 hover:text-amber hover:underline"
+                                                        >
+                                                            {t('traces.open')}
+                                                        </Link>
+                                                    )}
+                                                    {r.issue && (
+                                                        <Link
+                                                            href={
+                                                                issueShow([
+                                                                    project.uuid,
+                                                                    r.issue,
+                                                                ]).url
+                                                            }
+                                                            className="text-xs text-amber hover:underline"
+                                                        >
+                                                            {t(
+                                                                'jobs.runs.view_issue',
+                                                            )}
+                                                        </Link>
+                                                    )}
+                                                </span>
                                             </td>
                                         </tr>
                                     ))}
