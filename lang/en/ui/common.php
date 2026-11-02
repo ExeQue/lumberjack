@@ -15,6 +15,7 @@ return [
     ],
     'nav' => [
         'label' => 'Main menu',
+        'open' => 'Open the menu',
         'project' => 'Project',
         'team_section' => 'Team',
         'overview' => 'Overview',
