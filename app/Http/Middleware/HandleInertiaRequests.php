@@ -47,7 +47,6 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
-        $team = $user?->currentTeam;
 
         return [
             ...parent::share($request),
@@ -57,7 +56,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
             ],
-            'team' => fn (): ?array => $team === null ? null : [
+            // Read when rendering: a route may have switched team in the meantime.
+            'team' => fn (): ?array => ($team = $user?->currentTeam) === null ? null : [
                 'uuid' => $team->uuid,
                 'name' => $team->name,
                 'role' => $user->roleIn($team)?->value,

@@ -24,8 +24,8 @@ return [
     'empty_body' => 'Nothing matches the filters in this period.',
     'detail' => [
         'summary' => ':requests requests · p95 :p95 · error rate :errors',
-        'hourly' => 'Response time per hour (p50 and p95)',
-        'chart_label' => 'Response time per hour. Highest p95 was :p95 at :time.',
+        'hourly' => 'Response time over the period (p50 and p95)',
+        'chart_label' => 'Response time over the period. Highest p95 was :p95 at :time.',
         'slowest' => 'Slowest requests',
         'queries' => '{1} 1 query|[2,*] :count queries',
         'no_requests' => 'No requests in this period.',

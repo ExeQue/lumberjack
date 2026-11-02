@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useProjectLive } from '@/lib/use-project-live';
 import { show as projectShow } from '@/routes/projects';
 import { index as routesIndex } from '@/routes/routes';
+import { show as traceShow } from '@/routes/traces';
 import type {
     DashboardFilters,
     ProjectHeader,
@@ -45,7 +46,7 @@ type Filters = DashboardFilters & {
 type Detail = {
     method: string;
     route: string;
-    hourly: { t: string; p50: number; p95: number }[];
+    hourly: { t: string; p50: number | null; p95: number | null }[];
     slowest: {
         at: string;
         host: string | null;
@@ -364,13 +365,20 @@ export default function RoutesIndex({
                                                     {s.trace_id && (
                                                         <>
                                                             {' · '}
-                                                            <span
+                                                            <Link
+                                                                href={
+                                                                    traceShow([
+                                                                        project.uuid,
+                                                                        s.trace_id,
+                                                                    ]).url
+                                                                }
                                                                 title={t(
-                                                                    'common.trace',
+                                                                    'traces.open',
                                                                 )}
+                                                                className="hover:text-amber hover:underline"
                                                             >
                                                                 {s.trace_id}
-                                                            </span>
+                                                            </Link>
                                                         </>
                                                     )}
                                                 </span>
@@ -408,9 +416,12 @@ export default function RoutesIndex({
 
 function HourlyChart({ hourly }: { hourly: Detail['hourly'] }) {
     const t = useT();
-    const max = Math.max(1, ...hourly.map((h) => h.p95));
+    const max = Math.max(1, ...hourly.map((h) => h.p95 ?? 0));
     const peak = hourly.reduce<Detail['hourly'][number] | null>(
-        (best, h) => (best === null || h.p95 > best.p95 ? h : best),
+        (best, h) =>
+            h.p95 !== null && (best === null || h.p95 > (best.p95 ?? 0))
+                ? h
+                : best,
         null,
     );
     const label = peak
@@ -427,23 +438,31 @@ function HourlyChart({ hourly }: { hourly: Detail['hourly'] }) {
                 aria-label={label}
                 className="flex h-[120px] items-end gap-[3px]"
             >
-                {hourly.map((h) => (
-                    <div
-                        key={h.t}
-                        className="relative flex-1 rounded-t-sm bg-info/45"
-                        style={{
-                            height: `${Math.max(2, (h.p95 / max) * 100)}%`,
-                        }}
-                        title={`${formatTime(h.t)}: p50 ${formatDuration(h.p50)}, p95 ${formatDuration(h.p95)}`}
-                    >
+                {hourly.map((h) =>
+                    h.p95 === null ? (
                         <div
-                            className="absolute inset-x-0 bottom-0 bg-info"
-                            style={{
-                                height: `${h.p95 ? (h.p50 / h.p95) * 100 : 0}%`,
-                            }}
+                            key={h.t}
+                            className="h-[2px] flex-1 rounded-t-sm bg-line"
+                            title={`${formatTime(h.t)}: -`}
                         />
-                    </div>
-                ))}
+                    ) : (
+                        <div
+                            key={h.t}
+                            className="relative flex-1 rounded-t-sm bg-info/45"
+                            style={{
+                                height: `${Math.max(2, (h.p95 / max) * 100)}%`,
+                            }}
+                            title={`${formatTime(h.t)}: p50 ${formatDuration(h.p50)}, p95 ${formatDuration(h.p95)}`}
+                        >
+                            <div
+                                className="absolute inset-x-0 bottom-0 bg-info"
+                                style={{
+                                    height: `${h.p95 ? ((h.p50 ?? 0) / h.p95) * 100 : 0}%`,
+                                }}
+                            />
+                        </div>
+                    ),
+                )}
             </div>
             <div className="flex gap-4 text-xs text-ink-2">
                 <span className="inline-flex items-center gap-1.5">

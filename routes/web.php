@@ -23,6 +23,7 @@ use App\Domains\Performance\Http\Controllers\RouteController;
 use App\Domains\Performance\Http\Controllers\TraceController;
 use App\Domains\Projects\Http\Controllers\ProjectController;
 use App\Domains\Projects\Http\Controllers\ProjectSettingsController;
+use App\Domains\Projects\Http\Middleware\FollowProjectTeam;
 use App\Domains\Repositories\Http\Controllers\RepositoryController;
 use App\Domains\Retention\Http\Controllers\RetentionController;
 use App\Domains\Schedule\Http\Controllers\ScheduleController;
@@ -46,7 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
 
-    Route::prefix('projects/{project}')->scopeBindings()->group(function () {
+    Route::prefix('projects/{project}')->scopeBindings()->middleware(FollowProjectTeam::class)->group(function () {
         Route::get('/', OverviewController::class)->name('projects.show');
         Route::delete('/', [ProjectController::class, 'destroy'])->name('projects.destroy');
 

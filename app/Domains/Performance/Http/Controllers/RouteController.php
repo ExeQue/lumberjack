@@ -11,7 +11,6 @@ use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Http\Concerns\ReadsDashboardFilters;
 use App\Domains\Shared\Support\Percentiles;
-use DateTimeInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -37,15 +36,17 @@ class RouteController
             'project' => $presenter->header($project, $request->user()),
             'filters' => [...$this->filters($request), 'sort' => $sort, 'search' => $search, 'route' => $selected, 'method' => $method],
             'routes' => fn (): array => $this->withSeries($project, $period, $environment, $query->get($project->id, $period, $environment, $sort, $search)),
-            'detail' => fn (): ?array => $selected === '' ? null : $this->detail($project, $period->since(), $environment, $method, $selected),
+            'detail' => fn (): ?array => $selected === '' ? null : $this->detail($project, $period, $environment, $method, $selected),
         ]);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function detail(Project $project, DateTimeInterface $since, ?string $environment, string $method, string $route): array
+    private function detail(Project $project, Period $period, ?string $environment, string $method, string $route): array
     {
+        $since = $period->since();
+        $size = $period->bucketSeconds();
         $scope = fn ($q) => $q->where('project_id', $project->id)->where('occurred_at', '>=', $since)
             ->where('method', $method)->where(fn ($r) => $r->where('route', $route)->orWhere(fn ($u) => $u->whereNull('route')->where('url', $route)))
             ->when($environment !== null)->where('environment', $environment);
@@ -53,19 +54,25 @@ class RouteController
         $p50 = Percentiles::select('duration_us', 0.50, 'p50');
         $p95 = Percentiles::select('duration_us', 0.95, 'p95');
 
-        $hourly = DB::table('request_runs')->tap($scope)
-            ->selectRaw('FLOOR(EXTRACT(EPOCH FROM occurred_at) / 3600) * 3600 AS bucket, duration_us')
+        $byBucket = DB::table('request_runs')->tap($scope)
+            ->selectRaw('FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?) * ? AS bucket, duration_us', [$size, $size])
             ->get()
-            ->groupBy('bucket')
-            ->map(function ($rows, $bucket): array {
+            ->groupBy(fn ($row): int => (int) $row->bucket)
+            ->map(function ($rows): array {
                 $values = $rows->pluck('duration_us')->map(fn ($v): int => (int) $v)->sort()->values();
                 $at = fn (float $p): int => (int) $values->get(max(0, (int) ceil($values->count() * $p) - 1), 0);
 
-                return ['t' => date(DATE_ATOM, (int) $bucket), 'p50' => $at(0.5), 'p95' => $at(0.95)];
-            })
-            ->sortKeys()
-            ->values()
-            ->all();
+                return ['p50' => $at(0.5), 'p95' => $at(0.95)];
+            });
+
+        // Every bucket of the period, empty where no request came in, so one busy hour is
+        // one bar among the rest and not the whole chart.
+        $hourly = [];
+        $start = intdiv($since->getTimestamp(), $size) * $size;
+
+        for ($at = $start; $at <= now()->getTimestamp(); $at += $size) {
+            $hourly[] = ['t' => date(DATE_ATOM, $at), 'p50' => $byBucket[$at]['p50'] ?? null, 'p95' => $byBucket[$at]['p95'] ?? null];
+        }
 
         unset($p50, $p95);
 
