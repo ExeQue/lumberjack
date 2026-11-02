@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Domains\Projects\Models\Project;
+use App\Domains\Teams\Actions\DeleteAccountAction;
+use App\Domains\Teams\Enums\TeamRole;
+use App\Domains\Teams\Models\Team;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Models\User;
 
-covers(ProfileController::class);
+covers(ProfileController::class, DeleteAccountAction::class);
 
 describe('the profile settings', function () {
     test('profile page is displayed', function () {
@@ -88,5 +92,37 @@ describe('the profile settings', function () {
             ->assertRedirect(route('profile.edit'));
 
         expect($user->fresh())->not->toBeNull();
+    });
+});
+
+describe('deleting an account', function () {
+    test('takes the teams only they are in, with their projects, along', function () {
+        $user = User::factory()->inTeam()->create();
+        $team = $user->currentTeam;
+        $project = Project::factory()->create(['team_id' => $team->id]);
+
+        $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password'])->assertSessionHasNoErrors();
+
+        expect(Team::query()->whereKey($team->id)->exists())->toBeFalse()
+            ->and(Project::query()->whereKey($project->id)->exists())->toBeFalse();
+    });
+
+    test('is refused while they own a team others are in', function () {
+        $owner = User::factory()->inTeam()->create();
+        User::factory()->inTeam($owner->currentTeam, TeamRole::Member)->create();
+
+        $this->actingAs($owner)->delete(route('profile.destroy'), ['password' => 'password'])->assertSessionHasErrors('password');
+
+        expect($owner->fresh())->not->toBeNull();
+    });
+
+    test('leaves a team they are only a member of to its owner', function () {
+        $owner = User::factory()->inTeam()->create();
+        $member = User::factory()->inTeam($owner->currentTeam, TeamRole::Member)->create();
+
+        $this->actingAs($member)->delete(route('profile.destroy'), ['password' => 'password'])->assertSessionHasNoErrors();
+
+        expect($member->fresh())->toBeNull()
+            ->and(Team::query()->whereKey($owner->current_team_id)->exists())->toBeTrue();
     });
 });

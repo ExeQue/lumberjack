@@ -46,7 +46,7 @@ class SecurityController extends Controller
             'password_change_required' => false,
         ])->save();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('account.password_updated')]);
 
         return back();
     }

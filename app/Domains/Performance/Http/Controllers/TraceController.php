@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Domains\Performance\Http\Controllers;
 
 use App\Domains\Performance\Queries\TraceQuery;
-use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Projects\Presenters\ProjectPresenter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;

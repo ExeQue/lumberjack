@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests\Settings;
 
 use App\Concerns\PasswordValidationRules;
+use App\Domains\Teams\Enums\TeamRole;
+use App\Domains\Teams\Models\Team;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -40,6 +42,14 @@ class ProfileDeleteRequest extends FormRequest
 
                 if ($user?->isAdmin() && User::query()->whereActiveAdmin()->whereKeyNot($user->id)->doesntExist()) {
                     $validator->errors()->add('password', __('administration.last_admin'));
+                }
+
+                // A team others are in keeps an owner: it is handed over first.
+                $shared = $user?->teams()->wherePivot('role', TeamRole::Owner->value)->withCount('members')->get()
+                    ->first(fn (Team $team): bool => (int) $team->members_count > 1);
+
+                if ($shared !== null) {
+                    $validator->errors()->add('password', __('teams.transfer_before_deleting', ['team' => $shared->name]));
                 }
             },
         ];
