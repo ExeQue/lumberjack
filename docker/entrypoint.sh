@@ -6,6 +6,19 @@ cd /app
 
 as_app() { su-exec www-data "$@"; }
 
+# Reverb credentials only matter inside this container, so they derive from
+# APP_KEY unless given: stable across restarts, nothing extra to configure.
+derive() { printf '%s' "$1:${APP_KEY:-}" | sha256sum | cut -c1-32; }
+export REVERB_APP_ID="${REVERB_APP_ID:-lumberjack}"
+export REVERB_APP_KEY="${REVERB_APP_KEY:-$(derive reverb-key)}"
+export REVERB_APP_SECRET="${REVERB_APP_SECRET:-$(derive reverb-secret)}"
+
+# A one-off command (docker run ... php artisan key:generate --show) runs as it
+# is: the checks, migrations and caches below are for starting Lumberjack.
+if [ "${1:-}" != "supervisord" ]; then
+    exec su-exec www-data "$@"
+fi
+
 if [ -z "${APP_KEY:-}" ]; then
     cat >&2 <<'MSG'
 APP_KEY is not set. Generate one and put it in your compose file or .env:
@@ -20,13 +33,6 @@ if [ -z "${APP_URL:-}" ]; then
     echo "APP_URL is not set: use the address people open Lumberjack on, e.g. https://lumberjack.example.com" >&2
     exit 1
 fi
-
-# Reverb credentials only matter inside this container, so they derive from
-# APP_KEY unless given: stable across restarts, nothing extra to configure.
-derive() { printf '%s' "$1:$APP_KEY" | sha256sum | cut -c1-32; }
-export REVERB_APP_ID="${REVERB_APP_ID:-lumberjack}"
-export REVERB_APP_KEY="${REVERB_APP_KEY:-$(derive reverb-key)}"
-export REVERB_APP_SECRET="${REVERB_APP_SECRET:-$(derive reverb-secret)}"
 
 case "$APP_URL" in
     https://*) export SESSION_SECURE_COOKIE="${SESSION_SECURE_COOKIE:-true}" ;;

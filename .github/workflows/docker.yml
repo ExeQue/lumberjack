@@ -27,9 +27,12 @@ jobs:
 
       - name: Smoke test
         run: |
+          # The key the way the docs make it: a one-off run of the image itself.
+          key=$(docker run --rm lumberjack:smoke php artisan key:generate --show)
+          case "$key" in base64:*) ;; *) echo "key:generate gave: $key"; exit 1 ;; esac
           cat > .env.docker <<ENV
           APP_URL=http://localhost:8080
-          APP_KEY=base64:$(openssl rand -base64 32)
+          APP_KEY=$key
           DB_PASSWORD=smoke
           ENV
           sed -i 's#ghcr.io/exeque/lumberjack:latest#lumberjack:smoke#' compose.yaml
