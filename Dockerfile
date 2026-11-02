@@ -28,7 +28,8 @@ RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/fra
 
 FROM base
 
-ENV APP_ENV=production \
+ENV APP_NAME=Lumberjack \
+    APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
     LOG_LEVEL=info \

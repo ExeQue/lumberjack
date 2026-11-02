@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'Lumberjack'),
 
     /*
     | When set, the first-run setup of an empty Lumberjack asks for this token,
