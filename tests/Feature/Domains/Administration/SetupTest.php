@@ -111,6 +111,13 @@ describe('first-run setup', function () {
         $this->post(route('setup.store'), [...$payload, 'token' => 'tok-123'])->assertRedirect(route('admin.teams.index'));
     });
 
+    test('a token copied with the spaces around it still counts', function () {
+        config(['app.setup_token' => 'tok-123']);
+
+        $this->post(route('setup.store'), ['name' => 'Ada', 'email' => 'ada@example.com', 'password' => 'a-long-Secret-1', 'password_confirmation' => 'a-long-Secret-1', 'token' => "      tok-123\n"])
+            ->assertRedirect(route('admin.teams.index'));
+    });
+
     test('registration does not exist: accounts come from setup or an invitation', function () {
         User::factory()->create();
 

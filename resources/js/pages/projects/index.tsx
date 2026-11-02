@@ -55,6 +55,13 @@ export default function ProjectsIndex({
     const { team } = usePage<{ team: TeamShared }>().props;
     const [search, setSearch] = useState('');
     const [creating, setCreating] = useState(false);
+    // The prefix follows the name until it is edited by hand.
+    const [prefix, setPrefix] = useState('');
+    const [prefixEdited, setPrefixEdited] = useState(false);
+    const suggestPrefix = (name: string) => {
+        const letters = name.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        return (/^[A-Z]/.test(letters) ? letters : `P${letters}`).slice(0, 8);
+    };
 
     const visible = useMemo(
         () =>
@@ -256,7 +263,11 @@ export default function ProjectsIndex({
                 <DialogContent>
                     <Form
                         {...projectStore.form()}
-                        onSuccess={() => setCreating(false)}
+                        onSuccess={() => {
+                            setCreating(false);
+                            setPrefix('');
+                            setPrefixEdited(false);
+                        }}
                         className="flex flex-col gap-4"
                     >
                         {({ errors, processing }) => (
@@ -279,6 +290,42 @@ export default function ProjectsIndex({
                                         name="name"
                                         required
                                         autoFocus
+                                        onChange={(e) => {
+                                            if (!prefixEdited) {
+                                                setPrefix(
+                                                    suggestPrefix(
+                                                        e.target.value,
+                                                    ),
+                                                );
+                                            }
+                                        }}
+                                    />
+                                </Field>
+                                <Field
+                                    label={t('projects.issue_prefix')}
+                                    htmlFor="project-issue-prefix"
+                                    hint={t('projects.issue_prefix_hint', {
+                                        example: `${prefix || 'DEMO'}-42`,
+                                    })}
+                                    error={errors.issue_prefix}
+                                >
+                                    <Input
+                                        id="project-issue-prefix"
+                                        name="issue_prefix"
+                                        className="w-40 font-mono uppercase"
+                                        value={prefix}
+                                        onChange={(e) => {
+                                            setPrefixEdited(true);
+                                            setPrefix(
+                                                e.target.value
+                                                    .toUpperCase()
+                                                    .replace(/[^A-Z0-9]/g, ''),
+                                            );
+                                        }}
+                                        required
+                                        minLength={2}
+                                        maxLength={8}
+                                        spellCheck={false}
                                     />
                                 </Field>
                                 <DialogFooter>

@@ -62,7 +62,7 @@ class ProjectController
 
     public function store(StoreProjectRequest $request, CreateProjectAction $action): RedirectResponse
     {
-        ['project' => $project, 'token' => $token] = $action->execute($request->user()->currentTeam, $request->string('name')->toString());
+        ['project' => $project, 'token' => $token] = $action->execute($request->user()->currentTeam, $request->string('name')->toString(), $request->string('issue_prefix')->toString());
 
         return redirect()->route('projects.settings', $project)
             ->with('status', __('projects.created'))

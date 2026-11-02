@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Domains\Logs\Models\LogChannel;
+use App\Domains\Projects\Actions\CreateProjectAction;
 use App\Domains\Projects\Http\Controllers\ProjectSettingsController;
+use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Enums\TeamRole;
 use Tests\Support\Teams\CreatesTeamMembers;
 
@@ -36,6 +38,33 @@ describe('project administration', function () {
         ])->assertSessionHasNoErrors();
 
         expect($project->refresh()->allowed_origins)->toBe(['https://shop.test']);
+    });
+
+    it('lets the issue prefix be chosen, unique in the team', function () {
+        ['user' => $user, 'project' => $project] = $this->memberWithProject();
+        $other = Project::factory()->create(['team_id' => $project->team_id, 'issue_prefix' => 'API']);
+        $save = fn (string $prefix) => $this->actingAs($user)->put(route('projects.settings.update', $project), [
+            'name' => $project->name, 'slug' => $project->slug, 'allowed_origins' => [], 'issue_prefix' => $prefix,
+        ]);
+
+        $save('shop')->assertSessionHasNoErrors();
+        expect($project->refresh()->issuePrefix())->toBe('SHOP');
+
+        $save('API')->assertSessionHasErrors('issue_prefix');
+        $save('1SHOP')->assertSessionHasErrors('issue_prefix');
+        $save('S')->assertSessionHasErrors('issue_prefix');
+        expect($project->refresh()->issuePrefix())->toBe('SHOP')
+            ->and($other->refresh()->issuePrefix())->toBe('API');
+    });
+
+    it('gives new projects a prefix of their own, even when two names shorten alike', function () {
+        ['user' => $user, 'project' => $project] = $this->memberWithProject();
+
+        $first = app(CreateProjectAction::class)->execute($project->team, 'Eazy Photo')['project'];
+        $second = app(CreateProjectAction::class)->execute($project->team, 'Eazy Photographers')['project'];
+
+        expect($first->issuePrefix())->toBe('EAZYPHOT')
+            ->and($second->issuePrefix())->toBe('EAZYPHO2');
     });
 });
 

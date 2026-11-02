@@ -17,6 +17,19 @@ class UpdateProjectRequest extends FormRequest
         return $project instanceof Project && $this->user()?->can('update', $project);
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('issue_prefix')) {
+            $this->merge(['issue_prefix' => strtoupper(trim((string) $this->input('issue_prefix')))]);
+        }
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return ['issue_prefix.regex' => __('projects.issue_prefix_invalid')];
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
@@ -26,6 +39,8 @@ class UpdateProjectRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100'],
             'slug' => ['required', 'string', 'max:100', 'alpha_dash:ascii', Rule::unique('projects', 'slug')->where('team_id', $project->team_id)->ignore($project->id)],
+            // Unique in the team, so a reference such as DEMO-42 points at one issue, for MCP too.
+            'issue_prefix' => ['sometimes', 'required', 'string', 'min:2', 'max:8', 'regex:/^[A-Z][A-Z0-9]*$/', Rule::unique('projects', 'issue_prefix')->where('team_id', $project->team_id)->ignore($project->id)],
             'allowed_origins' => ['present', 'array', 'max:50'],
             'allowed_origins.*' => ['string', 'url:http,https', 'max:255'],
             'scrub_keys' => ['sometimes', 'array', 'max:50'],

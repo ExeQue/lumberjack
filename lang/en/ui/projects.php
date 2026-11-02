@@ -8,6 +8,8 @@ return [
     'search' => 'Search projects',
     'new' => 'New project',
     'name' => 'Name',
+    'issue_prefix' => 'Issue prefix',
+    'issue_prefix_hint' => 'Issue numbers look like :example. 2 to 8 capital letters and digits, unique in the team.',
     'create' => 'Create project',
     'create_hint' => 'You get the server token right after; it is shown once.',
     'open_issues' => 'Open issues',

@@ -59,6 +59,7 @@ import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
 type Settings = {
     name: string;
     slug: string;
+    issue_prefix: string;
     allowed_origins: string[];
     scrub_keys: string[];
     default_scrub_keys: string[];
@@ -333,6 +334,7 @@ function GeneralSection({ project, settings }: Props) {
     const form = useForm({
         name: settings.name,
         slug: settings.slug,
+        issue_prefix: settings.issue_prefix,
         allowed_origins: settings.allowed_origins,
         scrub_keys: settings.scrub_keys,
     });
@@ -428,6 +430,32 @@ function GeneralSection({ project, settings }: Props) {
                         onChange={(e) => form.setData('slug', e.target.value)}
                         required
                         maxLength={100}
+                    />
+                </Field>
+                <Field
+                    label={t('settings.general.issue_prefix')}
+                    htmlFor="project-issue-prefix"
+                    hint={t('settings.general.issue_prefix_hint', {
+                        example: `${form.data.issue_prefix || 'DEMO'}-42`,
+                    })}
+                    error={form.errors.issue_prefix}
+                >
+                    <Input
+                        id="project-issue-prefix"
+                        className="w-40 font-mono uppercase"
+                        value={form.data.issue_prefix}
+                        onChange={(e) =>
+                            form.setData(
+                                'issue_prefix',
+                                e.target.value
+                                    .toUpperCase()
+                                    .replace(/[^A-Z0-9]/g, ''),
+                            )
+                        }
+                        required
+                        minLength={2}
+                        maxLength={8}
+                        spellCheck={false}
                     />
                 </Field>
                 <div className="flex flex-col gap-1.5">

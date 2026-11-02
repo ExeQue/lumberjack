@@ -12,6 +12,8 @@ return [
         'name' => 'Name',
         'slug' => 'Slug',
         'slug_hint' => 'Used in URLs and as the project argument in MCP.',
+        'issue_prefix' => 'Issue prefix',
+        'issue_prefix_hint' => 'Issue numbers look like :example. Changing it renames every issue of the project; notes and repository issues that mention the old number keep it.',
         'origins' => 'Allowed origins',
         'origins_hint' => 'Browser errors are only accepted from these origins.',
         'scrub_keys' => 'Extra secret fields',

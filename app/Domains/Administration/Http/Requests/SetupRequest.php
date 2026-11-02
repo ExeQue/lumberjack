@@ -12,6 +12,14 @@ class SetupRequest extends FormRequest
 {
     use PasswordValidationRules;
 
+    /**
+     * The token is copied from a log line or a message, often with the spaces around it.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['token' => trim((string) $this->input('token'))]);
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {

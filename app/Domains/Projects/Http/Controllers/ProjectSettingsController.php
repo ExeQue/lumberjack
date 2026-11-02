@@ -45,6 +45,7 @@ class ProjectSettingsController
             'settings' => [
                 'name' => $project->name,
                 'slug' => $project->slug,
+                'issue_prefix' => $project->issuePrefix(),
                 'allowed_origins' => $project->allowed_origins ?? [],
                 'scrub_keys' => $project->scrub_keys ?? [],
                 'default_scrub_keys' => Scrubber::SENSITIVE,
@@ -110,6 +111,7 @@ class ProjectSettingsController
             $request->string('slug')->toString(),
             array_values((array) $request->input('allowed_origins', [])),
             array_values((array) $request->input('scrub_keys', $project->scrub_keys ?? [])),
+            $request->has('issue_prefix') ? $request->string('issue_prefix')->toString() : null,
         );
 
         return back()->with('status', __('projects.saved'));
