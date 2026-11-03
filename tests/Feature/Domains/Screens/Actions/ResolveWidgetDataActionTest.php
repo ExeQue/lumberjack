@@ -23,6 +23,7 @@ use App\Domains\Screens\Exceptions\UnknownWidgetSourceException;
 use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Models\Team;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\Health\CreatesDatabaseHealthResults;
 use Tests\Support\Performance\CreatesRequestCounts;
 
@@ -248,6 +249,9 @@ describe('the edges of each type', function () {
 
     it('gives requests per minute over the last minutes, and per bucket on a chart', function () {
         $this->createRequestCount($this->project, 50, minute: now()->subMinutes(2)->startOfMinute());
+        // The first of the five whole minutes counts; the minute under way does not yet.
+        $this->createRequestCount($this->project, 10, minute: now()->subMinutes(5)->startOfMinute());
+        $this->createRequestCount($this->project, 1000, minute: now()->startOfMinute());
         $this->createRequestCount($this->project, 25, minute: now()->subMinutes(7)->startOfMinute());
         $this->createRequestCount($this->project, 600, minute: now()->subMinutes(40)->startOfMinute());
 
@@ -255,11 +259,11 @@ describe('the edges of each type', function () {
         $chart = ($this->resolve)(WidgetType::Chart, 'requests_per_minute', scope: new WidgetScope(period: Period::Hour));
         $points = collect($chart['series'][0]['points']);
 
-        expect($stat['value'])->toEqual(10.0)
+        expect($stat['value'])->toEqual(12.0)
             ->and($stat['previous'])->toEqual(5.0)
             ->and($stat['period'])->toBe('now')
-            ->and(($this->resolve)(WidgetType::Gauge, 'requests_per_minute')['value'])->toEqual(10.0)
-            ->and($points->max('v'))->toEqual(600 / ($chart['interval'] === '1m' ? 1 : (int) $chart['interval']));
+            ->and(($this->resolve)(WidgetType::Gauge, 'requests_per_minute')['value'])->toEqual(12.0)
+            ->and($points->max('v'))->toEqual(1000 / ($chart['interval'] === '1m' ? 1 : (int) $chart['interval']));
     });
 
     it('sorts issues newest, most important or last reported first', function () {
@@ -361,6 +365,33 @@ describe('health', function () {
             ->and($data['check'])->toHaveKeys(['uptime', 'strip', 'since']);
     });
 
+    it('numbers the checks of a shared screen and leaves their messages out', function () {
+        ($this->check)('https://admin.internal/up', HealthStatus::Down);
+        $picked = ($this->check)('db.internal:5432', HealthStatus::Ok);
+        $resolve = fn (array $options = []): array => app(ResolveWidgetDataAction::class)
+            ->execute($this->project->team, WidgetType::Health, 'checks', new WidgetScope(), $options, aggregatesOnly: true);
+
+        $all = $resolve();
+        $one = $resolve(['checks' => [$picked->uuid]]);
+
+        expect(array_column($all['checks'], 'name'))->toBe(['check 1', 'check 2'])
+            ->and(array_column($all['checks'], 'message'))->toBe([null, null])
+            ->and(array_column($all['checks'], 'state'))->toBe(['down', 'ok'])
+            ->and($one['check'])->toMatchArray(['name' => 'check 1', 'last_message' => null, 'state' => 'ok']);
+    });
+
+    it('asks for the checks of a project once however many values show them', function () {
+        ($this->check)('cache:redis', HealthStatus::Ok);
+        $action = app(ResolveWidgetDataAction::class);
+        DB::enableQueryLog();
+
+        $action->execute($this->project->team, WidgetType::Health, 'checks', new WidgetScope());
+        $first = count(DB::getQueryLog());
+        $action->execute($this->project->team, WidgetType::Health, 'checks', new WidgetScope(), ['only_problems' => true]);
+
+        expect(count(DB::getQueryLog()) - $first)->toBeLessThan($first);
+    });
+
     it('gauges the lowest uptime of the checks', function () {
         ($this->check)('cache:redis', HealthStatus::Ok)->forceFill(['created_at' => now()->subDays(2)])->save();
 
@@ -399,6 +430,13 @@ describe('database checks', function () {
 
         expect($series())->toBe(['db_size' => [1000.0, 1500.0]])
             ->and($series(['split_by' => 'check']))->toBe(['database:pgsql' => [1000.0, 1200.0], 'database:mysql' => [300.0]]);
+    });
+
+    it('numbers the checks a chart on a shared screen is split by', function () {
+        $data = app(ResolveWidgetDataAction::class)
+            ->execute($this->project->team, WidgetType::Chart, 'db_size', new WidgetScope(), ['split_by' => 'check'], aggregatesOnly: true);
+
+        expect(array_column($data['series'], 'name'))->toBe(['check 1', 'check 2']);
     });
 
     it('gives a single picked check the metrics of its latest result', function () {

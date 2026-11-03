@@ -32,6 +32,7 @@ use App\Domains\Screens\Data\WidgetSource;
 use App\Domains\Screens\Enums\ReleaseScope;
 use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Support\WidgetSources;
+use App\Domains\Shared\Support\LruCache;
 use App\Domains\Teams\Models\Team;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
@@ -51,8 +52,13 @@ use Illuminate\Support\Facades\DB;
  */
 class ResolveWidgetDataAction
 {
-    /** @var array<int, AlertRule|false> the queue backlog rule per project, false for none */
-    private array $backlogRules = [];
+    /**
+     * What one screen asks for again and again across its widgets and rotated values:
+     * a project's checks and backlog rule.
+     *
+     * @var LruCache<mixed>
+     */
+    private LruCache $memo;
 
     public const int LIST_LIMIT = 10;
 
@@ -67,6 +73,7 @@ class ResolveWidgetDataAction
         private readonly AgentMetricsQuery $agents,
         private readonly HealthChecksQuery $health,
     ) {
+        $this->memo = new LruCache(200);
     }
 
     /**
@@ -90,9 +97,9 @@ class ResolveWidgetDataAction
         $data = match ($type) {
             WidgetType::Stat => $this->stat($source, $projects, $scope, $options, $limits),
             WidgetType::Gauge => $this->gauge($source, $projects, $scope, $options, $limits),
-            WidgetType::Chart => $this->chart($source, $projects, $scope, $options),
+            WidgetType::Chart => $this->chart($source, $projects, $scope, $options, $aggregatesOnly),
             WidgetType::List => $this->listRows($source, $projects, $scope, $options, $limits, $aggregatesOnly),
-            WidgetType::Health => $this->checks($projects, $scope, $options),
+            WidgetType::Health => $this->checks($projects, $scope, $options, $aggregatesOnly),
         };
 
         // The period it covers, for the tile's corner label; health and the latest report are now.
@@ -196,7 +203,7 @@ class ResolveWidgetDataAction
      * @param  array<string, mixed>  $options
      * @return array<string, mixed>
      */
-    private function chart(WidgetSource $source, Collection $projects, WidgetScope $scope, array $options): array
+    private function chart(WidgetSource $source, Collection $projects, WidgetScope $scope, array $options, bool $aggregatesOnly): array
     {
         $window = MetricWindow::forPeriod($scope->period);
         $metric = $source->metric ?? Metric::Requests;
@@ -234,6 +241,14 @@ class ResolveWidgetDataAction
                 'requests' => array_values($series)[0] ?? [],
                 'errors' => $this->line($this->metrics->series(Metric::Errors, $this->filter($source, $projects, $scope), $window)),
             ];
+        }
+
+        // A share link without names numbers the hosts and checks a chart is split by.
+        if ($aggregatesOnly && in_array($split, [MetricGroup::Host->value, MetricGroup::Check->value], true)) {
+            $series = array_combine(
+                array_map(fn (int $i): string => "{$split} ".($i + 1), array_keys(array_values($series))),
+                array_values($series),
+            );
         }
 
         if (($options['overlay_previous'] ?? false) && $split === null) {
@@ -307,7 +322,7 @@ class ResolveWidgetDataAction
                         'project' => $slugs[$r['project_id']],
                         'sent_at' => date(DATE_ATOM, (int) strtotime((string) $r['sent_at'])),
                         'issue' => $aggregatesOnly ? null : $r['title'],
-                        'channel' => $r['channel'],
+                        'channel' => $aggregatesOnly ? null : $r['channel'],
                         'status' => $r['status'],
                         'state' => $r['status'] === 'sent' ? null : 'red',
                     ])->all(),
@@ -440,14 +455,14 @@ class ResolveWidgetDataAction
      * @param  array<string, mixed>  $options
      * @return array<string, mixed>
      */
-    private function checks(Collection $projects, WidgetScope $scope, array $options): array
+    private function checks(Collection $projects, WidgetScope $scope, array $options, bool $aggregatesOnly): array
     {
         $picked = array_values(array_filter((array) ($options['checks'] ?? []), 'is_string'));
         $states = ['total' => 0, 'ok' => 0, 'degraded' => 0, 'down' => 0, 'recovering' => 0, 'stale' => 0, 'pending' => 0];
         $checks = [];
 
         foreach ($projects as $project) {
-            foreach ($this->health->summary($project, $scope->environment)['checks'] as $check) {
+            foreach ($this->healthSummary($project, $scope)['checks'] as $check) {
                 if ($picked !== [] && ! in_array($check['uuid'], $picked, true)) {
                     continue;
                 }
@@ -467,11 +482,34 @@ class ResolveWidgetDataAction
 
         if (count($picked) === 1 && count($checks) === 1) {
             $project = $projects->firstWhere('slug', $checks[0]['project']);
-            $row = collect($this->health->rows($project, $scope->period, $scope->environment))->firstWhere('uuid', $picked[0]);
+            $row = collect($this->healthRows($project, $scope))->firstWhere('uuid', $picked[0]);
             $detail = $row !== null ? [...array_intersect_key($row, array_flip(['uuid', 'name', 'state', 'last_message', 'last_result_at', 'duration_us', 'uptime', 'strip', 'metrics'])), 'since' => $checks[0]['since'] ?? null] : null;
         }
 
+        // A share link without names says how checks stand, not what they are called or
+        // what their probes answered: those name hosts, addresses and endpoints.
+        if ($aggregatesOnly) {
+            $checks = array_map(fn (array $c, int $i): array => [...$c, 'name' => 'check '.($i + 1), 'message' => null], $checks, array_keys($checks));
+            $detail = $detail !== null ? [...$detail, 'name' => 'check 1', 'last_message' => null] : null;
+        }
+
         return ['summary' => $states, 'checks' => $checks, 'check' => $detail];
+    }
+
+    /**
+     * @return array{total: int, ok: int, recovering: int, degraded: int, down: int, stale: int, pending: int, checks: list<array{uuid: string, name: string, state: string, message: string|null, since: string|null}>}
+     */
+    private function healthSummary(Project $project, WidgetScope $scope): array
+    {
+        return $this->memo->remember("health-summary:{$project->id}:".($scope->environment ?? '*'), fn (): array => $this->health->summary($project, $scope->environment));
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function healthRows(Project $project, WidgetScope $scope): array
+    {
+        return $this->memo->remember("health-rows:{$project->id}:{$scope->period->value}:".($scope->environment ?? '*'), fn (): array => $this->health->rows($project, $scope->period, $scope->environment));
     }
 
     /**
@@ -484,7 +522,7 @@ class ResolveWidgetDataAction
     {
         $picked = array_values(array_filter((array) ($options['checks'] ?? []), 'is_string'));
 
-        $uptimes = $projects->toBase()->flatMap(fn (Project $p): array => $this->health->rows($p, $scope->period, $scope->environment))
+        $uptimes = $projects->toBase()->flatMap(fn (Project $p): array => $this->healthRows($p, $scope))
             ->filter(fn (array $row): bool => ! $row['archived'] && $row['uptime'] !== null && ($picked === [] || in_array($row['uuid'], $picked, true)))
             ->pluck('uptime');
 
@@ -555,7 +593,8 @@ class ResolveWidgetDataAction
      */
     private function perMinute(MetricFilter $filter, int $minutes, int $ago = 0): float
     {
-        $to = CarbonImmutable::now()->subSeconds($ago);
+        // Whole minutes, as the counts are kept: the minute under way has not all come in.
+        $to = CarbonImmutable::now()->startOfMinute()->subSeconds($ago);
         $count = $this->metrics->value(Metric::Requests, $filter, MetricWindow::between($to->subMinutes($minutes), $to)) ?? 0.0;
 
         return round($count / $minutes, 2);
@@ -612,7 +651,8 @@ class ResolveWidgetDataAction
             return ['state' => $q['size'] !== null ? $this->state((float) $q['size'], $limits) : null, 'reason' => 'size'];
         }
 
-        $rule = $this->backlogRules[$project->id] ??= AlertRule::query()->whereEffectiveFor($project)->whereType(AlertRuleType::QueueBacklog)->first() ?? false;
+        $rule = $this->memo->remember("backlog:{$project->id}", fn (): AlertRule|false => AlertRule::query()
+            ->whereEffectiveFor($project)->whereType(AlertRuleType::QueueBacklog)->first() ?? false);
         $settings = $rule instanceof AlertRule
             ? QueueBacklogSettings::forQueue($rule, $project, $q['connection'], $q['queue'])
             : new QueueBacklogSettings();
