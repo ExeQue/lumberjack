@@ -316,6 +316,7 @@ final class WidgetSchema
                 $section('checks', [
                     $select('view', ['auto', 'summary', 'list', 'cards'], 'auto', false, 2),
                     ['key' => 'checks', 'type' => 'checks', 'default' => null, 'data' => true, 'span' => 2],
+                    $toggle('auto_scroll', true),
                     $toggle('only_problems', false, true),
                     $toggle('show_uptime', true),
                     $toggle('show_timeline', true),

@@ -203,6 +203,7 @@ return [
         'show_count' => ['label' => 'Show count'],
         'show_project' => ['label' => 'Show project'],
         'wrap' => ['label' => 'Wrap long text'],
+        'auto_scroll' => ['label' => 'Scroll slowly through rows that do not fit'],
         'view' => ['label' => 'Show as', 'options' => ['auto' => 'Automatic', 'summary' => 'Summary', 'list' => 'List', 'cards' => 'Cards']],
         'checks' => ['label' => 'Checks'],
         'show_uptime' => ['label' => 'Show uptime'],
