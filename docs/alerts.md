@@ -51,7 +51,9 @@ you pick, and can be limited to some environments (comma separated, empty means 
 | Resolved or ignored | Someone resolving or ignoring an issue, with their comment. Bulk changes are left out. | No            |
 | Note                | Every note on an issue, by a person or an agent.                                       | No            |
 | Queue backlog       | A queue over its thresholds for a while, and again when it is back under.              | Yes           |
-| Health check        | A [health check](./health) becoming degraded or down, and again when it recovers.      | Yes           |
+| Health degraded     | A [health check](./health) that keeps warning past its threshold.                      | Yes           |
+| Health down         | A health check that keeps failing past its threshold, also after being degraded.       | Yes           |
+| Health recovered    | A degraded or down health check that passes again past its recovery threshold.         | Yes           |
 
 At most one message is sent per issue per rule every 30 minutes. Regressions and
 notes are not throttled: a regression only follows someone resolving the issue, so
@@ -106,7 +108,7 @@ turning a status banner on while an issue escalates.
 ```
 
 `event` is the rule (`new_issue`, `regression`, `escalation`, `status_change`, `note`,
-`queue_backlog`, `health_check`) or `test`. `status_change` and `note` are filled in
+`queue_backlog`, `health_degraded`, `health_down`, `health_recovered`) or `test`. `status_change` and `note` are filled in
 for those events.
 
 A queue backlog has no issue; its body carries the queue and the thresholds instead,
@@ -139,7 +141,7 @@ runs):
 {
     "version": "1",
     "sent_at": "2026-11-03T10:12:00+00:00",
-    "event": "health_check",
+    "event": "health_down",
     "project": { "id": "...", "slug": "shop", "name": "Shop" },
     "environment": "production",
     "check": {

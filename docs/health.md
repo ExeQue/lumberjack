@@ -110,8 +110,13 @@ sidebar counts the checks that are degraded or down.
 
 ## Alerts
 
-The **Health check** alert rule (on by default) sends one message when a check becomes
-degraded or down, one more if a degraded check goes down, and one when it recovers.
+Three alert rules, all on by default, each with its own channels and environments:
+**Health degraded** when a check keeps warning, **Health down** when it keeps failing
+(also when a degraded check goes down), and **Health recovered** when it is ok again.
+So a check going down can page someone while a degraded one only posts to a channel,
+or recoveries can be left out. A check that is degraded or down is still followed while
+its rule is off: turning **Health degraded** off does not stop the later down or
+recovered message.
 A check that goes bad again within 30 minutes of its last alert stays quiet, so a
 flapping check does not flood the channel. Muted and archived checks send nothing.
 See [Alerts](./alerts#webhooks) for the webhook body.

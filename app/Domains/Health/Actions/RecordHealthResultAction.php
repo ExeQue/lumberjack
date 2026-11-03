@@ -146,9 +146,34 @@ class RecordHealthResultAction
             return null;
         }
 
+        $since = ($check->status_changed_at ?? now())->toIso8601String();
+
+        // What happened is worked out whether or not a rule listens, so turning one of
+        // the three rules off never confuses what the others are told later.
+        if ($status === HealthStatus::Ok) {
+            if ($check->alerted_status === null) {
+                return null;
+            }
+
+            $check->alerted_status = null;
+            [$type, $kind, $hosts, $since] = [AlertRuleType::HealthRecovered, HealthCheckAlert::RECOVERED, [], ($check->alerted_at ?? now())->toIso8601String()];
+        } else {
+            $throttled = $check->alerted_status === null && $check->alerted_at?->gt(now()->subMinutes(HealthCheck::ALERT_THROTTLE_MINUTES));
+
+            if (! $status->worseThan($check->alerted_status) || $throttled) {
+                return null;
+            }
+
+            $check->alerted_status = $status;
+            $check->alerted_at = now();
+            [$type, $kind] = $status === HealthStatus::Down
+                ? [AlertRuleType::HealthDown, HealthCheckAlert::DOWN]
+                : [AlertRuleType::HealthDegraded, HealthCheckAlert::DEGRADED];
+        }
+
         $rule = AlertRule::query()
             ->where('project_id', $check->project_id)
-            ->where('type', AlertRuleType::HealthCheck->value)
+            ->where('type', $type->value)
             ->where('enabled', true)
             ->whereHas('channels')
             ->first();
@@ -157,27 +182,6 @@ class RecordHealthResultAction
             return null;
         }
 
-        $since = ($check->status_changed_at ?? now())->toIso8601String();
-
-        if ($status === HealthStatus::Ok) {
-            if ($check->alerted_status === null) {
-                return null;
-            }
-
-            $check->alerted_status = null;
-
-            return [$rule, $check, HealthCheckAlert::RECOVERED, $result->message, [], ($check->alerted_at ?? now())->toIso8601String()];
-        }
-
-        $throttled = $check->alerted_status === null && $check->alerted_at?->gt(now()->subMinutes(HealthCheck::ALERT_THROTTLE_MINUTES));
-
-        if (! $status->worseThan($check->alerted_status) || $throttled) {
-            return null;
-        }
-
-        $check->alerted_status = $status;
-        $check->alerted_at = now();
-
-        return [$rule, $check, $status === HealthStatus::Down ? HealthCheckAlert::DOWN : HealthCheckAlert::DEGRADED, $result->message, $hosts, $since];
+        return [$rule, $check, $kind, $result->message, $hosts, $since];
     }
 }

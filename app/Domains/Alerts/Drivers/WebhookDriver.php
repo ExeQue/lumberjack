@@ -62,7 +62,8 @@ class WebhookDriver implements ChannelDriver
             $check = $alert->check;
 
             $this->post($channel, [
-                'event' => 'health_check',
+                // The rule that sent it: health_degraded, health_down or health_recovered.
+                'event' => 'health_'.$alert->state,
                 'project' => ['id' => $check->project->uuid, 'slug' => $check->project->slug, 'name' => $check->project->name],
                 'environment' => $check->environment !== '' ? $check->environment : null,
                 'check' => [
