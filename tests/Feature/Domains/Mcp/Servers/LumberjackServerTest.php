@@ -110,7 +110,7 @@ describe('the triage inbox', function () {
 
 describe('health checks', function () {
     it('lists the checks with their state, and only those needing attention when asked', function () {
-        $down = HealthCheck::factory()->for($this->project)->create(['slug' => 'disk:s3', 'degrade_after' => 1]);
+        $down = HealthCheck::factory()->for($this->project)->create(['slug' => 'disk:s3', 'degrade_after' => 1, 'down_after' => 1]);
         HealthCheck::factory()->for($this->project)->create(['slug' => 'cache:redis']);
         app(RecordHealthResultAction::class)->execute($down, new HealthResultData(HealthResultStatus::Failed, 'Not writable', host: 'web-1'));
 

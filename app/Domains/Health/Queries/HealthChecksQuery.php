@@ -21,7 +21,7 @@ use Illuminate\Support\Collection;
 class HealthChecksQuery
 {
     /** States from most to least in need of attention. */
-    private const array SEVERITY = ['down', 'degraded', 'stale', 'pending', 'ok'];
+    private const array SEVERITY = ['down', 'degraded', 'recovering', 'stale', 'pending', 'ok'];
 
     /**
      * @return EloquentCollection<int, HealthCheck>
@@ -56,7 +56,7 @@ class HealthChecksQuery
     /**
      * How many checks stand where, archived ones left out.
      *
-     * @return array{total: int, ok: int, degraded: int, down: int, stale: int, pending: int}
+     * @return array{total: int, ok: int, recovering: int, degraded: int, down: int, stale: int, pending: int}
      */
     public function summary(Project $project, ?string $environment = null): array
     {
@@ -66,6 +66,7 @@ class HealthChecksQuery
         return [
             'total' => $states->sum(),
             'ok' => (int) $states->get('ok', 0),
+            'recovering' => (int) $states->get('recovering', 0),
             'degraded' => (int) $states->get('degraded', 0),
             'down' => (int) $states->get('down', 0),
             'stale' => (int) $states->get('stale', 0),
@@ -85,7 +86,7 @@ class HealthChecksQuery
     }
 
     /**
-     * "ok", "degraded", "down", "stale" or "pending" (nothing reported yet).
+     * "ok", "recovering", "degraded", "down", "stale" or "pending" (nothing reported yet).
      */
     public static function state(HealthCheck $check): string
     {
@@ -113,6 +114,7 @@ class HealthChecksQuery
             'muted' => $check->muted,
             'archived' => $check->archived_at !== null,
             'degrade_after' => $check->degrade_after,
+            'down_after' => $check->downAfter(),
             'recover_after' => $check->recover_after,
             'thresholds_overridden' => $check->thresholds_overridden,
             'interval_minutes' => $check->interval_minutes,

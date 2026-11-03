@@ -62,6 +62,7 @@ type Props = {
 
 const stateTone: Record<HealthState, Tone> = {
     ok: 'ok',
+    recovering: 'info',
     degraded: 'warn',
     down: 'err',
     stale: 'neutral',
@@ -481,7 +482,10 @@ function CheckDetail({
                         )}
                         {t(
                             'health.detail.thresholds',
-                            { recover: check.recover_after },
+                            {
+                                recover: check.recover_after,
+                                down: check.down_after,
+                            },
                             check.degrade_after,
                         )}{' '}
                         {check.source === 'reported'

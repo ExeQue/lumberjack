@@ -6,9 +6,11 @@ namespace App\Domains\Health\Http\Requests;
 
 use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Models\HealthCheck;
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * Adding or editing a check. A check Lumberjack runs takes its type's settings; one
@@ -51,6 +53,7 @@ class SaveHealthCheckRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:1000'],
             'degrade_after' => $thresholds,
             'recover_after' => $thresholds,
+            'down_after' => $thresholds,
             'muted' => ['boolean'],
         ];
 
@@ -66,6 +69,24 @@ class SaveHealthCheckRequest extends FormRequest
             'config' => ['nullable', 'array'],
             ...$this->configRules(),
         ];
+    }
+
+    /**
+     * Down after fewer failures than degraded would skip degraded in a way nobody asked
+     * for; setting both the same is how to go straight to down.
+     *
+     * @return list<Closure(Validator): void>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $down = $this->input('down_after');
+            $degrade = $this->input('degrade_after') ?? $this->check()?->degrade_after;
+
+            if (is_numeric($down) && is_numeric($degrade) && (int) $down < (int) $degrade) {
+                $validator->errors()->add('down_after', __('health.down_after_too_low', ['degrade' => (int) $degrade]));
+            }
+        }];
     }
 
     /**

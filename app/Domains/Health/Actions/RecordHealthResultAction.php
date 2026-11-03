@@ -21,10 +21,12 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The one place a result moves a check: the host's streaks decide its status (down or
- * degraded after `degrade_after` bad results in a row, ok again after `recover_after`
+ * The one place a result moves a check: the host's streaks decide its status (degraded
+ * after `degrade_after` bad results in a row, down after `down_after` failed ones,
+ * recovering on the first good result after that and ok again after `recover_after`
  * good ones), the check takes the worst of its hosts, an outage opens or closes, and
- * the health check rule is told once per change.
+ * the health check rule is told once per change. Recovering keeps the outage open and
+ * sends nothing; a bad result while recovering goes back to where it was.
  */
 class RecordHealthResultAction
 {
@@ -68,7 +70,7 @@ class RecordHealthResultAction
             }
 
             $check->last_result_at = $check->last_result_at === null || $at->gt($check->last_result_at) ? $at : $check->last_result_at;
-            $alert = $this->alert($check, $status, $result, array_values(array_map(fn (HealthCheckHost $h): string => $h->host, $live->filter(fn (HealthCheckHost $h): bool => $h->status !== null && $h->status !== HealthStatus::Ok && $h->host !== '')->all())));
+            $alert = $this->alert($check, $status, $result, array_values(array_map(fn (HealthCheckHost $h): string => $h->host, $live->filter(fn (HealthCheckHost $h): bool => $h->status?->worseThan(HealthStatus::Recovering) === true && $h->host !== '')->all())));
             $check->save();
 
             return [$row, $alert];
@@ -94,17 +96,32 @@ class RecordHealthResultAction
         if ($result->status === HealthResultStatus::Ok) {
             $host->ok_streak++;
             $host->fail_streak = 0;
+            $host->failed_streak = 0;
 
             if ($host->status === null || $host->ok_streak >= $check->recover_after) {
                 $host->status = HealthStatus::Ok;
+                $host->recovering_from = null;
+            } elseif ($host->status === HealthStatus::Degraded || $host->status === HealthStatus::Down) {
+                $host->recovering_from = $host->status;
+                $host->status = HealthStatus::Recovering;
             }
         } else {
+            $failed = $result->status === HealthResultStatus::Failed;
             $host->fail_streak++;
+            $host->failed_streak = $failed ? $host->failed_streak + 1 : 0;
             $host->ok_streak = 0;
 
-            // A warning is not ok, but it degrades; only a failure takes it down.
-            if ($host->fail_streak >= $check->degrade_after) {
-                $host->status = $result->status === HealthResultStatus::Failed ? HealthStatus::Down : HealthStatus::Degraded;
+            // The bad streak restarts at one, so it goes back to where it was rather than dropping to degraded.
+            if ($host->status === HealthStatus::Recovering) {
+                $host->status = $host->recovering_from ?? HealthStatus::Degraded;
+                $host->recovering_from = null;
+            }
+
+            // A warning is not ok, but it only degrades; only failures in a row take it down, and keep it there.
+            if ($host->failed_streak >= $check->downAfter() || ($failed && $host->status === HealthStatus::Down)) {
+                $host->status = HealthStatus::Down;
+            } elseif ($host->fail_streak >= $check->degrade_after) {
+                $host->status = HealthStatus::Degraded;
             }
         }
 
@@ -122,9 +139,10 @@ class RecordHealthResultAction
         $bad = $status !== null && $status !== HealthStatus::Ok;
         $open = HealthOutage::query()->where('health_check_id', $check->id)->whereNull('ended_at')->latest('started_at')->first();
 
-        if ($bad && $open === null) {
+        // Recovering keeps an open outage open, at its worst status; it never opens one.
+        if ($bad && $open === null && $status !== HealthStatus::Recovering) {
             HealthOutage::query()->create(['health_check_id' => $check->id, 'project_id' => $check->project_id, 'status' => $status, 'first_message' => $result->message, 'started_at' => $at]);
-        } elseif ($bad && $status->worseThan($open->status)) {
+        } elseif ($bad && $open !== null && $status->worseThan($open->status)) {
             $open->update(['status' => $status]);
         } elseif (! $bad && $open !== null && $status === HealthStatus::Ok) {
             $open->update(['ended_at' => $at]);
@@ -135,14 +153,15 @@ class RecordHealthResultAction
      * What to tell the rule, if anything: a check getting worse than what was last sent,
      * or one that was reported bad and is ok again. A check that turns bad again within
      * the throttle window of its last alert stays quiet; one already told about may
-     * still escalate from degraded to down.
+     * still escalate from degraded to down, and one back from recovering stays quiet.
      *
      * @param  list<string>  $hosts
      * @return array{AlertRule, HealthCheck, string, ?string, list<string>, string}|null
      */
     private function alert(HealthCheck $check, ?HealthStatus $status, HealthResultData $result, array $hosts): ?array
     {
-        if ($check->muted || $check->archived_at !== null || $status === null) {
+        // Recovering is not news; only reaching ok again is.
+        if ($check->muted || $check->archived_at !== null || $status === null || $status === HealthStatus::Recovering) {
             return null;
         }
 
@@ -158,7 +177,7 @@ class RecordHealthResultAction
             $check->alerted_status = null;
             [$type, $kind, $hosts, $since] = [AlertRuleType::HealthRecovered, HealthCheckAlert::RECOVERED, [], ($check->alerted_at ?? now())->toIso8601String()];
         } else {
-            $throttled = $check->alerted_status === null && $check->alerted_at?->gt(now()->subMinutes(HealthCheck::ALERT_THROTTLE_MINUTES));
+            $throttled = $check->alerted_status === null && $check->alerted_at?->gt(now()->subMinutes((int) config('health.alert_throttle_minutes')));
 
             if (! $status->worseThan($check->alerted_status) || $throttled) {
                 return null;

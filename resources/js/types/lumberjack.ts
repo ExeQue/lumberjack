@@ -215,6 +215,7 @@ export type ReleaseStat = {
 export type HealthSummary = {
     total: number;
     ok: number;
+    recovering: number;
     degraded: number;
     down: number;
     stale: number;
@@ -228,8 +229,17 @@ export type HealthSummary = {
     }[];
 };
 
-/** Where a check stands as shown: stale when it stopped reporting, pending before its first result. */
-export type HealthState = 'ok' | 'degraded' | 'down' | 'stale' | 'pending';
+/**
+ * Where a check stands as shown: stale when it stopped reporting, pending before its first result,
+ * recovering when it was bad and has good results in a row, not yet enough to be ok.
+ */
+export type HealthState =
+    | 'ok'
+    | 'recovering'
+    | 'degraded'
+    | 'down'
+    | 'stale'
+    | 'pending';
 
 export type HealthResultStatus = 'ok' | 'warning' | 'failed';
 
@@ -258,6 +268,8 @@ export type HealthCheckRow = {
     muted: boolean;
     archived: boolean;
     degrade_after: number;
+    /** Effective: never below degrade_after. */
+    down_after: number;
     recover_after: number;
     thresholds_overridden: boolean;
     interval_minutes: number | null;
