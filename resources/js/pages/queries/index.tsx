@@ -43,7 +43,8 @@ type Props = {
     project: ProjectHeader;
     filters: Filters;
     connections: string[];
-    stats: {
+    /** Deferred: computed after the page shows. */
+    stats?: {
         rows: QueryStat[];
         total_us: number;
         calls: number;
@@ -55,13 +56,16 @@ export default function QueriesIndex({
     project,
     filters,
     connections,
-    stats,
+    stats: deferred,
 }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const [search, setSearch] = useState(filters.search);
 
     useProjectLive(project.uuid, ['performance.changed'], ['stats']);
+
+    const loading = deferred === undefined;
+    const stats = deferred ?? { rows: [], total_us: 0, calls: 0, distinct: 0 };
 
     const apply = (changes: Partial<Filters>) => {
         const query = Object.fromEntries(
@@ -176,8 +180,14 @@ export default function QueriesIndex({
 
                 <Card className="overflow-x-auto">
                     {stats.rows.length === 0 ? (
-                        <EmptyState title={t('queries.empty_title')}>
-                            {t('queries.empty_body')}
+                        <EmptyState
+                            title={
+                                loading
+                                    ? t('common.loading')
+                                    : t('queries.empty_title')
+                            }
+                        >
+                            {loading ? null : t('queries.empty_body')}
                         </EmptyState>
                     ) : (
                         <table className={tableClass}>

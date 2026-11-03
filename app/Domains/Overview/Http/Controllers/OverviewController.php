@@ -24,7 +24,8 @@ class OverviewController
         return Inertia::render('projects/overview', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => $this->filters($request),
-            'overview' => fn (): array => $overview->get($project, $this->period($request), $this->environment($request)),
+            // Deferred: the page shell paints at once on a cold statistics cache.
+            'overview' => Inertia::defer(fn (): array => $overview->get($project, $this->period($request), $this->environment($request))),
         ]);
     }
 }

@@ -15,6 +15,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Shared\Http\Concerns\ReadsDashboardFilters;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,33 +34,33 @@ class JobController
         $period = $this->period($request);
         $environment = $this->environment($request);
 
-        $runs = JobRun::query()
-            ->where('project_id', $project->id)
-            ->where('created_at', '>=', $period->since())
-            ->when($environment !== null)->where('environment', $environment)
-            ->when($name !== '')->where('name', $name)
-            ->when($name === '')->whereStatus(JobRunStatus::Failed, JobRunStatus::Stuck, JobRunStatus::Released)
-            ->with('occurrence.issue')
-            ->latest('id')
-            ->limit(25)
-            ->get();
-
         return Inertia::render('jobs/index', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => [...$this->filters($request), 'sort' => $sort, 'queue' => $queue, 'job' => $name],
-            'queues' => JobRun::query()->where('project_id', $project->id)->where('created_at', '>=', now()->subDays(7))->distinct()->limit(20)->pluck('queue'),
-            'stuck' => JobRun::query()->where('project_id', $project->id)->whereStatus(JobRunStatus::Stuck)->where('updated_at', '>=', now()->subDay())->count(),
-            'stuck_names' => JobRun::query()->where('project_id', $project->id)->whereStatus(JobRunStatus::Stuck)->where('updated_at', '>=', now()->subDay())
+            // Closures, so a live reload builds only the props it asks for.
+            'queues' => fn (): array => Cache::remember('jobs:'.$project->id.':queues', 300, fn (): array => JobRun::query()->where('project_id', $project->id)->where('created_at', '>=', now()->subDays(7))->distinct()->limit(20)->pluck('queue')->all()),
+            'stuck' => fn (): int => JobRun::query()->where('project_id', $project->id)->whereStatus(JobRunStatus::Stuck)->where('updated_at', '>=', now()->subDay())->count(),
+            'stuck_names' => fn () => JobRun::query()->where('project_id', $project->id)->whereStatus(JobRunStatus::Stuck)->where('updated_at', '>=', now()->subDay())
                 ->distinct()->limit(5)->pluck('name')->map(fn (string $name): string => class_basename($name))->values(),
             'jobs' => fn (): array => $query->get($project->id, $period, $environment, $sort, $queue),
             'queue_stats' => fn (): array => $queueStats->get($project->id, $period, $environment),
             // Each queue's own backlog thresholds, and the rule's they fall back to.
-            'queue_alerts' => [
+            'queue_alerts' => fn (): array => [
                 'rule' => AlertRule::query()->whereEffectiveFor($project)->whereType(AlertRuleType::QueueBacklog)->first()?->queueBacklogSettings()->toArray(),
                 'own' => QueueAlertThreshold::query()->where('project_id', $project->id)->orderBy('connection')->orderBy('queue')->get()->map(fn (QueueAlertThreshold $t): array => $t->toSummary())->all(),
                 'can_update' => $request->user()->can('update', $project),
             ],
-            'runs' => $runs->map(fn (JobRun $r): array => [
+            'runs' => fn (): array => JobRun::query()
+                ->where('project_id', $project->id)
+                ->where('created_at', '>=', $period->since())
+                ->when($environment !== null)->where('environment', $environment)
+                ->when($name !== '')->where('name', $name)
+                ->when($name === '')->whereStatus(JobRunStatus::Failed, JobRunStatus::Stuck, JobRunStatus::Released)
+                ->with('occurrence.issue')
+                ->latest('id')
+                ->limit(25)
+                ->get()
+                ->map(fn (JobRun $r): array => [
                 'id' => $r->id,
                 'uuid' => $r->job_uuid,
                 'name' => $r->name,
