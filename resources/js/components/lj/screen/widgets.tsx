@@ -692,7 +692,7 @@ function Gauge({
     const text = formatValue(value, unit);
 
     return (
-        <div className="relative min-h-0 flex-1">
+        <div className="relative min-h-0 w-full flex-1">
             <svg
                 viewBox="0 0 120 72"
                 className="absolute inset-0 h-full w-full"
@@ -861,7 +861,7 @@ function Chart({ widget, schema, data, t }: BodyProps) {
 
     return (
         <>
-            <div className="flex min-h-0 flex-1 flex-col gap-[0.25em]">
+            <div className="flex min-h-0 w-full flex-1 flex-col gap-[0.25em]">
                 <div className="relative min-h-0 flex-1">
                     {showY &&
                         yTicks.slice(0, -1).map((v, i) => (
@@ -1272,7 +1272,7 @@ function List({ widget, schema, data, now, t }: BodyProps) {
     return (
         <ul
             ref={scroller}
-            className="grid min-h-0 flex-1 content-start gap-x-[0.8em] overflow-hidden"
+            className="grid min-h-0 w-full flex-1 content-start gap-x-[0.8em] overflow-hidden"
             style={{ gridTemplateColumns: template }}
         >
             {rows.map((row, i) => {
@@ -1363,7 +1363,7 @@ function Hosts({
     return (
         <ul
             ref={scroller}
-            className="flex min-h-0 flex-1 flex-col gap-[0.45em] overflow-hidden"
+            className="flex min-h-0 w-full flex-1 flex-col gap-[0.45em] overflow-hidden"
         >
             {rows.map((row, i) => (
                 <li
@@ -1578,7 +1578,7 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
     const visible = checks.slice(0, more ? fit - 1 : fit);
 
     return (
-        <div ref={ref} className="min-h-0 flex-1 overflow-hidden">
+        <div ref={ref} className="min-h-0 w-full flex-1 overflow-hidden">
             {checks.length === 0 && (
                 <span
                     className="lj-tile-small"
