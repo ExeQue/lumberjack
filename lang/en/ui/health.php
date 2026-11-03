@@ -18,11 +18,13 @@ return [
         'heartbeat' => 'A secret URL your cron job or backup calls; fails when no call came in time.',
     ],
     'muted' => 'Muted',
+    // Next to a reported check that runs less often than every scheduler run.
+    'reported_every' => '{1} every minute|[2,*] every :count min',
     'never' => 'Never',
     'sources' => [
         'reported' => [
             'title' => 'Reported by the app',
-            'hint' => 'Checks the app runs itself and sends to Lumberjack. Stale when a check stops reporting for three times its usual interval.',
+            'hint' => 'Checks the app runs itself and sends to Lumberjack. Stale when a check stops reporting for 2.5 times the interval the app sends, or three times its usual interval without one.',
             'empty_title' => 'No reported checks yet',
             'empty_body' => 'Checks show up here once the app\'s SDK sends its first health result.',
         ],

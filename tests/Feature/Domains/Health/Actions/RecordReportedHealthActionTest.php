@@ -5,12 +5,15 @@ declare(strict_types=1);
 use App\Domains\Health\Actions\RecordReportedHealthAction;
 use App\Domains\Health\Data\HealthResultData;
 use App\Domains\Health\Models\HealthCheck;
+use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Health\Models\HealthCheckResult;
+use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Ingest\Data\Envelope;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Shared\Enums\Period;
 use Tests\Support\Ingest\BuildsIngestPayloads;
 
-covers(RecordReportedHealthAction::class, HealthResultData::class);
+covers(RecordReportedHealthAction::class, HealthResultData::class, HealthCheckHost::class);
 
 uses(BuildsIngestPayloads::class);
 
@@ -86,5 +89,42 @@ describe('ingesting health events', function () {
 
         $check = HealthCheck::sole();
         expect($check->degrade_after)->toBe(10)->and($check->down_after)->toBe(20)->and($check->archived_at)->toBeNull();
+    });
+});
+
+describe('the interval the app reports', function () {
+    it('keeps interval_minutes on the host, and none for an older SDK or a value out of range', function (mixed $sent, ?int $kept) {
+        ($this->record)(($this->event)(['interval_minutes' => $sent]));
+
+        expect(HealthCheckHost::sole()->interval_minutes)->toBe($kept);
+    })->with([
+        'every 15 minutes' => [15, 15],
+        'not sent' => [null, null],
+        'zero' => [0, null],
+        'more than a day' => [1441, null],
+        'a string' => ['15', null],
+    ]);
+
+    it('goes stale after 2.5 times the reported interval instead of the usual spacing', function () {
+        $this->travelTo(now()->startOfMinute());
+        ($this->record)(($this->event)(['interval_minutes' => 15, 'timestamp' => now()->getTimestamp()]));
+        $state = fn (): string => app(HealthChecksQuery::class)->summary($this->project)['checks'][0]['state'];
+
+        $this->travel(37)->minutes();
+        expect($state())->toBe('ok')
+            ->and(app(HealthChecksQuery::class)->rows($this->project, Period::Day)[0]['interval_minutes'])->toBe(15);
+
+        $this->travel(1)->minutes();
+        expect($state())->toBe('stale');
+    });
+
+    it('goes stale after 15 minutes as before when no interval is reported', function () {
+        $this->travelTo(now()->startOfMinute());
+        ($this->record)(($this->event)(['timestamp' => now()->getTimestamp()]));
+
+        $this->travel(16)->minutes();
+
+        expect(app(HealthChecksQuery::class)->summary($this->project)['checks'][0]['state'])->toBe('stale')
+            ->and(app(HealthChecksQuery::class)->rows($this->project, Period::Day)[0]['interval_minutes'])->toBeNull();
     });
 });

@@ -23,6 +23,11 @@ characters) is skipped, and the rest of the batch is kept. Each result carries a
 status (`ok`, `warning` or `failed`), a message, up to 20 numeric metrics and how long
 the check took; `latency_ms` is shown as the check's latency.
 
+A result may also carry `interval_minutes`: how often the app runs the check, in whole
+minutes (1 to 1440), when it runs less often than on every scheduler run. The Health
+page shows it next to the check (**every 15 min**), and it decides when the check goes
+stale. A result without it, or with a value outside that range, is recorded as before.
+
 ### Database metrics
 
 A check that watches a database may send these metrics with each result:
@@ -46,9 +51,11 @@ host's last result.
 ### Stale checks
 
 A check that stops reporting shows as **stale** (gray), not down: the app may have
-been switched off, or the check renamed. It is stale after three times its usual
-spacing without a result (so after 3 minutes for a check that runs every minute), or
-after 15 minutes while the spacing is not known yet. A stale check has no uptime and
+been switched off, or the check renamed. A check whose results carry `interval_minutes`
+is stale after 2.5 times that interval without a result (so after 37.5 minutes for a
+check that runs every 15 minutes). Without it, a check is stale after three times its
+usual spacing without a result (so after 3 minutes for a check that runs every minute),
+or after 15 minutes while the spacing is not known yet. A stale check has no uptime and
 sends no alert; it comes back by itself with its next result. **Archive** puts away a
 check that will not report again, for example after renaming a slug.
 

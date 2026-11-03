@@ -279,6 +279,16 @@ function ChecksTable({
                                             {t(`health.types.${check.type}`)}
                                         </span>
                                     )}
+                                    {check.source === 'reported' &&
+                                        check.interval_minutes && (
+                                            <span>
+                                                {t(
+                                                    'health.reported_every',
+                                                    {},
+                                                    check.interval_minutes,
+                                                )}
+                                            </span>
+                                        )}
                                     {check.environment && (
                                         <Mono>{check.environment}</Mono>
                                     )}
