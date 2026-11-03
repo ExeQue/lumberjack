@@ -81,14 +81,14 @@ new ones included), and the time zone for the clock and the theme schedule.
 
 A widget is a way of showing something; what it shows is picked under **Shows**.
 
-| Widget         | Shows                                                                                                                                                                                                                           |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stat           | One number with its trend against an earlier period and a sparkline: requests, error rate, p95, Apdex, open issues, users affected, failed jobs, queue size, agents online, highest host CPU, memory or disk, current release, LCP p75.      |
-| Gauge          | One value on a half circle against its limits: error rate, p95, Apdex, host CPU, memory or disk, queue size, health uptime.                                                                                                     |
-| Chart          | A series over the period: requests and errors, requests, error rate, p95, Apdex, users affected, queue size or wait, failed jobs, host CPU, memory or disk, LCP. It can split by route, queue, host, environment, release or project. |
-| List           | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents.                                                                                                                |
-| Health         | The health checks of the projects: a count at 1 x 1, a list when narrow, small cards when two or more fit side by side. With exactly one check picked, that check alone with its uptime, timeline and last message.             |
-| Clock and text | The time (12 or 24 hour, any time zone, with seconds or the date), a note for the room, or both.                                                                                                                                |
+| Widget         | Shows                                                                                                                                                                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stat           | One number with its trend against an earlier period and a sparkline: requests, error rate, p95, Apdex, open issues, users affected, failed jobs, queue size, agents online, highest host CPU, memory or disk, current release, LCP p75. |
+| Gauge          | One value on a half circle against its limits: error rate, p95, Apdex, host CPU, memory or disk, queue size, health uptime.                                                                                                             |
+| Chart          | A series over the period: requests and errors, requests, error rate, p95, Apdex, users affected, queue size or wait, failed jobs, host CPU, memory or disk, LCP. It can split by route, queue, host, environment, release or project.   |
+| List           | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents.                                                                                                                        |
+| Health         | The health checks of the projects: a count at 1 x 1, a list when narrow, small cards when two or more fit side by side. With exactly one check picked, that check alone with its uptime, timeline and last message.                     |
+| Clock and text | The time (12 or 24 hour, any time zone, with seconds or the date), a note for the room, or both.                                                                                                                                        |
 
 A list of queues judges each queue like its [backlog alert](./alerts#queue-backlog): red
 past the project's thresholds (its own for that queue, or the rule's: 1,000 jobs or 10
@@ -108,19 +108,30 @@ Each widget's settings are grouped in sections that open and close:
   values are bad (Apdex, uptime), what to compare with, decimals, a prefix and suffix,
   the chart style and how many series, its time axis, value axis and grid lines (each on or off), how many rows a list shows and in which order.
 - **Rotation**: a stat, gauge, chart or list can show several values in turn on one
-  tile. Pick them under **Rotate through**; the title follows the value shown. They
-  switch every 5 seconds to a minute, with a fade, a slide or neither, and tiles with
-  the same timing switch together. A value that needs attention (amber or red) holds
-  the tile until it clears. In the designer the selected tile stays on its first value.
-  Each picked value is a row under **Rotate through**: the arrows change the order, and
-  opening a row gives that value settings of its own over the widget's: how many
-  seconds it shows, its title, its period and the type's value settings (limits, low
+  tile. The inspector shows them as tabs at the top, one per value in the order they
+  show, the widget's own source first. **+** after the tabs adds the next value not
+  shown yet and opens its tab; **Shows** on that tab changes which one it is. A tab
+  holds everything about its value: what it shows, its title, its period (**Over**),
+  how many seconds it stays on screen, and the type's value settings (limits, low
   values are bad, compare, decimals, prefix and suffix, a gauge's scale, chart or list
-  options). Left empty, each shows what the widget uses ("Same as widget"). The first
-  value is the widget's own source with the widget's settings; only its seconds are set
-  on its row. As stored in the screen's widgets, a `rotate` entry is a source id or
-  `{"source": "p95", "seconds": 30, "title": "Latency", "options": {"red": 800},
-  "scope": {"period": "24h"}}`.
+  options). On the first tab these are the widget's own; on the others, left empty,
+  each shows what the widget uses ("Same as widget"). Drag a tab, or use the arrows
+  above its settings, to change the order; **Remove this value** takes it out of the
+  rotation. Moving a value to the front, or removing the first, makes it the widget's
+  source and its settings the widget's, and the other values keep what they showed.
+  In the designer the selected tile shows the value whose tab is open.
+
+    Below the tabs, **Whole widget** holds what applies to every value: under
+    **Rotation**, how often they switch (every 5 seconds to a minute), with a fade, a
+    slide or neither, whether a value that needs attention (amber or red) holds the tile
+    until it clears, and the position dots; then Scope, Display and Size. Tiles with the
+    same timing switch together. As stored in the screen's widgets, a `rotate` entry is a
+    source id or `{"source": "p95", "seconds": 30, "title": "Latency", "options":
+  {"red": 800}, "scope": {"period": "24h"}}`; the first value's seconds are the
+    widget's `source_seconds` option.
+
+    ![A rotating widget's value tabs](./screenshots/screen-designer-rotation.png)
+
 - **Scope**: the projects, environment, period and release the widget shows, each the
   screen's default unless set, and a filter on the route, queue, job or host (`*`
   matches anything, so `POST /checkout*` or `payments*`).
