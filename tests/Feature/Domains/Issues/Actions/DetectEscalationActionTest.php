@@ -39,6 +39,19 @@ describe('escalation', function () {
         Event::assertDispatched(IssueEscalated::class, fn (IssueEscalated $e): bool => $e->burst === 12);
     });
 
+    it('flags a burst that arrives at once, not only one spread over the throttle window', function () {
+        $issue = Issue::factory()->create(['surfaced_at' => now()->subDay()]);
+        $detect = app(DetectEscalationAction::class);
+        $flagged = false;
+
+        foreach (range(1, 12) as $i) {
+            Occurrence::factory()->for($issue)->create(['project_id' => $issue->project_id, 'occurred_at' => now()]);
+            $flagged = $detect->execute($issue->refresh(), 'production') || $flagged;
+        }
+
+        expect($flagged)->toBeTrue()->and($issue->refresh()->isEscalating())->toBeTrue();
+    });
+
     it('does not flag an issue that always happens this often', function () {
         $issue = Issue::factory()->create();
         // Three every five minutes all day: twelve in five minutes is only four times that.
