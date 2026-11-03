@@ -153,6 +153,16 @@ describe('notes', function () {
 
         Http::assertSent(fn ($request) => isset($request['embeds'][0]['description']) && str_contains($request['embeds'][0]['description'], '> Known issue, fix in #482'));
     });
+
+    it('leaves the comment given on resolving out of the summary', function () {
+        $this->issue->notes()->create(['body' => 'Looked into it', 'user_id' => User::factory()->create()->id]);
+        $this->issue->notes()->create(['body' => "won't fix", 'status' => 'resolved', 'user_id' => User::factory()->create()->id]);
+
+        app(SendIssueAlertsAction::class)->execute($this->issue, AlertRuleType::NewIssue, 'production');
+
+        Http::assertSent(fn ($request) => str_contains($request['embeds'][0]['description'] ?? '', '> Looked into it')
+            && ! str_contains($request['embeds'][0]['description'] ?? '', "won't fix"));
+    });
 });
 
 describe('status changes', function () {
