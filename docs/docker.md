@@ -181,18 +181,18 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-s
 
 Everything is set through environment variables in `.env.docker`.
 
-| Variable                       | Default        |                                                                                                                                   |
-| ------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `APP_URL`                      | (required)     | The public address, e.g. `https://lumberjack.example.com`                                                                         |
-| `APP_KEY`                      | (required)     | Encryption key. Keep it: changing it signs everyone out and breaks stored secrets                                                 |
-| `DB_PASSWORD`                  | (required)     | Password of the bundled Postgres                                                                                                  |
-| `LUMBERJACK_SETUP_TOKEN`       | generated      | Locks first-run setup. Without one, a token is generated on first start, printed in the log and kept in `storage/app/setup/token` |
-| `LUMBERJACK_PORT`              | `8080`         | Port on the host                                                                                                                  |
-| `HORIZON_INGEST_PROCESSES`     | `2`            | Most workers for incoming telemetry                                                                                               |
-| `HORIZON_BACKGROUND_PROCESSES` | `2`            | Most workers for everything else (alerts, pruning)                                                                                |
-| `MAIL_*`                       |                | SMTP for invitations, password resets and e-mail alerts; see [Mail](./administration#mail) for the two sender addresses           |
-| `TRUSTED_PROXIES`              | private ranges | Proxies whose `X-Forwarded-*` headers are believed; `*` for any                                                                   |
-| `LUMBERJACK_MIGRATE`           | `true`         | Run database migrations on start                                                                                                  |
+| Variable                       | Default       |                                                                                                                                   |
+| ------------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_URL`                      | (required)    | The public address, e.g. `https://lumberjack.example.com`                                                                         |
+| `APP_KEY`                      | (required)    | Encryption key. Keep it: changing it signs everyone out and breaks stored secrets                                                 |
+| `DB_PASSWORD`                  | (required)    | Password of the bundled Postgres                                                                                                  |
+| `LUMBERJACK_SETUP_TOKEN`       | generated     | Locks first-run setup. Without one, a token is generated on first start, printed in the log and kept in `storage/app/setup/token` |
+| `LUMBERJACK_PORT`              | `8080`        | Port on the host                                                                                                                  |
+| `HORIZON_INGEST_PROCESSES`     | `2`           | Most workers for incoming telemetry                                                                                               |
+| `HORIZON_BACKGROUND_PROCESSES` | `2`           | Most workers for everything else (alerts, pruning)                                                                                |
+| `MAIL_*`                       |               | SMTP for invitations, password resets and e-mail alerts; see [Mail](./administration#mail) for the two sender addresses           |
+| `TRUSTED_PROXIES`              | Docker ranges | Proxies whose `X-Forwarded-*` headers are believed: `127.0.0.1,172.16.0.0/12`. Comma separated; `*` for any (not recommended)     |
+| `LUMBERJACK_MIGRATE`           | `true`        | Run database migrations on start                                                                                                  |
 
 ### Your own Postgres or Redis
 
@@ -246,8 +246,12 @@ location / {
 
 **Traefik** handles WebSockets without extra settings; route the host to port 8080.
 
-If the proxy does not run on the same host or in a private network, set
-`TRUSTED_PROXIES` to its address.
+`TRUSTED_PROXIES` lists the proxies whose `X-Forwarded-For`, `-Proto` and `-Host`
+headers are believed. The default covers a proxy on the same server or in a Docker
+network (`127.0.0.1,172.16.0.0/12`). If your proxy connects from somewhere else, set it
+to the proxy's address. Keep the list short: anyone connecting from a trusted address
+can claim any client IP, which defeats the login and ingest rate limits. Links in mails
+and alerts always use `APP_URL`, whatever host a request names.
 
 ## Data and backups
 
