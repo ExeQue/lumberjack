@@ -80,9 +80,19 @@ class ConfirmTvPairingAction
         return $display;
     }
 
-    /** The pairing browser's device in the team, locked while the window joins it. */
+    /**
+     * The pairing browser's device in the team. Two of its windows confirmed at once
+     * wait for each other here (a row lock cannot hold a device not made yet), so the
+     * second joins the device the first made instead of making another.
+     */
     private function device(TvPairing $pairing, int $teamId): ?Device
     {
-        return $pairing->device_hash === null ? null : Device::query()->whereTeam($teamId)->whereDeviceHash($pairing->device_hash)->lockForUpdate()->first();
+        if ($pairing->device_hash === null) {
+            return null;
+        }
+
+        DB::select('SELECT pg_advisory_xact_lock(hashtext(?))', ["device:{$teamId}:{$pairing->device_hash}"]);
+
+        return Device::query()->whereTeam($teamId)->whereDeviceHash($pairing->device_hash)->first();
     }
 }
