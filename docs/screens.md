@@ -176,9 +176,12 @@ Each widget's settings are grouped in sections that open and close:
 - **Scope**, on each value's tab: the projects, environment and release it shows,
   each the widget's (on the first tab the screen's) default unless set, and a filter
   named after what the value can narrow: the route, queue, job, host or database check
-  (`*` matches anything, so `POST /checkout*` or `payments*`). A value with nothing to
+  (`*` matches anything, so `POST /checkout*` or `payments*`); a route filter also
+  matches route names, such as `orders.*`. A value that narrows a route also has a
+  **Domain**, suggesting the domains requests came in on in the last 7 days, such as
+  `shop.example.com` (`*` works here too). A value with nothing to
   narrow has no filter, and one that narrows something else than the first value (a
-  queue after a route) does not take the widget's filter. A rotated value's scope is stored in its `rotate` entry, such as
+  queue after a route) does not take the widget's filter or domain. A rotated value's scope is stored in its `rotate` entry, such as
   `{"source": "queue_size", "scope": {"filter": "bulk"}}`.
 - **Display**: not in the inspector but behind the gear in the tile's top right corner,
   in place of the period label, which shows while the pointer is on the tile, it has focus or it is

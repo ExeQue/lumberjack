@@ -24,7 +24,7 @@ export type Catalog = {
     environments: string[];
     checks: { uuid: string; name: string; project: string | null }[];
     periods: string[];
-    /** Known names per filter kind (queue, host), offered while typing a filter. */
+    /** Known names per filter kind (queue, host, domain), offered while typing a filter. */
     filters?: Record<string, string[]>;
 };
 
@@ -781,11 +781,16 @@ export function WidgetInspector({
                             list={
                                 field.key === 'filter' && filterOn
                                     ? id(`filter-${filterOn}`)
-                                    : undefined
+                                    : field.key === 'domain'
+                                      ? id('filter-domain')
+                                      : undefined
                             }
                             placeholder={
-                                scope && scopeTarget.inherited?.filter
-                                    ? scopeTarget.inherited.filter
+                                scope &&
+                                (field.key === 'filter' ||
+                                    field.key === 'domain') &&
+                                scopeTarget.inherited?.[field.key]
+                                    ? scopeTarget.inherited[field.key]
                                     : inherited &&
                                         typeof inherited[field.key] === 'string'
                                       ? String(inherited[field.key])
@@ -813,6 +818,13 @@ export function WidgetInspector({
                                         <option key={name} value={name} />
                                     ),
                                 )}
+                            </datalist>
+                        )}
+                        {field.key === 'domain' && (
+                            <datalist id={id('filter-domain')}>
+                                {(catalog.filters?.domain ?? []).map((name) => (
+                                    <option key={name} value={name} />
+                                ))}
                             </datalist>
                         )}
                     </div>
@@ -854,7 +866,11 @@ export function WidgetInspector({
               inherited:
                   filterOn === source?.filter_on
                       ? widget.scope
-                      : { ...widget.scope, filter: undefined },
+                      : {
+                            ...widget.scope,
+                            filter: undefined,
+                            domain: undefined,
+                        },
           };
     const projectsLabel = (value: string[] | undefined) =>
         value === undefined
@@ -1095,7 +1111,9 @@ export function WidgetInspector({
                         .filter(
                             (field) =>
                                 field.key !== 'period' &&
-                                (field.key !== 'filter' || filterOn),
+                                (field.key !== 'filter' || filterOn) &&
+                                (field.key !== 'domain' ||
+                                    filterOn === 'route'),
                         )
                         .map((field) => renderField(field, true))}
                 </Section>

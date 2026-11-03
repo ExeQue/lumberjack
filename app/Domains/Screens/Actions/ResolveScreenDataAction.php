@@ -54,7 +54,7 @@ class ResolveScreenDataAction
                 // A filter names a route, queue, job or host: a value that filters something
                 // else does not take the widget's.
                 if ($this->filterOn($type, $source) !== $this->filterOn($type, (string) $widget['source'])) {
-                    unset($own['filter']);
+                    unset($own['filter'], $own['domain']);
                 }
 
                 $scope = $this->scope($screen, [...$widget, 'scope' => [...$own, ...$item['scope']]]);
@@ -94,6 +94,7 @@ class ResolveScreenDataAction
             'period' => $own['period'] ?? $default['period'] ?? null,
             'release' => $own['release'] ?? null,
             'filter' => $own['filter'] ?? null,
+            'domain' => $own['domain'] ?? null,
         ]);
     }
 

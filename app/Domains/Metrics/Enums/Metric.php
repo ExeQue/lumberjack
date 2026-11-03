@@ -63,8 +63,9 @@ enum Metric: string
     public function groups(): array
     {
         return match ($this) {
-            self::Requests, self::Errors, self::ErrorRate, self::Apdex, self::LcpP75, self::InpP75, self::ClsP75 => [MetricGroup::Environment, MetricGroup::Route, MetricGroup::Release],
-            self::P50, self::P95, self::P99 => [MetricGroup::Environment, MetricGroup::Route, MetricGroup::Host, MetricGroup::Release],
+            self::Requests, self::Errors, self::ErrorRate, self::Apdex => [MetricGroup::Environment, MetricGroup::Route, MetricGroup::Domain, MetricGroup::Release],
+            self::LcpP75, self::InpP75, self::ClsP75 => [MetricGroup::Environment, MetricGroup::Route, MetricGroup::Release],
+            self::P50, self::P95, self::P99 => [MetricGroup::Environment, MetricGroup::Route, MetricGroup::Domain, MetricGroup::Host, MetricGroup::Release],
             self::Occurrences, self::Users => [MetricGroup::Environment, MetricGroup::Host, MetricGroup::Release],
             self::NewIssues => [MetricGroup::Environment, MetricGroup::Release],
             self::JobRuns, self::JobFailures, self::QueueWait => [MetricGroup::Environment, MetricGroup::Queue, MetricGroup::Host],

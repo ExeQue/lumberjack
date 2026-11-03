@@ -6,6 +6,7 @@ namespace App\Domains\Screens\Presenters;
 
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Jobs\Models\QueueSample;
+use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Projects\Queries\ProjectEnvironmentsQuery;
@@ -170,11 +171,13 @@ class ScreenPresenter
             'environments' => $projects->flatMap(fn (Project $p): array => $this->environments->get($p))->unique()->sort()->values()->all(),
             'checks' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->orderBy('name')->orderBy('slug')->get(['uuid', 'project_id', 'name', 'slug', 'type'])
                 ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name])->values()->all(),
-            // Names a filter can pick from, so a queue, host or database check is chosen, not typed.
+            // Names a filter can pick from, so a queue, host, domain or database check is chosen, not typed.
             'filters' => [
                 'queue' => QueueSample::query()->whereIn('project_id', $projects->modelKeys())->where('sampled_at', '>=', now()->subDays(7))
                     ->distinct()->orderBy('queue')->pluck('queue')->all(),
                 'host' => ProjectAgent::query()->whereIn('project_id', $projects->modelKeys())->distinct()->orderBy('host')->pluck('host')->all(),
+                'domain' => RequestRun::query()->whereIn('project_id', $projects->modelKeys())->where('occurred_at', '>=', now()->subDays(7))->whereNotNull('domain')
+                    ->distinct()->orderBy('domain')->pluck('domain')->all(),
                 'check' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->whereReportsDatabase()
                     ->distinct()->orderBy('slug')->pluck('slug')->all(),
             ],

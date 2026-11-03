@@ -135,6 +135,20 @@ describe('a gauge, a chart and a list', function () {
         expect($series['series'][0]['name'])->toBe('Zeta')->and($series['series'])->toHaveCount(2);
     });
 
+    it('narrows a route source to a domain, and finds routes by name', function () {
+        $minute = now()->subHour()->startOfMinute();
+        $this->createRequestCount($this->project, 30, minute: $minute, domain: 'shop.example.com');
+        $this->createRequestCount($this->project, 5, minute: $minute, domain: 'api.example.com');
+        $this->createRequestCount($this->project, 2, route: '/cart', minute: $minute, domain: 'api.example.com');
+        RequestRun::factory()->for($this->project)->create(['route' => '/orders', 'route_name' => 'orders.index', 'occurred_at' => now()->subHour()]);
+
+        $value = fn (WidgetScope $scope): mixed => ($this->resolve)(WidgetType::Stat, 'requests', scope: $scope)['value'];
+
+        expect($value(new WidgetScope(domain: 'API.example.com')))->toEqual(7)
+            ->and($value(new WidgetScope(filter: 'orders.*', domain: 'api.example.com')))->toEqual(5)
+            ->and(($this->resolve)(WidgetType::Stat, 'failed_jobs', scope: new WidgetScope(domain: 'api.example.com'))['value'])->toEqual(0);
+    });
+
     it('groups failed jobs by job class, filtered by the scope', function () {
         JobRun::factory()->for($this->project)->failed()->count(3)->create(['name' => 'App\\Jobs\\Bill', 'created_at' => now()->subHour()]);
         JobRun::factory()->for($this->project)->failed()->create(['name' => 'App\\Jobs\\Mail', 'created_at' => now()->subHour()]);

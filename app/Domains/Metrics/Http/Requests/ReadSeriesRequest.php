@@ -59,6 +59,7 @@ class ReadSeriesRequest extends FormRequest
             'interval' => ['sometimes', 'string', 'regex:/^(auto|\d{1,6}(ms|s|m|h|d))$/'],
             'environment' => ['sometimes', 'nullable', 'string', 'max:64'],
             'route' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'domain' => ['sometimes', 'nullable', 'string', 'max:255'],
             'queue' => ['sometimes', 'nullable', 'string', 'max:255'],
             'job' => ['sometimes', 'nullable', 'string', 'max:255'],
             'host' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -122,6 +123,7 @@ class ReadSeriesRequest extends FormRequest
             release: $value('release'),
             groupBy: MetricGroup::tryFrom($this->string('group_by')->toString()),
             check: $value('check'),
+            domain: $value('domain') !== null ? mb_strtolower((string) $value('domain')) : null,
         );
     }
 

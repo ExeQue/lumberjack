@@ -47,7 +47,7 @@ seconds, not once per panel and refresh. Data past a project's
 | `GET /projects`                     | The projects the credential reads: `uuid`, `slug`, `name`.                                                                                                                                            |
 | `GET /projects/{p}/summary`         | Requests, errors, error rate, p50/p95/p99, Apdex, open issues, users affected, job runs, failed and stuck jobs, health check counts, and the previous period's requests, errors, p95 and failed jobs. |
 | `GET /projects/{p}/series/{metric}` | A time series, see below.                                                                                                                                                                             |
-| `GET /projects/{p}/routes`          | Per route: requests, p50/p95/p99, error rate, Apdex.                                                                                                                                                  |
+| `GET /projects/{p}/routes`          | Per route: name, domain (with several), requests, p50/p95/p99, error rate, Apdex.                                                                                                                     |
 | `GET /projects/{p}/issues`          | Open issues, last seen first: reference, title, status, occurrences, users.                                                                                                                           |
 | `GET /projects/{p}/jobs`            | Per job class: runs, failures, failure rate, p50/p95 duration, p95 wait.                                                                                                                              |
 | `GET /projects/{p}/queues`          | Per queue: latest size, oldest age, p95 wait.                                                                                                                                                         |
@@ -78,23 +78,23 @@ Tables come as typed columns and rows:
 
 `GET /projects/{p}/series/{metric}`, where `{metric}` is one of:
 
-| Metric                                 | Unit  | Splits by                         |
-| -------------------------------------- | ----- | --------------------------------- |
-| `requests`, `errors` (5xx)             | count | environment, route, release       |
-| `error_rate`                           | ratio | environment, route, release       |
-| `p50`, `p95`, `p99`                    | ms    | environment, route, host, release |
-| `apdex`                                | score | environment, route, release       |
-| `occurrences`, `users`                 | count | environment, host, release        |
-| `new_issues`                           | count | environment, release              |
-| `job_runs`, `job_failures`             | count | environment, queue, host          |
-| `queue_wait` (p95)                     | ms    | environment, queue, host          |
-| `queue_size`                           | count | queue, host                       |
-| `cpu_load`, `memory_used`, `disk_used` | ratio | host                              |
-| `lcp_p75`, `inp_p75`                   | ms    | environment, route, release       |
-| `cls_p75`                              | score | environment, route, release       |
-| `db_size`                              | bytes | environment, check                |
-| `db_connections`                       | count | environment, check                |
-| `db_connections_used`                  | ratio | environment, check                |
+| Metric                                 | Unit  | Splits by                                 |
+| -------------------------------------- | ----- | ----------------------------------------- |
+| `requests`, `errors` (5xx)             | count | environment, route, domain, release       |
+| `error_rate`                           | ratio | environment, route, domain, release       |
+| `p50`, `p95`, `p99`                    | ms    | environment, route, domain, host, release |
+| `apdex`                                | score | environment, route, domain, release       |
+| `occurrences`, `users`                 | count | environment, host, release                |
+| `new_issues`                           | count | environment, release                      |
+| `job_runs`, `job_failures`             | count | environment, queue, host                  |
+| `queue_wait` (p95)                     | ms    | environment, queue, host                  |
+| `queue_size`                           | count | queue, host                               |
+| `cpu_load`, `memory_used`, `disk_used` | ratio | host                                      |
+| `lcp_p75`, `inp_p75`                   | ms    | environment, route, release               |
+| `cls_p75`                              | score | environment, route, release               |
+| `db_size`                              | bytes | environment, check                        |
+| `db_connections`                       | count | environment, check                        |
+| `db_connections_used`                  | ratio | environment, check                        |
 
 Query parameters, named so Grafana's macros drop straight in:
 
@@ -104,11 +104,12 @@ Query parameters, named so Grafana's macros drop straight in:
   `auto` (the default) for about 300 points. At least a minute, rounded up to whole
   minutes, and raised so a series has at most 2000 points; the answer's `interval` says
   what was used.
-- `environment`, `route`, `queue`, `job`, `host`, `release`, `check`: filters. `route`,
-  `queue`, `job`, `host` and `check` (a health check's slug, such as `database:pgsql`)
-  take `*` as a wildcard (`/api/*`). A filter a metric's data does not
+- `environment`, `route`, `domain`, `queue`, `job`, `host`, `release`, `check`: filters.
+  `route`, `domain`, `queue`, `job`, `host` and `check` (a health check's slug, such as
+  `database:pgsql`) take `*` as a wildcard (`/api/*`, `*.example.com`). `route` matches a
+  route's URI or its name (`orders.*`); `domain` the host the request was made to. A filter a metric's data does not
   carry, such as a route for a queue's size, is ignored.
-- `group_by`: one series per environment, route, host, queue, release or check, the busiest
+- `group_by`: one series per environment, route, domain, host, queue, release or check, the busiest
   `top` (10 by default, at most 50) of them.
 
 ```json

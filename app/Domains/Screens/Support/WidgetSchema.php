@@ -27,7 +27,7 @@ use Illuminate\Validation\Rule;
  * A rotating widget's rotate entries are source ids, or {source, seconds, title, options,
  * scope} where a value of the rotation has settings of its own: options only from the
  * type's first section (ITEM_SECTION: value, scale, chart, rows or checks) and the whole
- * scope (projects, environment, period, release, filter), each over the widget's. The widget's source is the rotation's first value; its
+ * scope (projects, environment, period, release, filter, domain), each over the widget's. The widget's source is the rotation's first value; its
  * own time on screen is the source_seconds option. Health has the one source, so its
  * values repeat it and differ by their checks (REPEATING_TYPES), which a value picks for
  * itself: none picked shows every check, never the widget's.
@@ -203,6 +203,7 @@ final class WidgetSchema
             "{$prefix}.rotate.*.scope.period" => ['nullable', Rule::enum(Period::class)],
             "{$prefix}.rotate.*.scope.release" => ['nullable', Rule::enum(ReleaseScope::class)],
             "{$prefix}.rotate.*.scope.filter" => ['nullable', 'string', 'max:200'],
+            "{$prefix}.rotate.*.scope.domain" => ['nullable', 'string', 'max:255'],
             // Without a position (an older designer) it flows like before; see ScreenLayout.
             "{$prefix}.x" => ['nullable', 'integer', 'min:0', 'max:'.(Screen::MAX_COLS - 1)],
             "{$prefix}.y" => ['nullable', 'integer', 'min:0', 'max:'.ScreenLayout::MAX_Y],
@@ -217,6 +218,7 @@ final class WidgetSchema
             "{$prefix}.scope.period" => ['nullable', Rule::enum(Period::class)],
             "{$prefix}.scope.release" => ['nullable', Rule::enum(ReleaseScope::class)],
             "{$prefix}.scope.filter" => ['nullable', 'string', 'max:200'],
+            "{$prefix}.scope.domain" => ['nullable', 'string', 'max:255'],
         ];
 
         $fields = [
@@ -373,6 +375,8 @@ final class WidgetSchema
             $timed ? ['key' => 'period', 'type' => 'select', 'options' => $periods, 'default' => null, 'data' => true, 'span' => 1] : null,
             $timed ? ['key' => 'release', 'type' => 'select', 'options' => array_map(fn (ReleaseScope $r): string => $r->value, ReleaseScope::cases()), 'default' => 'all', 'data' => true, 'span' => 1] : null,
             ['key' => 'filter', 'type' => 'text', 'default' => null, 'data' => true, 'span' => 2],
+            // Only for a source that filters a route.
+            ['key' => 'domain', 'type' => 'text', 'default' => null, 'data' => true, 'span' => 2],
         ])));
         $display = fn (bool $data): array => $section('display', array_values(array_filter([
             $toggle('show_title', true),

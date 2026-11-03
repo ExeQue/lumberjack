@@ -39,10 +39,12 @@ class MetricsTablesQuery
     public function routes(Project $project, Period $period, ?string $environment, int $limit, bool $public): array
     {
         return self::table(
-            ['method' => 'string', 'route' => 'string', 'requests' => 'number:count', 'p50' => 'number:ms', 'p95' => 'number:ms', 'p99' => 'number:ms', 'error_rate' => 'number:ratio', 'apdex' => 'number:score'],
+            ['method' => 'string', 'route' => 'string', 'route_name' => 'string', 'domain' => 'string', 'requests' => 'number:count', 'p50' => 'number:ms', 'p95' => 'number:ms', 'p99' => 'number:ms', 'error_rate' => 'number:ratio', 'apdex' => 'number:score'],
             array_map(fn (array $r): array => [
                 $r['method'],
                 $public ? strtok($r['route'], '?') : $r['route'],
+                $r['route_name'],
+                $r['domain'],
                 $r['requests'],
                 self::ms($r['p50']),
                 self::ms($r['p95']),

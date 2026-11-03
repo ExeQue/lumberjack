@@ -9,8 +9,8 @@ use App\Domains\Shared\Enums\Period;
 
 /**
  * What a data widget's figures cover: projects of the team (none means all of them),
- * an environment, the period ending now, a release, and a filter on the source's route,
- * queue, job or host where * stands for anything.
+ * an environment, the period ending now, a release, a filter on the source's route,
+ * queue, job or host where * stands for anything, and for a route the domain.
  */
 final readonly class WidgetScope
 {
@@ -23,6 +23,7 @@ final readonly class WidgetScope
         public Period $period = Period::Day,
         public ReleaseScope $release = ReleaseScope::All,
         public ?string $filter = null,
+        public ?string $domain = null,
     ) {
     }
 
@@ -39,6 +40,7 @@ final readonly class WidgetScope
             period: Period::tryFrom((string) $string('period')) ?? Period::Day,
             release: ReleaseScope::tryFrom((string) $string('release')) ?? ReleaseScope::All,
             filter: $string('filter'),
+            domain: $string('domain'),
         );
     }
 }

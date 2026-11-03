@@ -357,13 +357,14 @@ class ResolveWidgetDataAction
                     fn (array $r): array => [
                         'project' => $p->slug,
                         'method' => $r['method'],
-                        'route' => strtok($r['route'], '?'),
+                        // Split by domain, the same route on two domains is two rows.
+                        'route' => ($r['domain'] ?? '').strtok($r['route'], '?'),
                         'p95' => $r['p95'] !== null ? round($r['p95'] / 1000, 1) : null,
                         'requests' => $r['requests'],
                         'error_rate' => round($r['error_rate'], 4),
                         'state' => $r['p95'] !== null ? $this->state($r['p95'] / 1000, $limits) : null,
                     ],
-                    $this->routes->get($p->id, $scope->period, $scope->environment, 'p95', $scope->filter, $limit),
+                    $this->routes->get($p->id, $scope->period, $scope->environment, 'p95', $scope->filter, $limit, $scope->domain !== null ? mb_strtolower($scope->domain) : null),
                 ))->sortByDesc('p95')->when($onlyProblems)->filter(fn (array $r): bool => in_array($r['state'], ['amber', 'red'], true))->take($limit)->values()->all(),
             ],
             'queues' => [
@@ -507,6 +508,7 @@ class ResolveWidgetDataAction
             release: $this->release($projects, $scope),
             groupBy: $group,
             check: $on('check'),
+            domain: $source->filterOn === 'route' && $scope->domain !== null ? mb_strtolower($scope->domain) : null,
         );
     }
 
