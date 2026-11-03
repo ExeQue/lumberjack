@@ -922,7 +922,7 @@ export default function EditScreen(props: Props) {
                                     <>
                                         <span
                                             aria-hidden="true"
-                                            className="lj-badge pointer-events-none absolute top-1.5 right-2 rounded border border-(--s-line) bg-(--s-ground) px-1.5 text-[10px] font-semibold tracking-wide text-(--s-ink-2) uppercase"
+                                            className="lj-badge pointer-events-none absolute bottom-1.5 left-2 rounded border border-(--s-line) bg-(--s-ground) px-1.5 text-[10px] font-semibold tracking-wide text-(--s-ink-2) uppercase"
                                         >
                                             {`${t(`screens.kinds.${widget.type}`)} · ${widget.w}×${widget.h}`}
                                         </span>

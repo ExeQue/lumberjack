@@ -13,6 +13,7 @@ use App\Domains\Screens\Actions\UpdateScreenAction;
 use App\Domains\Screens\Actions\UpdateScreenLayoutAction;
 use App\Domains\Screens\Actions\UpdateScreenWidgetAction;
 use App\Domains\Screens\Broadcasting\ScreenChannel;
+use App\Domains\Screens\Enums\ScreenTemplate;
 use App\Domains\Screens\Exceptions\WidgetNotFoundException;
 use App\Domains\Screens\Http\Requests\ScreenDataRequest;
 use App\Domains\Screens\Http\Requests\StoreScreenRequest;
@@ -45,12 +46,13 @@ class ScreenController
                 'widgets' => count($s->widgets),
                 'updated_at' => $s->updated_at?->toIso8601String(),
             ])->all(),
+            'templates' => array_map(fn (ScreenTemplate $t): array => $t->toArray(), ScreenTemplate::cases()),
         ]);
     }
 
     public function store(StoreScreenRequest $request, CreateScreenAction $action): RedirectResponse
     {
-        $screen = $action->execute($request->user()->currentTeam, $request->string('name')->toString());
+        $screen = $action->execute($request->user()->currentTeam, $request->string('name')->toString(), $request->template());
 
         return redirect()->route('screens.edit', $screen);
     }

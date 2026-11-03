@@ -11,7 +11,15 @@ shows what each member can already see on the project pages.
 ## The list of screens
 
 **Screens** in the sidebar lists the team's screens. **New screen** asks for a name and
-opens the designer. Each row opens the screen full screen (**Open kiosk**, in a new tab),
+a layout to start from, then opens the designer:
+
+- **Overview**: traffic, errors, latency, issues, health, queues and hosts at a glance.
+- **On call**: what needs attention: error rate, newest issues, failing checks, alerts.
+- **Infrastructure**: CPU, memory and disk per host, agents and every health check.
+- **Jobs and schedules**: failed jobs, queue sizes and how scheduled tasks ran.
+- **Empty**: a 4 x 4 grid to fill yourself.
+
+Every widget of a template is an ordinary widget: change, move or remove it after. Each row opens the screen full screen (**Open kiosk**, in a new tab),
 in the designer (**Design**), or renames, duplicates or deletes it. A TV showing a
 deleted screen says so instead of going on with old numbers.
 

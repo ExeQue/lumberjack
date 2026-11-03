@@ -45,11 +45,69 @@ type Row = {
     updated_at: string | null;
 };
 
+type Template = {
+    id: string;
+    label: string;
+    description: string;
+    cols: number;
+    rows: number;
+    widgets: { type: string; w: number; h: number }[];
+};
+
+/** A thumbnail of a template's grid: each widget a block, tinted by its kind. */
+function TemplatePreview({ template }: { template: Template }) {
+    const tint: Record<string, string> = {
+        stat: 'bg-ink-3/40',
+        gauge: 'bg-ok/45',
+        chart: 'bg-info/45',
+        list: 'bg-ink-3/25',
+        health: 'bg-amber/40',
+    };
+
+    return (
+        <div
+            aria-hidden="true"
+            className="grid aspect-video w-full gap-[3px] rounded border border-line bg-ground p-[4px]"
+            style={{
+                gridTemplateColumns: `repeat(${template.cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${template.rows}, minmax(0, 1fr))`,
+            }}
+        >
+            {template.widgets.length === 0
+                ? Array.from({ length: template.cols * template.rows }).map(
+                      (_, i) => (
+                          <span
+                              key={i}
+                              className="rounded-[2px] border border-dashed border-line"
+                          />
+                      ),
+                  )
+                : template.widgets.map((w, i) => (
+                      <span
+                          key={i}
+                          className={`rounded-[2px] ${tint[w.type] ?? 'bg-panel-2'}`}
+                          style={{
+                              gridColumn: `span ${w.w}`,
+                              gridRow: `span ${w.h}`,
+                          }}
+                      />
+                  ))}
+        </div>
+    );
+}
+
 /** The team's status screens: open one on a TV, design it, or make another. */
-export default function Screens({ screens }: { screens: Row[] }) {
+export default function Screens({
+    screens,
+    templates,
+}: {
+    screens: Row[];
+    templates: Template[];
+}) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const [creating, setCreating] = useState(false);
+    const [template, setTemplate] = useState('overview');
     const [renaming, setRenaming] = useState<Row | null>(null);
 
     return (
@@ -220,7 +278,7 @@ export default function Screens({ screens }: { screens: Row[] }) {
             </PageBody>
 
             <Dialog open={creating} onOpenChange={setCreating}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-2xl">
                     <Form
                         {...store.form()}
                         onSuccess={() => setCreating(false)}
@@ -249,6 +307,48 @@ export default function Screens({ screens }: { screens: Row[] }) {
                                         autoFocus
                                     />
                                 </Field>
+                                <fieldset className="flex flex-col gap-2">
+                                    <legend className="mb-2 text-xs font-medium text-ink-2">
+                                        {t('screens.template')}
+                                    </legend>
+                                    <input
+                                        type="hidden"
+                                        name="template"
+                                        value={template}
+                                    />
+                                    <div
+                                        role="radiogroup"
+                                        aria-label={t('screens.template')}
+                                        className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                                    >
+                                        {templates.map((item) => {
+                                            const on = item.id === template;
+
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    type="button"
+                                                    role="radio"
+                                                    aria-checked={on}
+                                                    onClick={() =>
+                                                        setTemplate(item.id)
+                                                    }
+                                                    className={`flex cursor-pointer flex-col gap-1.5 rounded-md border p-2 text-left ${on ? 'border-amber bg-amber/5' : 'border-line hover:border-line-strong'}`}
+                                                >
+                                                    <TemplatePreview
+                                                        template={item}
+                                                    />
+                                                    <span className="text-[13px] font-medium text-ink">
+                                                        {item.label}
+                                                    </span>
+                                                    <span className="text-xs leading-snug text-ink-3">
+                                                        {item.description}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </fieldset>
                                 <DialogFooter>
                                     <Button onClick={() => setCreating(false)}>
                                         {t('common.cancel')}

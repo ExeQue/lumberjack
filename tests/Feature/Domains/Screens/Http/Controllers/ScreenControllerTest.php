@@ -11,15 +11,19 @@ use App\Domains\Screens\Actions\DuplicateScreenAction;
 use App\Domains\Screens\Actions\UpdateScreenAction;
 use App\Domains\Screens\Actions\UpdateScreenLayoutAction;
 use App\Domains\Screens\Actions\UpdateScreenWidgetAction;
+use App\Domains\Screens\Enums\ScreenTemplate;
 use App\Domains\Screens\Enums\ScreenTheme;
+use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Events\ScreenChanged;
 use App\Domains\Screens\Http\Controllers\ScreenController;
+use App\Domains\Screens\Http\Requests\StoreScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenLayoutRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenWidgetRequest;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Policies\ScreenPolicy;
 use App\Domains\Screens\Presenters\ScreenPresenter;
+use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
@@ -41,6 +45,8 @@ covers(
     UpdateScreenRequest::class,
     UpdateScreenLayoutRequest::class,
     UpdateScreenWidgetRequest::class,
+    StoreScreenRequest::class,
+    ScreenTemplate::class,
 );
 
 uses(CreatesTeamMembers::class);
@@ -74,6 +80,34 @@ describe('the screens of a team', function () {
             ->and($screen->cols)->toBe(4)
             ->and($screen->theme)->toBe(ScreenTheme::Dark)
             ->and($screen->widgets)->toBe([]);
+    });
+
+    it('starts from a template that fills its grid with widgets the registry knows', function (ScreenTemplate $template) {
+        $this->actingAs($this->user)->post(route('screens.store'), ['name' => 'From '.$template->value, 'template' => $template->value])->assertSessionHasNoErrors();
+
+        $screen = Screen::query()->where('name', 'From '.$template->value)->sole();
+        [$cols, $rows] = $template->grid();
+        $cells = array_sum(array_map(fn (array $w): int => $w['w'] * $w['h'], $screen->widgets));
+
+        expect($screen->cols)->toBe($cols)
+            ->and($screen->rows)->toBe($rows)
+            ->and($cells)->toBeLessThanOrEqual($cols * $rows)
+            ->and(collect($screen->widgets)->pluck('id')->duplicates())->toBeEmpty();
+
+        foreach ($screen->widgets as $widget) {
+            expect(WidgetSources::has(WidgetType::from($widget['type']), $widget['source']))->toBeTrue();
+        }
+    })->with(array_filter(ScreenTemplate::cases(), fn (ScreenTemplate $t): bool => $t !== ScreenTemplate::Blank));
+
+    it('offers every template on the list page', function () {
+        $this->actingAs($this->user)->get(route('screens.index'))
+            ->assertInertia(fn (Assert $page) => $page->has('templates', count(ScreenTemplate::cases()))
+                ->where('templates.1.id', 'overview')
+                ->has('templates.1.widgets.0.w'));
+    });
+
+    it('refuses an unknown template', function () {
+        $this->actingAs($this->user)->post(route('screens.store'), ['name' => 'X', 'template' => 'nope'])->assertSessionHasErrors('template');
     });
 
     it('refuses a screen without a name', function () {

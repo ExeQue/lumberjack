@@ -9,7 +9,15 @@ return [
     'new' => 'New screen',
     // Button.
     'create' => 'Create screen',
-    'create_hint' => 'It starts empty; add widgets in the designer that opens next.',
+    'create_hint' => 'Start from a ready layout or an empty grid; the designer opens next and everything can be changed there.',
+    'template' => 'Start from',
+    'templates' => [
+        'blank' => ['label' => 'Empty', 'description' => 'A 4 x 4 grid to fill yourself.'],
+        'overview' => ['label' => 'Overview', 'description' => 'Traffic, errors, latency, issues, health, queues and hosts at a glance.'],
+        'on_call' => ['label' => 'On call', 'description' => 'What needs attention: errors, newest issues, failing checks and alerts.'],
+        'infrastructure' => ['label' => 'Infrastructure', 'description' => 'CPU, memory and disk per host, agents and every health check.'],
+        'background' => ['label' => 'Jobs and schedules', 'description' => 'Failed jobs, queue sizes and how the scheduled tasks ran.'],
+    ],
     // Name of a duplicated screen, at most 100 characters.
     'copy_of' => ':name (copy)',
 
