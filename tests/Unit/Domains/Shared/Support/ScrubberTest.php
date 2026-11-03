@@ -40,3 +40,29 @@ test('extra secret fields support words, wildcards and dotted paths', function (
     'a dotted pattern matches the full path' => ['session.checkout.*', ['session.checkout.iban', 'session.checkout.step'], ['customer_cpr']],
     'a wildcard inside a header path' => ['request.headers.x-*-key', ['request.headers.x-api-key'], ['request.headers.x-request-id']],
 ]);
+
+test('values that look like secrets are masked whatever their key', function (string $value, string $expected) {
+    expect((new Scrubber())->scrub(['note' => $value])['note'])->toBe($expected);
+})->with([
+    'bearer token' => ['Bearer abcdefgh12345678', 'Bearer [filtered]'],
+    'token in a query string' => ['https://app.test/reset?email=a%40b.c&token=s3cr3t&page=2', 'https://app.test/reset?email=a%40b.c&token=[filtered]&page=2'],
+    'signed URL' => ['https://s3.test/f?X-Amz-Expires=300&X-Amz-Signature=deadbeef', 'https://s3.test/f?X-Amz-Expires=300&X-Amz-Signature=[filtered]'],
+    'password in a DSN' => ['pgsql://app:hunter2@db/app', 'pgsql://app:[filtered]@db/app'],
+    'JWT' => ['eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl', '[filtered]'],
+    'AWS key id' => ['AKIAIOSFODNN7EXAMPLE', '[filtered]'],
+    'Stripe secret key' => ['sk_live_abcdefghijklmnop', '[filtered]'],
+    'harmless text' => ['keyword=lumber&monkey=1', 'keyword=lumber&monkey=1'],
+]);
+
+test('patterns of your own mask values too', function () {
+    expect((new Scrubber(['/\bACME-\d{6}\b/' => '[acme]']))->scrubString('order ACME-123456'))->toBe('order [acme]');
+});
+
+test('a context larger than the limit keeps what fits and marks the rest', function () {
+    $context = (new Scrubber())->scrub(['small' => 'kept', 'huge' => str_repeat('x', Scrubber::MAX_BYTES), 'after' => 'kept too']);
+
+    expect($context['small'])->toBe('kept')
+        ->and($context['huge'])->toStartWith(Scrubber::TRUNCATED)
+        ->and($context['after'])->toBe('kept too')
+        ->and(strlen((string) json_encode($context)))->toBeLessThan(Scrubber::MAX_BYTES);
+});

@@ -19,6 +19,7 @@ use App\Domains\Performance\Enums\SpanKind;
 use App\Domains\Performance\Support\SqlNormalizer;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Schedule\Actions\RecordScheduleEventAction;
+use App\Domains\Shared\Support\Scrubber;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Throwable;
@@ -46,6 +47,7 @@ class ProcessIngestBatchAction
         private readonly SignalFactory $signalFactory,
         private readonly SqlNormalizer $sqlNormalizer,
         private readonly BroadcastProjectChangeAction $broadcast,
+        private readonly Scrubber $scrubber,
     ) {
     }
 
@@ -181,7 +183,8 @@ class ProcessIngestBatchAction
             'host' => $envelope->host,
             'method' => mb_substr(strtoupper((string) ($event['method'] ?? 'GET')), 0, 10),
             'route' => Envelope::short($event['route'] ?? null, 255),
-            'url' => mb_substr((string) ($event['url'] ?? ''), 0, 2000),
+            // Signed URLs and reset links carry their secret in the query string.
+            'url' => mb_substr($this->scrubber->scrubString((string) ($event['url'] ?? '')), 0, 2000),
             'status_code' => max(0, min(999, (int) ($event['status'] ?? 0))),
             'duration_us' => Envelope::micros($event['duration_ms'] ?? 0),
             'memory_peak' => isset($event['memory_peak']) && is_numeric($event['memory_peak']) ? (int) $event['memory_peak'] : null,

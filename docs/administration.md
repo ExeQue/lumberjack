@@ -201,3 +201,24 @@ still work from other origins.
 Links in mails, alerts and notifications are always built from `APP_URL`, never from the
 `Host` or `X-Forwarded-Host` of a request. `TRUSTED_PROXIES` lists the proxies whose
 `X-Forwarded-*` headers are believed; see [Docker](./docker#reverse-proxy).
+
+### Secrets and size of stored context
+
+Exception, log, job and command context is scrubbed on the server before it is stored,
+by key (see [Extra secret fields](./projects)) and by value: bearer and basic
+credentials, `token=`, `password=`, `signature=`, `key=` and similar parameters in URLs
+and query strings, passwords in `scheme://user:password@host`, JWTs, AWS access key ids,
+Stripe keys and GitHub and Slack tokens become `[filtered]`. Request URLs are scrubbed
+the same way. Add patterns of your own in `config/lumberjack.php` under
+`scrubbing.value_patterns` (regular expression => replacement).
+
+One context keeps at most 64 KB of JSON: top-level entries that no longer fit are
+replaced by `[truncated] N KB`.
+
+### Ingest and MCP limits
+
+- Browser ingest checks the public key and origin before it reads the body, and refuses
+  a compressed body (`415`). It takes 30 batches a minute per address and key, and 300
+  a minute per address whatever the key.
+- An address that sends 30 unknown server tokens (`/api/ingest`) or unusable MCP tokens
+  (`/mcp`) within a minute gets `429` without a lookup until the minute is over.

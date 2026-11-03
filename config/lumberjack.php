@@ -29,6 +29,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Scrubbing
+    |--------------------------------------------------------------------------
+    |
+    | Values that look like secrets (bearer tokens, token= and signature= in
+    | URLs, JWTs, AWS, Stripe, GitHub and Slack keys) are masked in stored
+    | context and request URLs. Add patterns of your own here, as regular
+    | expression => replacement, e.g. '/\bACME-[0-9]{12}\b/' => '[filtered]'.
+    |
+    */
+
+    'scrubbing' => [
+        'value_patterns' => [],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Teams
     |--------------------------------------------------------------------------
     |

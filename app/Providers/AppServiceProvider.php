@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Domains\Administration\Http\Middleware\RedirectToSetup;
 use App\Domains\Administration\Listeners\ConfirmPasswordOnLogin;
+use App\Domains\Shared\Support\Scrubber;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
@@ -26,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->when(Scrubber::class)->needs('$extraValuePatterns')->giveConfig('lumberjack.scrubbing.value_patterns', []);
     }
 
     /**
