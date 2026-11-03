@@ -1,0 +1,66 @@
+# MCP
+
+Lumberjack is an MCP server, so an AI agent (Claude Code, Claude Desktop, Cursor, ...)
+can read issues and telemetry and help triage them.
+
+## Tokens
+
+Create a token under **Members and tokens** on the team page:
+
+- **Projects:** the projects the token can see.
+- **Scope:** `read` only reads; `write` can also change issues (status, assignee,
+  labels, notes, GitHub issues).
+- **Expiry:** optional.
+
+The token (`lj_mcp_...`) is shown once. Each token shows when it was last used and can
+be revoked at any time.
+
+## Connecting
+
+The server is at `https://your-lumberjack/mcp` (streamable HTTP) and takes the token as
+a bearer token. For Claude Code:
+
+```bash
+claude mcp add --transport http lumberjack https://your-lumberjack/mcp \
+  --header "Authorization: Bearer lj_mcp_..."
+```
+
+## Tools
+
+Every tool that takes an issue accepts its number (`DEMO-42`) or its id. Durations are
+in microseconds.
+
+| Tool                                                                                | Does                                                                                                         |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `list_projects`                                                                     | The projects the token can see, with the slug other tools take.                                              |
+| `get_project_overview`                                                              | Requests, error rate, percentiles, job failures, newest issues, slowest routes and failed jobs for a period. |
+| `triage_inbox`                                                                      | Your work queue: open issues you have not handled since they last surfaced, and notes that tag you.          |
+| `list_issues`                                                                       | Issues with the issues page's filters.                                                                       |
+| `get_issue`                                                                         | One issue with its latest occurrence (stacktrace, request, user context) and notes.                          |
+| `list_occurrences`                                                                  | Recent occurrences of an issue.                                                                              |
+| `set_issue_status`                                                                  | Resolve, ignore, re-open or mark in progress. Write scope.                                                   |
+| `assign_issue`                                                                      | Assign or unassign. Write scope.                                                                             |
+| `set_issue_labels`                                                                  | Replace an issue's labels. Write scope.                                                                      |
+| `add_issue_note`                                                                    | Add a note; tag members with `<@id>`. Write scope.                                                           |
+| `create_repo_issue`                                                                 | Create a GitHub issue in the linked repository. Write scope.                                                 |
+| `list_members`                                                                      | The team's members, with the ids `assign_issue` takes.                                                       |
+| `list_routes`, `list_queries`, `list_jobs`, `list_commands`, `list_scheduled_tasks` | Statistics per route, query, job class, command and task.                                                    |
+| `get_job`, `get_command`, `get_scheduled_task`                                      | Recent runs of one job class, command or task.                                                               |
+| `get_trace`                                                                         | Everything recorded under one trace id, in time order.                                                       |
+| `search_logs`                                                                       | Log lines by channel, level, text, period and trace id.                                                      |
+
+Agents' notes and status changes are shown in Lumberjack with the token's name.
+
+## Automatic triage
+
+The project settings have a ready-made GitHub Actions workflow that runs Claude Code on
+a schedule in your repository. It triages new issues and answers notes that tag it,
+through the MCP tools. It reads the code but never changes it, and never resolves an
+issue.
+
+1. Create a token with the write scope that covers the project.
+2. Add the secrets the settings list to the GitHub repository.
+3. Commit the workflow shown in the settings.
+
+GitHub has to reach your Lumberjack, so it must be on a public URL. The settings also
+show how to run the same triage once in a local Claude Code session.

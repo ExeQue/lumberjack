@@ -62,7 +62,15 @@ export default defineConfig({
             {
                 text: 'Using it',
                 items: [
+                    { text: 'Projects', link: '/docs/projects' },
+                    { text: 'Issues', link: '/docs/issues' },
+                    { text: 'Alerts', link: '/docs/alerts' },
+                    {
+                        text: 'Performance and traces',
+                        link: '/docs/performance',
+                    },
                     { text: 'Finding things', link: '/docs/finding-things' },
+                    { text: 'MCP', link: '/docs/mcp' },
                 ],
             },
             {
