@@ -158,3 +158,21 @@ on their next request), cannot sign in, and their MCP tokens stop working.
 
 A user whose password an administrator requires to be changed can only reach the
 security settings until they choose a new one.
+
+## Security
+
+### Response headers
+
+Every response carries `X-Frame-Options: SAMEORIGIN` and
+`Content-Security-Policy: frame-ancestors 'self'` (no other site can frame Lumberjack),
+`X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` (an
+invitation link's token never leaves in a Referer) and a `Permissions-Policy` that turns
+off camera, microphone, location, payment and USB. With an `https://` `APP_URL` it also
+sends `Strict-Transport-Security: max-age=31536000`. Browser ingest and the SDK script
+still work from other origins.
+
+### Proxies and links
+
+Links in mails, alerts and notifications are always built from `APP_URL`, never from the
+`Host` or `X-Forwarded-Host` of a request. `TRUSTED_PROXIES` lists the proxies whose
+`X-Forwarded-*` headers are believed; see [Docker](./docker#reverse-proxy).

@@ -8,6 +8,11 @@
 	root * /app/public
 	encode zstd br gzip
 
+	# Static files skip Laravel; the app sets these (and HSTS) on everything else.
+	header ?X-Content-Type-Options nosniff
+	header ?X-Frame-Options SAMEORIGIN
+	header ?Referrer-Policy strict-origin-when-cross-origin
+
 	# Browsers reach Reverb through the same host and port as the app. Only the
 	# WebSocket path is forwarded; Reverb's HTTP API (/apps) stays inside.
 	@reverb path /app/*
