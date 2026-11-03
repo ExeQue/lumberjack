@@ -1,0 +1,212 @@
+/*
+ * Status screens: one token map, dark by default and its light twin. Widgets only use
+ * these variables (via the s-* utilities below or var()), never a color of their own, so
+ * every widget gets both themes. Light darkens the status colors enough for contrast on
+ * white.
+ */
+.lj-screen {
+    --s-ground: #0e1012;
+    --s-panel: #161a1e;
+    --s-panel-2: #1b2025;
+    --s-line: #262c32;
+    --s-line-strong: #333a41;
+    --s-ink: #e7eaee;
+    --s-ink-2: #a9b1ba;
+    --s-ink-3: #8a939c;
+    --s-ink-4: #5f6872;
+    --s-bar: #3a4a5c;
+    --s-amber: #f0a93b;
+    --s-amber-soft: #f6c46e;
+    --s-amber-ink: #1a1206;
+    --s-red: #f2705f;
+    --s-green: #47c08a;
+    --s-blue: #5b9bd5;
+    --s-red-bg: #2a1714;
+    --s-amber-bg: #2a2210;
+    --s-blue-bg: #14202c;
+    --s-red-card: #3a1c18;
+    --s-amber-card: #3a2e12;
+    --s-blue-card: #17283a;
+    --s-green-line: #2f5f48;
+    color-scheme: dark;
+    background: var(--s-ground);
+    color: var(--s-ink);
+    transition:
+        background-color 300ms ease-out,
+        color 300ms ease-out;
+}
+
+.lj-screen[data-theme='light'] {
+    --s-ground: #eef0f2;
+    --s-panel: #ffffff;
+    --s-panel-2: #f2f4f6;
+    --s-line: #dde1e5;
+    --s-line-strong: #c9cfd5;
+    --s-ink: #16191d;
+    --s-ink-2: #525a63;
+    --s-ink-3: #646c75;
+    --s-ink-4: #98a0a8;
+    --s-bar: #b4c0cc;
+    --s-amber: #b5720f;
+    --s-amber-soft: #8a5608;
+    --s-amber-ink: #ffffff;
+    --s-red: #c2392a;
+    --s-green: #1d8a5a;
+    --s-blue: #2d6dab;
+    --s-red-bg: #fdecea;
+    --s-amber-bg: #fdf3e0;
+    --s-blue-bg: #e7f0f9;
+    --s-red-card: #fbe0dc;
+    --s-amber-card: #fbeccc;
+    --s-blue-card: #dcebf8;
+    --s-green-line: #a9d8c0;
+    color-scheme: light;
+}
+
+.lj-screen * {
+    transition-duration: 300ms;
+}
+
+/*
+ * A tile keeps a 1px border in every state; status and alarm add an inset ring, and the
+ * designer's selection is an outline outside it, so neither shifts the layout or hides
+ * the status color.
+ */
+.lj-tile {
+    container-type: size;
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    gap: 0.3em;
+    overflow: hidden;
+    border: 1px solid var(--s-line);
+    border-radius: 10px;
+    background: var(--s-panel);
+    padding: 0.8em 1em;
+    font-size: calc(var(--lj-cell-font) * var(--lj-text-scale, 1));
+}
+
+/*
+ * The grid is the container a tile's type scales with: one cell's share of it, so the
+ * designer's grid is a true small TV and the TV gets large type.
+ */
+.lj-grid {
+    container-type: size;
+    --lj-cell-font: clamp(
+        10px,
+        min(calc(11cqh / var(--lj-rows)), calc(5.5cqw / var(--lj-cols))),
+        44px
+    );
+}
+
+.lj-tile[data-status='ok'] {
+    border-color: var(--s-green);
+}
+
+.lj-tile[data-status='degraded'] {
+    border-color: var(--s-amber);
+    background: var(--s-amber-bg);
+    box-shadow: inset 0 0 0 1px var(--s-amber);
+}
+
+.lj-tile[data-status='down'] {
+    border-color: var(--s-red);
+    background: var(--s-red-bg);
+    box-shadow: inset 0 0 0 1px var(--s-red);
+}
+
+.lj-tile[data-status='recovering'] {
+    border-color: var(--s-blue);
+    background: var(--s-blue-bg);
+    box-shadow: inset 0 0 0 1px var(--s-blue);
+}
+
+.lj-tile[data-status='stale'] {
+    border-color: var(--s-ink-4);
+}
+
+.lj-tile[data-kind='empty'] {
+    border: 1px dashed var(--s-line-strong);
+    background: transparent;
+}
+
+.lj-tile[data-selected='true'] {
+    outline: 2px solid var(--s-ink);
+    outline-offset: 2px;
+}
+
+.lj-tile[data-drop='true'] {
+    border-style: dashed;
+    border-color: var(--s-amber);
+}
+
+.lj-tile:focus-visible {
+    outline: 2px solid var(--s-amber);
+    outline-offset: 2px;
+}
+
+/* Kiosk: an empty cell is a gap, not a tile. */
+.lj-kiosk .lj-tile[data-kind='empty'] {
+    border-color: transparent;
+}
+
+.lj-tile .lj-badge {
+    opacity: 0;
+}
+
+.lj-tile:hover .lj-badge,
+.lj-tile:focus-visible .lj-badge,
+.lj-tile[data-selected='true'] .lj-badge {
+    opacity: 1;
+}
+
+.lj-tile-title {
+    overflow: hidden;
+    font-size: 1em;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lj-tile-small {
+    font-size: 0.8em;
+    color: var(--s-ink-3);
+}
+
+.lj-tile-big {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    line-height: 1.05;
+    white-space: nowrap;
+}
+
+/* A widget that crossed into red flashes once. */
+@keyframes lj-flash {
+    0%,
+    100% {
+        box-shadow: inset 0 0 0 1px var(--s-red);
+    }
+    25%,
+    75% {
+        box-shadow:
+            inset 0 0 0 1px var(--s-red),
+            0 0 0 6px color-mix(in oklab, var(--s-red) 55%, transparent);
+    }
+}
+
+.lj-tile[data-flash='true'] {
+    animation: lj-flash 1.6s ease-in-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lj-tile[data-flash='true'] {
+        animation: none;
+    }
+}
+
+.lj-kiosk[data-idle='true'],
+.lj-kiosk[data-idle='true'] * {
+    cursor: none !important;
+}

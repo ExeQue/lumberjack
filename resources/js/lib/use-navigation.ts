@@ -21,6 +21,7 @@ import { index as queriesIndex } from '@/routes/queries';
 import { index as releasesIndex } from '@/routes/releases';
 import { index as routesIndex } from '@/routes/routes';
 import { index as scheduleIndex } from '@/routes/schedule';
+import { index as screensIndex } from '@/routes/screens';
 import { show as teamShow } from '@/routes/team';
 import { show as teamRetention } from '@/routes/team/retention';
 import type { ProjectHeader } from '@/types/lumberjack';
@@ -141,6 +142,11 @@ export function useNavigation(
             label: t('common.nav.retention'),
             href: teamRetention().url,
             active: isAt(teamRetention().url),
+        },
+        {
+            label: t('common.nav.screens'),
+            href: screensIndex().url,
+            active: isAt(screensIndex().url),
         },
     ];
 
