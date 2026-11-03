@@ -4,18 +4,16 @@ The **Health** page of a project shows whether the things your app depends on wo
 its database, cache, queues and disks, the URLs people visit, the certificates they
 use. Checks come from two places, and both work the same once a result is in.
 
-| Source              | Where it runs                                    | Set up                            |
-| ------------------- | ------------------------------------------------ | --------------------------------- |
-| Reported by the app | The app's scheduler, through the Laravel package | In the app's code                 |
-| Run by Lumberjack   | This server, on an interval you pick             | On the Health page, **Add check** |
+| Source              | Where it runs                        | Set up                            |
+| ------------------- | ------------------------------------ | --------------------------------- |
+| Reported by the app | Inside the app, sent through ingest  | In the app, through its SDK       |
+| Run by Lumberjack   | This server, on an interval you pick | On the Health page, **Add check** |
 
 ## Checks the app reports
 
-Register checks in the app, for example
-`Lumberjack::health()->disk('s3')->database()->cache()`, and the package's
-`lumberjack:health` command runs them from the scheduler (every minute by default)
-and sends one result per check with the normal ingest batch. The package's
-`health-checks.md` page lists the built-in checks and how to write your own.
+An SDK runs checks inside the app and sends one `health` event per check with the
+normal ingest batch. How checks are registered and scheduled is up to the SDK; see
+its documentation.
 
 A check is known by its **slug** (`database:pgsql`, `disk:s3`, `queue:redis:default`)
 within an environment. A slug Lumberjack has not seen before becomes a new check on

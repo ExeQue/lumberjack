@@ -22,9 +22,9 @@ return [
     'sources' => [
         'reported' => [
             'title' => 'Reported by the app',
-            'hint' => 'Checks the Lumberjack package runs from the app\'s scheduler. Stale when a check stops reporting for three times its usual interval.',
+            'hint' => 'Checks the app runs itself and sends to Lumberjack. Stale when a check stops reporting for three times its usual interval.',
             'empty_title' => 'No reported checks yet',
-            'empty_body' => 'Register checks in the app with Lumberjack::health(), e.g. ->disk(\'s3\')->database(), and they report every time php artisan lumberjack:health runs from the scheduler. See health-checks.md in the package docs.',
+            'empty_body' => 'Checks show up here once the app\'s SDK sends its first health result.',
         ],
         'monitored' => [
             'title' => 'Run by Lumberjack',
