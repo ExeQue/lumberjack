@@ -539,3 +539,49 @@ export function swapTarget(
         ? other.id
         : null;
 }
+
+/**
+ * Dropping a widget on cells other widgets fill entirely swaps it with all of them: the
+ * group moves, as one, to where the widget was. A 2 x 2 onto two 2 x 1 stacked, say.
+ * Returns the new top left of each moved widget, or null when that does not fit.
+ */
+export function swapGroup(
+    widgets: Widget[],
+    cols: number,
+    rows: number,
+    moving: Widget,
+    box: Box,
+): Record<string, { x: number; y: number }> | null {
+    if (!fits(box, cols, rows)) {
+        return null;
+    }
+
+    const covered = widgets.filter(
+        (o) => o.id !== moving.id && !isFree([o], box),
+    );
+    const inside = (o: Widget) =>
+        o.x >= box.x &&
+        o.y >= box.y &&
+        o.x + o.w <= box.x + box.w &&
+        o.y + o.h <= box.y + box.h;
+
+    if (covered.length === 0 || !covered.every(inside)) {
+        return null;
+    }
+
+    const dx = moving.x - box.x;
+    const dy = moving.y - box.y;
+    const ids = new Set([moving.id, ...covered.map((o) => o.id)]);
+    const rest = widgets.filter((o) => !ids.has(o.id));
+    const moved = covered.map((o) => ({ ...o, x: o.x + dx, y: o.y + dy }));
+    const ok = moved.every(
+        (o) =>
+            fits(o, cols, rows) &&
+            isFree(rest, o) &&
+            isFree([{ ...moving, ...box }], o),
+    );
+
+    return ok
+        ? Object.fromEntries(moved.map((o) => [o.id, { x: o.x, y: o.y }]))
+        : null;
+}

@@ -413,7 +413,14 @@ export function WidgetTile({
                             // What time it covers, so a 1 h tile next to a 24 h one is not misread.
                             opt<boolean>('show_period') !== false &&
                             typeof payload?.period === 'string'
-                                ? t(`screens.period_short.${payload.period}`)
+                                ? // The latest report says how old it is; a period says how long.
+                                  typeof payload.as_of === 'string'
+                                    ? t('screens.period_short.ago', {
+                                          age: lasted(payload.as_of, now),
+                                      })
+                                    : t(
+                                          `screens.period_short.${payload.period}`,
+                                      )
                                 : '',
                         ]
                             .filter(Boolean)

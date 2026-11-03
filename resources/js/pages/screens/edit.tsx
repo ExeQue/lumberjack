@@ -10,6 +10,7 @@ import {
 import type { Catalog } from '@/components/lj/screen/inspector';
 import {
     canPlace,
+    swapGroup,
     swapTarget,
     firstFree,
     fits,
@@ -58,6 +59,7 @@ type Props = {
     sources: Sources;
     environments: string[];
     checks: Catalog['checks'];
+    filters?: Catalog['filters'];
     limits: {
         min_cols: number;
         max_cols: number;
@@ -277,8 +279,8 @@ export default function EditScreen(props: Props) {
         w: number;
         h: number;
         ok: boolean;
-        /** Dropping here swaps with this widget. */
-        swap?: string;
+        /** Dropping here moves these widgets to the dragged one's old cells. */
+        swap?: Record<string, { x: number; y: number }>;
     } | null>(null);
     const resizing = useRef<{
         id: string;
@@ -302,6 +304,7 @@ export default function EditScreen(props: Props) {
         environments: props.environments,
         checks: props.checks,
         periods: PERIODS,
+        filters: props.filters,
     };
     // The data follows what is saved, so a widget refetches once its new settings are stored.
     const { data } = useScreenData(
@@ -649,24 +652,38 @@ export default function EditScreen(props: Props) {
         const cell = cellAt(e.clientX, e.clientY);
         let box = { x: cell.x - d.dx, y: cell.y - d.dy, w: d.w, h: d.h };
         let ok = placeable(d.tile, box);
-        let swap: string | undefined;
+        let swap: Record<string, { x: number; y: number }> | undefined;
         const moving = d.tile
             ? latest.current.widgets.find((w) => w.id === d.tile)
             : undefined;
 
-        // Onto another widget: swap places when both fit, the footprint shows where it goes.
+        // Onto other widgets: swap places when they fit, the footprint shows where it goes.
         if (!ok && moving) {
-            const other = swapTarget(
+            // Whole widgets under the footprint trade places with it as a group.
+            const group = swapGroup(
                 latest.current.widgets,
                 screen.cols,
                 screen.rows,
                 moving,
-                cell,
+                box,
             );
+            // Otherwise the one widget pointed at, each taking the other's top left.
+            const other = group
+                ? null
+                : swapTarget(
+                      latest.current.widgets,
+                      screen.cols,
+                      screen.rows,
+                      moving,
+                      cell,
+                  );
             const target = latest.current.widgets.find((w) => w.id === other);
 
-            if (target) {
-                swap = target.id;
+            if (group) {
+                swap = group;
+                ok = true;
+            } else if (target) {
+                swap = { [target.id]: { x: moving.x, y: moving.y } };
                 ok = true;
                 box = { x: target.x, y: target.y, w: moving.w, h: moving.h };
             }
@@ -682,7 +699,7 @@ export default function EditScreen(props: Props) {
             hover?.y !== box.y ||
             hover?.w !== box.w ||
             hover?.ok !== ok ||
-            hover?.swap !== swap
+            JSON.stringify(hover?.swap) !== JSON.stringify(swap)
         ) {
             setHover({ ...box, ok, swap });
         }
@@ -700,23 +717,18 @@ export default function EditScreen(props: Props) {
         if (d.kind) {
             add(d.kind, { x: hover.x, y: hover.y });
         } else if (d.tile && hover.swap) {
-            const moving = latest.current.widgets.find((w) => w.id === d.tile);
-            const other = latest.current.widgets.find(
-                (w) => w.id === hover.swap,
+            const moves = hover.swap;
+            const to = { x: hover.x, y: hover.y };
+
+            setWidgets((widgets) =>
+                widgets.map((w) =>
+                    w.id === d.tile
+                        ? { ...w, ...to }
+                        : moves[w.id]
+                          ? { ...w, ...moves[w.id] }
+                          : w,
+                ),
             );
-
-            if (moving && other) {
-                setWidgets((widgets) =>
-                    widgets.map((w) =>
-                        w.id === moving.id
-                            ? { ...w, x: other.x, y: other.y }
-                            : w.id === other.id
-                              ? { ...w, x: moving.x, y: moving.y }
-                              : w,
-                    ),
-                );
-            }
-
             setSelected(d.tile);
         } else if (d.tile) {
             patch(d.tile, { x: hover.x, y: hover.y });

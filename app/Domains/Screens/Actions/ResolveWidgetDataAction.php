@@ -7,10 +7,13 @@ namespace App\Domains\Screens\Actions;
 use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\Health\Models\HealthCheck;
+use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Issues\Actions\DetectEscalationAction;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Enums\JobRunStatus;
+use App\Domains\Jobs\Models\QueueSample;
 use App\Domains\Jobs\Queries\QueueStatisticsQuery;
 use App\Domains\Metrics\Data\MetricFilter;
 use App\Domains\Metrics\Data\MetricWindow;
@@ -18,6 +21,7 @@ use App\Domains\Metrics\Enums\Metric;
 use App\Domains\Metrics\Enums\MetricGroup;
 use App\Domains\Metrics\Queries\MetricSeriesQuery;
 use App\Domains\Performance\Queries\RouteStatisticsQuery;
+use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Projects\Queries\AgentMetricsQuery;
@@ -29,6 +33,7 @@ use App\Domains\Screens\Enums\ReleaseScope;
 use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Teams\Models\Team;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -90,7 +95,7 @@ class ResolveWidgetDataAction
         // The period it covers, for the tile's corner label; health and the latest report are now.
         $period = $type === WidgetType::Health || $source->snapshot ? 'now' : $scope->period->value;
 
-        return ['type' => $type->value, 'source' => $source->id, 'unit' => $source->unit, 'period' => $period, ...$data];
+        return ['type' => $type->value, 'source' => $source->id, 'unit' => $source->unit, 'period' => $period, 'as_of' => $period === 'now' ? $this->asOf($source, $projects) : null, ...$data];
     }
 
     /**
@@ -523,6 +528,28 @@ class ResolveWidgetDataAction
     private function line(array $points): array
     {
         return array_map(fn (array $p): array => ['t' => $p['t'], 'v' => $p['value']], $points);
+    }
+
+    /**
+     * When the latest report behind a snapshot value arrived: the newest queue sample, host
+     * sample, agent heartbeat or health result. Null for values worked out on the spot.
+     *
+     * @param  Collection<int, Project>  $projects
+     */
+    private function asOf(WidgetSource $source, Collection $projects): ?string
+    {
+        $ids = $projects->modelKeys();
+        $at = match (true) {
+            in_array($source->id, ['queue_size', 'queues'], true) => QueueSample::query()->whereIn('project_id', $ids)->max('sampled_at'),
+            str_starts_with($source->id, 'host_') || $source->id === 'hosts' => HostSample::query()
+                ->whereIn('project_agent_id', ProjectAgent::query()->whereIn('project_id', $ids)->select('id'))->max('sampled_at'),
+            in_array($source->id, ['agents', 'agents_online'], true) => ProjectAgent::query()->whereIn('project_id', $ids)->max('last_seen_at'),
+            $source->type === WidgetType::Health => HealthCheckHost::query()
+                ->whereIn('health_check_id', HealthCheck::query()->whereIn('project_id', $ids)->select('id'))->max('last_result_at'),
+            default => null,
+        };
+
+        return $at !== null ? CarbonImmutable::parse((string) $at)->toIso8601String() : null;
     }
 
     /**
