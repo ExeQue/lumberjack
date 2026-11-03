@@ -48,7 +48,7 @@ class QueryStatisticsQuery
         $rows = DB::select("
             SELECT sql_hash, MAX(sql) AS sql, MAX(connection) AS connection, COUNT(*) AS calls,
                 SUM(duration_us) AS total_us, MAX(duration_us) AS max_us,
-                ".Percentiles::select('duration_us', 0.95, 'p95')."
+                ".Percentiles::select('duration_us', '0.95', 'p95')."
             FROM query_runs WHERE {$where} GROUP BY sql_hash ORDER BY {$order} DESC LIMIT ".(int) $limit, $bindings);
 
         $grand = max(1, (int) $totals->total_us);

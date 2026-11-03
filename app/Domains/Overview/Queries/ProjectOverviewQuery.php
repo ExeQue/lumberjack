@@ -33,9 +33,9 @@ class ProjectOverviewQuery
         $since = $period->since();
         $requests = DB::table('request_runs')->where('project_id', $project->id)->when($environment !== null)->where('environment', $environment);
 
-        $p50 = Percentiles::select('duration_us', 0.50, 'p50');
-        $p95 = Percentiles::select('duration_us', 0.95, 'p95');
-        $p99 = Percentiles::select('duration_us', 0.99, 'p99');
+        $p50 = Percentiles::select('duration_us', '0.50', 'p50');
+        $p95 = Percentiles::select('duration_us', '0.95', 'p95');
+        $p99 = Percentiles::select('duration_us', '0.99', 'p99');
         $envSql = $environment !== null ? ' AND environment = ?' : '';
         $bindings = array_filter([$project->id, $since->format('Y-m-d H:i:s'), $environment], fn ($v): bool => $v !== null);
 
@@ -94,7 +94,7 @@ class ProjectOverviewQuery
         $from = $until->subSeconds((int) now()->diffInSeconds($until, true));
         $range = [$from->format('Y-m-d H:i:s.v'), $until->format('Y-m-d H:i:s.v')];
 
-        $p95 = Percentiles::select('duration_us', 0.95, 'p95');
+        $p95 = Percentiles::select('duration_us', '0.95', 'p95');
         $envSql = $environment !== null ? ' AND environment = ?' : '';
         $bindings = array_filter([$project->id, ...$range, $environment], fn ($v): bool => $v !== null);
 
@@ -133,7 +133,7 @@ class ProjectOverviewQuery
         $bindings = [$size, $project->id, $since->format('Y-m-d H:i:s'), ...($environment !== null ? [$environment] : [])];
 
         $rows = DB::select("
-            SELECT {$bucket} AS bucket, ".Percentiles::select('duration_us', 0.50, 'p50').', '.Percentiles::select('duration_us', 0.95, 'p95')."
+            SELECT {$bucket} AS bucket, ".Percentiles::select('duration_us', '0.50', 'p50').', '.Percentiles::select('duration_us', '0.95', 'p95')."
             FROM request_runs WHERE project_id = ? AND occurred_at >= ?{$envSql}
             GROUP BY 1", $bindings);
 

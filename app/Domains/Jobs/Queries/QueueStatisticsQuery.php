@@ -42,7 +42,7 @@ class QueueStatisticsQuery
         }
 
         $waits = collect(DB::select("
-            SELECT connection, queue, ".Percentiles::select('EXTRACT(EPOCH FROM (started_at - queued_at)) * 1000000', 0.95, 'p95_wait')."
+            SELECT connection, queue, ".Percentiles::select('EXTRACT(EPOCH FROM (started_at - queued_at)) * 1000000', '0.95', 'p95_wait')."
             FROM job_runs WHERE {$where} GROUP BY connection, queue ORDER BY connection, queue LIMIT ".self::LIMIT, $bindings))
             ->map(fn (object $r): array => (array) $r)->keyBy($key);
 
