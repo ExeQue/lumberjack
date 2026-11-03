@@ -37,13 +37,16 @@ last change is saved and on how many screens it is live right now.
 
 ### The grid
 
-A screen is a grid of 2 to 12 columns and 2 to 6 rows, and the TV shows exactly that
+A screen is a grid of 2 to 12 columns and 2 to 12 rows, and the TV shows exactly that
 grid, so a widget's size in cells is its size on the TV. Each widget sits on the cells
 you put it on; cells no widget covers simply stay empty on the TV.
 
 **Aspect** next to Columns and Rows is the shape of the display the screen is made for:
 16:9 (the default), 16:10, 4:3, 21:9 or 32:9, and the two buttons after it stand it
-landscape or portrait (a 16:9 portrait screen is 9:16). The grid in the designer takes
+landscape or portrait (a 16:9 portrait screen is 9:16). **Swap columns and rows** next to them turns
+the layout with it: columns become rows and every widget's place and size turn too, so a
+landscape layout becomes a portrait one in one click (only while every widget is on the
+grid). The grid in the designer takes
 that shape, as large as fits, so a widget's text reads as it will on that display.
 
 **Preview at** shows the screen as a TV of that resolution shows it, header, gaps and

@@ -256,6 +256,17 @@ describe('saving from the designer', function () {
         ])->assertUnprocessable()->assertJsonValidationErrors(['cols', 'rows', 'widgets.1.id']);
     });
 
+    it('takes up to 12 rows, for a portrait screen, with widgets down to the last', function () {
+        $this->actingAs($this->user)->putJson(route('screens.layout', $this->screen), [
+            'cols' => 3, 'rows' => 12, 'widgets' => [($this->widget)(['x' => 0, 'y' => 10, 'w' => 1, 'h' => 2])],
+        ])->assertOk();
+        $this->actingAs($this->user)->putJson(route('screens.layout', $this->screen), ['cols' => 3, 'rows' => 13, 'widgets' => []])
+            ->assertJsonValidationErrors(['rows']);
+
+        expect($this->screen->refresh()->rows)->toBe(12)
+            ->and($this->screen->widgets[0])->toMatchArray(['x' => 0, 'y' => 10, 'h' => 2]);
+    });
+
     it('saves one widget in its place', function () {
         $this->actingAs($this->user)->putJson(route('screens.widget', [$this->screen, 'traffic']), [
             'widget' => ($this->widget)(['id' => 'elsewhere', 'type' => 'chart', 'source' => 'p95', 'w' => 2, 'h' => 2, 'title' => '  Latency  ', 'rotate' => ['p95', 'apdex']]),

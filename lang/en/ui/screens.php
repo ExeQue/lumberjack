@@ -105,6 +105,10 @@ return [
         'aspect' => 'Aspect',
         // The landscape and portrait buttons next to it.
         'orientation' => 'Orientation',
+        // Button: columns become rows, and every widget turns with them.
+        'swap' => 'Swap columns and rows',
+        'swap_hint' => 'Turns the layout on its side, for a display turned to portrait or back.',
+        'swap_refused' => 'Only when every widget is on the grid and both counts stay within 2 to 12.',
         // The designer's preview: as large as fits, or the TV's layout at a resolution.
         'preview_at' => 'Preview at',
         'preview_fit' => 'Fit',
