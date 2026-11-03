@@ -74,6 +74,12 @@ class TvPairing extends Model
         return $this->belongsTo(Display::class);
     }
 
+    /** The device of the team this browser already is, by its device cookie. */
+    public function existingDevice(int $teamId): ?Device
+    {
+        return $this->device_hash === null ? null : Device::query()->whereTeam($teamId)->whereDeviceHash($this->device_hash)->first();
+    }
+
     public function isPending(): bool
     {
         return $this->confirmed_at === null && $this->expires_at->isFuture();

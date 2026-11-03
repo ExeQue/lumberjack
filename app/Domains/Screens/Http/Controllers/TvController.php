@@ -28,8 +28,10 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * /tv, a TV's start page: the screens of the display it was paired as, else a pairing
  * code to confirm from a phone. No session needed; the TV proves itself with httpOnly
- * cookies (see TvCredentials), never with anything in a URL. One computer runs several
- * windows as /tv/1 to /tv/9 (/tv is window 1), each a display of its own.
+ * cookies (see TvCredentials), never with anything in a URL. One device runs several
+ * windows as /tv/1 to /tv/9, each a display of its own, living at its own address. /tv is
+ * the landing page: it pairs window 1 on a new browser, and on a paired one lists its
+ * windows to pick from, or another to add. It never forwards by itself.
  */
 class TvController
 {
@@ -38,14 +40,20 @@ class TvController
     ) {
     }
 
-    public function show(Request $request, ScreenPresenter $presenter, StartTvPairingAction $start, int $slot = 1): Response
+    public function show(Request $request, ScreenPresenter $presenter, StartTvPairingAction $start, ?int $slot = null): Response
     {
-        $display = TvCredentials::display($request, $slot);
         $device = TvCredentials::cookie($request, TvCredentials::DEVICE_COOKIE) ?? Str::random(40);
+        $windows = $slot === null ? TvCredentials::windows($request) : [];
 
-        $response = $display !== null
-            ? $this->display($request, $slot, $display, $presenter)
-            : $this->pairing($request, $slot, $device, $start);
+        if ($windows !== []) {
+            $response = $this->chooser($request, $windows);
+        } else {
+            $slot ??= 1;
+            $display = TvCredentials::display($request, $slot);
+            $response = $display !== null
+                ? $this->display($request, $slot, $display, $presenter)
+                : $this->pairing($request, $slot, $device, $start);
+        }
 
         $response->headers->set('Cache-Control', 'no-store');
         // Sent again on every visit: the year starts over.
@@ -149,13 +157,36 @@ class TvController
         return $response;
     }
 
+    /**
+     * /tv on a browser with paired windows: which one this window shows, or another to add.
+     *
+     * @param  non-empty-array<int, Display>  $windows
+     */
+    private function chooser(Request $request, array $windows): Response
+    {
+        $free = array_values(array_diff(range(1, Display::MAX_SLOT), array_keys($windows)))[0] ?? null;
+        $first = $windows[array_key_first($windows)];
+
+        return Inertia::render('tv/choose', [
+            'device' => $first->device->name,
+            'windows' => array_map(fn (int $slot, Display $display): array => [
+                'slot' => $slot,
+                'label' => $display->label(),
+                'screens' => array_map(fn (Screen $screen): string => $screen->name, $display->screens()),
+                'url' => self::url($slot),
+            ], array_keys($windows), $windows),
+            'add' => $free === null ? null : ['slot' => $free, 'url' => self::url($free)],
+        ])->toResponse($request);
+    }
+
     private function display(Request $request, int $slot, Display $display, ScreenPresenter $presenter): Response
     {
-        $this->touch->execute($display, $request->userAgent(), $request->ip());
+        $this->touch->execute($display, $slot, $request->userAgent(), $request->ip());
+        $screens = $display->screens();
 
         $response = Inertia::render('tv/show', [
             'slot' => $slot,
-            'display' => ['uuid' => $display->uuid, 'name' => $display->name],
+            'display' => ['uuid' => $display->uuid, 'name' => $display->fullName(), 'label' => $display->label()],
             'display_channel' => DisplayChannel::name($display),
             'version' => self::version($display),
             'rotate_seconds' => $display->rotate_seconds,
@@ -165,7 +196,7 @@ class TvController
             'screens' => array_map(fn (Screen $screen): array => $presenter->kiosk($screen, [
                 'data_url' => route('tv.data', ['slot' => $slot, 'screen' => $screen->uuid], absolute: false),
                 'channel' => ScreenChannel::name($screen),
-            ], $display->theme->screenTheme()), $display->screens()),
+            ], $display->theme->screenTheme()), $screens),
         ])->toResponse($request);
 
         $response->headers->setCookie(TvCredentials::displayCookie($slot, (string) TvCredentials::displayToken($request, $slot)));
@@ -178,15 +209,15 @@ class TvController
     {
         $display = TvCredentials::display($request, $slot);
         abort_if($display === null, 401);
-        $this->touch->execute($display, $request->userAgent(), $request->ip(), $viewport);
+        $this->touch->execute($display, $slot, $request->userAgent(), $request->ip(), $viewport);
 
         return $display;
     }
 
-    /** /tv for window 1, /tv/2 and on for the others. */
+    /** Where a window lives, /tv/1 to /tv/9: never /tv, the landing page. */
     public static function url(int $slot): string
     {
-        return $slot === 1 ? route('tv') : route('tv', $slot);
+        return route('tv', $slot);
     }
 
     /**

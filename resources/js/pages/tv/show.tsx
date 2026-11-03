@@ -16,7 +16,8 @@ type KioskProps = Omit<
 
 type Props = {
     slot: number;
-    display: { uuid: string; name: string };
+    /** Name: "Office PC, window 2"; label: "Window 2". */
+    display: { uuid: string; name: string; label: string };
     display_channel: string;
     /** What the display shows; the heartbeat says when it changed. */
     version: string;
@@ -104,7 +105,7 @@ export default function TvShow({
         // Its size right away, and again whenever the window changes.
         const resized = () => {
             window.clearTimeout(settle);
-            settle = window.setTimeout(beat, 2_000);
+            settle = window.setTimeout(beat, 1_000);
         };
         let settle = window.setTimeout(beat, 2_000);
         window.addEventListener('resize', resized);

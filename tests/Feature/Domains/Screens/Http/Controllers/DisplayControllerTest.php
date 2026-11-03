@@ -10,6 +10,7 @@ use App\Domains\Screens\Enums\DisplayTheme;
 use App\Domains\Screens\Events\DisplayChanged;
 use App\Domains\Screens\Http\Controllers\DisplayController;
 use App\Domains\Screens\Http\Requests\UpdateDisplayRequest;
+use App\Domains\Screens\Models\Device;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Policies\DisplayPolicy;
@@ -37,43 +38,53 @@ beforeEach(function () {
 });
 
 describe('the list of displays', function () {
-    it('shows the team\'s displays to every member, read only for members', function () {
-        Display::factory()->offline()->for($this->screen->team)->create(['name' => 'Kitchen', 'user_agent' => null]);
+    it('shows the team\'s devices with their windows to every member, read only for members', function () {
+        $kitchen = Device::factory()->for($this->screen->team)->create(['name' => 'Kitchen', 'user_agent' => null, 'last_seen_at' => now()->subDays(3)]);
+        Display::factory()->offline()->onDevice($kitchen)->create(['viewport_width' => 1920, 'viewport_height' => 1080]);
         Display::factory()->create();
 
         $this->actingAs($this->member)->get(route('team.displays'))->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('team/displays')
-            ->has('displays', 2)
-            ->where('displays.0.name', 'Kitchen')
-            ->where('displays.0.online', false)
-            ->where('displays.0.device', null)
-            ->where('displays.0.screen', null)
-            ->where('displays.1.name', 'Office TV')
-            ->where('displays.1.online', true)
-            ->where('displays.1.device', 'Fire TV · Silk')
-            ->where('displays.1.screen', $this->screen->uuid)
-            ->where('displays.1.theme', 'default')
+            ->has('devices', 2)
+            ->where('devices.0.name', 'Kitchen')
+            ->where('devices.0.online', false)
+            ->where('devices.0.browser', null)
+            ->where('devices.0.next_url', route('tv', 2))
+            ->where('devices.0.windows.0.label', 'Window 1')
+            ->where('devices.0.windows.0.screen', null)
+            ->where('devices.0.windows.0.viewport', ['w' => 1920, 'h' => 1080])
+            ->where('devices.1.name', 'Office TV')
+            ->where('devices.1.online', true)
+            ->where('devices.1.browser', 'Fire TV · Silk')
+            ->where('devices.1.windows.0.screen', $this->screen->uuid)
+            ->where('devices.1.windows.0.theme', 'default')
+            ->where('devices.1.windows.0.viewport', null)
+            ->where('devices.1.windows.0.online', true)
             ->has('screens', 2)
             ->where('themes', ['default', 'dark', 'light', 'schedule'])
             ->where('can_manage', false)
+            ->where('channel', 'team.'.$this->screen->team->uuid.'.displays')
             ->where('tv.url', route('tv')));
 
         $this->actingAs($this->admin)->get(route('team.displays'))->assertInertia(fn (Assert $page) => $page->where('can_manage', true));
     });
 
-    it('keeps the windows of one computer together, in window order', function () {
-        $computer = str_repeat('c', 64);
-        Display::factory()->for($this->screen->team)->create(['name' => 'Zed window 2', 'slot' => 2, 'device_hash' => $computer]);
-        Display::factory()->for($this->screen->team)->create(['name' => 'Alpha window 1', 'slot' => 1, 'device_hash' => $computer]);
+    it('lists the windows of a device under it, in window order, with the next free window to add', function () {
+        $device = $this->display->device;
+        Display::factory()->onDevice($device, 3)->create(['name' => 'Kiosk']);
+        Display::factory()->offline()->onDevice($device, 2)->create();
 
         $this->actingAs($this->member)->get(route('team.displays'))->assertInertia(fn (Assert $page) => $page
-            ->where('displays.0.name', 'Alpha window 1')
-            ->where('displays.1.name', 'Zed window 2')
-            ->where('displays.1.slot', 2)
-            ->where('displays.0.computer', fn (string $key): bool => strlen($key) === 12 && ! str_contains($computer, $key))
-            ->where('displays.1.computer', fn (string $key): bool => $key !== '')
-            ->where('displays.2.name', 'Office TV')
-            ->where('displays.2.playlist', []));
+            ->has('devices', 1)
+            ->where('devices.0.online', true)
+            ->where('devices.0.next_url', route('tv', 4))
+            ->has('devices.0.windows', 3)
+            ->where('devices.0.windows.0.slot', 1)
+            ->where('devices.0.windows.1.label', 'Window 2')
+            ->where('devices.0.windows.1.online', false)
+            ->where('devices.0.windows.2.label', 'Kiosk')
+            ->where('devices.0.windows.2.name', 'Kiosk')
+            ->where('devices.0.windows.0.playlist', []));
     });
 
     it('sends someone without a team to the team page', function () {
@@ -92,6 +103,9 @@ describe('changing a display', function () {
         expect($display->screen_id)->toBe($this->other->id)
             ->and($display->theme)->toBe(DisplayTheme::Light)
             ->and($display->name)->toBe('Lobby');
+
+        $this->actingAs($this->admin)->put(route('displays.update', $this->display), ['name' => ''])->assertRedirect();
+        expect($this->display->refresh()->name)->toBeNull()->and($this->display->label())->toBe('Window 1');
         Event::assertDispatched(DisplayChanged::class, fn (DisplayChanged $e): bool => $e->broadcastAs() === 'display.changed'
             && $e->broadcastOn()->name === 'private-display.'.$this->display->uuid && $e->broadcastWith() === []);
     });
@@ -109,7 +123,7 @@ describe('changing a display', function () {
             ->and($display->rotate_seconds)->toBe(45)
             ->and($display->hold_on_alert)->toBeFalse();
         $this->actingAs($this->admin)->get(route('team.displays'))->assertInertia(fn (Assert $page) => $page
-            ->where('displays.0.playlist', [$this->other->uuid, $this->screen->uuid]));
+            ->where('devices.0.windows.0.playlist', [$this->other->uuid, $this->screen->uuid]));
 
         $this->actingAs($this->admin)->put(route('displays.update', $this->display), ['screen' => $this->screen->uuid])->assertRedirect();
         expect($this->display->refresh()->playlist)->toBeNull()->and($this->display->screen_id)->toBe($this->screen->id);
@@ -160,18 +174,29 @@ describe('changing a display', function () {
 });
 
 describe('removing a display', function () {
-    it('stops its token at once and sends the TV back to pairing', function () {
+    it('stops its token at once and sends the TV back to pairing, and its device with its last window', function () {
         Event::fake([DisplayChanged::class]);
 
         $this->actingAs($this->admin)->delete(route('displays.destroy', $this->display))
             ->assertRedirect()->assertSessionHas('status', __('screens.displays.removed'));
 
         expect(Display::query()->count())->toBe(0)
-            ->and(AdminAuditEntry::query()->sole()->action)->toBe(AdminAction::DisplayRemoved);
+            ->and(Device::query()->count())->toBe(0)
+            ->and(AdminAuditEntry::query()->sole()->action)->toBe(AdminAction::DisplayRemoved)
+            ->and(AdminAuditEntry::query()->sole()->subject)->toBe('Office TV, window 1');
         Event::assertDispatched(DisplayChanged::class, fn (DisplayChanged $e): bool => $e->broadcastAs() === 'display.removed');
 
         auth()->logout();
         $this->withCredentials()->withCookie(TvCredentials::displayCookieName(1), 'ljd_token')->getJson(route('tv.data', 1))->assertUnauthorized();
-        $this->withCookie(TvCredentials::displayCookieName(1), 'ljd_token')->get(route('tv'))->assertInertia(fn (Assert $page) => $page->component('tv/pair'));
+        $this->withCookie(TvCredentials::displayCookieName(1), 'ljd_token')->get(route('tv', 1))->assertInertia(fn (Assert $page) => $page->component('tv/pair'));
+    });
+
+    it('keeps the device while it has other windows', function () {
+        $second = Display::factory()->onDevice($this->display->device, 2)->create();
+
+        $this->actingAs($this->admin)->delete(route('displays.destroy', $second))->assertRedirect();
+
+        expect(Display::query()->sole()->is($this->display))->toBeTrue()
+            ->and(Device::query()->sole()->is($this->display->device))->toBeTrue();
     });
 });

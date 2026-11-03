@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Broadcasting\DisplayChannel;
 use App\Domains\Screens\Broadcasting\ScreenChannel;
+use App\Domains\Screens\Broadcasting\TeamDisplaysChannel;
 use App\Domains\Screens\Broadcasting\TvPairingChannel;
 use App\Domains\Screens\Support\TvViewer;
 use App\Domains\Teams\Models\Team;
@@ -30,6 +31,7 @@ Broadcast::channel('team.{teamUuid}', function (User $user, string $teamUuid): b
     return $team !== null && $user->belongsToTeam($team);
 });
 
+Broadcast::channel('team.{teamUuid}.displays', TeamDisplaysChannel::class);
 Broadcast::channel('screen.{screen}', ScreenChannel::class, ['guards' => ['web', 'tv']]);
 Broadcast::channel('display.{display}', DisplayChannel::class, ['guards' => ['tv']]);
 Broadcast::channel('tv-pairing.{uuid}', TvPairingChannel::class, ['guards' => ['tv']]);

@@ -27,7 +27,8 @@ class UpdateDisplayRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'string', 'max:60'],
+            // Its own name besides its window number; empty for none.
+            'name' => ['sometimes', 'nullable', 'string', 'max:60'],
             // One of the display's team's screens, or none.
             'screen' => ['sometimes', 'nullable', 'uuid', Rule::exists('screens', 'uuid')->where('team_id', $this->display()->team_id)],
             // Several of them, shown in turn.
@@ -40,14 +41,14 @@ class UpdateDisplayRequest extends FormRequest
     }
 
     /**
-     * @return array{name?: string, screen_id?: int|null, playlist?: list<int>, rotate_seconds?: int, hold_on_alert?: bool, theme?: DisplayTheme}
+     * @return array{name?: string|null, screen_id?: int|null, playlist?: list<int>, rotate_seconds?: int, hold_on_alert?: bool, theme?: DisplayTheme}
      */
     public function settings(): array
     {
         $settings = [];
 
         if ($this->has('name')) {
-            $settings['name'] = $this->string('name')->toString();
+            $settings['name'] = $this->filled('name') ? $this->string('name')->trim()->toString() : null;
         }
 
         if ($this->has('screen')) {

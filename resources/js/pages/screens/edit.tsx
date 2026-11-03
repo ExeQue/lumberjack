@@ -1,4 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { useEffect, useRef, useState } from 'react';
 import type {
     DragEvent,
@@ -71,6 +72,8 @@ type Props = {
     team: { name: string };
     /** The sizes the TVs showing this screen report, to preview it at. */
     displays: { name: string; w: number; h: number }[];
+    /** Where a TV of the team says it reported a new size. */
+    displays_channel: string;
     projects: { uuid: string; name: string }[];
     data_url: string;
     schema: Schema;
@@ -326,6 +329,10 @@ function onlyWidget(before: Screen, after: Screen): Widget | null | undefined {
  */
 export default function EditScreen(props: Props) {
     const t = useT();
+    // A TV resized or came back: its size in Preview at follows.
+    useEcho(props.displays_channel, '.display.updated', () =>
+        router.reload({ only: ['displays'] }),
+    );
     const now = useNow();
     const [screen, setScreen] = useState<Screen>(props.screen);
     const [saved, setSaved] = useState<Screen>(props.screen);

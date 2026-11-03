@@ -419,6 +419,14 @@ return [
         'paired' => 'Paired. Opening the screen...',
         // Which browser window of a computer this is, /tv/2 being window 2.
         'window' => 'Window :slot',
+        // /tv on a paired device, the landing page: which window this one shows.
+        'choose_title' => 'Which window is this?',
+        'choose_hint' => 'Pick the window of :device this one shows, or add another; use the arrow keys and Enter on a remote.',
+        'choose_start_page' => 'Each window lives at its own address. For a screen that runs unattended, make that address its start page, such as :url, not this page.',
+        'no_screen' => 'No screen yet',
+        // Button.
+        'add_window' => 'Add another window',
+        'add_window_hint' => 'Pairs window :slot with a new code',
         'start_page' => 'Opened this page by hand? Make :url the start page of the TV browser, and it will show its screen after every restart.',
     ],
 
@@ -436,8 +444,13 @@ return [
         'check' => 'Check that the TV shows the same code.',
         'screen' => 'Screen',
         'screen_option' => ':screen (:team)',
-        'name' => 'Name this TV',
+        'name' => 'Name this device',
+        'name_hint' => 'The TV or computer, so its windows are listed together: "Office PC".',
         'name_default' => 'Office TV',
+        // Pairing another window of a device the team has: only its screen is asked.
+        'join' => 'Add window :slot to :device',
+        'join_body' => 'This browser is :device already; window :slot joins it.',
+        'screen_window' => 'Screen for window :slot',
         // Button.
         'confirm' => 'Show on the TV',
         'expires' => 'Not your TV? Close this page; the code expires :time.',
@@ -447,7 +460,7 @@ return [
         // Buttons.
         'another' => 'Pair another TV',
         'displays' => 'Go to Displays',
-        'another_window' => 'Another screen on this computer? Open :url in a second window (or on the second monitor) and pair it the same way.',
+        'another_window' => 'Another screen on this device? Open :url in a second window (or on the second monitor) and pair it the same way; it joins :device.',
     ],
 
     // How to put a screen on a TV, in the designer and on Displays.
@@ -485,34 +498,43 @@ return [
         'off' => 'Not shared.',
     ],
 
-    // Team settings > Displays.
+    // Team settings > Displays: one card per device, its windows under it.
     'displays' => [
         'title' => 'Displays',
-        'description' => 'TVs that show a status screen. Open :url on a TV and confirm its code to add one. Changing the screen here switches the TV right away.',
+        'description' => 'TVs and computers that show a status screen, each with its windows. Open :url on a TV and confirm its code to add one. Changing the screen here switches the TV right away.',
         // Button.
         'pair' => 'Pair a TV',
         'empty_title' => 'No TVs yet',
         'empty_body' => 'Open :url on a TV and confirm the code it shows; it appears here.',
-        'name' => 'Name',
+        'device_name' => 'Name of :name',
+        'window_col' => 'Window',
         'shows' => 'Shows',
+        'seconds_col' => 'Seconds',
+        'hold_col' => 'Holds on red',
         'theme' => 'Theme',
-        'device' => 'Device',
+        'viewport' => 'Size',
         'status' => 'Status',
         'actions' => 'Actions',
+        'yes' => 'Yes',
+        'no' => 'No',
         'no_screen' => 'No screen',
+        'unknown_viewport' => 'Not reported',
         'online' => 'Online',
         'last_seen' => 'Last seen :time',
         'never_seen' => 'Never connected',
-        // Button.
-        // Button: the TV loads its page afresh.
+        'windows' => '{1} 1 window|[2,*] :count windows',
+        // Buttons: the TV loads its page afresh.
         'reload' => 'Reload',
-        'reload_hint' => 'Loads the page on this TV afresh, as after an update.',
+        'reload_hint' => 'Loads the page in this window afresh, as after an update.',
+        'reload_device' => 'Reload all',
+        'reload_device_hint' => 'Loads the page in every window of this device afresh.',
         'remove' => 'Remove',
-        'remove_question' => 'Remove :name? The TV goes back to showing a pairing code.',
+        'remove_question' => 'Remove :name? The window goes back to showing a pairing code.',
+        // Button.
+        'remove_device' => 'Remove device',
+        'remove_device_question' => 'Remove :name? Every window of it goes back to showing a pairing code.',
         'read_only' => 'Only team admins change displays.',
-        // ":device: window 1, window 2" for a computer showing several screens.
-        'computer' => ':device: :windows',
-        'window' => 'window :slot',
+        'add_window' => 'Add a window: open :url in another browser window on this device and pair it.',
         // Button; opens the playlist of a display.
         'rotate' => 'In turn',
         'rotating' => '{1} 1 screen|[2,*] :count screens in turn',

@@ -1,7 +1,8 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
-import { Relative } from '@/components/lj/relative';
+import { Relative, useNow } from '@/components/lj/relative';
 import { bareUrl, withSlot } from '@/components/lj/screen/qr';
 import {
     TvInstructions,
@@ -28,28 +29,57 @@ import {
 } from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
+import {
+    destroy as destroyDevice,
+    reload as reloadDevice,
+    update as updateDevice,
+} from '@/routes/devices';
 import { destroy, reload, update } from '@/routes/displays';
 import type { TeamShared } from '@/types/lumberjack';
 
+/** One window of a device, /tv/{slot}. */
 type Row = {
     uuid: string;
-    name: string;
+    slot: number;
+    /** Its own name, besides its window number. */
+    name: string | null;
+    /** "Window 2", or its own name. */
+    label: string;
     screen: string | null;
     /** Screens shown in turn; empty shows the one screen. */
     playlist: string[];
     rotate_seconds: number;
     hold_on_alert: boolean;
     theme: string;
-    device: string | null;
-    /** Windows of one computer share this. */
-    computer: string;
-    slot: number;
+    viewport: { w: number; h: number } | null;
     online: boolean;
     last_seen_at: string | null;
 };
 
+type DeviceRow = {
+    uuid: string;
+    name: string;
+    browser: string | null;
+    online: boolean;
+    last_seen_at: string | null;
+    /** Where its next window pairs; null once all are. */
+    next_url: string | null;
+    windows: Row[];
+};
+
+/** What a window says when it reports in, on the team's displays channel. */
+type Report = {
+    uuid: string;
+    viewport: { w: number; h: number } | null;
+    last_seen_at: string | null;
+};
+
+/** Heard from this recently, a window counts as online (Display::ONLINE_SECONDS). */
+const ONLINE_MS = 180_000;
+
 type Props = {
-    displays: Row[];
+    devices: DeviceRow[];
+    channel: string;
     screens: { uuid: string; name: string }[];
     themes: string[];
     can_manage: boolean;
@@ -57,11 +87,12 @@ type Props = {
 };
 
 /**
- * Team settings > Displays: the TVs paired to the team, what each shows, whether it is
- * online. A change reaches the TV at once.
+ * Team settings > Displays: the devices paired to the team, one card each, with their
+ * windows: what each shows, whether it is online. A change reaches the TV at once.
  */
 export default function Displays({
-    displays,
+    devices: listed,
+    channel,
     screens,
     themes,
     can_manage,
@@ -70,9 +101,54 @@ export default function Displays({
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const [pairing, setPairing] = useState(false);
-    const [editing, setEditing] = useState<Row | null>(null);
-    const windows = (row: Row) =>
-        displays.filter((d) => d.computer === row.computer);
+    const now = useNow();
+    // Sizes and last seen as the windows report them, newer than the page.
+    const [reports, setReports] = useState<Record<string, Report>>({});
+    useEcho<Report>(channel, '.display.updated', (report) =>
+        setReports((all) => ({ ...all, [report.uuid]: report })),
+    );
+    // Online is worked out here, so a TV that goes silent turns offline on its own.
+    const isOnline = (iso: string | null) =>
+        iso !== null && now - Date.parse(iso) < ONLINE_MS;
+    const devices = listed.map((device) => {
+        const windows = device.windows.map((w) => {
+            const report = reports[w.uuid];
+            const seen =
+                report?.last_seen_at &&
+                (w.last_seen_at === null ||
+                    Date.parse(report.last_seen_at) >
+                        Date.parse(w.last_seen_at))
+                    ? report
+                    : null;
+            const last = seen?.last_seen_at ?? w.last_seen_at;
+
+            return {
+                ...w,
+                viewport: seen ? seen.viewport : w.viewport,
+                last_seen_at: last,
+                online: isOnline(last),
+            };
+        });
+        const last = windows.reduce<string | null>(
+            (max, w) =>
+                w.last_seen_at !== null &&
+                (max === null || Date.parse(w.last_seen_at) > Date.parse(max))
+                    ? w.last_seen_at
+                    : max,
+            device.last_seen_at,
+        );
+
+        return {
+            ...device,
+            windows,
+            last_seen_at: last,
+            online: windows.some((w) => w.online),
+        };
+    });
+    const [editing, setEditing] = useState<{
+        device: DeviceRow;
+        window: Row;
+    } | null>(null);
     const tvUrl = <Mono className="text-amber">{bareUrl(tv.url)}</Mono>;
     const save = (
         display: Row,
@@ -112,8 +188,8 @@ export default function Displays({
                         {t('screens.displays.read_only')}
                     </p>
                 )}
-                <Card>
-                    {displays.length === 0 ? (
+                {devices.length === 0 ? (
+                    <Card>
                         <EmptyState title={t('screens.displays.empty_title')}>
                             {withSlot(
                                 (r) => t('screens.displays.empty_body', r),
@@ -121,264 +197,31 @@ export default function Displays({
                                 tvUrl,
                             )}
                         </EmptyState>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className={tableClass}>
-                                <thead>
-                                    <tr>
-                                        <th className={thClass}>
-                                            {t('screens.displays.name')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('screens.displays.shows')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('screens.displays.theme')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('screens.displays.device')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('screens.displays.status')}
-                                        </th>
-                                        {can_manage && (
-                                            <th className={thClass}>
-                                                <span className="sr-only">
-                                                    {t(
-                                                        'screens.displays.actions',
-                                                    )}
-                                                </span>
-                                            </th>
-                                        )}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {displays.flatMap((display, i) => [
-                                        ...(windows(display).length > 1 &&
-                                        displays[i - 1]?.computer !==
-                                            display.computer
-                                            ? [
-                                                  <tr
-                                                      key={`${display.computer}-computer`}
-                                                  >
-                                                      <th
-                                                          colSpan={
-                                                              can_manage ? 6 : 5
-                                                          }
-                                                          scope="rowgroup"
-                                                          className={`${tdClass} bg-panel-2 text-left text-xs font-semibold text-ink-2`}
-                                                      >
-                                                          {t(
-                                                              'screens.displays.computer',
-                                                              {
-                                                                  device:
-                                                                      display.device ??
-                                                                      t(
-                                                                          'screens.pair.unknown_device',
-                                                                      ),
-                                                                  windows:
-                                                                      windows(
-                                                                          display,
-                                                                      )
-                                                                          .map(
-                                                                              (
-                                                                                  w,
-                                                                              ) =>
-                                                                                  t(
-                                                                                      'screens.displays.window',
-                                                                                      {
-                                                                                          slot: w.slot,
-                                                                                      },
-                                                                                  ),
-                                                                          )
-                                                                          .join(
-                                                                              ', ',
-                                                                          ),
-                                                              },
-                                                          )}
-                                                      </th>
-                                                  </tr>,
-                                              ]
-                                            : []),
-                                        <tr key={display.uuid}>
-                                            <td
-                                                className={`${tdClass} font-medium`}
-                                            >
-                                                {display.name}
-                                            </td>
-                                            <td className={tdClass}>
-                                                <Select
-                                                    aria-label={`${t('screens.displays.shows')}: ${display.name}`}
-                                                    value={display.screen ?? ''}
-                                                    disabled={!can_manage}
-                                                    onChange={(e) =>
-                                                        save(display, {
-                                                            screen:
-                                                                e.target
-                                                                    .value ||
-                                                                null,
-                                                        })
-                                                    }
-                                                >
-                                                    <option value="">
-                                                        {t(
-                                                            'screens.displays.no_screen',
-                                                        )}
-                                                    </option>
-                                                    {screens.map((s) => (
-                                                        <option
-                                                            key={s.uuid}
-                                                            value={s.uuid}
-                                                        >
-                                                            {s.name}
-                                                        </option>
-                                                    ))}
-                                                </Select>
-                                                <div className="mt-1 flex items-center gap-2 text-xs text-ink-3">
-                                                    {display.playlist.length >
-                                                        1 && (
-                                                        <span>
-                                                            {t(
-                                                                'screens.displays.rotating',
-                                                                {},
-                                                                display.playlist
-                                                                    .length,
-                                                            )}
-                                                        </span>
-                                                    )}
-                                                    {can_manage && (
-                                                        <button
-                                                            type="button"
-                                                            className="text-amber hover:underline"
-                                                            onClick={() =>
-                                                                setEditing(
-                                                                    display,
-                                                                )
-                                                            }
-                                                        >
-                                                            {t(
-                                                                'screens.displays.rotate',
-                                                            )}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className={tdClass}>
-                                                <Select
-                                                    aria-label={`${t('screens.displays.theme')}: ${display.name}`}
-                                                    value={display.theme}
-                                                    disabled={!can_manage}
-                                                    onChange={(e) =>
-                                                        save(display, {
-                                                            theme: e.target
-                                                                .value,
-                                                        })
-                                                    }
-                                                >
-                                                    {themes.map((theme) => (
-                                                        <option
-                                                            key={theme}
-                                                            value={theme}
-                                                        >
-                                                            {t(
-                                                                `screens.display_theme.${theme}`,
-                                                            )}
-                                                        </option>
-                                                    ))}
-                                                </Select>
-                                            </td>
-                                            <td
-                                                className={`${tdClass} text-ink-2`}
-                                            >
-                                                {[
-                                                    display.device ??
-                                                        t(
-                                                            'screens.pair.unknown_device',
-                                                        ),
-                                                    ...(windows(display)
-                                                        .length > 1 ||
-                                                    display.slot > 1
-                                                        ? [
-                                                              t(
-                                                                  'screens.displays.window',
-                                                                  {
-                                                                      slot: display.slot,
-                                                                  },
-                                                              ),
-                                                          ]
-                                                        : []),
-                                                ].join(' · ')}
-                                            </td>
-                                            <td className={tdClass}>
-                                                <Status display={display} />
-                                            </td>
-                                            {can_manage && (
-                                                <td
-                                                    className={`${tdClass} text-right whitespace-nowrap`}
-                                                >
-                                                    <Button
-                                                        variant="ghost"
-                                                        title={t(
-                                                            'screens.displays.reload_hint',
-                                                        )}
-                                                        onClick={() =>
-                                                            router.post(
-                                                                reload(
-                                                                    display.uuid,
-                                                                ).url,
-                                                                {},
-                                                                {
-                                                                    preserveScroll: true,
-                                                                },
-                                                            )
-                                                        }
-                                                    >
-                                                        {t(
-                                                            'screens.displays.reload',
-                                                        )}
-                                                    </Button>
-                                                    <ConfirmButton
-                                                        question={t(
-                                                            'screens.displays.remove_question',
-                                                            {
-                                                                name: display.name,
-                                                            },
-                                                        )}
-                                                        confirmLabel={t(
-                                                            'screens.displays.remove',
-                                                        )}
-                                                        onConfirm={() =>
-                                                            router.delete(
-                                                                destroy(
-                                                                    display.uuid,
-                                                                ).url,
-                                                                {
-                                                                    preserveScroll: true,
-                                                                },
-                                                            )
-                                                        }
-                                                    >
-                                                        {t(
-                                                            'screens.displays.remove',
-                                                        )}
-                                                    </ConfirmButton>
-                                                </td>
-                                            )}
-                                        </tr>,
-                                    ])}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </Card>
+                    </Card>
+                ) : (
+                    devices.map((device) => (
+                        <DeviceCard
+                            key={device.uuid}
+                            device={device}
+                            screens={screens}
+                            themes={themes}
+                            canManage={can_manage}
+                            onSave={save}
+                            onPlaylist={(window) =>
+                                setEditing({ device, window })
+                            }
+                        />
+                    ))
+                )}
             </PageBody>
             {editing && (
                 <Playlist
-                    display={editing}
+                    display={editing.window}
+                    title={`${editing.device.name}, ${editing.window.label}`}
                     screens={screens}
                     onClose={() => setEditing(null)}
                     onSave={(fields) => {
-                        save(editing, fields);
+                        save(editing.window, fields);
                         setEditing(null);
                     }}
                 />
@@ -396,10 +239,315 @@ export default function Displays({
     );
 }
 
-function Status({ display }: { display: Row }) {
+/** A device: its name, browser and status, reload or remove it all, and its windows. */
+function DeviceCard({
+    device,
+    screens,
+    themes,
+    canManage,
+    onSave,
+    onPlaylist,
+}: {
+    device: DeviceRow;
+    screens: Props['screens'];
+    themes: string[];
+    canManage: boolean;
+    onSave: (
+        display: Row,
+        fields: Record<string, string | null | string[] | number | boolean>,
+    ) => void;
+    onPlaylist: (window: Row) => void;
+}) {
+    const t = useT();
+    const headingId = `device-${device.uuid}`;
+    const rename = (name: string) => {
+        if (name.trim() !== '' && name.trim() !== device.name) {
+            router.put(
+                updateDevice(device.uuid).url,
+                { name: name.trim() },
+                { preserveScroll: true },
+            );
+        }
+    };
+
+    return (
+        <Card aria-labelledby={headingId}>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+                <div className="flex min-w-0 flex-col gap-1">
+                    <h2
+                        id={headingId}
+                        className={
+                            canManage ? 'sr-only' : 'text-[13px] font-semibold'
+                        }
+                    >
+                        {device.name}
+                    </h2>
+                    {canManage && (
+                        <Input
+                            key={device.name}
+                            aria-label={t('screens.displays.device_name', {
+                                name: device.name,
+                            })}
+                            defaultValue={device.name}
+                            maxLength={60}
+                            className="h-8 w-64 font-semibold"
+                            onBlur={(e) => rename(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.currentTarget.blur();
+                                }
+                            }}
+                        />
+                    )}
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-3">
+                        <span>
+                            {device.browser ?? t('screens.pair.unknown_device')}
+                        </span>
+                        <span>
+                            {t(
+                                'screens.displays.windows',
+                                {},
+                                device.windows.length,
+                            )}
+                        </span>
+                        <Status
+                            online={device.online}
+                            lastSeen={device.last_seen_at}
+                        />
+                    </span>
+                </div>
+                {canManage && (
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            title={t('screens.displays.reload_device_hint')}
+                            onClick={() =>
+                                router.post(
+                                    reloadDevice(device.uuid).url,
+                                    {},
+                                    { preserveScroll: true },
+                                )
+                            }
+                        >
+                            {t('screens.displays.reload_device')}
+                        </Button>
+                        <ConfirmButton
+                            question={t(
+                                'screens.displays.remove_device_question',
+                                { name: device.name },
+                            )}
+                            confirmLabel={t('screens.displays.remove_device')}
+                            onConfirm={() =>
+                                router.delete(destroyDevice(device.uuid).url, {
+                                    preserveScroll: true,
+                                })
+                            }
+                        >
+                            {t('screens.displays.remove_device')}
+                        </ConfirmButton>
+                    </div>
+                )}
+            </div>
+            <div className="overflow-x-auto">
+                <table className={tableClass}>
+                    <thead>
+                        <tr>
+                            <th className={thClass}>
+                                {t('screens.displays.window_col')}
+                            </th>
+                            <th className={thClass}>
+                                {t('screens.displays.shows')}
+                            </th>
+                            <th className={thClass}>
+                                {t('screens.displays.seconds_col')}
+                            </th>
+                            <th className={thClass}>
+                                {t('screens.displays.hold_col')}
+                            </th>
+                            <th className={thClass}>
+                                {t('screens.displays.theme')}
+                            </th>
+                            <th className={thClass}>
+                                {t('screens.displays.viewport')}
+                            </th>
+                            <th className={thClass}>
+                                {t('screens.displays.status')}
+                            </th>
+                            {canManage && (
+                                <th className={thClass}>
+                                    <span className="sr-only">
+                                        {t('screens.displays.actions')}
+                                    </span>
+                                </th>
+                            )}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {device.windows.map((display) => (
+                            <tr key={display.uuid}>
+                                <td
+                                    className={`${tdClass} font-medium whitespace-nowrap`}
+                                >
+                                    {display.label}
+                                </td>
+                                <td className={tdClass}>
+                                    <Select
+                                        aria-label={`${t('screens.displays.shows')}: ${device.name}, ${display.label}`}
+                                        value={display.screen ?? ''}
+                                        disabled={!canManage}
+                                        onChange={(e) =>
+                                            onSave(display, {
+                                                screen: e.target.value || null,
+                                            })
+                                        }
+                                    >
+                                        <option value="">
+                                            {t('screens.displays.no_screen')}
+                                        </option>
+                                        {screens.map((s) => (
+                                            <option key={s.uuid} value={s.uuid}>
+                                                {s.name}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                    <div className="mt-1 flex items-center gap-2 text-xs text-ink-3">
+                                        {display.playlist.length > 1 && (
+                                            <span>
+                                                {t(
+                                                    'screens.displays.rotating',
+                                                    {},
+                                                    display.playlist.length,
+                                                )}
+                                            </span>
+                                        )}
+                                        {canManage && (
+                                            <button
+                                                type="button"
+                                                className="text-amber hover:underline"
+                                                onClick={() =>
+                                                    onPlaylist(display)
+                                                }
+                                            >
+                                                {t('screens.displays.rotate')}
+                                            </button>
+                                        )}
+                                    </div>
+                                </td>
+                                <td
+                                    className={`${tdClass} font-mono text-ink-2 tabular-nums`}
+                                >
+                                    {display.rotate_seconds}
+                                </td>
+                                <td className={`${tdClass} text-ink-2`}>
+                                    {display.hold_on_alert
+                                        ? t('screens.displays.yes')
+                                        : t('screens.displays.no')}
+                                </td>
+                                <td className={tdClass}>
+                                    <Select
+                                        aria-label={`${t('screens.displays.theme')}: ${device.name}, ${display.label}`}
+                                        value={display.theme}
+                                        disabled={!canManage}
+                                        onChange={(e) =>
+                                            onSave(display, {
+                                                theme: e.target.value,
+                                            })
+                                        }
+                                    >
+                                        {themes.map((theme) => (
+                                            <option key={theme} value={theme}>
+                                                {t(
+                                                    `screens.display_theme.${theme}`,
+                                                )}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </td>
+                                <td
+                                    className={`${tdClass} font-mono whitespace-nowrap text-ink-2 tabular-nums`}
+                                >
+                                    {display.viewport
+                                        ? `${display.viewport.w} × ${display.viewport.h}`
+                                        : t(
+                                              'screens.displays.unknown_viewport',
+                                          )}
+                                </td>
+                                <td className={tdClass}>
+                                    <Status
+                                        online={display.online}
+                                        lastSeen={display.last_seen_at}
+                                    />
+                                </td>
+                                {canManage && (
+                                    <td
+                                        className={`${tdClass} text-right whitespace-nowrap`}
+                                    >
+                                        <Button
+                                            variant="ghost"
+                                            title={t(
+                                                'screens.displays.reload_hint',
+                                            )}
+                                            aria-label={`${t('screens.displays.reload')}: ${display.label}`}
+                                            onClick={() =>
+                                                router.post(
+                                                    reload(display.uuid).url,
+                                                    {},
+                                                    { preserveScroll: true },
+                                                )
+                                            }
+                                        >
+                                            {t('screens.displays.reload')}
+                                        </Button>
+                                        <ConfirmButton
+                                            question={t(
+                                                'screens.displays.remove_question',
+                                                {
+                                                    name: `${device.name}, ${display.label}`,
+                                                },
+                                            )}
+                                            confirmLabel={t(
+                                                'screens.displays.remove',
+                                            )}
+                                            onConfirm={() =>
+                                                router.delete(
+                                                    destroy(display.uuid).url,
+                                                    { preserveScroll: true },
+                                                )
+                                            }
+                                        >
+                                            {t('screens.displays.remove')}
+                                        </ConfirmButton>
+                                    </td>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {canManage && device.next_url && (
+                <p className="px-4 py-3 text-xs text-ink-3">
+                    {withSlot(
+                        (r) => t('screens.displays.add_window', r),
+                        'url',
+                        <Mono className="text-amber">
+                            {bareUrl(device.next_url)}
+                        </Mono>,
+                    )}
+                </p>
+            )}
+        </Card>
+    );
+}
+
+function Status({
+    online,
+    lastSeen,
+}: {
+    online: boolean;
+    lastSeen: string | null;
+}) {
     const t = useT();
 
-    if (display.online) {
+    if (online) {
         return (
             <span className="flex items-center gap-2 text-ok">
                 <span
@@ -414,14 +562,14 @@ function Status({ display }: { display: Row }) {
     return (
         <span className="flex items-center gap-2 text-ink-3">
             <span aria-hidden="true" className="size-2 rounded-full bg-ink-3" />
-            {display.last_seen_at === null ? (
+            {lastSeen === null ? (
                 t('screens.displays.never_seen')
             ) : (
                 <span>
                     {withSlot(
                         (r) => t('screens.displays.last_seen', r),
                         'time',
-                        <Relative iso={display.last_seen_at} />,
+                        <Relative iso={lastSeen} />,
                     )}
                 </span>
             )}
@@ -432,11 +580,13 @@ function Status({ display }: { display: Row }) {
 /** Which screens a display shows in turn, in which order, and for how long each. */
 function Playlist({
     display,
+    title,
     screens,
     onClose,
     onSave,
 }: {
     display: Row;
+    title: string;
     screens: Props['screens'];
     onClose: () => void;
     onSave: (fields: {
@@ -474,7 +624,7 @@ function Playlist({
             <DialogContent className="border-line bg-panel sm:max-w-md">
                 <DialogTitle>
                     {t('screens.displays.playlist_title', {
-                        name: display.name,
+                        name: title,
                     })}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-ink-2">

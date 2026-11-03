@@ -25,11 +25,20 @@ type Props = {
         /** Where another window of that computer pairs; null past the last. */
         next_url: string | null;
     } | null;
-    /** Screens of the teams the user administers. */
-    screens: { uuid: string; name: string; team: string | null }[];
+    /**
+     * Screens of the teams the user administers, each with the device this browser already
+     * is in that team (the window then joins it), else null.
+     */
+    screens: {
+        uuid: string;
+        name: string;
+        team: string | null;
+        device: string | null;
+    }[];
     /** Just paired: what it shows. */
     paired: {
         display: string;
+        device: string;
         screen: string | null;
         slot: number;
         next_url: string | null;
@@ -150,18 +159,38 @@ function ConfirmForm({
         name: t('screens.pair.name_default'),
     });
     const errors = form.errors as Record<string, string | undefined>;
+    // Another window of a device the team has: only its screen is asked.
+    const joining =
+        screens.find((s) => s.uuid === form.data.screen)?.device ?? null;
 
     return (
         <form
             className="flex flex-col gap-4"
             onSubmit={(e) => {
                 e.preventDefault();
+                form.transform((data) => ({
+                    ...data,
+                    name: joining ? '' : data.name,
+                }));
                 form.submit(confirm(code.replace('-', '')));
             }}
         >
             <h1 className="text-2xl leading-tight font-bold">
-                {t('screens.pair.question')}
+                {joining
+                    ? t('screens.pair.join', {
+                          slot: pairing.slot,
+                          device: joining,
+                      })
+                    : t('screens.pair.question')}
             </h1>
+            {joining && (
+                <p className="text-sm text-ink-2">
+                    {t('screens.pair.join_body', {
+                        slot: pairing.slot,
+                        device: joining,
+                    })}
+                </p>
+            )}
             <div className="flex flex-col gap-1.5 rounded-xl border border-line bg-panel px-4 py-3.5">
                 <span className="flex items-center justify-between gap-2">
                     <span className="font-mono text-3xl font-bold tracking-widest">
@@ -196,7 +225,13 @@ function ConfirmForm({
             ) : (
                 <>
                     <Field
-                        label={t('screens.pair.screen')}
+                        label={
+                            joining
+                                ? t('screens.pair.screen_window', {
+                                      slot: pairing.slot,
+                                  })
+                                : t('screens.pair.screen')
+                        }
                         htmlFor="pair-screen"
                         error={errors.screen}
                     >
@@ -218,22 +253,25 @@ function ConfirmForm({
                             ))}
                         </Select>
                     </Field>
-                    <Field
-                        label={t('screens.pair.name')}
-                        htmlFor="pair-name"
-                        error={errors.name}
-                    >
-                        <Input
-                            id="pair-name"
-                            value={form.data.name}
-                            onChange={(e) =>
-                                form.setData('name', e.target.value)
-                            }
-                            maxLength={60}
-                            required
-                            className="h-11 text-base"
-                        />
-                    </Field>
+                    {!joining && (
+                        <Field
+                            label={t('screens.pair.name')}
+                            htmlFor="pair-name"
+                            hint={t('screens.pair.name_hint')}
+                            error={errors.name}
+                        >
+                            <Input
+                                id="pair-name"
+                                value={form.data.name}
+                                onChange={(e) =>
+                                    form.setData('name', e.target.value)
+                                }
+                                maxLength={60}
+                                required
+                                className="h-11 text-base"
+                            />
+                        </Field>
+                    )}
                     <Button
                         type="submit"
                         variant="primary"
@@ -249,7 +287,10 @@ function ConfirmForm({
                     time: formatRelative(pairing.expires_at, now),
                 })}
             </span>
-            <NextWindow url={pairing.next_url} />
+            <NextWindow
+                url={pairing.next_url}
+                device={joining ?? form.data.name}
+            />
         </form>
     );
 }
@@ -272,7 +313,7 @@ function Done({ paired }: { paired: NonNullable<Props['paired']> }) {
                 })}
             </h1>
             <p className="text-sm text-ink-2">{t('screens.pair.done_body')}</p>
-            <NextWindow url={paired.next_url} />
+            <NextWindow url={paired.next_url} device={paired.device} />
             <div className="flex flex-wrap gap-2">
                 <LinkButton href={pair().url}>
                     {t('screens.pair.another')}
@@ -285,8 +326,8 @@ function Done({ paired }: { paired: NonNullable<Props['paired']> }) {
     );
 }
 
-/** One computer, several screens: the address of its next window. */
-function NextWindow({ url }: { url: string | null }) {
+/** One device, several screens: the address of its next window. */
+function NextWindow({ url, device }: { url: string | null; device: string }) {
     const t = useT();
 
     if (url === null) {
@@ -296,7 +337,7 @@ function NextWindow({ url }: { url: string | null }) {
     return (
         <p className="rounded-xl border border-line bg-panel px-3.5 py-3 text-xs text-ink-2">
             {withSlot(
-                (r) => t('screens.pair.another_window', r),
+                (r) => t('screens.pair.another_window', { ...r, device }),
                 'url',
                 <span className="font-mono text-amber">{bareUrl(url)}</span>,
             )}

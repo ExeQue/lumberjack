@@ -144,16 +144,18 @@ class ScreenPresenter
     }
 
     /**
-     * The TVs showing this screen that said how large their window is, to preview it at.
+     * The windows showing this screen that said how large they are, to preview it at, by
+     * device and window: "Office PC, window 2".
      *
      * @return list<array{name: string, w: int, h: int}>
      */
     public function previewDisplays(Screen $screen): array
     {
-        $displays = Display::query()->whereTeam($screen->team)->whereNotNull('viewport_width')->orderBy('name')->get()
-            ->filter(fn (Display $d): bool => in_array($screen->id, $d->screenIds(), true));
+        $displays = Display::query()->whereTeam($screen->team)->whereNotNull('viewport_width')->with('device')->orderBy('slot')->get()
+            ->filter(fn (Display $d): bool => in_array($screen->id, $d->screenIds(), true))
+            ->sortBy(fn (Display $d): string => $d->device->name.'|'.$d->slot);
 
-        return array_values($displays->map(fn (Display $d): array => ['name' => $d->name, 'w' => (int) $d->viewport_width, 'h' => (int) $d->viewport_height])->all());
+        return array_values($displays->map(fn (Display $d): array => ['name' => $d->fullName(), 'w' => (int) $d->viewport_width, 'h' => (int) $d->viewport_height])->all());
     }
 
     /**

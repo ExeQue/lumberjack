@@ -12,11 +12,11 @@ use App\Domains\Screens\Models\Screen;
 class UpdateDisplayAction
 {
     /**
-     * Its name, what it shows (one of its team's screens, several in turn, or none), how
+     * Its own name, what it shows (one of its team's screens, several in turn, or none), how
      * long each shows, and its theme; the TV switches at once. Screens of other teams are
      * left out.
      *
-     * @param  array{name?: string, screen_id?: int|null, playlist?: list<int>, rotate_seconds?: int, hold_on_alert?: bool, theme?: DisplayTheme}  $settings
+     * @param  array{name?: string|null, screen_id?: int|null, playlist?: list<int>, rotate_seconds?: int, hold_on_alert?: bool, theme?: DisplayTheme}  $settings
      */
     public function execute(Display $display, array $settings): Display
     {

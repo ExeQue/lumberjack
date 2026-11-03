@@ -24,6 +24,7 @@ use App\Domains\Screens\Http\Requests\StoreScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenLayoutRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenWidgetRequest;
+use App\Domains\Screens\Models\Device;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Policies\ScreenPolicy;
@@ -187,16 +188,17 @@ describe('the pages', function () {
             ->where('limits.max_cols', Screen::MAX_COLS));
     });
 
-    it('offers the aspects and the sizes the TVs showing it report, to preview at', function () {
-        Display::factory()->for($this->screen->team)->create(['name' => 'Office TV', 'screen_id' => $this->screen->id, 'viewport_width' => 1920, 'viewport_height' => 1080]);
-        Display::factory()->for($this->screen->team)->create(['name' => 'Hall', 'playlist' => [$this->screen->id], 'viewport_width' => 3840, 'viewport_height' => 2160]);
+    it('offers the aspects and the sizes the TVs showing it report, by device and window, to preview at', function () {
+        $pc = Device::factory()->for($this->screen->team)->create(['name' => 'Office PC']);
+        Display::factory()->onDevice($pc, 2)->create(['screen_id' => $this->screen->id, 'viewport_width' => 1920, 'viewport_height' => 1080]);
+        Display::factory()->onDevice($pc, 1)->create(['name' => 'Hall', 'playlist' => [$this->screen->id], 'viewport_width' => 3840, 'viewport_height' => 2160]);
         Display::factory()->for($this->screen->team)->create(['name' => 'Elsewhere', 'viewport_width' => 1280, 'viewport_height' => 720]);
         Display::factory()->for($this->screen->team)->create(['name' => 'Silent', 'screen_id' => $this->screen->id]);
         Display::factory()->create(['viewport_width' => 800, 'viewport_height' => 600]);
 
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
             ->where('aspects', ['16:9', '16:10', '4:3', '21:9', '32:9'])
-            ->where('displays', [['name' => 'Hall', 'w' => 3840, 'h' => 2160], ['name' => 'Office TV', 'w' => 1920, 'h' => 1080]])
+            ->where('displays', [['name' => 'Office PC, Hall', 'w' => 3840, 'h' => 2160], ['name' => 'Office PC, window 2', 'w' => 1920, 'h' => 1080]])
             ->where('screen.fit', 'keep'));
     });
 });

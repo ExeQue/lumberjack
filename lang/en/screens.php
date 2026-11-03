@@ -11,6 +11,8 @@ return [
     'pairing' => [
         'expired' => 'This code has expired or was already used. The TV shows a new one; enter that.',
         'not_admin' => 'Only team admins pair TVs. Pick a screen of a team you administer.',
+        'name_required' => 'Name this device.',
+        'default_name' => 'TV',
     ],
 
     // Flash messages of the share link panel.
@@ -26,12 +28,19 @@ return [
         'sent' => '{0} Reload sent; no screen shows it right now|{1} Reload sent to 1 screen|[2,*] Reload sent to :count screens',
         'sent_unknown' => 'Reload sent.',
         'sent_display' => 'Reload sent to :name.',
+        'sent_device' => '{1} Reload sent to :name.|[2,*] Reload sent to the :count windows of :name.',
         'too_soon' => 'A reload went out moments ago; try again in :seconds s.',
     ],
 
     'displays' => [
         'saved' => 'Display saved.',
-        'removed' => 'Display removed; it shows a pairing code again.',
+        'removed' => 'Window removed; it shows a pairing code again.',
+        'device_saved' => 'Device saved.',
+        'device_removed' => '{1} :name removed; its window shows a pairing code again.|[2,*] :name removed; its :count windows show a pairing code again.',
+        // What a window of a device is called: "Window 2", "Office PC, window 2".
+        'window' => 'Window :slot',
+        'full_name' => ':device, window :slot',
+        'full_name_named' => ':device, :name',
     ],
 
     // Source names in the designer and as widget titles.

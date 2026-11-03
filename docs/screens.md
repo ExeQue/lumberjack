@@ -244,16 +244,23 @@ Nothing long is ever typed on the TV. Pairing works like a streaming app: the TV
 a code, and a phone or laptop that is signed in confirms it.
 
 1. On the TV, open `/tv` on your Lumberjack (`lumberjack.example.com/tv`): short enough
-   to type with a remote, and a good start page for a kiosk browser (Fire TV Silk,
-   Android TV, Fully Kiosk Browser, Chromium `--kiosk` on a Raspberry Pi). It shows a
+   to type with a remote, in any browser (Fire TV Silk, Android TV, Fully Kiosk Browser,
+   Chromium `--kiosk` on a Raspberry Pi). On a browser that was never paired it shows a
    six character code such as `K7Q-M2X` (no 0, O, 1 or I, so it reads well across the
    room), a QR code, and how long the code lasts.
 2. On your phone, scan the QR code, or open `/pair` and type the code. Sign in if you
    are asked. The page shows which browser asks (**Fire TV · Silk**) and when the code
-   was made, so you pair the right TV. Pick the screen, name the TV ("Office TV") and
-   press **Show on the TV**.
-3. The TV shows the screen within a second. Make `/tv` its start page and it shows its
-   screen again after every restart.
+   was made, so you pair the right TV. Pick the screen, name the device ("Office TV")
+   and press **Show on the TV**.
+3. The TV shows the screen within a second, at `/tv/1`: the address of its first window.
+   Make `/tv/1` the start page of the TV browser and it shows its screen again after
+   every restart.
+
+`/tv` itself is the landing page and never forwards by itself. On a browser that is
+already paired it lists the device's windows as large buttons (arrow keys and Enter on
+a remote), each with what it shows and its address, plus **Add another window**. Pick
+one to go to it. For a screen that runs unattended, set its start page to its own
+window's address (`/tv/1`, `/tv/2`, ...), not to `/tv`.
 
 ![A TV waiting to be paired](./screenshots/tv-pairing.png)
 
@@ -266,30 +273,59 @@ team admins pair TVs. **Open on a TV** in the designer shows the same steps, wit
 ### Several screens on one computer
 
 One computer can drive several screens: two monitors, or two browser windows side by
-side. Each window is a display of its own: open `/tv` in the first, `/tv/2` in the
-second, up to `/tv/9`, and pair each with its own code. The pairing page says which
-window it is (**Window 2**), and after confirming, the phone offers the address of the
-next window. Displays lists the windows of one computer together.
+side. The computer is one device, and each browser window is one of its windows, up to
+nine: `/tv/1` to `/tv/9`, all in the same browser.
+
+1. Pair the first window as above. The device gets its name then ("Office PC").
+2. In a second window, open `/tv` and press **Add another window** (or open `/tv/2`
+   straight away). It shows a new code.
+3. Confirm the code on your phone. Since this browser is already Office PC in the team,
+   the page says **Add window 2 to Office PC** and asks only which screen window 2
+   shows.
+
+After confirming, the phone offers the address of the next free window. A window
+that lost its cookie and is paired again gets its old settings back. The same browser
+paired into another team becomes a device of its own there.
 
 ## Displays
 
-**Displays** in the sidebar (Team settings) lists the team's paired TVs: their name,
-the screen each shows, its theme, the browser it runs in, and whether it is online
-(heard from in the last three minutes) or when it was last seen.
+**Displays** in the sidebar (Team settings) lists the team's paired devices, one card
+each: its name, the browser it runs in, how many windows it has, and whether it is
+online (any of its windows heard from in the last three minutes) or when it was last
+seen. Under it, its windows: the window number, the screen it shows, the seconds per
+screen and whether it holds on red, its theme, the size of the window as it last
+reported, and its own online status.
 
 ![The team's displays](./screenshots/displays.png)
 
+The page updates by itself: a window that is resized reports its new size within a
+second or so, and a window that falls silent turns offline after three minutes, without
+reloading the page.
+
 Team admins change them; every member can see them.
 
-- **Shows**: another screen switches the TV at once, so nobody has to touch it again.
-- **In turn**: several screens one after another on the same TV, in the order you set,
-  10 seconds to an hour each (30 by default), fading from one to the next. While a
+For a device:
+
+- **Name**: type a new one and leave the field.
+- **Reload all**: every window of it loads its page afresh, as after an update (once
+  every ten seconds).
+- **Remove device**: every window of it goes back to showing a pairing code at once.
+- Below its windows, the address of the next free window to add, `/tv/3` say.
+
+For a window:
+
+- **Shows**: another screen switches the window at once, so nobody has to touch it.
+- **In turn**: several screens one after another in the same window, in the order you
+  set, 10 seconds to an hour each (30 by default), fading from one to the next. While a
   screen has something red it stays until that clears, unless you turn that off.
 - **Theme**: the screen's own theme, or always **Dark**, **Light** or **By time of
   day**, for a TV in a bright room showing a screen that is dark elsewhere.
-- **Reload**: the TV loads its page afresh, as after an update (team admins, once every
-  ten seconds).
-- **Remove**: the TV goes back to showing a pairing code at once.
+- **Reload**: this window loads its page afresh.
+- **Remove**: this window goes back to showing a pairing code; removing a device's last
+  window removes the device.
+
+The designer's **Preview at** lists the windows showing the screen by device and window
+("Office PC, window 2, 1920 × 1080").
 
 ## Share links
 
