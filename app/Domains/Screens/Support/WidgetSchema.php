@@ -262,6 +262,7 @@ final class WidgetSchema
             $data ? $toggle('show_period', true) : null,
             $data ? $toggle('status_colors', true) : null,
             $select('text_size', ['auto', 's', 'm', 'l', 'xl'], 'auto'),
+            $select('title_size', ['s', 'm', 'l', 'xl'], 'm'),
             $select('align', ['left', 'center'], 'left'),
             $select('valign', ['top', 'middle'], 'top'),
             $data ? $select('refresh', ['live', '1m', '5m'], 'live') : null,
@@ -269,7 +270,6 @@ final class WidgetSchema
         ])));
         $rotation = $section('rotation', [
             $select('rotate_every', ['5', '10', '20', '30', '60'], '10'),
-            $select('title_size', ['s', 'm', 'l', 'xl'], 'm'),
             $select('transition', ['fade', 'slide', 'none'], 'fade'),
             $toggle('hold_problem', true),
             $toggle('dots', true),
@@ -317,6 +317,7 @@ final class WidgetSchema
                     $toggle('show_count', true),
                     $toggle('show_project', false),
                     $toggle('wrap', false),
+                    $toggle('auto_scroll', true),
                 ]),
                 $rotation, $scope(true), $display(true),
             ],
@@ -324,7 +325,6 @@ final class WidgetSchema
                 $section('checks', [
                     $select('view', ['auto', 'summary', 'list', 'cards'], 'auto', false, 2),
                     ['key' => 'checks', 'type' => 'checks', 'default' => null, 'data' => true, 'span' => 2],
-                    $toggle('auto_scroll', true),
                     $toggle('only_problems', false, true),
                     $toggle('show_uptime', true),
                     $toggle('show_timeline', true),
