@@ -38,6 +38,7 @@ return [
         'team' => 'Members and tokens',
         'alerts' => 'Alerts',
         'retention' => 'Retention',
+        'screens' => 'Screens',
     ],
     'breadcrumb' => 'Breadcrumb',
     'teams' => 'Teams',
