@@ -1505,12 +1505,12 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                         .filter(Boolean)
                         .join(' · ')}
                 </span>
-                {opt<boolean>('show_message') !== false &&
-                    detail.last_message && (
-                        <span className="lj-tile-small truncate">
-                            {detail.last_message}
-                        </span>
-                    )}
+                {/* The line is kept even when empty, so a message never shifts the state. */}
+                {opt<boolean>('show_message') !== false && (
+                    <span className="lj-tile-small max-w-full truncate">
+                        {detail.last_message || '\u00a0'}
+                    </span>
+                )}
                 {opt<boolean>('show_timeline') !== false &&
                     widget.h >= 2 &&
                     detail.strip.length > 0 && (
