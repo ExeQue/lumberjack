@@ -201,10 +201,15 @@
 }
 
 @layer base {
-    /* Slim scrollbars in the brand amber, quiet until a pane is hovered. */
+    /* Slim scrollbars in the brand amber, almost invisible until their pane is hovered. */
+    /* Always room for the page's scrollbar, so the layout never jumps; its track is clear. */
+    html {
+        overflow-y: scroll;
+    }
+
     * {
         scrollbar-width: thin;
-        scrollbar-color: color-mix(in oklab, var(--lj-amber) 35%, transparent)
+        scrollbar-color: color-mix(in oklab, var(--lj-amber) 8%, transparent)
             transparent;
     }
 
