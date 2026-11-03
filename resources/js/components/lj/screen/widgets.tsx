@@ -168,6 +168,26 @@ function duration(seconds: number): string {
 }
 
 /** How long since then, short. */
+/** An age in one narrow unit, for a corner label: 42s, 6m, 1h, 4d. */
+function shortAge(iso: string, now: number): string {
+    const seconds = Math.max(0, (now - new Date(iso).getTime()) / 1000);
+    const [value, unit] =
+        seconds < 60
+            ? [seconds, 'second']
+            : seconds < 3600
+              ? [seconds / 60, 'minute']
+              : seconds < 86400
+                ? [seconds / 3600, 'hour']
+                : [seconds / 86400, 'day'];
+
+    return new Intl.NumberFormat(document.documentElement.lang || 'en', {
+        style: 'unit',
+        unit,
+        unitDisplay: 'narrow',
+        maximumFractionDigits: 0,
+    }).format(Math.floor(value));
+}
+
 function lasted(iso: string | null | undefined, now: number): string {
     return iso
         ? duration(Math.max(0, (now - new Date(iso).getTime()) / 1000))
@@ -415,9 +435,7 @@ export function WidgetTile({
                             typeof payload?.period === 'string'
                                 ? // The latest report says how old it is; a period says how long.
                                   typeof payload.as_of === 'string'
-                                    ? t('screens.period_short.ago', {
-                                          age: lasted(payload.as_of, now),
-                                      })
+                                    ? shortAge(payload.as_of, now)
                                     : t(
                                           `screens.period_short.${payload.period}`,
                                       )
