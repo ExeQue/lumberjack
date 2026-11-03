@@ -39,6 +39,7 @@ class IssueController
         $assigned = (string) $request->query('assigned', '');
         $sort = (string) $request->query('sort', 'last_seen');
         $label = (string) $request->query('label', '');
+        $watching = $request->boolean('watching');
 
         $base = Issue::query()->where('project_id', $project->id);
 
@@ -51,6 +52,7 @@ class IssueController
             ->when($assigned === 'me')->where('assigned_user_id', $request->user()->id)
             ->when($assigned === 'none')->whereNull('assigned_user_id')
             ->when($label !== '')->whereHasLabel($label)
+            ->when($watching)->whereWatchedBy($request->user())
             ->orderByDesc(match ($sort) {
                 'occurrences' => 'occurrences_count',
                 'users' => 'users_count',
@@ -83,6 +85,7 @@ class IssueController
                 'assigned' => $assigned,
                 'sort' => $sort,
                 'label' => $label,
+                'watching' => $watching,
             ],
             'labels' => $project->labels()->get()->map(fn (Label $l): array => $l->toSummary())->all(),
             'members' => $project->team->members()->orderBy('name')->get()->map(fn (User $u): array => ['id' => $u->id, 'name' => $u->name])->all(),
@@ -131,6 +134,8 @@ class IssueController
             'labels' => $project->labels()->get()->map(fn (Label $l): array => $l->toSummary())->all(),
             'history' => $presenter->history($issue),
             'has_repository' => $project->repository()->exists(),
+            'watchers' => $issue->watchers()->orderBy('name')->get()->map(fn (User $u): array => ['id' => $u->id, 'name' => $u->name])->all(),
+            'watching' => $issue->watchers()->whereKey($request->user()->id)->exists(),
         ]);
     }
 }

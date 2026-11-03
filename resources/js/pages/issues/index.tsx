@@ -28,6 +28,7 @@ import {
     bulkAssign,
     bulkLabels,
     bulkStatus,
+    bulkWatch,
     index as issuesIndex,
     show as issueShow,
 } from '@/routes/issues';
@@ -52,6 +53,7 @@ type Filters = {
     assigned: string;
     sort: string;
     label: string;
+    watching: boolean;
 };
 
 type Props = {
@@ -91,7 +93,8 @@ export default function IssuesIndex({
         const next = { ...filters, ...changes };
         const query = Object.fromEntries(
             Object.entries(next).filter(
-                ([, v]) => v !== null && v !== '' && v !== undefined,
+                ([, v]) =>
+                    v !== null && v !== '' && v !== undefined && v !== false,
             ),
         ) as Record<string, string>;
 
@@ -231,6 +234,15 @@ export default function IssuesIndex({
                             {t('issues.assigned_none')}
                         </option>
                     </Select>
+                    <Button
+                        aria-pressed={filters.watching}
+                        className={cn(
+                            filters.watching && 'border-accent text-accent',
+                        )}
+                        onClick={() => apply({ watching: !filters.watching })}
+                    >
+                        {t('issues.watching')}
+                    </Button>
                     {labels.length > 0 && (
                         <>
                             <label className="sr-only" htmlFor="issue-label">
@@ -627,6 +639,14 @@ export default function IssuesIndex({
                                 </Select>
                             </>
                         )}
+                        <Button
+                            disabled={selected.length === 0}
+                            onClick={() =>
+                                bulkPost(bulkWatch(project.uuid).url, {})
+                            }
+                        >
+                            {t('issues.watch_selected')}
+                        </Button>
                         <Button
                             disabled={selected.length === 0}
                             onClick={() => bulk('in_progress')}

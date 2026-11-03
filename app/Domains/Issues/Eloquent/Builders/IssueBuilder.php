@@ -9,6 +9,7 @@ use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Shared\Support\LikePattern;
+use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -38,6 +39,16 @@ class IssueBuilder extends Builder
     public function orWhereOpen(): self
     {
         return $this->orWhereIn('status', [IssueStatus::Open->value, IssueStatus::InProgress->value]);
+    }
+
+    public function whereWatchedBy(User $user): self
+    {
+        return $this->whereHas('watchers', fn ($q) => $q->whereKey($user->id));
+    }
+
+    public function orWhereWatchedBy(User $user): self
+    {
+        return $this->orWhereHas('watchers', fn ($q) => $q->whereKey($user->id));
     }
 
     public function whereSource(IssueSource $source): self

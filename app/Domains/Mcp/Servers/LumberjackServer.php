@@ -27,6 +27,8 @@ use App\Domains\Mcp\Tools\SearchLogs;
 use App\Domains\Mcp\Tools\SetIssueLabels;
 use App\Domains\Mcp\Tools\SetIssueStatus;
 use App\Domains\Mcp\Tools\TriageInbox;
+use App\Domains\Mcp\Tools\UnwatchIssue;
+use App\Domains\Mcp\Tools\WatchIssue;
 use Laravel\Mcp\Server;
 
 class LumberjackServer extends Server
@@ -66,6 +68,8 @@ class LumberjackServer extends Server
         SetIssueStatus::class,
         SetIssueLabels::class,
         AssignIssue::class,
+        WatchIssue::class,
+        UnwatchIssue::class,
         AddIssueNote::class,
         CreateRepoIssue::class,
     ];

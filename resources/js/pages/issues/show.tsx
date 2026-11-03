@@ -1,6 +1,6 @@
 import { Relative } from '@/components/lj/relative';
 import { Head, router, useForm, usePage, Link } from '@inertiajs/react';
-import { ChevronRight, CircleDot } from 'lucide-react';
+import { ChevronRight, CircleDot, Eye, EyeOff } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { CSSProperties, FormEvent, KeyboardEvent } from 'react';
 import { LabelEditor } from '@/components/lj/labels';
@@ -45,6 +45,7 @@ import {
     index as issuesIndex,
     repoIssue,
     status as issueStatus,
+    watch as watchIssue,
 } from '@/routes/issues';
 import { store as storeNote } from '@/routes/issues/notes';
 import { show as projectShow } from '@/routes/projects';
@@ -79,7 +80,85 @@ type Props = {
     labels: IssueLabel[];
     history: HistoryEntry[];
     has_repository: boolean;
+    watchers: { id: number; name: string }[];
+    watching: boolean;
 };
+
+function initials(name: string): string {
+    const words = name
+        .trim()
+        .split(/[\s(]+/)
+        .filter(Boolean);
+
+    return ((words[0]?.[0] ?? '?') + (words[1]?.[0] ?? '')).toUpperCase();
+}
+
+/**
+ * Watch or stop watching, with the faces of who watches it.
+ */
+function WatchControl({
+    watchers,
+    watching,
+    url,
+}: {
+    watchers: { id: number; name: string }[];
+    watching: boolean;
+    url: string;
+}) {
+    const t = useT();
+    const shown = watchers.slice(0, 4);
+
+    return (
+        <div className="flex items-center gap-2">
+            {watchers.length > 0 && (
+                <div
+                    className="flex -space-x-1.5"
+                    title={watchers.map((w) => w.name).join(', ')}
+                    aria-label={t('issue.watching.watchers', {
+                        names: watchers.map((w) => w.name).join(', '),
+                    })}
+                >
+                    {shown.map((watcher) => (
+                        <span
+                            key={watcher.id}
+                            aria-hidden="true"
+                            className="flex size-6 items-center justify-center rounded-full border border-panel bg-info/15 text-[10px] font-semibold text-info"
+                        >
+                            {initials(watcher.name)}
+                        </span>
+                    ))}
+                    {watchers.length > shown.length && (
+                        <span
+                            aria-hidden="true"
+                            className="flex size-6 items-center justify-center rounded-full border border-panel bg-panel-2 text-[10px] text-ink-3"
+                        >
+                            +{watchers.length - shown.length}
+                        </span>
+                    )}
+                </div>
+            )}
+            <Button
+                onClick={() =>
+                    router.put(
+                        url,
+                        { watching: !watching },
+                        { preserveScroll: true },
+                    )
+                }
+                aria-pressed={watching}
+            >
+                {watching ? (
+                    <EyeOff className="size-3.5" aria-hidden="true" />
+                ) : (
+                    <Eye className="size-3.5" aria-hidden="true" />
+                )}
+                {watching
+                    ? t('issue.watching.unwatch')
+                    : t('issue.watching.watch')}
+            </Button>
+        </div>
+    );
+}
 
 type Tab = 'stacktrace' | 'occurrences' | 'notes' | 'history';
 
@@ -622,6 +701,8 @@ export default function IssueShow({
     labels,
     history,
     has_repository,
+    watchers,
+    watching,
 }: Props) {
     const t = useT();
     const { team, auth } = usePage<{
@@ -833,6 +914,11 @@ export default function IssueShow({
                         )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
+                        <WatchControl
+                            watchers={watchers}
+                            watching={watching}
+                            url={watchIssue(key).url}
+                        />
                         <label className="sr-only" htmlFor="issue-assignee">
                             {t('issue.actions.assignee')}
                         </label>

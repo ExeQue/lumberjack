@@ -25,9 +25,18 @@ return [
         'assigned' => '{0} Already assigned to :name.|{1} Assigned 1 issue to :name.|[2,*] Assigned :count issues to :name.',
         'unassigned' => '{0} Already unassigned.|{1} Unassigned 1 issue.|[2,*] Unassigned :count issues.',
         'label_added' => '{0} Nothing to add :label to.|{1} Added :label to 1 issue.|[2,*] Added :label to :count issues.',
+        'watching' => '{0} Nothing to watch.|{1} You watch 1 issue.|[2,*] You watch :count issues.',
         'label_removed' => '{0} Nothing to remove :label from.|{1} Removed :label from 1 issue.|[2,*] Removed :label from :count issues.',
     ],
     'sources' => ['server' => 'Server', 'browser' => 'Browser', 'log' => 'Log'],
     'statuses' => ['open' => 'Open', 'in_progress' => 'In progress', 'resolved' => 'Resolved', 'ignored' => 'Ignored'],
+    'watching' => [
+        'stop_title' => 'Stop watching :ref?',
+        'stop_body' => 'You will no longer get mails or toasts about :ref :title, and acting on it will not make you watch it again. You can watch it again from its page.',
+        'stop_button' => 'Stop watching',
+        'stopped_title' => 'You no longer watch it',
+        'stopped' => 'Nothing more about :ref :title will reach you, unless you watch it again from its page.',
+        'open' => 'Open :ref',
+    ],
     'repo_issue_created' => 'Repository issue created.',
 ];

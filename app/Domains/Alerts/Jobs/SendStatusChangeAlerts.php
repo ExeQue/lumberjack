@@ -8,6 +8,7 @@ use App\Domains\Alerts\Actions\SendIssueAlertsAction;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\IssueNote;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -26,6 +27,7 @@ class SendStatusChangeAlerts implements ShouldQueue
         public readonly IssueStatus $status,
         public readonly string $actor,
         public readonly ?int $noteId = null,
+        public readonly ?int $byUserId = null,
     ) {
         $this->onQueue(SendIssueAlerts::QUEUE);
     }
@@ -42,7 +44,8 @@ class SendStatusChangeAlerts implements ShouldQueue
 
         if ($issue !== null) {
             $note = $this->noteId !== null ? IssueNote::query()->find($this->noteId) : null;
-            $action->executeForStatusChange($issue, $this->status, $this->actor, $note);
+            $by = $this->byUserId !== null ? User::query()->find($this->byUserId) : null;
+            $action->executeForStatusChange($issue, $this->status, $this->actor, $note, by: $by);
         }
     }
 }

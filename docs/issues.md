@@ -65,7 +65,8 @@ the **Escalation** alert rule fires.
 ## Working on an issue
 
 - **Assignee:** any member of the team. Whoever is assigned, or taken off, gets a mail
-  and a toast if Lumberjack is open, naming who did it (a person, or an MCP token).
+  and a toast if Lumberjack is open (each can be turned off under
+  [Notifications](#watching) in your profile), naming who did it (a person, or an MCP token).
   Nobody hears about their own change, so taking an issue yourself, or starting work
   on it (which assigns you), sends nothing. Resolving an issue takes it off its
   assignee, in the history like any unassign; the assignee is told unless they resolved
@@ -89,6 +90,45 @@ Select issues on the list to change several at once:
 - **Label** them: add one of the project's labels, or remove it.
 - **Start working** on them: they go in progress, and the unassigned ones are assigned
   to you.
+- **Watch** them, see [Watching](#watching).
 
 Assigning, labeling and starting work apply at once and confirm with a toast. Each
 person assigned or taken off gets one message for the whole action.
+
+## Watching
+
+Watch an issue to hear what happens to it. **Watch** on the issue page starts, **Stop
+watching** stops; the faces beside it are who watches it now. **Watching** on the issues
+list shows only the issues you watch, and **Watch** in the selection bar watches the
+selected ones. Agents can do the same with `watch_issue` and `unwatch_issue` over
+[MCP](./mcp#tools), for the person the token belongs to.
+
+You start watching an issue by yourself when you are assigned to it, write a note on
+it, are tagged in a note on it, or resolve or ignore it. Stopping sticks: after you stop
+watching an issue, acting on it does not make you watch it again. Only **Watch** does.
+
+What watchers hear, never about their own actions:
+
+- **A regression or an escalation:** a mail right away, like the alert.
+- **Notes, status changes (resolved, ignored, re-opened, in progress) and assignee
+  changes:** grouped. The first one starts a 5 minute window, and at its end one mail
+  lists everything that happened in it, with who did what and when and the notes and
+  comments quoted. A single update is mailed on its own subject, such as "Sofie wrote
+  a note on DEMO-12".
+
+Each also shows a toast if Lumberjack is open. Under **Notifications** in your profile,
+choose mail, toast or both for issues you watch, and the same for mentions and
+assignments. Everything is on until you turn it off.
+
+Every watching mail has a **Stop watching** link that works without signing in, and mail
+clients that support one-click unsubscribe offer it too.
+
+### One mail per thing that happened
+
+You get at most one mail about one thing that happened, however many reasons you have
+to hear of it. A mention or an assignment comes first, then watching, then an alert
+rule's mail channel; the one mail you get says every reason in its footer ("you watch
+DEMO-12 and the Regression rule of Ops Team sends to the mail channel Ops"). Addresses
+are compared without case and surrounding spaces. The summary of a bulk resolve or
+ignore names more issues than anyone watches, so there it stands in for the watching
+mail. Chat channels are not affected.

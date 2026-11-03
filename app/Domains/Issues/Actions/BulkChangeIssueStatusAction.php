@@ -49,8 +49,8 @@ class BulkChangeIssueStatusAction
             $this->assign->announce($unassigned, $by, resolved: true);
         }
 
-        if ($issues->count() > 1 && ($status === IssueStatus::Resolved || $status === IssueStatus::Ignored)) {
-            IssuesStatusChangedInBulk::dispatch($project, array_values($issues->map(fn (Issue $issue): int => $issue->id)->all()), $status, $by->name);
+        if ($issues->count() > 1) {
+            IssuesStatusChangedInBulk::dispatch($project, array_values($issues->map(fn (Issue $issue): int => $issue->id)->all()), $status, $by->name, $by->id);
         }
 
         return $issues->count();

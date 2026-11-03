@@ -10,7 +10,7 @@ use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 
 /**
- * Someone resolved or ignored several issues at once from the issues list.
+ * Someone gave several issues one status at once from the issues list.
  */
 class IssuesStatusChangedInBulk implements ShouldDispatchAfterCommit
 {
@@ -24,6 +24,7 @@ class IssuesStatusChangedInBulk implements ShouldDispatchAfterCommit
         public readonly array $issueIds,
         public readonly IssueStatus $status,
         public readonly string $actor,
+        public readonly ?int $byUserId = null,
     ) {
     }
 }

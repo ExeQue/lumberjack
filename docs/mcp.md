@@ -41,6 +41,7 @@ in microseconds.
 | `set_issue_status`                                                                  | Resolve, ignore, re-open or mark in progress. Write scope.                                                                        |
 | `assign_issue`                                                                      | Assign or unassign. Write scope.                                                                                                  |
 | `set_issue_labels`                                                                  | Replace an issue's labels. Write scope.                                                                                           |
+| `watch_issue`, `unwatch_issue`                                                      | Watch or stop watching an issue, as the token's person. Write scope.                                                              |
 | `add_issue_note`                                                                    | Add a note; tag members with `<@id>`. Write scope.                                                                                |
 | `create_repo_issue`                                                                 | Create a GitHub issue in the linked repository. Write scope.                                                                      |
 | `list_members`                                                                      | The team's members, with the ids `assign_issue` takes.                                                                            |

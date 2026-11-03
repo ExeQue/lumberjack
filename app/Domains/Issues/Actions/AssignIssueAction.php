@@ -6,6 +6,7 @@ namespace App\Domains\Issues\Actions;
 
 use App\Domains\Issues\Data\IssueAssignment;
 use App\Domains\Issues\Enums\IssueEventType;
+use App\Domains\Issues\Enums\WatchReason;
 use App\Domains\Issues\Events\IssuesAssigned;
 use App\Domains\Issues\Exceptions\AssigneeNotInTeamException;
 use App\Domains\Issues\Models\Issue;
@@ -18,6 +19,7 @@ class AssignIssueAction
     public function __construct(
         private readonly BroadcastProjectChangeAction $broadcast,
         private readonly RecordIssueEventAction $history,
+        private readonly WatchIssueAction $watch,
     ) {
     }
 
@@ -35,6 +37,10 @@ class AssignIssueAction
         $issue->update(['assigned_user_id' => $assignee?->id]);
 
         if ($from?->id !== $assignee?->id) {
+            if ($assignee !== null) {
+                $this->watch->execute($issue, $assignee, WatchReason::Assigned);
+            }
+
             $this->history->execute($issue, IssueEventType::Assigned, $by, $token, ['from' => $from?->name, 'to' => $assignee?->name]);
 
             if ($announce) {

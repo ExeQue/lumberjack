@@ -74,6 +74,13 @@ function MentionListener({ userUuid }: { userUuid: string }) {
         assignment,
     );
 
+    // Something happened to an issue you watch: the same shape as an assignment.
+    useEcho<AssignmentChanged>(
+        `user.${userUuid}`,
+        '.issue.watched',
+        assignment,
+    );
+
     return null;
 }
 
@@ -108,7 +115,8 @@ function Listener({ team }: { team: TeamShared }) {
 
 /**
  * A toast, and a chime unless turned off, when a new error or a regression comes in on
- * the team, when a note tags you, or when someone assigns you or takes you off issues.
+ * the team, when a note tags you, when someone assigns you or takes you off issues, or
+ * when something happens to an issue you watch.
  */
 export function NewIssueToasts() {
     const { team, auth } = usePage<{

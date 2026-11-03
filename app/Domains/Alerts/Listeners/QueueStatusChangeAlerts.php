@@ -11,6 +11,6 @@ class QueueStatusChangeAlerts
 {
     public function handle(IssueStatusChanged $event): void
     {
-        SendStatusChangeAlerts::dispatch($event->issue->id, $event->status, $event->actor, $event->note?->id);
+        SendStatusChangeAlerts::dispatch($event->issue->id, $event->status, $event->actor, $event->note?->id, $event->by?->id);
     }
 }

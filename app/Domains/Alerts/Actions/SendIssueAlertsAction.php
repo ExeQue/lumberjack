@@ -11,14 +11,18 @@ use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\AlertSend;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Alerts\Support\ChannelDriverRegistry;
+use App\Domains\Issues\Actions\NotifyWatchersAction;
+use App\Domains\Issues\Data\WatchUpdate;
 use App\Domains\Issues\Enums\IssueEventType;
 use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\IssueEvent;
 use App\Domains\Issues\Models\IssueNote;
+use App\Domains\Issues\Support\NoteMentions;
 use App\Domains\Shared\Mail\MailReason;
 use App\Domains\Shared\Mail\MailRecipients;
+use App\Models\User;
 use Closure;
 use Throwable;
 
@@ -30,6 +34,8 @@ class SendIssueAlertsAction
 {
     public function __construct(
         private readonly ChannelDriverRegistry $drivers,
+        private readonly NotifyWatchersAction $watchers,
+        private readonly NoteMentions $mentions,
     ) {
     }
 
@@ -69,9 +75,18 @@ class SendIssueAlertsAction
             resolvedAt: $resolved?->occurred_at,
         );
 
+        $own = $recipients === null;
+        $recipients ??= new MailRecipients();
+
+        // Watchers hear of a regression or an escalation right away, not grouped.
+        if ($type === AlertRuleType::Regression || $type === AlertRuleType::Escalation) {
+            $kind = $type === AlertRuleType::Regression ? WatchUpdate::REGRESSION : WatchUpdate::ESCALATION;
+            $this->watchers->execute([new WatchUpdate($issue, $kind, (string) __('alerts.messages.unknown_author'), alert: $alert)], null, $recipients);
+        }
+
         // A regression only follows someone resolving the issue, so each one is news; the
         // throttle is for escalations and the like that can repeat by themselves.
-        return $this->deliver($issue, $type, $environment, $alert, $type !== AlertRuleType::Regression, $recipients);
+        return $this->deliver($issue, $type, $environment, $alert, $type !== AlertRuleType::Regression, $recipients, $own);
     }
 
     /**
@@ -86,8 +101,25 @@ class SendIssueAlertsAction
             return 0;
         }
 
+        $own = $recipients === null;
+        $recipients ??= new MailRecipients();
+
+        // A comment given on resolving or ignoring reaches watchers with the status change.
+        if ($note->status === null) {
+            $note->loadMissing(['user', 'mcpToken']);
+            $this->watchers->execute(
+                [new WatchUpdate($issue, WatchUpdate::NOTE, $this->mentions->author($note), body: $this->mentions->render($note->body, $issue->project->team), at: $note->created_at)],
+                $note->mcp_token_id === null ? $note->user : null,
+                $recipients,
+            );
+        }
+
         // A comment given on resolving or ignoring goes out with the status-change alert instead.
         if ($note->status !== null && AlertRule::query()->whereEffectiveFor($issue->project)->whereType(AlertRuleType::StatusChange)->whereEnabled()->exists()) {
+            if ($own) {
+                $recipients->send();
+            }
+
             return 0;
         }
 
@@ -95,34 +127,48 @@ class SendIssueAlertsAction
         $environment = is_string($environment) ? $environment : null;
         $alert = new IssueAlert($issue, AlertRuleType::Note, $environment, route('issues.show', [$issue->project, $issue]), note: $note);
 
-        return $this->deliver($issue, AlertRuleType::Note, $environment, $alert, false, $recipients);
+        return $this->deliver($issue, AlertRuleType::Note, $environment, $alert, false, $recipients, $own);
     }
 
     /**
-     * Someone resolved or ignored the issue, with their comment if they gave one.
-     * Sent unthrottled, like notes: it is a deliberate action.
+     * Someone changed the issue's status, with their comment if they gave one. Watchers
+     * hear of every change; the rule's channels of resolving and ignoring. Sent
+     * unthrottled, like notes: it is a deliberate action.
+     *
+     * @param  User|null  $by  who did it, who then does not hear of it as a watcher
      */
-    public function executeForStatusChange(Issue $issue, IssueStatus $status, string $actor, ?IssueNote $note = null, ?MailRecipients $recipients = null): int
+    public function executeForStatusChange(Issue $issue, IssueStatus $status, string $actor, ?IssueNote $note = null, ?MailRecipients $recipients = null, ?User $by = null): int
     {
+        $own = $recipients === null;
+        $recipients ??= new MailRecipients();
+        $body = $note !== null ? $this->mentions->render($note->body, $issue->project->team) : null;
+        $this->watchers->execute([new WatchUpdate($issue, WatchUpdate::STATUS, $actor, ['status' => $status->value], $body)], $by, $recipients);
+
+        if ($status !== IssueStatus::Resolved && $status !== IssueStatus::Ignored) {
+            if ($own) {
+                $recipients->send();
+            }
+
+            return 0;
+        }
+
         $environment = $issue->occurrences()->latest('occurred_at')->value('environment');
         $environment = is_string($environment) ? $environment : null;
         $alert = new IssueAlert($issue, AlertRuleType::StatusChange, $environment, route('issues.show', [$issue->project, $issue]), note: $note, statusChange: $status, actor: $actor);
 
-        return $this->deliver($issue, AlertRuleType::StatusChange, $environment, $alert, false, $recipients);
+        return $this->deliver($issue, AlertRuleType::StatusChange, $environment, $alert, false, $recipients, $own);
     }
 
     /**
      * Chat channels get the alert right away; a mail channel offers it to the event's
      * recipients, which send it unless the address hears about this event another way.
-     * Without recipients given, this call is the whole event and sends its own mails.
+     * When this call is the whole event ($own), it sends the event's mails too.
      *
      * @return int channels reached, mail channels counted once sent
      */
-    private function deliver(Issue $issue, AlertRuleType $type, ?string $environment, IssueAlert $alert, bool $throttle, ?MailRecipients $recipients): int
+    private function deliver(Issue $issue, AlertRuleType $type, ?string $environment, IssueAlert $alert, bool $throttle, MailRecipients $recipients, bool $own): int
     {
         $sent = 0;
-        $own = $recipients === null;
-        $recipients ??= new MailRecipients();
 
         $rules = AlertRule::query()
             ->whereEffectiveFor($issue->project)

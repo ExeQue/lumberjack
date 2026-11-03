@@ -8,10 +8,13 @@ use App\Domains\Alerts\Actions\SendProjectAlertAction;
 use App\Domains\Alerts\Data\BulkStatusChangeAlert;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\Issues\Actions\NotifyWatchersAction;
+use App\Domains\Issues\Data\WatchUpdate;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Mail\MailRecipients;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -35,6 +38,7 @@ class SendBulkStatusChangeAlert implements ShouldQueue
         public readonly array $issueIds,
         public readonly IssueStatus $status,
         public readonly string $actor,
+        public readonly ?int $byUserId = null,
     ) {
         $this->onQueue(SendIssueAlerts::QUEUE);
     }
@@ -45,9 +49,27 @@ class SendBulkStatusChangeAlert implements ShouldQueue
         return [10, 60, 300];
     }
 
-    public function handle(SendProjectAlertAction $action): void
+    public function handle(SendProjectAlertAction $action, NotifyWatchersAction $watchers): void
     {
         $issues = Issue::query()->with('project')->whereKey($this->issueIds)->orderBy('number')->get();
+
+        // The whole bulk action is one event: an address on several of its rules gets one
+        // mail. The summary names more issues than anyone watches, so here it outranks the
+        // watchers' mails; its footer says which of them they watch.
+        $recipients = new MailRecipients();
+        $by = $this->byUserId !== null ? User::query()->find($this->byUserId) : null;
+        $watchers->execute(
+            array_values($issues->map(fn (Issue $issue): WatchUpdate => new WatchUpdate($issue, WatchUpdate::STATUS, $this->actor, ['status' => $this->status->value]))->all()),
+            $by,
+            $recipients,
+            MailRecipients::CHANNEL - 1,
+        );
+
+        if ($this->status !== IssueStatus::Resolved && $this->status !== IssueStatus::Ignored) {
+            $recipients->send();
+
+            return;
+        }
 
         // The environment of each issue, as a single change takes it: its latest occurrence.
         // ponytail: one query per issue, at most 100 per bulk change.
@@ -63,9 +85,6 @@ class SendBulkStatusChangeAlert implements ShouldQueue
             ->whereEnabled()
             ->with('channels')
             ->get();
-
-        // The whole bulk action is one event: an address on several of its rules gets one mail.
-        $recipients = new MailRecipients();
 
         foreach ($rules as $rule) {
             // A bulk change spans environments, so a rule limited to some hears only about

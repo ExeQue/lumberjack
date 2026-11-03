@@ -33,6 +33,10 @@ class NotifyMentionedMembers
         $body = $this->mentions->render($note->body, $note->issue?->project?->team);
 
         foreach ($users as $user) {
+            if (! $user->notification_preferences->toast('mentions')) {
+                continue;
+            }
+
             try {
                 broadcast(new NoteMentioned($note, $user->uuid, $author, $body));
             } catch (Throwable $e) {

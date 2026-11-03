@@ -84,6 +84,29 @@ final readonly class MailReason
     }
 
     /**
+     * As stored with a watched issue's update until its grouped mail goes out.
+     *
+     * @return array{kind: string, bold: array<string, string>, plain: array<string, string>, change_url: string|null, health: bool}
+     */
+    public function toArray(): array
+    {
+        return ['kind' => $this->kind, 'bold' => $this->bold, 'plain' => $this->plain, 'change_url' => $this->changeUrl, 'health' => $this->health];
+    }
+
+    /**
+     * @param  array<string, mixed>  $stored  from toArray()
+     */
+    public static function fromArray(array $stored): self
+    {
+        /** @var array<string, string> $bold */
+        $bold = is_array($stored['bold'] ?? null) ? $stored['bold'] : [];
+        /** @var array<string, string> $plain */
+        $plain = is_array($stored['plain'] ?? null) ? $stored['plain'] : [];
+
+        return new self((string) ($stored['kind'] ?? self::CHANNEL), $bold, $plain, is_string($stored['change_url'] ?? null) ? $stored['change_url'] : null, (bool) ($stored['health'] ?? false));
+    }
+
+    /**
      * A mail that stands in for a personal one comes from the notifications sender.
      */
     public function isPersonal(): bool
