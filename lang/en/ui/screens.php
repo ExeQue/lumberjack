@@ -108,6 +108,8 @@ return [
         // The designer's preview: as large as fits, or the TV's layout at a resolution.
         'preview_at' => 'Preview at',
         'preview_fit' => 'Fit',
+        'preview_tvs' => 'On a TV now',
+        'preview_common' => 'Common sizes',
         'preview_custom' => 'Custom',
         'preview_w' => 'Width in pixels',
         'preview_h' => 'Height in pixels',
