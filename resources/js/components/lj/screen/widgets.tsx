@@ -5,7 +5,7 @@ import type {
     ReactNode,
     RefObject,
 } from 'react';
-import { formatPercent } from '@/lib/format';
+import { formatBytes, formatNumber, formatPercent } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -102,6 +102,49 @@ function orKey(t: Translate, key: string, fallback: string): string {
 }
 
 /** Status words and colors per check state, worst first. */
+/** Share of a database's connections in use that turns amber and red, as the gauge. */
+const CONNECTIONS_AMBER = 0.8;
+const CONNECTIONS_RED = 0.9;
+
+/** A database check's latest connections and size: "4 of 100 connections · 13.8 MB". */
+function DatabaseLine({ metrics }: { metrics: Record<string, number> }) {
+    const t = useT();
+    const { connections, max_connections: max, size_bytes: size } = metrics;
+
+    if (connections === undefined && size === undefined) {
+        return null;
+    }
+
+    const share = connections !== undefined && max ? connections / max : null;
+    const color =
+        share === null
+            ? undefined
+            : share >= CONNECTIONS_RED
+              ? 'var(--s-red)'
+              : share >= CONNECTIONS_AMBER
+                ? 'var(--s-amber)'
+                : undefined;
+
+    return (
+        <span className="lj-tile-small shrink-0">
+            {connections !== undefined && (
+                <span style={{ color }}>
+                    {max !== undefined
+                        ? t('screens.health.connections_of', {
+                              used: formatNumber(connections),
+                              max: formatNumber(max),
+                          })
+                        : t('screens.health.connections', {
+                              count: formatNumber(connections),
+                          })}
+                </span>
+            )}
+            {connections !== undefined && size !== undefined && ' · '}
+            {size !== undefined && formatBytes(size)}
+        </span>
+    );
+}
+
 const STATE_COLOR: Record<string, string> = {
     down: 'var(--s-red)',
     degraded: 'var(--s-amber)',
@@ -1488,6 +1531,7 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
               last_message: string | null;
               uptime: number | null;
               strip: { t: string; s: string | null }[];
+              metrics?: Record<string, number>;
           })
         | null;
     // Cards keep a readable minimum width (140px, more on a big TV).
@@ -1513,14 +1557,15 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                 <span
                     className="lj-tile-big"
                     style={{
-                        fontSize: 'min(30cqh, 15cqw)',
+                        // Leaves room for the lines under it on a one row tile.
+                        fontSize: 'min(24cqh, 15cqw)',
                         color: STATE_COLOR[state],
                     }}
                 >
                     {word(state)}
                 </span>
                 <span
-                    className="lj-tile-small"
+                    className="lj-tile-small shrink-0"
                     style={{ color: STATE_COLOR[state] }}
                 >
                     {[
@@ -1540,9 +1585,10 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                         .filter(Boolean)
                         .join(' · ')}
                 </span>
+                <DatabaseLine metrics={detail.metrics ?? {}} />
                 {/* The line is kept even when empty, so a message never shifts the state. */}
                 {opt<boolean>('show_message') !== false && (
-                    <span className="lj-tile-small max-w-full truncate">
+                    <span className="lj-tile-small max-w-full shrink-0 truncate">
                         {detail.last_message || '\u00a0'}
                     </span>
                 )}

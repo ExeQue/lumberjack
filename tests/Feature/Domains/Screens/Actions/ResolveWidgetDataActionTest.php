@@ -370,4 +370,10 @@ describe('database checks', function () {
         expect($series())->toBe(['db_size' => [1000.0, 1500.0]])
             ->and($series(['split_by' => 'check']))->toBe(['database:pgsql' => [1000.0, 1200.0], 'database:mysql' => [300.0]]);
     });
+
+    it('gives a single picked check the metrics of its latest result', function () {
+        $data = ($this->resolve)(WidgetType::Health, 'checks', ['checks' => [$this->mysql->uuid]]);
+
+        expect($data['check']['metrics'])->toBe(['size_bytes' => 300, 'connections' => 45, 'max_connections' => 50]);
+    });
 });
