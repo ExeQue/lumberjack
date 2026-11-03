@@ -1,0 +1,218 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * Every mail Lumberjack sends, built as one card (resources/views/mail/card.blade.php).
+ * Mails say what happened, not how Lumberjack works.
+ */
+return [
+    'subject' => '[:project] :subject',
+    'pill' => ':project · :environment',
+    'fallback_url' => 'Button not working? Paste this into your browser:',
+    'time' => 'H:i, j M',
+    'clock' => 'H:i',
+
+    'footer' => [
+        'because_start' => 'You get this because',
+        'and' => 'and',
+        'rule' => 'the :rule rule of :owner sends to the mail channel :channel',
+        'channel' => 'it is a test of the mail channel :channel',
+        'watching' => 'you watch :issue:why',
+        'mentioned' => ':author mentioned you in a note on an issue in :project',
+        'assigned' => ':actor changed who works on issues in :project',
+        'change_rule' => 'Change it under :where.',
+        'change_rule_health' => 'Change it under :where, or mute the check on its page.',
+        'change_watching' => ':stop, or change how you hear about issues in :profile.',
+        'change_profile' => 'Change how you hear about it in :profile.',
+        'team_alerts' => 'Team settings, Alerts',
+        'project_alerts' => 'Project settings, Alerts',
+        'stop_watching' => 'Stop watching',
+        'profile' => 'your profile',
+        'host' => 'Lumberjack · :host',
+    ],
+
+    'issue' => [
+        'open' => 'Open :ref',
+        'open_unnamed' => 'Open the issue',
+        'reply' => 'Reply on :ref',
+        'all_open' => 'All open issues in :project',
+        'compare_releases' => 'Compare releases',
+        'latest_note' => 'Latest note, :author:',
+        'latest_note_unknown' => 'Latest note:',
+        'occurrences' => '{1} 1 occurrence|[2,*] :count occurrences',
+        'users' => '{1} 1 user|[2,*] :count users',
+        'facts' => [
+            'release' => 'Release',
+            'first_seen' => 'First seen',
+            'occurrences' => 'Occurrences',
+            'users' => 'Users affected',
+            'assignee' => 'Assignee',
+            'nobody' => 'Nobody yet',
+            'resolved' => 'Resolved',
+            'back_in' => 'Back in',
+            'open_for' => 'Open for',
+            'last_seen_in' => 'Last seen in',
+        ],
+        'new_issue' => [
+            'subject' => 'New error: :issue',
+            'kind' => 'New error',
+        ],
+        'regression' => [
+            'subject' => 'Regressed: :issue',
+            'kind' => 'Regressed',
+            'lead' => ':actor resolved it :ago. It happened again in :release.',
+            'lead_unknown' => 'It was resolved :ago and happened again in :release.',
+            'lead_plain' => 'It was resolved and happened again.',
+            'preheader' => 'Resolved :ago by :actor, back in :release',
+            'preheader_plain' => 'Resolved :ago, back in :release',
+        ],
+        'escalation' => [
+            'subject' => 'Escalating: :issue',
+            'kind' => 'Escalating',
+            'stat' => 'in the last :minutes minutes.',
+            'preheader' => ':count in the last :minutes minutes',
+        ],
+        'note' => [
+            'subject' => ':author wrote a note on :ref',
+            'kind' => 'Note',
+            'what' => 'at :time',
+        ],
+        'status' => [
+            'resolved' => ['subject' => ':actor resolved :issue', 'kind' => 'Resolved by :actor', 'what' => 'resolved it at :time'],
+            'ignored' => ['subject' => ':actor ignored :issue', 'kind' => 'Ignored by :actor', 'what' => 'ignored it at :time'],
+            'open' => ['subject' => ':actor reopened :issue', 'kind' => 'Reopened by :actor', 'what' => 'reopened it at :time'],
+            'in_progress' => ['subject' => ':actor started working on :issue', 'kind' => 'In progress', 'what' => 'started working on it at :time'],
+        ],
+    ],
+
+    'health' => [
+        'down' => ['subject' => 'Down: :check', 'kind' => 'Health check down', 'lead' => 'Failing since :since.', 'preheader' => 'Failing for :duration'],
+        'degraded' => ['subject' => 'Degraded: :check', 'kind' => 'Health check degraded', 'lead' => 'Warning since :since.', 'preheader' => 'Warning for :duration'],
+        'recovered' => ['subject' => 'Recovered: :check', 'kind' => 'Health check recovered', 'lead' => 'Passing again after :duration.', 'preheader' => 'Passing again after :duration'],
+        'on_hosts' => 'on :hosts',
+        'since' => 'Since',
+        'open' => 'Open :check',
+        'all' => 'All health checks',
+        'minutes' => '{1} 1 minute|[2,*] :count minutes',
+    ],
+
+    'queue' => [
+        'backlog' => ['subject' => 'Queue backlog: :queue', 'kind' => 'Queue backlog'],
+        'recovered' => ['subject' => 'Queue recovered: :queue', 'kind' => 'Queue recovered'],
+        'preheader' => ':size waiting, the oldest for :age',
+        'open' => 'Open jobs in :project',
+    ],
+
+    'bulk' => [
+        'resolved' => ['kind' => 'Resolved', 'see' => 'See resolved issues', 'title' => '{1} :actor resolved 1 issue|[2,*] :actor resolved :count issues'],
+        'ignored' => ['kind' => 'Ignored', 'see' => 'See ignored issues', 'title' => '{1} :actor ignored 1 issue|[2,*] :actor ignored :count issues'],
+        'more' => '+:count more',
+    ],
+
+    'test' => [
+        'subject' => 'Test message for :channel',
+        'title' => 'Test message',
+        'lead' => 'Lumberjack can reach the mail channel :channel. Alerts will arrive here.',
+        'preheader' => 'Alerts for :channel will arrive here.',
+        'open' => 'Open alert settings',
+    ],
+
+    'mention' => [
+        'subject' => ':author mentioned you on :ref',
+        'kind' => 'Mentioned',
+        'title' => ':author mentioned you on',
+        'what' => 'at :time',
+    ],
+
+    'assignment' => [
+        'subject' => [
+            'assigned' => '{1} :actor assigned you to :issue|[2,*] :actor assigned you to :count issues',
+            'unassigned' => '{1} :actor took you off :issue|[2,*] :actor took you off :count issues',
+            'resolved' => '{1} :actor resolved :issue and took you off it|[2,*] :actor resolved :count issues and took you off them',
+        ],
+        'title' => [
+            'assigned' => '{1} :actor assigned you to an issue|[2,*] :actor assigned you to :count issues',
+            'unassigned' => '{1} :actor took you off an issue|[2,*] :actor took you off :count issues',
+            'resolved' => '{1} :actor resolved an issue and took you off it|[2,*] :actor resolved :count issues and took you off them',
+        ],
+        'kind' => ['assigned' => 'Assigned to you', 'unassigned' => 'Taken off', 'resolved' => 'Resolved'],
+        'see_yours' => 'See your issues',
+        'see_resolved' => 'See resolved issues',
+        'see_all' => 'See open issues',
+        'escalating' => 'Escalating',
+        'more' => '+:count more',
+    ],
+
+    'watching' => [
+        'kind' => 'An issue you watch',
+        'pill' => ':project · watching',
+        'subject_many' => ':count updates on :issue',
+        'subject' => [
+            'note' => ':actor wrote a note on :ref',
+            'resolved' => ':actor resolved :issue',
+            'ignored' => ':actor ignored :issue',
+            'open' => ':actor reopened :issue',
+            'in_progress' => ':actor started working on :issue',
+            'assigned' => ':actor assigned :to to :ref',
+            'took' => ':actor took over :ref',
+            'unassigned' => ':actor took :from off :ref',
+        ],
+        'what' => [
+            'note' => 'wrote a note',
+            'resolved' => 'resolved it',
+            'ignored' => 'ignored it',
+            'open' => 'reopened it',
+            'in_progress' => 'started working on it',
+            'assigned' => 'assigned it to :to',
+            'reassigned' => 'handed it from :from to :to',
+            'took' => 'took it',
+            'took_from' => 'took it over from :from',
+            'unassigned' => 'took :from off it',
+        ],
+        'why' => [
+            'manual' => null,
+            'assigned' => 'you were assigned to it',
+            'noted' => 'you wrote a note on it',
+            'mentioned' => 'you were mentioned on it',
+            'resolved' => 'you resolved or ignored it',
+        ],
+        'stop' => 'Stop watching',
+    ],
+
+    'invitation' => [
+        'subject' => ':inviter invited you to :team on Lumberjack',
+        'subject_anonymous' => 'You are invited to :team on Lumberjack',
+        'title' => 'Join :team',
+        'lead' => ':inviter invited you to work on :team\'s projects in Lumberjack as :role. You will see their issues, performance and health checks, and can be assigned and mentioned.',
+        'someone' => 'Someone',
+        'role' => 'a :role',
+        'projects' => 'Projects',
+        'accept' => 'Accept the invitation',
+        'after' => '{1} The invitation works for 1 day, until :date. Without an account yet, you make one on the way.|[2,*] The invitation works for :count days, until :date. Without an account yet, you make one on the way.',
+        'preheader' => '{1} Join as :role. The invitation is valid for 1 day.|[2,*] Join as :role. The invitation is valid for :count days.',
+        'footer' => 'You get this because :inviter invited :email. Not expecting it? Ignore this mail and nothing happens.',
+        'date' => 'j M',
+    ],
+
+    'reset' => [
+        'subject' => 'Reset your Lumberjack password',
+        'title' => 'Reset your password',
+        'lead' => 'Someone asked to reset the password of the Lumberjack account for :email. Choose a new one with the button below.',
+        'button' => 'Choose a new password',
+        'after' => 'The link works for :minutes minutes and only once.',
+        'two_factor' => 'Two-factor authentication stays on.',
+        'preheader' => 'The link works for :minutes minutes. Ignore this mail if you did not ask.',
+        'footer' => 'Did not ask for this? Ignore the mail; your password stays as it is.',
+    ],
+
+    'verify' => [
+        'subject' => 'Confirm your email address for Lumberjack',
+        'title' => 'Confirm your email address',
+        'lead' => 'Confirm that :email is yours to finish setting up your Lumberjack account.',
+        'button' => 'Confirm the address',
+        'after' => 'The link works for :minutes minutes.',
+        'preheader' => 'One click and your Lumberjack account is ready.',
+        'footer' => 'Did not ask for this? Ignore the mail and nothing changes.',
+    ],
+];

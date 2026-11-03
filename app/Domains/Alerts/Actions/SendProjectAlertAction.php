@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Actions;
 
 use App\Domains\Alerts\Contracts\Alert;
+use App\Domains\Alerts\Drivers\MailDriver;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Support\ChannelDriverRegistry;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Shared\Mail\MailReason;
 use Throwable;
 
 /**
@@ -32,7 +34,10 @@ class SendProjectAlertAction
             $error = null;
 
             try {
-                $this->drivers->for($channel->type)->send($channel, $alert);
+                $driver = $this->drivers->for($channel->type);
+                $driver instanceof MailDriver
+                    ? $driver->sendWithReasons($channel, $alert, [MailReason::rule($rule, $channel, $project)])
+                    : $driver->send($channel, $alert);
                 $sent++;
             } catch (Throwable $e) {
                 report($e);

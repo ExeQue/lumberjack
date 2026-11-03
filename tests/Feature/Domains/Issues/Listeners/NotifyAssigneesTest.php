@@ -34,7 +34,7 @@ describe('assignment notifications', function () {
         app(AssignIssueAction::class)->execute($this->issue, $this->sofie, $this->morten);
 
         Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, fn (IssueAssignmentNotification $n) => $n->assigned
-            && $n->toMail($this->sofie)->subject === 'Morten assigned you to Deadlock');
+            && $n->toMail($this->sofie)->subject === '['.$this->issue->project->name.'] Morten assigned you to '.$this->issue->reference().' Deadlock');
         Notification::assertNotSentTo([$this->morten, $this->anna], IssueAssignmentNotification::class);
         ($this->toasted)($this->sofie, 'issue.assigned');
         Event::assertDispatchedTimes(IssueAssignmentChanged::class, 1);
@@ -45,8 +45,8 @@ describe('assignment notifications', function () {
 
         app(AssignIssueAction::class)->execute($this->issue, $this->sofie, $this->morten);
 
-        Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, fn ($n) => $n->toMail($this->sofie)->subject === 'Morten assigned you to Deadlock');
-        Notification::assertSentTo($this->anna, IssueAssignmentNotification::class, fn ($n) => ! $n->assigned && $n->toMail($this->anna)->subject === 'Morten took you off Deadlock');
+        Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, fn ($n) => $n->toMail($this->sofie)->subject === '['.$this->issue->project->name.'] Morten assigned you to '.$this->issue->reference().' Deadlock');
+        Notification::assertSentTo($this->anna, IssueAssignmentNotification::class, fn ($n) => ! $n->assigned && $n->toMail($this->anna)->subject === '['.$this->issue->project->name.'] Morten took you off '.$this->issue->reference().' Deadlock');
         ($this->toasted)($this->anna, 'issue.unassigned');
     });
 
@@ -63,7 +63,7 @@ describe('assignment notifications', function () {
 
         app(AssignIssueAction::class)->execute($this->issue, $this->sofie, token: $token);
 
-        Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, fn ($n) => $n->toMail($this->sofie)->subject === 'Claude (MCP) assigned you to Deadlock');
+        Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, fn ($n) => $n->toMail($this->sofie)->subject === '['.$this->issue->project->name.'] Claude (MCP) assigned you to '.$this->issue->reference().' Deadlock');
     });
 
     it('stays quiet when starting work assigns the one who started it', function () {
@@ -82,7 +82,7 @@ describe('unassigning on resolve', function () {
 
         expect($this->issue->refresh()->assigned_user_id)->toBeNull()
             ->and($this->issue->events()->where('type', IssueEventType::Assigned)->sole()->data)->toBe(['from' => 'Sofie', 'to' => null]);
-        Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, fn ($n) => $n->toMail($this->sofie)->subject === 'Morten resolved Deadlock and took you off it');
+        Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, fn ($n) => $n->toMail($this->sofie)->subject === '['.$this->issue->project->name.'] Morten resolved '.$this->issue->reference().' Deadlock and took you off it');
         ($this->toasted)($this->sofie, 'issue.unassigned');
     });
 
@@ -108,7 +108,7 @@ describe('unassigning on resolve', function () {
         expect(Issue::query()->whereNotNull('assigned_user_id')->count())->toBe(0);
         Notification::assertSentToTimes($this->sofie, IssueAssignmentNotification::class, 1);
         Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, fn ($n) => $n->issues->count() === 3
-            && $n->toMail($this->sofie)->subject === 'Morten resolved 3 issues in '.$project->name.' and took you off them');
+            && $n->toMail($this->sofie)->subject === '['.$project->name.'] Morten resolved 3 issues and took you off them');
         Notification::assertSentToTimes($this->anna, IssueAssignmentNotification::class, 1);
         Event::assertDispatchedTimes(IssueAssignmentChanged::class, 2);
     });

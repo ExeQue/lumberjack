@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Actions;
 
 use App\Domains\Alerts\Data\IssueAlert;
+use App\Domains\Alerts\Drivers\MailDriver;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\AlertSend;
 use App\Domains\Alerts\Support\ChannelDriverRegistry;
+use App\Domains\Issues\Enums\IssueEventType;
 use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
+use App\Domains\Issues\Models\IssueEvent;
 use App\Domains\Issues\Models\IssueNote;
+use App\Domains\Shared\Mail\MailReason;
 use Throwable;
 
 /**
@@ -38,9 +42,28 @@ class SendIssueAlertsAction
 
         // The latest note someone wrote about the issue, not the comment left when resolving
         // or ignoring it ("won't fix"): on a regression that would read as if it were news.
-        $note = $issue->notes()->whereNull('status')->latest('id')->value('body');
-        $summary = is_string($note) ? strtok($note, "\n") : null;
-        $alert = new IssueAlert($issue, $type, $environment, route('issues.show', [$issue->project, $issue]), $summary ?: null, burst: $burst);
+        $note = $issue->notes()->with(['user', 'mcpToken'])->whereNull('status')->latest('id')->first();
+        $summary = $note !== null ? strtok($note->body, "\n") : null;
+        $author = match (true) {
+            $note?->mcpToken !== null => (string) __('alerts.messages.via_mcp', ['token' => $note->mcpToken->name]),
+            default => $note?->user?->name,
+        };
+        $resolved = $type === AlertRuleType::Regression
+            ? IssueEvent::query()->with(['user', 'mcpToken'])->where('issue_id', $issue->id)
+                ->where('type', IssueEventType::StatusChanged)->where('data->to', IssueStatus::Resolved->value)
+                ->latest('occurred_at')->first()
+            : null;
+        $alert = new IssueAlert(
+            $issue,
+            $type,
+            $environment,
+            route('issues.show', [$issue->project, $issue]),
+            $summary ?: null,
+            burst: $burst,
+            triageAuthor: $author,
+            resolvedBy: $resolved?->mcpToken !== null ? (string) __('alerts.messages.via_mcp', ['token' => $resolved->mcpToken->name]) : $resolved?->user?->name,
+            resolvedAt: $resolved?->occurred_at,
+        );
 
         // A regression only follows someone resolving the issue, so each one is news; the
         // throttle is for escalations and the like that can repeat by themselves.
@@ -115,7 +138,10 @@ class SendIssueAlertsAction
                 $error = null;
 
                 try {
-                    $this->drivers->for($channel->type)->send($channel, $alert);
+                    $driver = $this->drivers->for($channel->type);
+                    $driver instanceof MailDriver
+                        ? $driver->sendWithReasons($channel, $alert, [MailReason::rule($rule, $channel, $issue->project)])
+                        : $driver->send($channel, $alert);
                     $sent++;
                 } catch (Throwable $e) {
                     report($e);

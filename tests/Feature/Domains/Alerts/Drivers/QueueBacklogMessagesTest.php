@@ -76,7 +76,10 @@ describe('queue backlog messages', function () {
         Notification::assertSentOnDemand(AlertSummaryNotification::class, function (AlertSummaryNotification $n): bool {
             $mail = $n->toMail(new stdClass());
 
-            return $mail->subject === 'Queue backlog in Shop: redis:emails' && in_array('Waiting: 1,240', $mail->introLines, true);
+            return $mail->subject === '[Shop] Queue backlog: redis:emails'
+                && $n->card()->facts['Waiting'] === '1,240'
+                && $n->card()->button['label'] === 'Open jobs in Shop'
+                && str_contains((string) $mail->render(), 'the mail channel <strong>Ops</strong>');
         });
     });
 });
@@ -174,7 +177,10 @@ describe('bulk status change messages', function () {
         Notification::assertSentOnDemand(AlertSummaryNotification::class, function (AlertSummaryNotification $n): bool {
             $mail = $n->toMail(new stdClass());
 
-            return str_starts_with($mail->subject, 'Morten resolved 12 issues in Shop: SHOP-1, SHOP-2') && in_array('Issues: 12', $mail->introLines, true);
+            return $mail->subject === '[Shop] Morten resolved 12 issues'
+                && $n->card()->preheader === 'SHOP-1, SHOP-2, SHOP-3, SHOP-4, SHOP-5, SHOP-6, SHOP-7, SHOP-8, SHOP-9, SHOP-10, +2 more'
+                && count($n->card()->rows) === 10 && $n->card()->more === '+2 more'
+                && $n->card()->button['label'] === 'See resolved issues';
         });
     });
 });

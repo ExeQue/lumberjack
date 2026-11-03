@@ -43,9 +43,10 @@ describe('assigning selected issues', function () {
         Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, function (IssueAssignmentNotification $n): bool {
             $mail = $n->toMail($this->sofie);
 
-            return $mail->subject === 'Morten assigned you to 12 issues in Demo'
-                && count(array_filter($mail->introLines, fn (string $line): bool => str_contains($line, ' · RuntimeException'))) === 10
-                && in_array('+2 more', $mail->introLines, true);
+            return $mail->subject === '[Demo] Morten assigned you to 12 issues'
+                && count($n->card()->rows) === 10
+                && $n->card()->more === '+2 more'
+                && $n->card()->button['label'] === 'See your issues';
         });
         Event::assertDispatchedTimes(IssueAssignmentChanged::class, 1);
     });
@@ -56,7 +57,7 @@ describe('assigning selected issues', function () {
         $this->actingAs($this->morten)->post(route('issues.bulk-assign', $this->project), ['user_id' => $this->morten->id, 'issues' => $this->uuids]);
 
         Notification::assertSentToTimes($this->sofie, IssueAssignmentNotification::class, 1);
-        Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, fn ($n) => $n->toMail($this->sofie)->subject === 'Morten took you off 3 issues in Demo');
+        Notification::assertSentTo($this->sofie, IssueAssignmentNotification::class, fn ($n) => $n->toMail($this->sofie)->subject === '[Demo] Morten took you off 3 issues');
         Notification::assertNotSentTo($this->morten, IssueAssignmentNotification::class);
     });
 
