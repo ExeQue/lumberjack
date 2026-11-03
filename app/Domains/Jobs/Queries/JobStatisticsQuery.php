@@ -6,6 +6,7 @@ namespace App\Domains\Jobs\Queries;
 
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Support\Percentiles;
+use App\Domains\Shared\Support\StatisticsCache;
 use Illuminate\Support\Facades\DB;
 
 class JobStatisticsQuery
@@ -16,6 +17,14 @@ class JobStatisticsQuery
      * @return list<array<string, mixed>>
      */
     public function get(int $projectId, Period $period, ?string $environment = null, string $sort = 'errors', ?string $queue = null, int $limit = 100): array
+    {
+        return StatisticsCache::remember('jobs', $period, [$projectId, $environment, $sort, $queue, $limit], fn (): array => $this->compute($projectId, $period, $environment, $sort, $queue, $limit));
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function compute(int $projectId, Period $period, ?string $environment, string $sort, ?string $queue, int $limit): array
     {
         $bindings = [$projectId, $period->since()->format('Y-m-d H:i:s')];
         $where = 'project_id = ? AND created_at >= ?';

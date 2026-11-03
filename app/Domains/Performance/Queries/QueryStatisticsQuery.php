@@ -7,6 +7,7 @@ namespace App\Domains\Performance\Queries;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Support\LikePattern;
 use App\Domains\Shared\Support\Percentiles;
+use App\Domains\Shared\Support\StatisticsCache;
 use Illuminate\Support\Facades\DB;
 
 class QueryStatisticsQuery
@@ -22,6 +23,14 @@ class QueryStatisticsQuery
      * @return array{rows: list<array{sql_hash: string, sql: string, connection: string, calls: int, total_us: int, share: float, p95: int, max: int, most_from: string|null, location: string|null, per_trace: int, n_plus_one: bool}>, total_us: int, calls: int, distinct: int}
      */
     public function get(int $projectId, Period $period, ?string $environment = null, string $sort = 'total', ?string $search = null, ?string $connection = null, int $limit = 100): array
+    {
+        return StatisticsCache::remember('queries', $period, [$projectId, $environment, $sort, $search, $connection, $limit], fn (): array => $this->compute($projectId, $period, $environment, $sort, $search, $connection, $limit));
+    }
+
+    /**
+     * @return array{rows: list<array{sql_hash: string, sql: string, connection: string, calls: int, total_us: int, share: float, p95: int, max: int, most_from: string|null, location: string|null, per_trace: int, n_plus_one: bool}>, total_us: int, calls: int, distinct: int}
+     */
+    private function compute(int $projectId, Period $period, ?string $environment, string $sort, ?string $search, ?string $connection, int $limit): array
     {
         $bindings = [$projectId, $period->since()->format('Y-m-d H:i:s')];
         $where = 'project_id = ? AND occurred_at >= ?';

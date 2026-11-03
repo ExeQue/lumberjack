@@ -6,6 +6,7 @@ namespace App\Domains\Jobs\Queries;
 
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Support\Percentiles;
+use App\Domains\Shared\Support\StatisticsCache;
 use App\Domains\Shared\Support\TimeSeries;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,14 @@ class QueueStatisticsQuery
      * @return list<array{connection: string, queue: string, size: int|null, oldest_age_s: int|null, sampled_at: string|null, p95_wait: int|null, series: list<array{t: string, v: int|float}>}>
      */
     public function get(int $projectId, Period $period, ?string $environment = null): array
+    {
+        return StatisticsCache::remember('queues', $period, [$projectId, $environment], fn (): array => $this->compute($projectId, $period, $environment));
+    }
+
+    /**
+     * @return list<array{connection: string, queue: string, size: int|null, oldest_age_s: int|null, sampled_at: string|null, p95_wait: int|null, series: list<array{t: string, v: int|float}>}>
+     */
+    private function compute(int $projectId, Period $period, ?string $environment): array
     {
         $since = $period->since()->format('Y-m-d H:i:s');
         $key = fn (array $r): string => $r['connection'].':'.$r['queue'];
