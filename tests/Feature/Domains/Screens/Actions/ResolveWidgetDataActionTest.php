@@ -159,7 +159,7 @@ describe('the sources and scope', function () {
     it('describes a source for the designer, its name translated', function () {
         expect(WidgetSources::find(WidgetType::Gauge, 'apdex')->toArray())->toBe([
             'type' => 'gauge', 'id' => 'apdex', 'label' => 'Apdex', 'unit' => 'score', 'amber' => 0.85, 'red' => 0.7,
-            'low_is_bad' => true, 'metric' => 'apdex', 'filter_on' => 'route',
+            'low_is_bad' => true, 'metric' => 'apdex', 'filter_on' => 'route', 'snapshot' => false,
         ])->and(WidgetSources::has(WidgetType::List, 'queues'))->toBeTrue()
             ->and(WidgetSources::has(WidgetType::Stat, 'queues'))->toBeFalse()
             ->and(array_column(array_map(fn (WidgetSource $s): array => $s->toArray(), WidgetSources::for(WidgetType::Health)), 'id'))->toBe(['checks']);
@@ -243,9 +243,11 @@ describe('the edges of each type', function () {
             ->and($titles('last_seen'))->toBe(['recent', 'escalating', 'regressed', 'plain']);
     });
 
-    it('says which period it covers, except for health which is now', function () {
+    it('says which period it covers, or now for the latest report', function () {
         expect(($this->resolve)(WidgetType::Stat, 'requests', scope: new WidgetScope(period: Period::Week))['period'])->toBe('7d')
-            ->and(($this->resolve)(WidgetType::Health, 'checks')['period'])->toBeNull();
+            ->and(($this->resolve)(WidgetType::Health, 'checks')['period'])->toBe('now')
+            ->and(($this->resolve)(WidgetType::Gauge, 'host_cpu', scope: new WidgetScope(period: Period::Week))['period'])->toBe('now')
+            ->and(($this->resolve)(WidgetType::List, 'queues')['period'])->toBe('now');
     });
 
     it('judges a queue like its backlog alert, and says why', function () {

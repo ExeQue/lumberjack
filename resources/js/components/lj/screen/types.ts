@@ -91,6 +91,8 @@ export type Source = {
     low_is_bad: boolean;
     metric: string | null;
     filter_on: string | null;
+    /** The latest report, not a figure over a period. */
+    snapshot?: boolean;
 };
 
 export type Sources = Partial<Record<WidgetKind, Source[]>>;
