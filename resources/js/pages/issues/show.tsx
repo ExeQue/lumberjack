@@ -18,7 +18,9 @@ import { CopyText } from '@/components/lj/copy-text';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
+    Segmented,
     TimeBars,
+    bucketLabel,
     Button,
     Card,
     CardHeader,
@@ -55,6 +57,7 @@ import type {
     IssueSummary,
     Occurrence,
     ProjectHeader,
+    Period,
     SeriesPoint,
     StackFrame,
     TeamShared,
@@ -72,6 +75,7 @@ type Props = {
     latest: Occurrence | null;
     occurrences: Omit<Occurrence, 'stacktrace'>[];
     series: SeriesPoint[];
+    period: Period;
     notes: IssueNote[];
     members: { id: number; name: string }[];
     agents: { id: number; name: string }[];
@@ -90,13 +94,6 @@ const statusTone: Record<IssueSummary['status'], Tone> = {
     resolved: 'ok',
     ignored: 'neutral',
 };
-
-function hourLabel(iso: string): string {
-    return new Date(iso).toLocaleTimeString(
-        document.documentElement.lang || undefined,
-        { hour: '2-digit', minute: '2-digit' },
-    );
-}
 
 function frameFunction(frame: StackFrame): string | null {
     if (!frame.function) {
@@ -596,6 +593,7 @@ export default function IssueShow({
     latest,
     occurrences,
     series,
+    period,
     notes,
     members,
     agents,
@@ -699,11 +697,14 @@ export default function IssueShow({
                   {
                       count: formatNumber(total),
                       peak: formatNumber(peak.v),
-                      time: hourLabel(peak.t),
+                      time: bucketLabel(peak.t, period),
+                      period: t(`issue.series.in.${period}`),
                   },
                   total,
               )
-            : t('issue.series.empty');
+            : t('issue.series.empty', {
+                  period: t(`issue.series.in.${period}`),
+              });
 
     const visibleFrames = showVendor ? frames : appFrames;
     const tabCounts: Record<Tab, number | null> = {
@@ -954,20 +955,46 @@ export default function IssueShow({
                             id="issue-series"
                             className="text-[13px] font-semibold"
                         >
-                            {t('issue.series.title')}
+                            {t(`issue.series.title.${period}`)}
                         </h2>
-                        {issue.regressed_at && (
-                            <span className="text-xs text-ink-3">
-                                {t('issue.series.regressed_at', {
-                                    time: formatDateTime(issue.regressed_at),
-                                })}
-                            </span>
-                        )}
+                        <span className="flex flex-wrap items-center gap-3">
+                            {issue.regressed_at && (
+                                <span className="text-xs text-ink-3">
+                                    {t('issue.series.regressed_at', {
+                                        time: formatDateTime(
+                                            issue.regressed_at,
+                                        ),
+                                    })}
+                                </span>
+                            )}
+                            <Segmented<Period>
+                                label={t('common.filters.period')}
+                                value={period}
+                                onChange={(value) =>
+                                    router.get(
+                                        window.location.pathname,
+                                        { period: value },
+                                        {
+                                            only: ['series', 'period'],
+                                            preserveState: true,
+                                            preserveScroll: true,
+                                            replace: true,
+                                        },
+                                    )
+                                }
+                                options={(
+                                    ['1h', '24h', '7d', '30d'] as Period[]
+                                ).map((value) => ({
+                                    value,
+                                    label: t(`common.periods.${value}`),
+                                }))}
+                            />
+                        </span>
                     </div>
                     <div>
                         <TimeBars
                             series={series}
-                            period="24h"
+                            period={period}
                             label={seriesSummary}
                             height={96}
                             color="var(--lj-line)"

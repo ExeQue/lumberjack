@@ -51,9 +51,15 @@ return [
         'hosts' => 'Hosts',
     ],
     'series' => [
-        'title' => 'Occurrences per hour, 24 h',
-        'summary' => '{1} 1 occurrence in the last 24 hours, peak :peak at :time|[0,*] :count occurrences in the last 24 hours, peak :peak at :time',
-        'empty' => 'No occurrences in the last 24 hours',
+        'title' => [
+            '1h' => 'Occurrences per 2 minutes, last hour',
+            '24h' => 'Occurrences per hour, 24 h',
+            '7d' => 'Occurrences per 6 hours, 7 days',
+            '30d' => 'Occurrences per day, 30 days',
+        ],
+        'in' => ['1h' => 'the last hour', '24h' => 'the last 24 hours', '7d' => 'the last 7 days', '30d' => 'the last 30 days'],
+        'summary' => '{1} 1 occurrence in :period, peak :peak at :time|[0,*] :count occurrences in :period, peak :peak at :time',
+        'empty' => 'No occurrences in :period',
         'regressed_at' => 'Regressed :time',
     ],
     'tabs' => [

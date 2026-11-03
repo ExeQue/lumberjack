@@ -118,7 +118,8 @@ class IssueController
             ],
             'latest' => $latest !== null ? $presenter->occurrence($latest) : null,
             'occurrences' => $occurrences->map(fn ($o): array => array_diff_key($presenter->occurrence($o), ['stacktrace' => true]))->all(),
-            'series' => TimeSeries::count(DB::table('occurrences')->where('issue_id', $issue->id), Period::Day),
+            'period' => $this->period($request)->value,
+            'series' => TimeSeries::count(DB::table('occurrences')->where('issue_id', $issue->id), $this->period($request)),
             'notes' => $issue->notes()->with(['user', 'mcpToken'])->latest()->get()->map(fn (IssueNote $n): array => $presenter->note($n))->all(),
             'members' => $project->team->members()->orderBy('name')->get()->map(fn (User $u): array => ['id' => $u->id, 'name' => $u->name])->all(),
             // Agents whose MCP token covers this project, for tagging in notes.

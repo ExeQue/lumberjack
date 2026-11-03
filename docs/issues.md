@@ -15,6 +15,11 @@ Click the copy icon next to the number on the issue page to copy it. The number 
 in the [command palette](./finding-things), in the issues search (`DEMO-42`, `#42` or
 `42`) and in every MCP tool that takes an issue.
 
+## The chart
+
+The issue page charts its occurrences over 1 hour, 24 hours (the default), 7 days or
+30 days. Pick the period above the chart; it stays in the URL, so a link shows the same.
+
 ## Statuses
 
 | Status      | Means                                                    |
