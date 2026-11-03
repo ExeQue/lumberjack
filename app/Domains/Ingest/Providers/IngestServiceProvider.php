@@ -24,6 +24,11 @@ class IngestServiceProvider extends ServiceProvider
      */
     public const int BROWSER_PER_MINUTE = 30;
 
+    /**
+     * Browser batches per minute per IP over all keys, e.g. an office behind one address.
+     */
+    public const int BROWSER_PER_IP_PER_MINUTE = 300;
+
     public const int HEALTH_STATES_PER_MINUTE = 120;
 
     #[Override]
@@ -46,7 +51,10 @@ class IngestServiceProvider extends ServiceProvider
             return Limit::perMinute(self::HEALTH_STATES_PER_MINUTE)->by('health-states:'.($project instanceof Project ? $project->id : $request->ip()));
         });
 
-        RateLimiter::for('ingest-browser', fn (Request $request): Limit => Limit::perMinute(self::BROWSER_PER_MINUTE)
-            ->by('ingest-browser:'.$request->query('key').':'.$request->ip()));
+        // Per key and IP, and per IP whatever the key: a made-up key per request gets no fresh bucket.
+        RateLimiter::for('ingest-browser', fn (Request $request): array => [
+            Limit::perMinute(self::BROWSER_PER_MINUTE)->by('ingest-browser:'.$request->query('key').':'.$request->ip()),
+            Limit::perMinute(self::BROWSER_PER_IP_PER_MINUTE)->by('ingest-browser-ip:'.$request->ip()),
+        ]);
     }
 }

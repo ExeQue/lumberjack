@@ -13,6 +13,11 @@ trait DecodesIngestBody
 
     protected function prepareForValidation(): void
     {
+        $this->decodeIngestBody();
+    }
+
+    protected function decodeIngestBody(): void
+    {
         $raw = $this->getContent();
 
         if (strlen($raw) > self::MAX_BYTES) {

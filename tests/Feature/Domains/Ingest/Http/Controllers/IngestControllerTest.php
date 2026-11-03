@@ -6,6 +6,7 @@ use App\Domains\Health\Enums\HealthStatus;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Ingest\Http\Controllers\IngestController;
+use App\Domains\Ingest\Http\Middleware\AuthenticateProjectToken;
 use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
@@ -22,7 +23,9 @@ use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Schedule\Enums\ScheduledRunStatus;
 use App\Domains\Schedule\Models\ScheduledTask;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\Support\Ingest\BuildsIngestPayloads;
 
 covers(IngestController::class);
@@ -37,6 +40,14 @@ beforeEach(function () {
 describe('server ingest', function () {
     it('rejects an unknown token', function () {
         $this->postJson('/api/ingest', $this->batch([]), ['Authorization' => 'Bearer nope'])->assertUnauthorized();
+    });
+
+    it('turns an address away unchecked after many unknown tokens', function () {
+        foreach (range(1, AuthenticateProjectToken::FAILURES_PER_MINUTE) as $i) {
+            $this->postJson('/api/ingest', [], ['Authorization' => 'Bearer nope-'.$i])->assertUnauthorized();
+        }
+
+        $this->postJson('/api/ingest', [], ['Authorization' => 'Bearer nope-again'])->assertTooManyRequests();
     });
 
     it('stores every event type of a batch', function () {
@@ -263,6 +274,22 @@ describe('scheduled tasks', function () {
 });
 
 describe('browser ingest', function () {
+    it('checks the key before it reads the body', function () {
+        $this->call('POST', '/api/ingest/browser?key=nope', [], [], [], ['HTTP_CONTENT_ENCODING' => 'gzip', 'HTTP_ORIGIN' => 'https://app.example.test', 'CONTENT_TYPE' => 'text/plain'], 'not gzip')
+            ->assertForbidden();
+    });
+
+    it('refuses a compressed body even with the right key', function () {
+        $this->call('POST', '/api/ingest/browser?key='.$this->project->public_key, [], [], [], ['HTTP_CONTENT_ENCODING' => 'gzip', 'HTTP_ORIGIN' => 'https://app.example.test', 'CONTENT_TYPE' => 'text/plain'], (string) gzencode('{}'))
+            ->assertStatus(415);
+    });
+
+    it('limits an address whatever key it makes up', function () {
+        $limits = RateLimiter::limiter('ingest-browser')(Request::create('/api/ingest/browser?key=made-up', 'POST', server: ['REMOTE_ADDR' => '203.0.113.9']));
+
+        expect(collect($limits)->pluck('key')->all())->toContain('ingest-browser-ip:203.0.113.9');
+    });
+
     it('refuses an origin the project does not allow', function () {
         $this->postJson('/api/ingest/browser?key='.$this->project->public_key, $this->batch([$this->exceptionEvent('TypeError')]), ['Origin' => 'https://evil.test'])
             ->assertForbidden();

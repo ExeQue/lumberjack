@@ -19,6 +19,23 @@ class BrowserIngestRequest extends FormRequest
 
     private ?Project $resolvedProject = null;
 
+    /**
+     * The key and origin are checked before the body is read, so nobody without them can
+     * make Lumberjack inflate or parse anything. Browsers send plain text, never gzip.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! $this->authorize()) {
+            $this->failedAuthorization();
+        }
+
+        if ($this->hasHeader('Content-Encoding') && strtolower((string) $this->header('Content-Encoding')) !== 'identity') {
+            abort(415, 'Browser batches are not compressed.');
+        }
+
+        $this->decodeIngestBody();
+    }
+
     public function authorize(): bool
     {
         $project = $this->project();
