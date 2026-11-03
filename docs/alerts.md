@@ -27,6 +27,10 @@ Discord, Slack, Teams and Telegram messages carry the same content: the headline
 number and title, the message, the location, release and occurrence count, and a link
 to the issue.
 
+A delivery that meets a dropped connection, a rate limit (429) or a server error (5xx)
+is tried again up to three times within about 8 seconds. One the other side refuses,
+such as a removed webhook, fails at once and shows on the channel.
+
 **Send test** delivers a test message so you can check the setup. Each channel shows
 when it last delivered or failed.
 

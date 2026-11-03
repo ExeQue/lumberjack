@@ -8,24 +8,42 @@ use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
- * HTTP for a channel: a short timeout, a few retries on a dropped connection, and a
- * delivery failure that says what the other side answered.
+ * HTTP for a channel: a short timeout, retries with backoff when the other side is
+ * briefly away, and a delivery failure that says what it answered.
  */
 trait SendsHttp
 {
+    /** Waits between attempts, in milliseconds: four attempts within about 8 seconds. */
+    private const array BACKOFF_MS = [500, 2000, 5000];
+
     protected function http(): PendingRequest
     {
         return Http::timeout(10)->retry(
-            times: 3,
-            sleepMilliseconds: 200,
-            when: fn (Throwable $e): bool => $e instanceof ConnectionException,
+            times: self::BACKOFF_MS,
+            when: fn (Throwable $e): bool => self::worthRetrying($e),
             throw: false,
         );
+    }
+
+    /**
+     * A dropped connection, a rate limit or a server error may pass; anything else, such
+     * as a removed webhook (404) or a rejected message (400), will not.
+     */
+    private static function worthRetrying(Throwable $e): bool
+    {
+        if ($e instanceof ConnectionException) {
+            return true;
+        }
+
+        $status = $e instanceof RequestException ? $e->response->status() : 0;
+
+        return $status === 429 || $status >= 500;
     }
 
     /**

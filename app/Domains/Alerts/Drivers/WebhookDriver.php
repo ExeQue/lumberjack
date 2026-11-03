@@ -6,12 +6,12 @@ namespace App\Domains\Alerts\Drivers;
 
 use App\Domains\Alerts\Contracts\ChannelDriver;
 use App\Domains\Alerts\Data\IssueAlert;
+use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Shared\Rules\PublicUrl;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\PendingRequest;
 use Override;
-use Throwable;
 
 /**
  * POSTs each alert as JSON to the app's own endpoint, so it can react, e.g.
@@ -21,6 +21,8 @@ use Throwable;
  */
 class WebhookDriver implements ChannelDriver
 {
+    use SendsHttp;
+
     public const string VERSION = '1';
 
     #[Override]
@@ -80,23 +82,15 @@ class WebhookDriver implements ChannelDriver
         $body = (string) json_encode(['version' => self::VERSION, 'sent_at' => now()->toIso8601String(), ...$payload], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $timestamp = (string) now()->getTimestamp();
 
-        try {
-            $response = Http::timeout(10)
-                ->withoutRedirecting()
-                ->withHeaders([
-                    'User-Agent' => 'Lumberjack-Webhook/'.self::VERSION,
-                    'X-Lumberjack-Event' => (string) $payload['event'],
-                    'X-Lumberjack-Timestamp' => $timestamp,
-                    'X-Lumberjack-Signature' => 'sha256='.hash_hmac('sha256', $timestamp.'.'.$body, (string) ($channel->config['secret'] ?? '')),
-                ])
-                ->withBody($body, 'application/json')
-                ->post($url);
-        } catch (Throwable) {
-            throw AlertDeliveryFailedException::unreachable($channel->name);
-        }
-
-        if (! $response->successful()) {
-            throw AlertDeliveryFailedException::status($channel->name, $response->status());
-        }
+        $this->deliver($channel, fn (PendingRequest $http) => $http
+            ->withoutRedirecting()
+            ->withHeaders([
+                'User-Agent' => 'Lumberjack-Webhook/'.self::VERSION,
+                'X-Lumberjack-Event' => (string) $payload['event'],
+                'X-Lumberjack-Timestamp' => $timestamp,
+                'X-Lumberjack-Signature' => 'sha256='.hash_hmac('sha256', $timestamp.'.'.$body, (string) ($channel->config['secret'] ?? '')),
+            ])
+            ->withBody($body, 'application/json')
+            ->post($url));
     }
 }

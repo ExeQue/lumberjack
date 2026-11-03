@@ -86,6 +86,20 @@ describe('sending an alert', function () {
         Http::assertNothingSent();
     });
 
+    it('tries again when the chat app is briefly away', function () {
+        Http::fake(['discord.com/*' => Http::sequence()->push(null, 503)->push(null, 429)->push(null, 204)]);
+
+        expect(app(SendIssueAlertsAction::class)->execute($this->issue, AlertRuleType::NewIssue, 'production'))->toBe(1);
+        Http::assertSentCount(3);
+    });
+
+    it('does not try again when the chat app refuses the message', function () {
+        Http::fake(['discord.com/*' => Http::response(null, 404)]);
+
+        expect(app(SendIssueAlertsAction::class)->execute($this->issue, AlertRuleType::NewIssue, 'production'))->toBe(0);
+        Http::assertSentCount(1);
+    });
+
     it('records a failed delivery instead of throwing', function () {
         Http::fake(['discord.com/*' => Http::response('nope', 500)]);
 

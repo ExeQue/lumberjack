@@ -6,18 +6,17 @@ namespace App\Domains\Alerts\Drivers;
 
 use App\Domains\Alerts\Contracts\ChannelDriver;
 use App\Domains\Alerts\Data\IssueAlert;
+use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Enums\AlertRuleType;
-use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Issues\Enums\IssueStatus;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Support\Facades\Http;
 use Override;
-use Throwable;
 
 class DiscordDriver implements ChannelDriver
 {
+    use SendsHttp;
+
     public const int COLOR_NEW = 0xF2705F;
 
     public const int COLOR_REGRESSION = 0xF0A93B;
@@ -133,20 +132,6 @@ class DiscordDriver implements ChannelDriver
      */
     private function post(NotificationChannel $channel, array $payload): void
     {
-        $response = $this->http()->post((string) ($channel->config['webhook_url'] ?? ''), $payload);
-
-        if ($response->failed()) {
-            throw AlertDeliveryFailedException::status($channel->name, $response->status());
-        }
-    }
-
-    private function http(): PendingRequest
-    {
-        return Http::timeout(10)->retry(
-            times: 3,
-            sleepMilliseconds: 200,
-            when: fn (Throwable $e): bool => $e instanceof ConnectionException,
-            throw: false,
-        );
+        $this->deliver($channel, fn (PendingRequest $http) => $http->post((string) ($channel->config['webhook_url'] ?? ''), $payload));
     }
 }

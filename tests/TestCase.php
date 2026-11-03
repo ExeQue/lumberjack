@@ -7,6 +7,7 @@ namespace Tests;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Sleep;
 use Laravel\Fortify\Features;
 use Override;
 
@@ -18,6 +19,9 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         Http::preventStrayRequests();
+
+        // Retries back off for seconds; tests should not wait for them.
+        Sleep::fake();
 
         // Pages render without a frontend build (CI tests run without one).
         $this->withoutVite();
