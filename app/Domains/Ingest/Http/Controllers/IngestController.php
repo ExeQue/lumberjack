@@ -8,6 +8,7 @@ use App\Domains\Ingest\Http\Requests\BrowserIngestRequest;
 use App\Domains\Ingest\Http\Requests\HeartbeatRequest;
 use App\Domains\Ingest\Http\Requests\IngestBatchRequest;
 use App\Domains\Ingest\Jobs\ProcessIngestBatch;
+use App\Domains\Jobs\Actions\RecordQueueSamplesAction;
 use App\Domains\Live\Actions\BroadcastProjectChangeAction;
 use App\Domains\Live\Enums\ChangeKind;
 use App\Domains\Projects\Actions\RecordAgentHeartbeatAction;
@@ -44,10 +45,12 @@ class IngestController
         return response()->noContent()->withHeaders($this->corsHeaders((string) $request->header('Origin')));
     }
 
-    public function heartbeat(HeartbeatRequest $request, RecordAgentHeartbeatAction $action, BroadcastProjectChangeAction $broadcast): JsonResponse
+    public function heartbeat(HeartbeatRequest $request, RecordAgentHeartbeatAction $action, RecordQueueSamplesAction $queues, BroadcastProjectChangeAction $broadcast): JsonResponse
     {
         $project = $request->project();
-        $action->execute($project, $request->string('host')->toString(), $request->client(), $request->input('name'));
+        $host = $request->string('host')->toString();
+        $action->execute($project, $host, $request->client(), $request->input('name'));
+        $queues->execute($project, $host, $request->queues());
         $broadcast->execute($project->id, ChangeKind::Agents);
 
         return response()->json(['ok' => true]);

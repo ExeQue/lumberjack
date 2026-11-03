@@ -9,6 +9,7 @@ use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Jobs\Enums\JobRunStatus;
 use App\Domains\Jobs\Models\JobRun;
+use App\Domains\Jobs\Models\QueueSample;
 use App\Domains\Logs\Models\LogChannel;
 use App\Domains\Logs\Models\LogEntry;
 use App\Domains\Performance\Models\QueryRun;
@@ -123,6 +124,22 @@ describe('server ingest', function () {
         $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'name' => 'queue'], $this->auth)->assertOk();
 
         expect($this->project->agents()->orderBy('name')->pluck('name')->all())->toBe(['queue', 'web']);
+    });
+
+    it('stores the queue sizes a heartbeat reports', function () {
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'queues' => [
+            ['connection' => 'redis', 'queue' => 'default', 'size' => 12, 'oldest_age_s' => 40],
+            ['connection' => 'redis', 'queue' => 'emails', 'size' => 0, 'oldest_age_s' => null],
+        ]], $this->auth)->assertOk();
+
+        expect(QueueSample::query()->orderBy('queue')->get(['host', 'connection', 'queue', 'size', 'oldest_age_s'])->toArray())->toBe([
+            ['host' => 'web-2', 'connection' => 'redis', 'queue' => 'default', 'size' => 12, 'oldest_age_s' => 40],
+            ['host' => 'web-2', 'connection' => 'redis', 'queue' => 'emails', 'size' => 0, 'oldest_age_s' => null],
+        ]);
+    });
+
+    it('refuses a queue size that is no count', function () {
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'queues' => [['connection' => 'redis', 'queue' => 'default', 'size' => -1]]], $this->auth)->assertUnprocessable();
     });
 });
 
@@ -250,6 +267,23 @@ describe('browser ingest', function () {
             ->assertJson(['accepted' => 1]);
 
         expect(Issue::count())->toBe(1);
+    });
+
+    it('stores web vitals from a browser, drops absurd values and groups ids in the path', function () {
+        $this->postJson('/api/ingest/browser?key='.$this->project->public_key, $this->batch([
+            ['type' => 'vital', 'route' => '/orders/42/items/0d9c7a1e-1111-4222-8333-944455556666', 'url' => 'https://app.example.test/orders/42', 'lcp_ms' => 2400.5, 'inp_ms' => -5, 'cls' => 0.12, 'ttfb_ms' => 90_000, 'fcp_ms' => 800, 'timestamp' => now()->getTimestamp()],
+            ['type' => 'vital', 'route' => '/empty', 'lcp_ms' => null, 'cls' => 99],
+        ]), ['Origin' => 'https://app.example.test', 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'])
+            ->assertStatus(202);
+
+        $vital = DB::table('web_vitals')->sole();
+        expect($vital->route)->toBe('/orders/{id}/items/{id}')
+            ->and($vital->lcp_us)->toBe(2_400_500)
+            ->and($vital->inp_us)->toBeNull()
+            ->and($vital->ttfb_us)->toBeNull()
+            ->and($vital->fcp_us)->toBe(800_000)
+            ->and((float) $vital->cls)->toBe(0.12)
+            ->and($vital->environment)->toBe('production');
     });
 
     it('does not accept non-error events from a browser', function () {

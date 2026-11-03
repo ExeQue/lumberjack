@@ -32,6 +32,8 @@ Pages that belong to one thing, like a trace, open the other project's overview.
   that stops is shown as offline, and is removed after 24 hours without a heartbeat,
   since its server or pod is most likely gone (Kubernetes names every pod for
   itself). **Remove** forgets one right away; it comes back if it checks in again.
+  The heartbeat also reports the size of the app's queues (the package's `queues`
+  config), kept for 30 days for the [Jobs page](./performance#queues).
 - **Alerts:** the project's [rules and own channels](./alerts).
 - **Labels:** rename, recolor or delete [issue labels](./issues#working-on-an-issue).
 - **Retention:** see below.
