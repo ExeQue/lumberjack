@@ -83,6 +83,11 @@ class ReadSeriesRequest extends FormRequest
                 $validator->errors()->add('group_by', "{$metric->value} cannot be split by {$group->value}.");
             }
 
+            // Request counts carry no host: a host filter there would quietly cover every host.
+            if ($metric !== null && $this->filled('host') && ! in_array(MetricGroup::Host, $metric->groups(), true)) {
+                $validator->errors()->add('host', "{$metric->value} cannot be filtered by host.");
+            }
+
             // Public stats leave hosts out.
             if (app(MetricsCredential::class)->isPublic() && ($group === MetricGroup::Host || $this->filled('host'))) {
                 $validator->errors()->add('host', 'Public stats are not split or filtered by host.');

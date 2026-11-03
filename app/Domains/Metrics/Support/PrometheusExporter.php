@@ -68,7 +68,11 @@ class PrometheusExporter
             $requests->set($summary['requests'], $label);
             $errorRate->set($summary['error_rate'], $label);
             $p95->set($summary['p95'] / 1000, $label);
-            $apdex->set($summary['apdex'] ?? 0, $label);
+            // No requests, no score: a 0 would read as the worst Apdex there is.
+            if ($summary['apdex'] !== null) {
+                $apdex->set($summary['apdex'], $label);
+            }
+
             $openIssues->set($summary['open_issues'], $label);
             $users->set($summary['users'], $label);
             $failedJobs->set($summary['failed_jobs'], $label);

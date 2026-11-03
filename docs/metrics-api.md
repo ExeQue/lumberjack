@@ -108,7 +108,9 @@ Query parameters, named so Grafana's macros drop straight in:
   `route`, `domain`, `queue`, `job`, `host` and `check` (a health check's slug, such as
   `database:pgsql`) take `*` as a wildcard (`/api/*`, `*.example.com`). `route` matches a
   route's URI or its name (`orders.*`); `domain` the host the request was made to. A filter a metric's data does not
-  carry, such as a route for a queue's size, is ignored.
+  carry, such as a route for a queue's size, is ignored; except `host`, which is refused
+  (422) on a metric that cannot be split by host, as requests and errors are counted
+  without one.
 - `group_by`: one series per environment, route, domain, host, queue, release or check, the busiest
   `top` (10 by default, at most 50) of them.
 
@@ -146,7 +148,7 @@ How the numbers are counted:
 ### Prometheus
 
 `GET /metrics` serves gauges for every project the token reads (or the public stats
-project), labelled with the project's slug. Counts and rates cover the last hour; the
+project), labeled with the project's slug. Counts and rates cover the last hour; the
 database gauges are each database check's latest report.
 
 | Gauge                                     | Labels                            |
