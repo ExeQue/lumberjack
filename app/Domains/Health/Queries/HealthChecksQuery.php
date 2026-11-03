@@ -180,6 +180,7 @@ class HealthChecksQuery
             'duration_us' => $latest?->last_duration_us,
             'metrics' => $latest->last_metrics ?? [],
             'uptime' => $check->isStale() ? null : $this->uptime($check, $period, $outages),
+            'uptime_live' => $check->isStale() ? null : $this->uptimeBasis($check, $period, $outages),
             'strip' => $this->strip($check, $period, $outages),
             'hosts' => $check->isReported() ? $check->hosts->map(fn (HealthCheckHost $h): array => [
                 'host' => $h->host !== '' ? $h->host : null,
@@ -219,6 +220,35 @@ class HealthChecksQuery
         }
 
         return round(max(0, 1 - $down / $total), 5);
+    }
+
+    /**
+     * What uptime is worked out from, so the page can keep counting between results: the
+     * start, the down time of outages that ended, and since when it is down now.
+     *
+     * @param  Collection<int, HealthOutage>  $outages
+     * @return array{from: string, down_s: float, down_since: ?string}
+     */
+    public function uptimeBasis(HealthCheck $check, Period $period, Collection $outages): array
+    {
+        $now = now()->toImmutable();
+        $start = $period->since()->max($check->created_at ?? $period->since());
+        $down = 0.0;
+        $downSince = null;
+
+        foreach ($outages->where('status', HealthStatus::Down) as $outage) {
+            $from = $outage->started_at->max($start);
+
+            if ($outage->ended_at === null) {
+                $downSince = $from;
+
+                continue;
+            }
+
+            $down += max(0, $from->diffInSeconds($outage->ended_at->min($now), false));
+        }
+
+        return ['from' => $start->toIso8601String(), 'down_s' => $down, 'down_since' => $downSince?->toIso8601String()];
     }
 
     /**

@@ -280,6 +280,12 @@ export type HealthCheckRow = {
     duration_us: number | null;
     metrics: Record<string, number>;
     uptime: number | null;
+    /** What uptime is counted from, so it keeps counting between results. */
+    uptime_live: {
+        from: string;
+        down_s: number;
+        down_since: string | null;
+    } | null;
     strip: { t: string; s: 'ok' | 'degraded' | 'down' | null }[];
     hosts: HealthHost[];
 };
