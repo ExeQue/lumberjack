@@ -67,7 +67,10 @@ the **Escalation** alert rule fires.
 - **Assignee:** any member of the team. Whoever is assigned, or taken off, gets a mail
   and a toast if Lumberjack is open, naming who did it (a person, or an MCP token).
   Nobody hears about their own change, so taking an issue yourself, or starting work
-  on it (which assigns you), sends nothing.
+  on it (which assigns you), sends nothing. Resolving an issue takes it off its
+  assignee, in the history like any unassign; the assignee is told unless they resolved
+  it themselves. Ignoring keeps the assignee, and a regression comes back unassigned.
+  A bulk action sends each person one message for all the issues it touched.
 - **Labels:** type a new name on the issue to create a label. Rename, recolor or
   delete labels in the project settings.
 - **Notes:** free text for the team. Type `@` to tag a team member or an MCP agent.
