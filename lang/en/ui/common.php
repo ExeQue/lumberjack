@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'loading' => 'Loading…',
     'sound_on' => 'Sound for new errors: on',
     'sound_off' => 'Sound for new errors: off',
     'toasts' => [

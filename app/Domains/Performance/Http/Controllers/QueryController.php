@@ -9,6 +9,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Shared\Http\Concerns\ReadsDashboardFilters;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -29,8 +30,9 @@ class QueryController
         return Inertia::render('queries/index', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => [...$this->filters($request), 'sort' => $sort, 'search' => $search, 'connection' => $connection],
-            'connections' => DB::table('query_runs')->where('project_id', $project->id)->where('occurred_at', '>=', now()->subDays(7))->distinct()->limit(20)->pluck('connection'),
-            'stats' => fn (): array => $query->get($project->id, $this->period($request), $this->environment($request), $sort, $search, $connection),
+            'connections' => fn () => Cache::remember('queries:'.$project->id.':connections', 300, fn () => DB::table('query_runs')->where('project_id', $project->id)->where('occurred_at', '>=', now()->subDays(7))->distinct()->limit(20)->pluck('connection')->all()),
+            // Deferred: the page shell paints at once on a cold statistics cache.
+            'stats' => Inertia::defer(fn (): array => $query->get($project->id, $this->period($request), $this->environment($request), $sort, $search, $connection)),
         ]);
     }
 }

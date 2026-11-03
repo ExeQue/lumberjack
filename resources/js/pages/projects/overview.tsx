@@ -78,7 +78,8 @@ type Overview = {
 type Props = {
     project: ProjectHeader;
     filters: DashboardFilters;
-    overview: Overview;
+    /** Deferred: computed after the page shows. */
+    overview?: Overview;
 };
 
 const jobTone: Record<FailedJobRun['status'], Tone> = {
@@ -474,12 +475,9 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
         ['overview'],
     );
 
-    const failureRate =
-        overview.job_runs > 0 ? overview.failed_jobs / overview.job_runs : 0;
     const trend = useTrend();
-    const previous = overview.previous;
 
-    return (
+    const header = (
         <>
             <Head title={`${t('overview.title')} · ${project.name}`} />
             <TopBar
@@ -494,6 +492,30 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                     environments={project.environments}
                 />
             </TopBar>
+        </>
+    );
+
+    if (overview === undefined) {
+        return (
+            <>
+                {header}
+                <PageBody wide>
+                    <PageTitle title={t('overview.title')} />
+                    <Card>
+                        <EmptyState title={t('common.loading')} />
+                    </Card>
+                </PageBody>
+            </>
+        );
+    }
+
+    const failureRate =
+        overview.job_runs > 0 ? overview.failed_jobs / overview.job_runs : 0;
+    const previous = overview.previous;
+
+    return (
+        <>
+            {header}
             <PageBody wide>
                 <PageTitle title={t('overview.title')} />
 
