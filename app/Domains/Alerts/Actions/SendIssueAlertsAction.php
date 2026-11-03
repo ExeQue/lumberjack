@@ -36,7 +36,9 @@ class SendIssueAlertsAction
             return 0;
         }
 
-        $note = $issue->notes()->latest('id')->value('body');
+        // The latest note someone wrote about the issue, not the comment left when resolving
+        // or ignoring it ("won't fix"): on a regression that would read as if it were news.
+        $note = $issue->notes()->whereNull('status')->latest('id')->value('body');
         $summary = is_string($note) ? strtok($note, "\n") : null;
         $alert = new IssueAlert($issue, $type, $environment, route('issues.show', [$issue->project, $issue]), $summary ?: null, burst: $burst);
 
