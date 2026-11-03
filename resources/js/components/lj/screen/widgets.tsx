@@ -394,15 +394,25 @@ function Stat({
     widget,
     schema,
     data,
+    now,
     t,
     textSize,
     colored,
 }: BodyProps & { colored: boolean }) {
+    const release = data.release as
+        | {
+              since: string;
+              previous: string | null;
+              error_rate: number | null;
+              error_rate_change: number | null;
+          }
+        | undefined;
     const opt = <T,>(key: string) => option<T>(schema, widget, key);
     const compare = opt<string>('compare') ?? 'previous';
     const change = data.change as number | null;
     const spark = (data.sparkline as { v: number | null }[] | null) ?? null;
-    const extra = (compare !== 'none' && change !== null) || !!spark;
+    const extra =
+        (compare !== 'none' && change !== null) || !!spark || !!release;
     const value = formatValue(
         data.value,
         String(data.unit),
@@ -434,6 +444,43 @@ function Stat({
                         formatPercent(Math.abs(change), 0) +
                         ' ' +
                         t(`screens.trend.${compare}`)}
+                </span>
+            )}
+            {release && (
+                <span className="lj-tile-small flex flex-wrap gap-x-[0.6em]">
+                    <span>
+                        {t('screens.release.since', {
+                            age: lasted(release.since, now),
+                        })}
+                    </span>
+                    {release.previous && (
+                        <span>
+                            {t('screens.release.previous', {
+                                release: release.previous,
+                            })}
+                        </span>
+                    )}
+                    {release.error_rate !== null && (
+                        <span
+                            style={{
+                                color:
+                                    colored &&
+                                    (release.error_rate_change ?? 0) > 0.1
+                                        ? 'var(--s-red)'
+                                        : undefined,
+                            }}
+                        >
+                            {t('screens.release.errors', {
+                                rate: formatPercent(release.error_rate, 1),
+                            }) +
+                                (release.error_rate_change !== null &&
+                                Math.abs(release.error_rate_change) >= 0.02
+                                    ? release.error_rate_change > 0
+                                        ? ' ▲'
+                                        : ' ▼'
+                                    : '')}
+                        </span>
+                    )}
                 </span>
             )}
             {spark && spark.length > 1 && (
@@ -923,6 +970,8 @@ function List({ widget, schema, data, now, t }: BodyProps) {
     const opt = <T,>(key: string) => option<T>(schema, widget, key);
     const rows = (data.rows as Row[]) ?? [];
     const wrap = opt<boolean>('wrap') === true;
+    // One column wide: the key and the value matter, count and age do not fit.
+    const narrow = widget.w <= 1;
 
     if (rows.length === 0) {
         return <span className="lj-tile-small">{t('screens.list.empty')}</span>;
@@ -977,16 +1026,20 @@ function List({ widget, schema, data, now, t }: BodyProps) {
                                 {text.tag.text}
                             </span>
                         )}
-                        {opt<boolean>('show_count') !== false && text.count && (
-                            <span className="flex-none font-mono text-[0.85em] text-(--s-ink-3)">
-                                {text.count}
-                            </span>
-                        )}
-                        {opt<boolean>('show_age') !== false && text.at && (
-                            <span className="flex-none font-mono text-[0.85em] whitespace-nowrap text-(--s-ink-3)">
-                                {lasted(text.at, now)}
-                            </span>
-                        )}
+                        {!narrow &&
+                            opt<boolean>('show_count') !== false &&
+                            text.count && (
+                                <span className="flex-none font-mono text-[0.85em] text-(--s-ink-3)">
+                                    {text.count}
+                                </span>
+                            )}
+                        {!narrow &&
+                            opt<boolean>('show_age') !== false &&
+                            text.at && (
+                                <span className="flex-none font-mono text-[0.85em] whitespace-nowrap text-(--s-ink-3)">
+                                    {lasted(text.at, now)}
+                                </span>
+                            )}
                     </li>
                 );
             })}

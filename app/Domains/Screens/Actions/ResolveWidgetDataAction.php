@@ -98,6 +98,7 @@ class ResolveWidgetDataAction
         $window = MetricWindow::forPeriod($scope->period);
         $previous = null;
         $sparkline = null;
+        $release = null;
 
         if ($source->metric !== null) {
             $filter = $this->filter($source, $projects, $scope);
@@ -114,7 +115,7 @@ class ResolveWidgetDataAction
             $value = match ($source->id) {
                 'open_issues' => (float) Issue::query()->whereIn('project_id', $projects->modelKeys())->whereOpen()->count(),
                 'agents_online' => (float) $this->agentQuery($projects, $scope)->where('last_seen_at', '>', now()->subMinutes(ProjectAgent::OFFLINE_AFTER_MINUTES))->count(),
-                'current_release' => $projects->isNotEmpty() ? ($this->releases->get($projects->first()->id, $scope->period, $scope->environment)[0]['release'] ?? null) : null,
+                'current_release' => ($release = $projects->isNotEmpty() ? ($this->releases->get($projects->first()->id, $scope->period, $scope->environment)[0] ?? null) : null)['release'] ?? null,
                 default => null,
             };
         }
@@ -126,6 +127,13 @@ class ResolveWidgetDataAction
             'state' => is_float($value) ? $this->state($value, $limits) : null,
             'limits' => $limits,
             'sparkline' => $sparkline,
+            // The current release says when it arrived and how it compares with the one before.
+            ...($release !== null ? ['release' => [
+                'since' => $release['first_seen_at'],
+                'previous' => $release['previous']['release'] ?? null,
+                'error_rate' => $release['error_rate'],
+                'error_rate_change' => $release['change']['error_rate'],
+            ]] : []),
         ];
     }
 
