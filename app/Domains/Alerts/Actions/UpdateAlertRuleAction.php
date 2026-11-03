@@ -12,7 +12,7 @@ use App\Domains\Alerts\Models\NotificationChannel;
 class UpdateAlertRuleAction
 {
     /**
-     * @param  list<int>  $channelIds  the team's shared channels and the project's own
+     * @param  list<int>  $channelIds  the team's shared channels, and for a project's rule its own
      * @param  list<string>|null  $environments  null means every environment
      * @param  array<string, mixed>|null  $settings  a queue backlog rule's thresholds; null keeps them
      */
@@ -26,7 +26,12 @@ class UpdateAlertRuleAction
 
         $rule->save();
 
-        $allowed = NotificationChannel::query()->whereAvailableTo($rule->project)->whereIn('id', $channelIds)->pluck('id');
+        // A team rule serves every project, so it can only use the team's shared channels.
+        $allowed = NotificationChannel::query()
+            ->when($rule->project === null)->where('team_id', $rule->team_id)
+            ->when($rule->project === null)->whereTeamWide()
+            ->when($rule->project !== null)->whereAvailableTo($rule->project)
+            ->whereIn('id', $channelIds)->pluck('id');
         $rule->channels()->sync($allowed);
 
         return $rule;

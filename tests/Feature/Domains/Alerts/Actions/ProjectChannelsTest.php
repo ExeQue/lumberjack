@@ -50,23 +50,28 @@ describe('channels of one project', function () {
         $shared = ($this->save)(ChannelType::Mail, ['address' => 'ops@example.com']);
 
         $new = app(CreateProjectAction::class)->execute($this->team, 'Docs')['project'];
+        $rule = AlertRule::query()->whereEffectiveFor($new)->whereType(AlertRuleType::NewIssue)->sole();
 
-        expect($new->alertRules()->first()?->channels()->pluck('notification_channels.id')->all())->toBe([$shared->id]);
+        expect($rule->team_id)->toBe($this->team->id)
+            ->and($rule->channels()->pluck('notification_channels.id')->all())->toBe([$shared->id]);
     });
 
     it('shows the team only its shared channels, and each project its own and its rules', function () {
         $admin = User::factory()->inTeam($this->team)->create();
         ($this->save)(ChannelType::Webhook, ['url' => 'https://93.184.215.14/hook'], $this->shop);
         ($this->save)(ChannelType::Mail, ['address' => 'ops@example.com']);
-        AlertRule::factory()->for($this->shop)->create();
 
         $this->actingAs($admin)->get(route('alerts.index'))->assertInertia(fn (Assert $page) => $page
-            ->has('channels', 1)->where('channels.0.type', 'mail')->where('types', ['mail', 'discord', 'slack', 'teams', 'telegram', 'ntfy', 'pushover']));
+            ->has('channels', 1)->where('channels.0.type', 'mail')->where('types', ['mail', 'discord', 'slack', 'teams', 'telegram', 'ntfy', 'pushover'])
+            ->has('rules', count(AlertRuleType::cases())));
 
+        // The webhook customized the rules that page; note and status change still follow the team.
         $this->actingAs($admin)->get(route('projects.settings', $this->shop))->assertInertia(fn (Assert $page) => $page
             ->has('alerts.channels', 1)->where('alerts.channels.0.type', 'webhook')
             ->has('alerts.available', 2)
-            ->has('alerts.rules', 1));
+            ->has('alerts.rules', count(AlertRuleType::cases()))
+            ->where('alerts.rules.0.type', 'new_issue')->whereNot('alerts.rules.0.project', null)
+            ->where('alerts.rules.2.type', 'note')->where('alerts.rules.2.project', null)->whereNot('alerts.rules.2.team', null));
     });
 
     it('adds a webhook for a project through the channel form', function () {

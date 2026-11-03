@@ -21,7 +21,8 @@ describe('the local seed', function () {
             ->and($admin->currentTeam?->is($project->team))->toBeTrue()
             ->and($project->public_key)->toBe(DatabaseSeeder::PUBLIC_KEY)
             ->and($project->logChannels()->pluck('name')->all())->toBe(['default'])
-            ->and($project->alertRules()->count())->toBe(count(AlertRuleType::cases()));
+            ->and($project->team->alertRules()->count())->toBe(count(AlertRuleType::cases()))
+            ->and($project->alertRules()->sole()->type)->toBe(AlertRuleType::Escalation);
 
         $this->withToken(DatabaseSeeder::TOKEN)
             ->postJson('/api/ingest/heartbeat', ['host' => 'web-1'])

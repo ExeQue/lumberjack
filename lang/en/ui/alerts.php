@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'per_project' => [
         'title' => 'Rules and project channels',
-        'description' => 'Each project picks which alerts go where, and can add channels of its own such as a webhook, in its settings.',
+        'description' => 'Each project uses the team\'s rules unless it customizes one, and can add channels of its own such as a webhook, in its settings.',
     ],
     'title' => 'Alerts',
     'types' => ['mail' => 'Mail', 'discord' => 'Discord', 'webhook' => 'Webhook', 'slack' => 'Slack', 'teams' => 'Microsoft Teams', 'telegram' => 'Telegram', 'ntfy' => 'ntfy', 'pushover' => 'Pushover'],
@@ -63,6 +63,18 @@ return [
             'hint' => 'Leave one of the first two empty to turn it off. Sent once when it starts and once when the queue is back under, at most once every 30 minutes.',
         ],
         'empty' => 'This project has no rules.',
+        'team_description' => 'Every project uses these unless it customizes a rule in its settings. Team rules send to the shared channels above.',
+        'project_description' => 'A rule marked team default follows the team\'s Alerts page. Customize one to change it for this project only, with its own channels too.',
+        'team_default' => 'Team default',
+        'customized' => 'Customized',
+        'sends_to' => 'Sends to :channels',
+        'nowhere' => 'Sends nowhere yet',
+        'only_in' => 'Only in :environments',
+        // Button
+        'customize' => 'Customize',
+        // Button
+        'use_team' => 'Use the team\'s',
+        'use_team_question' => 'Drop this project\'s :rule rule and use the team\'s again? Its changes are lost.',
         'no_projects' => 'Create a project to set up rules.',
         'hint' => 'At most one message per issue per rule every 30 minutes; every regression and note is sent. Ignored issues and browser errors never send.',
     ],

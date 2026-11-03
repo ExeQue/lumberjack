@@ -90,6 +90,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('settings/labels/{label}', [LabelController::class, 'update'])->name('labels.update');
         Route::delete('settings/labels/{label}', [LabelController::class, 'destroy'])->name('labels.destroy');
         Route::put('settings/retention', [RetentionController::class, 'project'])->name('projects.retention');
+        Route::post('settings/alert-rules/{type}', [AlertController::class, 'customizeRule'])->name('alerts.rules.customize');
         Route::put('settings/repository', [RepositoryController::class, 'update'])->name('repository.update');
         Route::post('settings/repository/test', [RepositoryController::class, 'test'])->name('repository.test');
         Route::delete('settings/repository', [RepositoryController::class, 'destroy'])->name('repository.destroy');
@@ -129,6 +130,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('team/alerts/channels/{channel}', [AlertController::class, 'destroyChannel'])->name('alerts.channels.destroy');
     Route::post('team/alerts/channels/{channel}/test', [AlertController::class, 'testChannel'])->name('alerts.channels.test');
     Route::put('team/alerts/rules/{rule}', [AlertController::class, 'updateRule'])->name('alerts.rules.update');
+    Route::delete('team/alerts/rules/{rule}', [AlertController::class, 'resetRule'])->name('alerts.rules.reset');
 });
 
 require __DIR__.'/settings.php';

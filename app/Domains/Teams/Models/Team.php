@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Teams\Models;
 
+use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Projects\Models\Project;
@@ -78,6 +79,12 @@ class Team extends Model
     public function notificationChannels(): HasMany
     {
         return $this->hasMany(NotificationChannel::class);
+    }
+
+    /** @return HasMany<AlertRule, $this> */
+    public function alertRules(): HasMany
+    {
+        return $this->hasMany(AlertRule::class);
     }
 
     /** @return HasMany<McpToken, $this> */

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domains\Projects\Actions;
 
-use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Logs\Models\LogChannel;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Support\ProjectKeys;
@@ -36,11 +35,7 @@ class CreateProjectAction
 
             $project->logChannels()->create(['name' => LogChannel::DEFAULT]);
 
-            $channelIds = $team->notificationChannels()->whereTeamWide()->pluck('id');
-
-            foreach (AlertRuleType::cases() as $type) {
-                $project->alertRules()->create(['type' => $type, 'enabled' => $type->enabledByDefault()])->channels()->attach($channelIds);
-            }
+            // No alert rules of its own: it uses the team's until one is customized.
 
             return $project;
         });

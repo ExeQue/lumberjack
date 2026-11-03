@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Actions;
 
+use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Exceptions\WebhookNeedsProjectException;
 use App\Domains\Alerts\Models\AlertRule;
@@ -16,6 +17,11 @@ class SaveNotificationChannelAction
 {
     /** Config fields that are no secret; the edit form shows them filled in. */
     public const array VISIBLE = ['sender_name', 'chat_id'];
+
+    public function __construct(
+        private readonly CustomizeAlertRuleAction $customize,
+    ) {
+    }
 
     /**
      * @param  array<string, string|null>  $config  validated against the driver's rules; null or empty keeps the stored value
@@ -49,10 +55,16 @@ class SaveNotificationChannelAction
 
         $channel->fill(['type' => $type, 'name' => $name, 'config' => $config, 'project_id' => $project?->id])->save();
 
-        // A new project channel goes straight into the project's rules for the kinds that page.
-        if ($channel->wasRecentlyCreated && $project !== null) {
-            $project->alertRules()->get()->filter(fn (AlertRule $rule): bool => $rule->type->enabledByDefault())
-                ->each(fn (AlertRule $rule) => $rule->channels()->syncWithoutDetaching([$channel->id]));
+        // A new channel goes straight into the rules for the kinds that page: a shared one
+        // into the team's, a project's own into the project's, which it customizes where
+        // it used the team's (a team rule cannot send to one project's channel).
+        if ($channel->wasRecentlyCreated) {
+            $types = array_values(array_filter(AlertRuleType::cases(), fn (AlertRuleType $type): bool => $type->enabledByDefault()));
+            $rules = $project === null
+                ? $team->alertRules()->whereIn('type', array_map(fn (AlertRuleType $type): string => $type->value, $types))->get()
+                : collect($types)->map(fn (AlertRuleType $type): AlertRule => $this->customize->execute($project, $type));
+
+            $rules->each(fn (AlertRule $rule) => $rule->channels()->syncWithoutDetaching([$channel->id]));
         }
 
         return $channel;

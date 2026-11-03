@@ -287,3 +287,31 @@ export type HealthCheckDetail = {
     }[];
     latency_series: SeriesPoint[];
 };
+
+export type QueueBacklogSettings = {
+    size: number | null;
+    age_minutes: number | null;
+    sustain_minutes: number;
+};
+
+/** A team's alert rule, or a project's own that overrides the team's of that type. */
+export type AlertRule = {
+    id: number;
+    type: string;
+    label: string;
+    description: string;
+    enabled: boolean;
+    channels: number[];
+    environments: string[];
+    /** A queue backlog rule's thresholds; null for other rules. */
+    settings: QueueBacklogSettings | null;
+};
+
+/** One type on a project: the team's rule, and the project's own when it customized it. */
+export type ProjectAlertRule = {
+    type: string;
+    label: string;
+    description: string;
+    team: AlertRule | null;
+    project: AlertRule | null;
+};

@@ -1,6 +1,7 @@
 # Alerts
 
-Alerts go to **channels** and are chosen per project by **rules**.
+Alerts go to **channels** and are chosen by **rules**: the team's, which every project
+uses, and a project's own where it customizes one.
 
 ## Channels
 
@@ -40,8 +41,29 @@ for example in local development.
 
 ## Rules
 
-Each project has one rule per alert type. A rule is on or off, sends to the channels
-you pick, and can be limited to some environments (comma separated, empty means all).
+A rule is on or off, sends to the channels you pick, and can be limited to some
+environments (comma separated, empty means all).
+
+### Team rules and project overrides
+
+The team has one rule per alert type, on its **Alerts** page under **Rules**. Every
+project uses them, so a new project alerts like the others from the start. Team rules
+send to the team's shared channels only, since they serve every project. Only team
+owners and admins change them.
+
+In a project's settings, under **Alerts**, each type shows either:
+
+- **Team default**: what the team's rule does (on or off, its channels and
+  environments), read only. **Customize** gives the project a rule of its own for that
+  type, starting as a copy of the team's, to change for this project only. It can also
+  send to the project's own channels, such as a webhook.
+- **Customized**: the project's own rule, edited in place. Changes to the team's rule
+  no longer reach it. **Use the team's** deletes it, after asking, and the project
+  follows the team's rule again.
+
+A new shared channel is added to the team's rules that are on by default. A new project
+channel is added to the project's rules that are on by default, customizing those that
+still followed the team (a team rule cannot send to one project's channel).
 
 | Rule                | Fires on                                                                               | On by default |
 | ------------------- | -------------------------------------------------------------------------------------- | ------------- |
