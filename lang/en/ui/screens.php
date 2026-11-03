@@ -197,7 +197,7 @@ return [
         'y_axis' => ['label' => 'Value axis'],
         'grid' => ['label' => 'Grid lines'],
         'limit' => ['label' => 'Rows', 'options' => ['auto' => 'Fit to tile', '3' => '3', '5' => '5', '10' => '10', '20' => '20']],
-        'sort' => ['label' => 'Sort', 'options' => ['newest' => 'Newest first', 'most_frequent' => 'Most frequent']],
+        'sort' => ['label' => 'Sort', 'options' => ['newest' => 'Newest first', 'worst' => 'Most important first', 'last_seen' => 'Last reported first', 'most_frequent' => 'Most frequent']],
         'only_problems' => ['label' => 'Only what needs attention'],
         'show_age' => ['label' => 'Show age'],
         'show_count' => ['label' => 'Show count'],
@@ -281,7 +281,7 @@ return [
             'skipped' => 'Skipped',
         ],
         'sort_hint' => [
-            'latest_issues' => ['default' => 'newest first', 'newest' => 'newest first', 'most_frequent' => 'most frequent first'],
+            'latest_issues' => ['default' => 'newest first', 'newest' => 'newest first', 'worst' => 'most important first', 'last_seen' => 'last reported first', 'most_frequent' => 'most frequent first'],
             'alert_feed' => ['default' => 'newest first'],
             'failed_jobs' => ['default' => 'most failures first'],
             'scheduled_tasks' => ['default' => 'failed first'],

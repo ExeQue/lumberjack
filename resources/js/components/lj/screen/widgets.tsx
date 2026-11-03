@@ -1148,29 +1148,52 @@ function List({ widget, schema, data, now, t }: BodyProps) {
         return <Hosts rows={rows} t={t} />;
     }
 
+    const texts = rows.map((row) =>
+        rowText(String(data.source), row, t, narrow),
+    );
+    const showCount = !narrow && opt<boolean>('show_count') !== false;
+    const showAge = !narrow && opt<boolean>('show_age') !== false;
+    // One grid for the whole list, each row a subgrid, so keys, tags, counts and ages line up.
+    const columns = {
+        key: texts.some((x) => x.key),
+        tag: texts.some((x) => x.tag),
+        count: showCount && texts.some((x) => x.count),
+        age: showAge && texts.some((x) => x.at),
+    };
+    const template = [
+        columns.key
+            ? narrow
+                ? 'minmax(0, max-content)'
+                : 'minmax(0, 6.5em)'
+            : null,
+        'minmax(0, 1fr)',
+        columns.tag ? 'max-content' : null,
+        columns.count ? 'max-content' : null,
+        columns.age ? 'max-content' : null,
+    ]
+        .filter(Boolean)
+        .join(' ');
+
     return (
-        <ul className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <ul
+            className="grid min-h-0 flex-1 content-start gap-x-[0.8em] overflow-hidden"
+            style={{ gridTemplateColumns: template }}
+        >
             {rows.map((row, i) => {
-                const text = rowText(String(data.source), row, t, narrow);
+                const text = texts[i];
 
                 return (
                     <li
                         key={i}
-                        className="flex items-baseline gap-[0.8em] border-t border-(--s-line) py-[0.35em] first:border-t-0"
+                        className="col-span-full grid grid-cols-subgrid items-baseline border-t border-(--s-line) py-[0.35em] first:border-t-0"
                     >
-                        {text.key && (
+                        {columns.key && (
                             <span
-                                className={cn(
-                                    'truncate font-mono text-(--s-ink-2)',
-                                    // Narrow: the key gives way before a short value does.
-                                    narrow
-                                        ? 'min-w-0 flex-1'
-                                        : 'w-[6.5em] flex-none',
-                                )}
+                                className="truncate font-mono text-(--s-ink-2)"
                                 // A symbol always shows its state; a name only when it needs attention.
                                 style={{
                                     color:
-                                        text.key.length <= 1 ||
+                                        (text.key ?? '').length <= 1 ||
                                         row.state === 'red' ||
                                         row.state === 'amber'
                                             ? (ROW_COLOR[row.state ?? 'ok'] ??
@@ -1181,14 +1204,7 @@ function List({ widget, schema, data, now, t }: BodyProps) {
                                 {text.key}
                             </span>
                         )}
-                        <span
-                            className={cn(
-                                narrow && text.key && text.main.length <= 8
-                                    ? 'flex-none'
-                                    : 'min-w-0 flex-1',
-                                !wrap && 'truncate',
-                            )}
-                        >
+                        <span className={cn('min-w-0', !wrap && 'truncate')}>
                             {opt<boolean>('show_project') && row.project && (
                                 <span className="mr-[0.5em] text-(--s-ink-3)">
                                     {row.project}
@@ -1196,32 +1212,28 @@ function List({ widget, schema, data, now, t }: BodyProps) {
                             )}
                             {text.main}
                         </span>
-                        {text.tag && (
+                        {columns.tag && (
                             <span
-                                className="flex-none text-[0.85em] font-semibold whitespace-nowrap"
+                                className="text-right text-[0.85em] font-semibold whitespace-nowrap"
                                 style={{
                                     color:
-                                        ROW_COLOR[text.tag.tone ?? ''] ??
+                                        ROW_COLOR[text.tag?.tone ?? ''] ??
                                         'var(--s-ink-2)',
                                 }}
                             >
-                                {text.tag.text}
+                                {text.tag?.text}
                             </span>
                         )}
-                        {!narrow &&
-                            opt<boolean>('show_count') !== false &&
-                            text.count && (
-                                <span className="flex-none font-mono text-[0.85em] text-(--s-ink-3)">
-                                    {text.count}
-                                </span>
-                            )}
-                        {!narrow &&
-                            opt<boolean>('show_age') !== false &&
-                            text.at && (
-                                <span className="flex-none font-mono text-[0.85em] whitespace-nowrap text-(--s-ink-3)">
-                                    {lasted(text.at, now)}
-                                </span>
-                            )}
+                        {columns.count && (
+                            <span className="text-right font-mono text-[0.85em] text-(--s-ink-3)">
+                                {text.count}
+                            </span>
+                        )}
+                        {columns.age && (
+                            <span className="text-right font-mono text-[0.85em] whitespace-nowrap text-(--s-ink-3)">
+                                {text.at ? lasted(text.at, now) : ''}
+                            </span>
+                        )}
                     </li>
                 );
             })}

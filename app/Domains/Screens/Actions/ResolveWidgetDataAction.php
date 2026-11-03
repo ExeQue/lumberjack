@@ -8,6 +8,7 @@ use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Health\Queries\HealthChecksQuery;
+use App\Domains\Issues\Actions\DetectEscalationAction;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Enums\JobRunStatus;
 use App\Domains\Jobs\Queries\QueueStatisticsQuery;
@@ -40,7 +41,7 @@ use Illuminate\Support\Facades\DB;
  * Options read here (all optional): amber, red, low_is_bad (limits), compare
  * (previous, yesterday, last_week, none) and sparkline for a stat; min and max for a
  * gauge; split_by (a metric group or project), top and overlay_previous for a chart;
- * limit, sort (newest, most_frequent) and only_problems for a list; checks (uuids) and
+ * limit, sort (newest, most_frequent, last_seen, worst) and only_problems for a list; checks (uuids) and
  * only_problems for health. Display options are the widget's own business.
  */
 class ResolveWidgetDataAction
@@ -251,6 +252,12 @@ class ResolveWidgetDataAction
                 Issue::query()->whereIn('project_id', $ids)->whereOpen()
                     ->when($onlyProblems)->whereNotNull('escalated_at')
                     ->when(($options['sort'] ?? 'newest') === 'most_frequent')->orderByDesc('occurrences_count')
+                    ->when(($options['sort'] ?? 'newest') === 'last_seen')->orderByDesc('last_seen_at')
+                    // Most important first: escalating now, then regressed, then the newest.
+                    ->when(($options['sort'] ?? 'newest') === 'worst')->orderByRaw(
+                        'CASE WHEN escalated_at > ? THEN 0 WHEN regressed_at IS NOT NULL THEN 1 ELSE 2 END',
+                        [now()->subMinutes(DetectEscalationAction::ACTIVE_MINUTES)],
+                    )
                     ->latest('surfaced_at')->limit($limit)->get()
                     ->map(fn (Issue $i): array => [
                         'project' => $slugs[$i->project_id],

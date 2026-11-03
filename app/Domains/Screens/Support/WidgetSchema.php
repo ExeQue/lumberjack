@@ -303,7 +303,7 @@ final class WidgetSchema
             'list' => [
                 $section('rows', [
                     $select('limit', ['auto', '3', '5', '10', '20'], 'auto', true),
-                    $select('sort', ['newest', 'most_frequent'], 'newest', true),
+                    $select('sort', ['newest', 'worst', 'last_seen', 'most_frequent'], 'newest', true),
                     $toggle('only_problems', false, true),
                     $toggle('show_age', true),
                     $toggle('show_count', true),
