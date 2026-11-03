@@ -30,11 +30,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $last_duration_us
  * @property array<string, int|float>|null $last_metrics
  * @property CarbonImmutable|null $last_result_at
- * @property int|null $interval_s
+ * @property int|null $interval_s the usual spacing of results, smoothed
+ * @property int|null $interval_minutes how often the app says the check runs here
  */
 #[Fillable([
     'health_check_id', 'host', 'status', 'recovering_from', 'ok_streak', 'fail_streak', 'failed_streak', 'last_status', 'last_message',
-    'last_duration_us', 'last_metrics', 'last_result_at', 'interval_s',
+    'last_duration_us', 'last_metrics', 'last_result_at', 'interval_s', 'interval_minutes',
 ])]
 class HealthCheckHost extends Model
 {
@@ -45,6 +46,9 @@ class HealthCheckHost extends Model
 
     /** Stale after this long without a result when the usual spacing is not known yet. */
     public const int STALE_AFTER_UNKNOWN_S = 900;
+
+    /** Stale after this many of the check's own intervals without a result, when the app sends one. */
+    public const float STALE_AFTER_INTERVALS = 2.5;
 
     protected function casts(): array
     {
@@ -64,11 +68,16 @@ class HealthCheckHost extends Model
     }
 
     /**
-     * No result for more than three times its usual spacing.
+     * No result for 2.5 times the interval the app says the check runs on, or, without
+     * one, for three times its usual spacing.
      */
     public function isStale(?CarbonImmutable $at = null): bool
     {
-        $after = $this->interval_s !== null ? 3 * $this->interval_s : self::STALE_AFTER_UNKNOWN_S;
+        $after = match (true) {
+            $this->interval_minutes !== null => (int) (self::STALE_AFTER_INTERVALS * 60 * $this->interval_minutes),
+            $this->interval_s !== null => 3 * $this->interval_s,
+            default => self::STALE_AFTER_UNKNOWN_S,
+        };
 
         return $this->last_result_at === null || $this->last_result_at->lt(($at ?? now())->subSeconds($after));
     }

@@ -138,6 +138,7 @@ class RecordHealthResultAction
             'last_duration_us' => $result->durationUs,
             'last_metrics' => $result->metrics,
             'last_result_at' => $at,
+            'interval_minutes' => $result->intervalMinutes,
         ]);
     }
 

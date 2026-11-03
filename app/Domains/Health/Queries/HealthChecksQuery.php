@@ -173,7 +173,8 @@ class HealthChecksQuery
             'down_after' => $check->downAfter(),
             'recover_after' => $check->recover_after,
             'thresholds_overridden' => $check->thresholds_overridden,
-            'interval_minutes' => $check->interval_minutes,
+            // A reported check's comes from the app, the longest of its hosts; null when it runs on every scheduler run.
+            'interval_minutes' => $check->isReported() ? $check->hosts->max('interval_minutes') : $check->interval_minutes,
             'config' => $check->config,
             'last_result_at' => $check->last_result_at?->toIso8601String(),
             'last_status' => $latest?->last_status?->value,

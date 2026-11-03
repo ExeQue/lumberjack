@@ -17,6 +17,9 @@ final readonly class HealthResultData
 
     public const int MAX_MESSAGE = 1000;
 
+    /** A day: a host that sends nothing for longer is forgotten anyway. */
+    public const int MAX_INTERVAL_MINUTES = 1440;
+
     /**
      * @param  array<string, int|float>  $metrics
      */
@@ -27,6 +30,7 @@ final readonly class HealthResultData
         public ?int $durationUs = null,
         public string $host = '',
         public ?CarbonImmutable $at = null,
+        public ?int $intervalMinutes = null,
     ) {
     }
 
@@ -63,7 +67,16 @@ final readonly class HealthResultData
             isset($event['duration_ms']) && is_numeric($event['duration_ms']) ? Envelope::micros($event['duration_ms']) : null,
             $envelope->host ?? '',
             Envelope::time($event['timestamp'] ?? null),
+            self::intervalMinutes($event['interval_minutes'] ?? null),
         );
+    }
+
+    /**
+     * Whole minutes from 1 to a day; anything else is as if none was sent.
+     */
+    private static function intervalMinutes(mixed $minutes): ?int
+    {
+        return is_int($minutes) && $minutes >= 1 && $minutes <= self::MAX_INTERVAL_MINUTES ? $minutes : null;
     }
 
     public static function message(mixed $message): ?string
