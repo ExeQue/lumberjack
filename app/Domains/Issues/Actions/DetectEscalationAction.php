@@ -43,15 +43,17 @@ class DetectEscalationAction
             return false;
         }
 
-        if (! Cache::add('issues:escalation-check:'.$issue->id, true, self::CHECK_EVERY_SECONDS)) {
-            return false;
-        }
-
         $now = now();
         $windowStart = $now->copy()->subMinutes(self::WINDOW_MINUTES);
         $burst = Occurrence::query()->where('issue_id', $issue->id)->where('occurred_at', '>=', $windowStart)->count();
 
         if ($burst < self::MIN) {
+            return false;
+        }
+
+        // Throttled only once a burst is big enough: a throttle taken by the first of 30
+        // errors in one request would skip the other 29 and never see the burst.
+        if (! Cache::add('issues:escalation-check:'.$issue->id, true, self::CHECK_EVERY_SECONDS)) {
             return false;
         }
 

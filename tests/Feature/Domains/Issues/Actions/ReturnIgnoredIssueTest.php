@@ -9,6 +9,7 @@ use App\Domains\Issues\Actions\ReturnDueIgnoredIssuesAction;
 use App\Domains\Issues\Actions\ReturnIgnoredIssueAction;
 use App\Domains\Issues\Data\IgnoreCondition;
 use App\Domains\Issues\Data\IssueSignal;
+use App\Domains\Issues\Enums\IssueEventType;
 use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Events\IssueRegressed;
@@ -58,7 +59,7 @@ describe('an ignored issue coming back', function () {
         expect($issue->status)->toBe(IssueStatus::Open)
             ->and($issue->returned_at)->not->toBeNull()
             ->and($issue->ignore_until_count)->toBeNull()
-            ->and($issue->events()->latest('id')->first()?->data)->toMatchArray(['reason' => 'count']);
+            ->and($issue->events()->where('type', IssueEventType::Returned)->latest('id')->first()?->data)->toMatchArray(['reason' => 'count']);
         Event::assertDispatched(IssueRegressed::class);
     });
 
