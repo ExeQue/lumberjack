@@ -152,6 +152,9 @@ do there is written to the audit log.
   resets sent and new passwords required.
 - **Retention:** how long this Lumberjack keeps each kind of data, as the default
   and the maximum for every team. See [Retention](./projects#retention).
+- **Horizon:** the queue dashboard (`/horizon`), linked from the sidebar and the
+  command palette. For system administrators only, in every environment including
+  local; to anyone else it answers 404.
 
 ![Administration > Retention: the default and maximum for every kind of data](./screenshots/admin-retention.png)
 
@@ -183,9 +186,6 @@ password; a session that was already open is told the account is suspended.
 
 A user whose password an administrator requires to be changed can only reach the
 security settings until they choose a new one.
-
-- **Horizon:** the queue dashboard (`/horizon`), for system administrators only, in
-  every environment including local; to anyone else it answers 404.
 
 ## Security
 

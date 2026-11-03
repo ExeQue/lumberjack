@@ -17,7 +17,7 @@ once a second.
 | Queries  | Queries grouped by normalized SQL, highlighted (as in traces): calls, total time, share of database time, p95 and max. N+1 patterns are flagged.                                                                     |
 | Jobs     | Runs, failure rate, stuck and retried jobs, duration and wait time per job class. Click a job for its runs.                                                                                                          |
 | Schedule | Scheduled tasks per environment with their last and next run. A task that does not run when expected is marked missed and becomes an issue.                                                                          |
-| Commands | Artisan commands with runs, failures and duration. Click a command for its runs.                                                                                                                                     |
+| Commands | Console commands with runs, failures and duration. Click a command for its runs.                                                                                                                                     |
 | Logs     | Log lines by channel and level, with full-text search.                                                                                                                                                               |
 
 ## Overview
@@ -31,7 +31,7 @@ rate and how many are stuck; the p95 shows the p50 and p99 under it.
 
 Sort by highest p95 (the default), most requests, highest error rate, most total time
 or lowest [Apdex](#apdex). **Search routes or names** uses the [search syntax](./finding-things#search-syntax)
-and matches a route's URI or its Laravel name (`orders.show`), which shows muted next to
+and matches a route's URI or its framework name (`orders.show`), which shows muted next to
 the URI.
 
 When requests came in on more than one domain in the period (`shop.example.com` and
@@ -104,7 +104,7 @@ comes back if the app still runs it.
 
 Each command shows its runs, failures, average and longest duration, last run and
 status; the latest runs below show their arguments and options, exit code and host.
-Queue workers (`queue:work`, `horizon`) are left out: they run until they are stopped.
+Long-running queue workers are left out: they run until they are stopped.
 
 ## Logs
 
@@ -179,7 +179,8 @@ id. **Open trace** (on a request, a run or an occurrence) shows it on one time a
   notifications and Redis commands,
 - log lines and exceptions.
 
-Each step is a bar placed where it started, as long as it took. Above the timeline a
+The header names the request's route, its route name and domain when the SDK sent
+them. Each step is a bar placed where it started, as long as it took. Above the timeline a
 summary counts the queries, outgoing calls, cache operations and misses, mails,
 notifications, Redis commands, log lines and exceptions. A trace shows at most 500
 steps. Which spans are recorded is up to the SDK.

@@ -6,8 +6,9 @@ owners and admins can change its settings.
 ## The projects list
 
 **All projects** shows every project of the team with its open issues, errors, p95
-and job failures of the last 24 hours, its errors per hour, and a status: **3 open** or **Calm**. **Agent offline** and **Not seen: hosts** warn when the project's
-[agents](#agents) stopped checking in. **Search projects** filters the list.
+and job failures of the last 24 hours, its errors per hour, and a status: **3 open** or **Calm**. **Agent offline** and **Not seen** warn when the project's
+[agents](#agents) stopped checking in, naming each agent with its host ("queue on
+web-2", or "unnamed agent on web-2"). **Search projects** filters the list.
 
 ## Live updates
 
@@ -25,6 +26,8 @@ show at once and are not loaded twice.
 - **Project settings**: keys, labels, log channels, agents, retention, alerts and the
   repository, and what the project inherits from the team.
 - **Team**: members, invitations, MCP tokens, alert channels and rules, and retention.
+- **Screens**: the screens list, Displays, and every open kiosk and TV when its screen
+  is changed (see [Status screens](./screens)).
 - **Administration**: teams, users, the audit log and retention.
 
 A settings page you are typing into is not changed under your hands: it says **This
@@ -63,7 +66,7 @@ The settings are in sections, one open at a time; the address keeps which (for e
 - **Keys:** the server token (for the agent), the public key (for browser errors) and
   public stats, a secret URL serving the project's aggregates on the
   [metrics API](./metrics-api#authentication) without a token, off by default.
-  Both can be rotated; the server token is shown only once.
+  All three can be rotated; the server token is shown only once.
 - **Allowed origins:** browser errors are only accepted from these origins (up to 50,
   each an origin such as `https://shop.example.com`, without a path). Until one is
   added, browser errors are refused.
@@ -184,7 +187,7 @@ age of the oldest, and the date the daily prune would delete up to.
 | Performance    | Web vitals          | 30 days  | Page load metrics from browsers                                   |
 | Jobs           | Job runs            | 30 days  | Each queued job attempt; can be set per job class                 |
 | Jobs           | Scheduled task runs | 30 days  | Each run of a scheduled task                                      |
-| Jobs           | Command runs        | 30 days  | Each Artisan command run                                          |
+| Jobs           | Command runs        | 30 days  | Each console command run                                          |
 | Logs           | Logs                | 14 days  | Log lines; can be set per channel                                 |
 | Health         | Health results      | 14 days  | Each health check probe and its latency                           |
 | Health         | Health outages      | 365 days | Periods a check was down or degraded; uptime is counted from them |

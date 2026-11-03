@@ -1,7 +1,7 @@
 # Releases
 
 Every request, error and issue carries the release it ran on: the SDK
-resolves it (the Laravel SDK's docs describe its release resolvers), and the
+resolves it (its docs describe how), and the
 [browser script](./projects#browser-script) takes it from `data-release`. The
 **Releases** page of a project puts the releases seen in the period side by side, newest
 first, so you can tell which deploy broke something. The period and environment at the

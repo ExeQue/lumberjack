@@ -16,7 +16,7 @@ Type at least two characters and the palette also searches the project you are i
 | What            | Matched on                                        | Opens                            |
 | --------------- | ------------------------------------------------- | -------------------------------- |
 | Issues          | title, message or number (`DEMO-42`, `#42`, `42`) | the issue                        |
-| Routes          | route or URL, seen in the last 7 days             | the route on the Routes page     |
+| Routes          | route, route name or URL, seen in the last 7 days | the route on the Routes page     |
 | Jobs            | class name, run in the last 7 days                | the job on the Jobs page         |
 | Commands        | command name, run in the last 7 days              | the command on the Commands page |
 | Scheduled tasks | task name                                         | the Schedule page                |

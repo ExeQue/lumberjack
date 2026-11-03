@@ -262,4 +262,4 @@ created:
 - `X-Lumberjack-Signature`: `sha256=` and the HMAC-SHA256 of
   `{timestamp}.{body}` with the secret.
 
-The laravel-lumberjack package verifies these for you; see its webhooks docs.
+An SDK may verify these for you; see its docs.
