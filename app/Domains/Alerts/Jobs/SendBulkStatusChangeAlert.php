@@ -11,6 +11,7 @@ use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Shared\Mail\MailRecipients;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -63,6 +64,9 @@ class SendBulkStatusChangeAlert implements ShouldQueue
             ->with('channels')
             ->get();
 
+        // The whole bulk action is one event: an address on several of its rules gets one mail.
+        $recipients = new MailRecipients();
+
         foreach ($rules as $rule) {
             // A bulk change spans environments, so a rule limited to some hears only about
             // the issues in them, the same ones it would have heard about one by one.
@@ -79,7 +83,9 @@ class SendBulkStatusChangeAlert implements ShouldQueue
                 array_values($matching->all()),
                 array_values($matching->map(fn (Issue $issue): ?string => $environments[$issue->id])->filter()->unique()->sort()->all()),
                 route('issues.index', ['project' => $this->project, 'status' => $this->status->value]),
-            ));
+            ), $recipients);
         }
+
+        $recipients->send();
     }
 }
