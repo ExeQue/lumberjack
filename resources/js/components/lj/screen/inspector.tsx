@@ -364,7 +364,10 @@ export function WidgetInspector({
         const inherited = target.inherited;
         const raw = (
             scope
-                ? (widget.scope as Record<string, unknown>)[field.key]
+                ? // Own keys only: an empty scope that arrived as [] has a filter() method.
+                  Object.hasOwn(widget.scope ?? {}, field.key)
+                    ? (widget.scope as Record<string, unknown>)[field.key]
+                    : undefined
                 : target.values[field.key]
         ) as string | number | string[] | undefined;
         // A rotated value's toggle can also follow the widget's.
