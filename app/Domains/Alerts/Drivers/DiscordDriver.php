@@ -62,7 +62,7 @@ class DiscordDriver implements ChannelDriver
                     'title' => mb_substr($alert->headline(), 0, 256),
                     'url' => $alert->url,
                     'color' => $alert->statusChange === IssueStatus::Resolved ? self::COLOR_RESOLVED : self::COLOR_IGNORED,
-                    'description' => mb_substr('`'.$issue->title.'`'.($alert->note !== null ? "\n\n".$alert->noteBody() : ''), 0, 4000),
+                    'description' => mb_substr(self::code($issue->title).($alert->note !== null ? "\n\n".$alert->noteBody() : ''), 0, 4000),
                     'timestamp' => now()->toIso8601String(),
                 ]],
             ]);
@@ -78,7 +78,7 @@ class DiscordDriver implements ChannelDriver
                     'url' => $alert->url,
                     'color' => self::COLOR_NOTE,
                     'author' => ['name' => mb_substr((string) $alert->noteAuthor(), 0, 256)],
-                    'description' => mb_substr('`'.$issue->title."`\n\n".$alert->noteBody(), 0, 4000),
+                    'description' => mb_substr(self::code($issue->title)."\n\n".$alert->noteBody(), 0, 4000),
                     'timestamp' => ($alert->note->created_at ?? now())->toIso8601String(),
                 ]],
             ]);
@@ -98,12 +98,12 @@ class DiscordDriver implements ChannelDriver
                 },
                 'description' => mb_substr(implode("\n", array_filter([
                     $alert->burstLine() !== null ? '**'.$alert->burstLine().'**' : null,
-                    ($issue->number !== null ? $issue->reference().' · ' : '').'`'.$issue->title.'`',
-                    $issue->message,
-                    $alert->triageSummary !== null ? '> '.$alert->triageSummary : null,
+                    ($issue->number !== null ? $issue->reference().' · ' : '').self::code($issue->title),
+                    self::escape($issue->message),
+                    $alert->triageSummary !== null ? '> '.self::escape($alert->triageSummary) : null,
                 ])), 0, 3900)."\n\n[".__('alerts.open_issue').']('.$alert->url.')',
                 'fields' => array_map(
-                    fn (string $name, string $value): array => ['name' => $name, 'value' => $value, 'inline' => $name !== __('alerts.discord.location')],
+                    fn (string $name, string $value): array => ['name' => $name, 'value' => self::escape($value), 'inline' => $name !== __('alerts.discord.location')],
                     array_keys($alert->facts()),
                     $alert->facts(),
                 ),
@@ -129,15 +129,32 @@ class DiscordDriver implements ChannelDriver
                     'low' => self::COLOR_RESOLVED,
                     default => self::COLOR_NEW,
                 },
-                'description' => mb_substr(implode("\n", ['`'.$subject.'`', ...$body]), 0, 3900)."\n\n[".__('alerts.open_issue').']('.$alert->url().')',
+                'description' => mb_substr(implode("\n", [self::code($subject), ...array_map(self::escape(...), $body)]), 0, 3900)."\n\n[".__('alerts.open_issue').']('.$alert->url().')',
                 'fields' => array_map(
-                    fn (string $name, string $value): array => ['name' => $name, 'value' => $value, 'inline' => true],
+                    fn (string $name, string $value): array => ['name' => $name, 'value' => self::escape($value), 'inline' => true],
                     array_keys($alert->facts()),
                     $alert->facts(),
                 ),
                 'timestamp' => now()->toIso8601String(),
             ]],
         ]);
+    }
+
+    /**
+     * Text from the app (an issue's message, a file name) shown as text: Discord's
+     * markdown would otherwise turn [text](url) into a link nobody wrote here.
+     */
+    public static function escape(string $text): string
+    {
+        return (string) preg_replace('/([\\\\`*_~|\[\]<])/', '\\\\$1', $text);
+    }
+
+    /**
+     * Inline code that a backtick in the text cannot end early.
+     */
+    public static function code(string $text): string
+    {
+        return '`'.str_replace('`', 'ˋ', $text).'`';
     }
 
     #[Override]
@@ -167,6 +184,7 @@ class DiscordDriver implements ChannelDriver
      */
     private function post(NotificationChannel $channel, array $payload): void
     {
-        $this->deliver($channel, fn (PendingRequest $http) => $http->post((string) ($channel->config['webhook_url'] ?? ''), $payload));
+        // An @everyone in an issue's title pings nobody.
+        $this->deliver($channel, fn (PendingRequest $http) => $http->post((string) ($channel->config['webhook_url'] ?? ''), ['allowed_mentions' => ['parse' => []], ...$payload]));
     }
 }
