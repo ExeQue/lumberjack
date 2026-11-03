@@ -9,6 +9,7 @@ use App\Domains\Live\Events\ProjectChanged;
 use App\Domains\Live\Jobs\BroadcastTrailingProjectChange;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class BroadcastProjectChangeAction
@@ -90,8 +91,15 @@ class BroadcastProjectChangeAction
 
     /**
      * Live updates are a convenience: a Reverb outage must never fail ingest or a user action.
+     * Sent after the surrounding transaction commits, if any: the page must find the change,
+     * and the HTTP call to Reverb must not run while row locks are held.
      */
     private function send(int $projectId, ChangeKind $kind, ?string $issueUuid): void
+    {
+        DB::afterCommit(fn () => $this->sendNow($projectId, $kind, $issueUuid));
+    }
+
+    private function sendNow(int $projectId, ChangeKind $kind, ?string $issueUuid): void
     {
         try {
             if (! array_key_exists($projectId, $this->uuids)) {

@@ -69,6 +69,18 @@ class McpToken extends Model
         return $this->expires_at !== null && $this->expires_at->isPast();
     }
 
+    /**
+     * A token acts for the team, but only while the person who made it may still make
+     * one: it stops working when they leave the team, lose the admin role, are
+     * suspended or deleted. Revoking it, or asking an admin to make a new one, is the way back.
+     */
+    public function isUsable(): bool
+    {
+        $user = $this->user;
+
+        return $user !== null && ! $user->isSuspended() && $user->canAdministerTeam($this->team);
+    }
+
     public function canWrite(): bool
     {
         return $this->scope === McpScope::Write;

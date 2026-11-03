@@ -15,6 +15,11 @@ Create a token under **Members and tokens** on the team page:
 The token (`lj_mcp_...`) is shown once. Each token shows when it was last used and can
 be revoked at any time.
 
+A token works only while the person who created it is still an owner or admin of the
+team. It stops working, and is marked **Stopped** on the team page, when they leave
+the team, become a plain member, are suspended or their account is deleted. Revoke it
+and let a current admin create a new one.
+
 ## Connecting
 
 The server is at `https://your-lumberjack/mcp` (streamable HTTP) and takes the token as

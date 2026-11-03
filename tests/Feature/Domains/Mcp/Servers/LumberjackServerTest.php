@@ -37,6 +37,30 @@ describe('authentication', function () {
         $this->callTool('lj_mcp_secret', 'list_projects')->assertUnauthorized();
     });
 
+    it('stops working once its creator leaves the team', function () {
+        $this->token->team->members()->detach($this->token->user);
+
+        $this->callTool('lj_mcp_secret', 'list_projects')->assertUnauthorized();
+    });
+
+    it('stops working once its creator is no longer an admin of the team', function () {
+        $this->token->team->members()->updateExistingPivot($this->token->user->id, ['role' => 'member']);
+
+        $this->callTool('lj_mcp_secret', 'list_projects')->assertUnauthorized();
+    });
+
+    it('stops working once its creator is suspended', function () {
+        $this->token->user->forceFill(['suspended_at' => now()])->save();
+
+        $this->callTool('lj_mcp_secret', 'list_projects')->assertUnauthorized();
+    });
+
+    it('stops working once its creator is deleted', function () {
+        $this->token->user->delete();
+
+        $this->callTool('lj_mcp_secret', 'list_projects')->assertUnauthorized();
+    });
+
     it('lists only the projects the token covers', function () {
         Project::factory()->for($this->team)->create(['slug' => 'other']);
 

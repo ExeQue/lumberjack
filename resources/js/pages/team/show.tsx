@@ -77,6 +77,7 @@ type Token = {
     scope: string;
     projects: string[];
     created_by: string | null;
+    usable: boolean;
     last_used_at: string | null;
     expires_at: string | null;
 };
@@ -557,6 +558,19 @@ export default function TeamShow({
                                                     )}
                                                 >
                                                     {token.created_by ?? '-'}
+                                                    {!token.usable && (
+                                                        <Badge
+                                                            tone="err"
+                                                            className="ml-2"
+                                                            title={t(
+                                                                'team.tokens.inactive_hint',
+                                                            )}
+                                                        >
+                                                            {t(
+                                                                'team.tokens.inactive',
+                                                            )}
+                                                        </Badge>
+                                                    )}
                                                 </td>
                                                 <td
                                                     className={cn(

@@ -47,12 +47,13 @@ class TeamController
                 'expires_at' => $i->expires_at->toIso8601String(),
                 'expired' => $i->isExpired(),
             ])->all(),
-            'tokens' => $team->mcpTokens()->with(['projects:id,name,slug', 'user:id,name'])->latest()->get()->map(fn (McpToken $t): array => [
+            'tokens' => $team->mcpTokens()->with(['projects:id,name,slug', 'user:id,name,is_admin,suspended_at', 'user.teams:id'])->latest()->get()->map(fn (McpToken $t): array => [
                 'id' => $t->id,
                 'name' => $t->name,
                 'scope' => $t->scope->value,
                 'projects' => $t->projects->pluck('name')->all(),
                 'created_by' => $t->user?->name,
+                'usable' => $t->isUsable(),
                 'last_used_at' => $t->last_used_at?->toIso8601String(),
                 'expires_at' => $t->expires_at?->toIso8601String(),
             ])->all(),

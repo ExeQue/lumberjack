@@ -64,12 +64,12 @@ class RecordOccurrenceAction
             $at = $signal->occurredAt;
 
             if ($issue === null) {
-                // The project row's lock hands out numbers one at a time.
-                Project::query()->whereKey($project->id)->increment('last_issue_number');
+                // The project row's lock hands out numbers one at a time; one statement takes and reads it.
+                $number = DB::selectOne('UPDATE projects SET last_issue_number = last_issue_number + 1 WHERE id = ? RETURNING last_issue_number', [$project->id]);
 
                 $issue = Issue::create([
                     'project_id' => $project->id,
-                    'number' => (int) Project::query()->whereKey($project->id)->value('last_issue_number'),
+                    'number' => (int) $number->last_issue_number,
                     'fingerprint' => $fingerprint,
                     'source' => $signal->source,
                     'status' => IssueStatus::Open,
@@ -86,7 +86,10 @@ class RecordOccurrenceAction
                     'surfaced_at' => now(),
                 ]);
 
+                // The listeners (the live toast names the project and team) need not load it again.
+                $issue->setRelation('project', $project);
                 $this->history->execute($issue, IssueEventType::Created, at: $at);
+                // Like every issue event, it waits for the commit: an alert job must find the issue.
                 IssueCreated::dispatch($issue, $signal->environment);
             } else {
                 $regressed = $issue->status === IssueStatus::Resolved;

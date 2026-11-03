@@ -47,6 +47,8 @@ return [
         'projects' => 'Projects',
         'scope' => 'Scope',
         'created_by' => 'Created by',
+        'inactive' => 'Stopped',
+        'inactive_hint' => 'Its creator no longer administers this team, so the token no longer works. Revoke it and make a new one.',
         'last_used' => 'Last used',
         'never_used' => 'Never',
         'expires' => 'Expires',
