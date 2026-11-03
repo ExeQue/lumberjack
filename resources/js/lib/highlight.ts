@@ -46,7 +46,14 @@ function load(language: CodeLanguage): Promise<HighlighterCore> {
 export function languageOf(
     file: string | null | undefined,
 ): CodeLanguage | null {
-    const extension = file?.split('.').pop()?.toLowerCase();
+    // A browser frame's file is a URL; its query or fragment is no part of the name.
+    const extension = file
+        ?.split(/[?#]/)[0]
+        .split('/')
+        .pop()
+        ?.split('.')
+        .pop()
+        ?.toLowerCase();
 
     return (
         (
