@@ -21,6 +21,11 @@ return [
         'health_note' => ':down down, :degraded degraded, :stale stale',
         'health_all_ok' => 'Every check passes',
     ],
+    'health' => [
+        'title' => 'Health checks',
+        'open' => 'Open Health',
+        'check_label' => ':name: :state',
+    ],
     'charts' => [
         'requests' => 'Requests over time',
         'requests_unit' => 'requests',

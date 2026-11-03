@@ -20,6 +20,9 @@ use Illuminate\Support\Collection;
  */
 class HealthChecksQuery
 {
+    /** States from most to least in need of attention. */
+    private const array SEVERITY = ['down', 'degraded', 'stale', 'pending', 'ok'];
+
     /**
      * @return EloquentCollection<int, HealthCheck>
      */
@@ -57,7 +60,8 @@ class HealthChecksQuery
      */
     public function summary(Project $project, ?string $environment = null): array
     {
-        $states = $this->checks($project, $environment, archived: false)->map(fn (HealthCheck $check): string => self::state($check))->countBy();
+        $checks = $this->checks($project, $environment, archived: false);
+        $states = $checks->map(fn (HealthCheck $check): string => self::state($check))->countBy();
 
         return [
             'total' => $states->sum(),
@@ -66,6 +70,17 @@ class HealthChecksQuery
             'down' => (int) $states->get('down', 0),
             'stale' => (int) $states->get('stale', 0),
             'pending' => (int) $states->get('pending', 0),
+            // Worst first, so what needs attention leads the list on the overview.
+            'checks' => $checks
+                ->map(fn (HealthCheck $check): array => [
+                    'uuid' => $check->uuid,
+                    'name' => $check->displayName(),
+                    'state' => self::state($check),
+                    'message' => $check->hosts->sortByDesc('last_result_at')->first()?->last_message,
+                ])
+                ->sortBy([fn (array $a, array $b): int => array_search($a['state'], self::SEVERITY, true) <=> array_search($b['state'], self::SEVERITY, true), ['name', 'asc']])
+                ->values()
+                ->all(),
         ];
     }
 
