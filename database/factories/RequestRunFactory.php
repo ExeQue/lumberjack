@@ -20,6 +20,7 @@ class RequestRunFactory extends Factory
             'environment' => 'production',
             'method' => 'GET',
             'route' => '/dashboard',
+            'domain' => 'example.test',
             'url' => 'https://example.test/dashboard',
             'status_code' => 200,
             'duration_us' => fake()->numberBetween(10_000, 500_000),

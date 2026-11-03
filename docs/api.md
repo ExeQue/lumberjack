@@ -40,6 +40,16 @@ most 5,000 events, each of type `request`, `request_counts`, `query`, `exception
 `log`, `schedule`, `command`, `span` or `health`. Lumberjack answers `202` with
 `{"accepted": <count>}` and processes the batch on its `ingest` queue.
 
+### Requests
+
+A `request` event carries its `method`, `route` (the route's URI, or the path when no
+route matched), `url`, `status`, `duration_ms` and `memory_peak`, and may carry:
+
+- `domain`: the host the request was made to, such as `shop.example.com`, with the port
+  only when it is not the default one. Without it, Lumberjack takes the host (and port)
+  of `url`. Stored lowercased.
+- `route_name`: the framework's name of the route, such as `orders.show`.
+
 ### Sampling
 
 An SDK that samples says so on each run, so Lumberjack can show the true traffic. A
@@ -62,6 +72,7 @@ its last one:
         {
             "method": "GET",
             "route": "/orders/{order}",
+            "domain": "shop.example.com",
             "status": 200,
             "count": 2,
             "duration_ms_sum": 31.4
@@ -73,10 +84,11 @@ its last one:
 }
 ```
 
-`route` is the route's URI, or the path when no route matched. `counts` is a list of at
+`route` is the route's URI, or the path when no route matched; `domain` is optional, as
+on a `request` event, and counts without one are kept apart under no domain. `counts` is a list of at
 most 501 rows; a batch with a longer one, or none, is turned down with a 422. A row
 without a positive `count` is skipped. Lumberjack adds the counts up per project,
-environment, minute (of `timestamp`), method, route and status, so one event per request
+environment, minute (of `timestamp`), method, domain, route and status, so one event per request
 (PHP-FPM) and one per few seconds (a long-running worker) end up the same. The counts
 are kept as long as the [request runs](./projects#retention).
 

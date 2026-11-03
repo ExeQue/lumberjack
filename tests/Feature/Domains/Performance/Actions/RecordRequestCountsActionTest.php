@@ -50,6 +50,15 @@ describe('request counts', function () {
             ->and((int) RequestCount::sum('count'))->toBe(6);
     });
 
+    it('keeps domains apart, and stores counts without one under an empty domain', function () {
+        $row = ['method' => 'GET', 'route' => '/orders', 'status' => 200, 'count' => 2, 'duration_ms_sum' => 4];
+
+        $this->postJson('/api/ingest', $this->batch([($this->counts)([[...$row, 'domain' => 'shop.example.com'], [...$row, 'domain' => 'API.example.com'], $row])]), $this->auth);
+        $this->postJson('/api/ingest', $this->batch([($this->counts)([[...$row, 'domain' => 'shop.example.com']])]), $this->auth);
+
+        expect(RequestCount::query()->orderBy('domain')->pluck('count', 'domain')->all())->toBe(['' => 2, 'api.example.com' => 2, 'shop.example.com' => 4]);
+    });
+
     it('skips a row without a count', function () {
         $this->postJson('/api/ingest', $this->batch([($this->counts)([['method' => 'GET', 'route' => '/'], ['method' => 'GET', 'route' => '/', 'status' => 200, 'count' => 0]])]), $this->auth)->assertStatus(202);
 

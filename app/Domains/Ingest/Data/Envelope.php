@@ -37,6 +37,23 @@ final readonly class Envelope
     }
 
     /**
+     * The domain a request was made to, lowercased: as the event says, or else the host
+     * (and port, when the URL has one) of its URL.
+     */
+    public static function domain(mixed $domain, mixed $url = null): ?string
+    {
+        if (self::short($domain, 255) === null && is_string($url)) {
+            $host = parse_url($url, PHP_URL_HOST);
+            $port = parse_url($url, PHP_URL_PORT);
+            $domain = is_string($host) ? $host.(is_int($port) ? ':'.$port : '') : null;
+        }
+
+        $domain = self::short($domain, 255);
+
+        return $domain !== null ? mb_strtolower($domain) : null;
+    }
+
+    /**
      * Unix seconds (float, milliseconds as fraction) or an ISO 8601 string.
      */
     public static function time(mixed $value): CarbonImmutable

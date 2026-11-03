@@ -191,6 +191,8 @@ class ProcessIngestBatchAction
             'host' => $envelope->host,
             'method' => mb_substr(strtoupper((string) ($event['method'] ?? 'GET')), 0, 10),
             'route' => Envelope::short($event['route'] ?? null, 255),
+            'route_name' => Envelope::short($event['route_name'] ?? null, 255),
+            'domain' => Envelope::domain($event['domain'] ?? null, $event['url'] ?? null),
             // Signed URLs and reset links carry their secret in the query string.
             'url' => mb_substr($this->scrubber->scrubString((string) ($event['url'] ?? '')), 0, 2000),
             'status_code' => max(0, min(999, (int) ($event['status'] ?? 0))),
