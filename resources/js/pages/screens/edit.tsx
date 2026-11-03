@@ -10,6 +10,7 @@ import {
 import type { Catalog } from '@/components/lj/screen/inspector';
 import {
     canPlace,
+    swapTarget,
     firstFree,
     fits,
     newWidgetId,
@@ -276,6 +277,8 @@ export default function EditScreen(props: Props) {
         w: number;
         h: number;
         ok: boolean;
+        /** Dropping here swaps with this widget. */
+        swap?: string;
     } | null>(null);
     const resizing = useRef<{
         id: string;
@@ -644,8 +647,30 @@ export default function EditScreen(props: Props) {
         }
 
         const cell = cellAt(e.clientX, e.clientY);
-        const box = { x: cell.x - d.dx, y: cell.y - d.dy, w: d.w, h: d.h };
-        const ok = placeable(d.tile, box);
+        let box = { x: cell.x - d.dx, y: cell.y - d.dy, w: d.w, h: d.h };
+        let ok = placeable(d.tile, box);
+        let swap: string | undefined;
+        const moving = d.tile
+            ? latest.current.widgets.find((w) => w.id === d.tile)
+            : undefined;
+
+        // Onto another widget: swap places when both fit, the footprint shows where it goes.
+        if (!ok && moving) {
+            const other = swapTarget(
+                latest.current.widgets,
+                screen.cols,
+                screen.rows,
+                moving,
+                cell,
+            );
+            const target = latest.current.widgets.find((w) => w.id === other);
+
+            if (target) {
+                swap = target.id;
+                ok = true;
+                box = { x: target.x, y: target.y, w: moving.w, h: moving.h };
+            }
+        }
 
         if (ok) {
             e.preventDefault();
@@ -656,9 +681,10 @@ export default function EditScreen(props: Props) {
             hover?.x !== box.x ||
             hover?.y !== box.y ||
             hover?.w !== box.w ||
-            hover?.ok !== ok
+            hover?.ok !== ok ||
+            hover?.swap !== swap
         ) {
-            setHover({ ...box, ok });
+            setHover({ ...box, ok, swap });
         }
     };
 
@@ -673,6 +699,25 @@ export default function EditScreen(props: Props) {
 
         if (d.kind) {
             add(d.kind, { x: hover.x, y: hover.y });
+        } else if (d.tile && hover.swap) {
+            const moving = latest.current.widgets.find((w) => w.id === d.tile);
+            const other = latest.current.widgets.find(
+                (w) => w.id === hover.swap,
+            );
+
+            if (moving && other) {
+                setWidgets((widgets) =>
+                    widgets.map((w) =>
+                        w.id === moving.id
+                            ? { ...w, x: other.x, y: other.y }
+                            : w.id === other.id
+                              ? { ...w, x: moving.x, y: moving.y }
+                              : w,
+                    ),
+                );
+            }
+
+            setSelected(d.tile);
         } else if (d.tile) {
             patch(d.tile, { x: hover.x, y: hover.y });
             setSelected(d.tile);
