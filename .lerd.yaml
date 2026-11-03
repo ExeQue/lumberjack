@@ -1,10 +1,10 @@
 domains:
-    - lumberjack
+  - lumberjack
 secured: true
 services:
-    - mysql
+  - mysql
 workers:
-    - horizon
-    - reverb
-    - schedule
-    - vite
+  - horizon
+  - reverb
+  - schedule
+  - vite
