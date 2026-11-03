@@ -22,6 +22,7 @@ class ChangeIssueStatusAction
         private readonly BroadcastProjectChangeAction $broadcast,
         private readonly AddIssueNoteAction $addNote,
         private readonly RecordIssueEventAction $history,
+        private readonly AssignIssueAction $assign,
     ) {
     }
 
@@ -58,11 +59,11 @@ class ChangeIssueStatusAction
             ]);
         }
 
-        if ($status === IssueStatus::InProgress && $by !== null && $issue->assigned_user_id === null) {
-            $issue->assigned_user_id = $by->id;
-        }
-
         $issue->save();
+
+        if ($status === IssueStatus::InProgress && $by !== null && $issue->assigned_user_id === null && $by->belongsToTeam($issue->project->team)) {
+            $this->assign->execute($issue, $by, $by, $token);
+        }
         $this->history->execute($issue, IssueEventType::StatusChanged, $by, $token, array_filter([
             'from' => $from->value,
             'to' => $status->value,
