@@ -23,6 +23,21 @@ characters) is skipped, and the rest of the batch is kept. Each result carries a
 status (`ok`, `warning` or `failed`), a message, up to 20 numeric metrics and how long
 the check took; `latency_ms` is shown as the check's latency.
 
+### Database metrics
+
+A check that watches a database may send these metrics with each result:
+
+| Metric            | Meaning                                |
+| ----------------- | -------------------------------------- |
+| `size_bytes`      | The database's size on disk, in bytes  |
+| `connections`     | Connections open right now             |
+| `max_connections` | Connections the database server allows |
+
+The Health page shows them next to the latency (**13.8 MB · 4 of 100 connections**), and
+they feed the database widgets of [status screens](./screens#widgets) and the `db_size`,
+`db_connections` and `db_connections_used` series of the [metrics API](./metrics-api#series).
+Any reported check that sends them counts, whatever its slug.
+
 When several servers report the same slug, each server keeps its own state, and the
 check shows the worst of them. One server with a full disk is not hidden by two
 healthy ones; the row lists the hosts with their status, and the details show each

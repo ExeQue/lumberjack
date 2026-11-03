@@ -11,4 +11,6 @@ enum MetricGroup: string
     case Host = 'host';
     case Queue = 'queue';
     case Release = 'release';
+    /** A health check, by slug. */
+    case Check = 'check';
 }

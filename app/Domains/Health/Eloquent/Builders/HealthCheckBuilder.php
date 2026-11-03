@@ -77,4 +77,18 @@ class HealthCheckBuilder extends Builder
     {
         return $this->orWhere(fn (self $q) => $q->whereDue($datetime));
     }
+
+    /**
+     * Checks whose latest result on some host carried database figures (size_bytes or
+     * connections), such as an SDK's database check.
+     */
+    public function whereReportsDatabase(): self
+    {
+        return $this->whereHas('hosts', fn (Builder $q) => $q->whereRaw("((last_metrics->>'size_bytes') IS NOT NULL OR (last_metrics->>'connections') IS NOT NULL)"));
+    }
+
+    public function orWhereReportsDatabase(): self
+    {
+        return $this->orWhere(fn (self $q) => $q->whereReportsDatabase());
+    }
 }

@@ -10,12 +10,12 @@ use App\Domains\Screens\Enums\WidgetType;
 /**
  * One thing a widget can show: its unit, default amber and red limits (a value at or
  * past them is amber or red; at or below when low is bad), the metric of the metrics
- * API behind it, and which of the scope's filters (route, queue, job, host) it takes.
+ * API behind it, and which of the scope's filters (route, queue, job, host, check) it takes.
  */
 final readonly class WidgetSource
 {
     /**
-     * @param  'route'|'queue'|'job'|'host'|null  $filterOn
+     * @param  'route'|'queue'|'job'|'host'|'check'|null  $filterOn  check is a health check's slug
      */
     public function __construct(
         public WidgetType $type,

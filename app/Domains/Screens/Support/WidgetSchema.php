@@ -390,7 +390,7 @@ final class WidgetSchema
             'chart' => [
                 $section('chart', [
                     $select('style', ['bars', 'area', 'line'], 'bars'),
-                    $select('split_by', ['none', 'route', 'queue', 'host', 'environment', 'release', 'project'], 'none', true),
+                    $select('split_by', ['none', 'route', 'queue', 'host', 'check', 'environment', 'release', 'project'], 'none', true),
                     $select('top', ['5', '10', '20'], '5', true),
                     $number('red'),
                     $toggle('overlay_previous', false, true),

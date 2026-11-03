@@ -12,7 +12,7 @@ use App\Domains\Screens\Exceptions\UnknownWidgetSourceException;
 /**
  * Every source a status screen widget can show, per visualization: the one list the
  * designer offers, the server validates against and ResolveWidgetDataAction reads.
- * Durations are in milliseconds, shares from 0 to 1.
+ * Durations are in milliseconds, shares from 0 to 1, sizes in bytes.
  */
 final class WidgetSources
 {
@@ -71,6 +71,8 @@ final class WidgetSources
             new WidgetSource($stat, 'host_disk', 'ratio', 0.8, 0.9, metric: Metric::DiskUsed, filterOn: 'host', snapshot: true),
             new WidgetSource($stat, 'current_release', 'text', snapshot: true),
             new WidgetSource($stat, 'lcp_p75', 'ms', 2500, 4000, metric: Metric::LcpP75, filterOn: 'route'),
+            new WidgetSource($stat, 'db_size', 'bytes', metric: Metric::DbSize, filterOn: 'check', snapshot: true),
+            new WidgetSource($stat, 'db_connections', 'count', metric: Metric::DbConnections, filterOn: 'check', snapshot: true),
 
             // Gauge: one value on a scale.
             new WidgetSource($gauge, 'error_rate', 'ratio', 0.01, 0.05, metric: Metric::ErrorRate, filterOn: 'route'),
@@ -80,6 +82,7 @@ final class WidgetSources
             new WidgetSource($gauge, 'host_memory', 'ratio', 0.8, 0.9, metric: Metric::MemoryUsed, filterOn: 'host', snapshot: true),
             new WidgetSource($gauge, 'host_disk', 'ratio', 0.8, 0.9, metric: Metric::DiskUsed, filterOn: 'host', snapshot: true),
             new WidgetSource($gauge, 'queue_size', 'count', 100, 1000, metric: Metric::QueueSize, filterOn: 'queue', snapshot: true),
+            new WidgetSource($gauge, 'db_connections', 'ratio', 0.8, 0.9, metric: Metric::DbConnectionsUsed, filterOn: 'check', snapshot: true),
             new WidgetSource($gauge, 'health_uptime', 'ratio', 0.999, 0.99, lowIsBad: true),
 
             // Chart: one series (or a split) over the period.
@@ -96,6 +99,8 @@ final class WidgetSources
             new WidgetSource($chart, 'host_memory', 'ratio', red: 0.9, metric: Metric::MemoryUsed, filterOn: 'host'),
             new WidgetSource($chart, 'host_disk', 'ratio', red: 0.9, metric: Metric::DiskUsed, filterOn: 'host'),
             new WidgetSource($chart, 'lcp_p75', 'ms', red: 4000, metric: Metric::LcpP75, filterOn: 'route'),
+            new WidgetSource($chart, 'db_size', 'bytes', metric: Metric::DbSize, filterOn: 'check'),
+            new WidgetSource($chart, 'db_connections', 'count', metric: Metric::DbConnections, filterOn: 'check'),
 
             // List: rows, worst or newest first.
             new WidgetSource($list, 'latest_issues', 'rows', snapshot: true),

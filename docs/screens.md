@@ -82,22 +82,26 @@ new ones included), and the time zone for the clock and the theme schedule.
 
 A widget is a way of showing something; what it shows is picked under **Shows**.
 
-| Widget         | Shows                                                                                                                                                                                                                                   |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stat           | One number with its trend against an earlier period and a sparkline: requests, error rate, p95, Apdex, open issues, users affected, failed jobs, queue size, agents online, highest host CPU, memory or disk, current release, LCP p75. |
-| Gauge          | One value on a half circle against its limits: error rate, p95, Apdex, host CPU, memory or disk, queue size, health uptime.                                                                                                             |
-| Chart          | A series over the period: requests and errors, requests, error rate, p95, Apdex, users affected, queue size or wait, failed jobs, host CPU, memory or disk, LCP. It can split by route, queue, host, environment, release or project.   |
-| List           | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents.                                                                                                                        |
-| Health         | The health checks of the projects: a count at 1 x 1, a list when narrow, small cards when two or more fit side by side. With exactly one check picked, that check alone with its uptime, timeline and last message.                     |
-| Clock and text | The time (12 or 24 hour, any time zone, with seconds or the date), a note for the room, or both.                                                                                                                                        |
+| Widget         | Shows                                                                                                                                                                                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stat           | One number with its trend against an earlier period and a sparkline: requests, error rate, p95, Apdex, open issues, users affected, failed jobs, queue size, agents online, highest host CPU, memory or disk, current release, LCP p75, database size and connections.              |
+| Gauge          | One value on a half circle against its limits: error rate, p95, Apdex, host CPU, memory or disk, queue size, health uptime, the share of database connections in use.                                                                                                               |
+| Chart          | A series over the period: requests and errors, requests, error rate, p95, Apdex, users affected, queue size or wait, failed jobs, host CPU, memory or disk, LCP, database size or connections. It can split by route, queue, host, database check, environment, release or project. |
+| List           | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents.                                                                                                                                                                    |
+| Health         | The health checks of the projects: a count at 1 x 1, a list when narrow, small cards when two or more fit side by side. With exactly one check picked, that check alone with its uptime, timeline and last message.                                                                 |
+| Clock and text | The time (12 or 24 hour, any time zone, with seconds or the date), a note for the room, or both.                                                                                                                                                                                    |
 
 A list of queues judges each queue like its [backlog alert](./alerts#queue-backlog): red
 past the project's thresholds (its own for that queue, or the rule's: 1,000 jobs or 10
 minutes by default), amber past half of them, and says why (**Backlog** or **Waiting**).
 A muted queue stays calm. Limits set on the widget replace that and count on its size.
-A list of hosts shows each host once with CPU, memory and disk meters. The filter of a queue or host value is named after it (**Queue**, **Host**) and suggests the team's queues and hosts while you type; `*` still matches anything. Rows that do not fit scroll slowly down and back up, resting at each end; hovering stops it, and **Scroll slowly through rows that do not fit** under Rows turns it off.
+The database values read what [database health checks](./health#database-metrics) report:
+the size is the latest each database reported, added up over the databases in scope, connections
+the same; the gauge shows the database with the largest share of its connections in use
+(amber at 80%, red at 90%). A database several servers report counts once.
+A list of hosts shows each host once with CPU, memory and disk meters. The filter of a queue, host or database value is named after it (**Queue**, **Host**, **Database check**) and suggests the team's queues, hosts and database checks (by slug, such as `database:pgsql`) while you type; `*` still matches anything. Rows that do not fit scroll slowly down and back up, resting at each end; hovering stops it, and **Scroll slowly through rows that do not fit** under Rows turns it off.
 
-Every widget with data names its period in the top right corner (1 h, 24 h, 7 d, 30 d), or how old the latest report is (**55 sec ago**) for values that are the latest report (host CPU, memory and disk, queue sizes, agents, open issues, the current release, health), which have no period to pick;
+Every widget with data names its period in the top right corner (1h, 24h, 7d, 30d), or how old the latest report is (**55s**, **6m**) for values that are the latest report (host CPU, memory and disk, queue sizes, agents, open issues, the current release, health, databases), which have no period to pick;
 **Over** in the inspector picks it per widget, or follows the screen. **Show the period
 in the corner** under Display turns the label off.
 
@@ -134,7 +138,7 @@ Each widget's settings are grouped in sections that open and close:
     ![A rotating widget's value tabs](./screenshots/screen-designer-rotation.png)
 
 - **Scope**: the projects, environment, period and release the widget shows, each the
-  screen's default unless set, and a filter on the route, queue, job or host (`*`
+  screen's default unless set, and a filter on the route, queue, job, host or database check (`*`
   matches anything, so `POST /checkout*` or `payments*`).
 - **Display**: whether the title shows and how big, whether the tile is colored by its status,
   the text size (fitted to the tile, or small to huge), alignment (left or centered, top or vertically centered), how often it updates

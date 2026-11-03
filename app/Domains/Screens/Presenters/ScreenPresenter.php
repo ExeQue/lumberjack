@@ -146,11 +146,13 @@ class ScreenPresenter
             'environments' => $projects->flatMap(fn (Project $p): array => $this->environments->get($p))->unique()->sort()->values()->all(),
             'checks' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->orderBy('name')->orderBy('slug')->get(['uuid', 'project_id', 'name', 'slug', 'type'])
                 ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name])->values()->all(),
-            // Names a filter can pick from, so a queue or host is chosen, not typed.
+            // Names a filter can pick from, so a queue, host or database check is chosen, not typed.
             'filters' => [
                 'queue' => QueueSample::query()->whereIn('project_id', $projects->modelKeys())->where('sampled_at', '>=', now()->subDays(7))
                     ->distinct()->orderBy('queue')->pluck('queue')->all(),
                 'host' => ProjectAgent::query()->whereIn('project_id', $projects->modelKeys())->distinct()->orderBy('host')->pluck('host')->all(),
+                'check' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->whereReportsDatabase()
+                    ->distinct()->orderBy('slug')->pluck('slug')->all(),
             ],
             'limits' => ['min_cols' => Screen::MIN_COLS, 'max_cols' => Screen::MAX_COLS, 'min_rows' => Screen::MIN_ROWS, 'max_rows' => Screen::MAX_ROWS, 'max_widgets' => WidgetSchema::MAX_WIDGETS],
         ];

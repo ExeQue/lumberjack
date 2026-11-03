@@ -52,7 +52,7 @@ return [
         'schedule' => 'Light by day, dark at night',
     ],
 
-    'period_short' => ['ago' => ':age ago', 'now' => 'now', '1h' => '1 h', '24h' => '24 h', '7d' => '7 d', '30d' => '30 d'],
+    'period_short' => ['now' => 'now', '1h' => '1h', '24h' => '24h', '7d' => '7d', '30d' => '30d'],
     'periods' => [
         '1h' => 'Last hour',
         '24h' => 'Last 24 hours',
@@ -152,6 +152,7 @@ return [
         'limits_below' => 'Turns amber and red at or below the limits; empty uses the defaults shown.',
         'ratio_hint' => 'Shares go from 0 to 1: 0.05 is 5%.',
         'ms_hint' => 'In milliseconds.',
+        'bytes_hint' => 'In bytes: 1073741824 is 1 GB.',
         'size' => 'Size',
         'auto' => 'Automatic',
         'screen_default' => 'Screen default',
@@ -199,7 +200,7 @@ return [
         'prefix' => ['label' => 'Prefix', 'placeholder' => 'e.g. ~'],
         'suffix' => ['label' => 'Suffix', 'placeholder' => 'e.g. /min'],
         'style' => ['label' => 'Style', 'options' => ['bars' => 'Bars', 'area' => 'Area', 'line' => 'Line']],
-        'split_by' => ['label' => 'Split by', 'options' => ['none' => 'Nothing', 'route' => 'Route', 'queue' => 'Queue', 'host' => 'Host', 'environment' => 'Environment', 'release' => 'Release', 'project' => 'Project']],
+        'split_by' => ['label' => 'Split by', 'options' => ['none' => 'Nothing', 'route' => 'Route', 'queue' => 'Queue', 'host' => 'Host', 'check' => 'Database check', 'environment' => 'Environment', 'release' => 'Release', 'project' => 'Project']],
         'top' => ['label' => 'Series', 'options' => ['5' => 'Top 5', '10' => 'Top 10', '20' => 'Top 20']],
         'overlay_previous' => ['label' => 'Overlay the previous period'],
         'limit_line' => ['label' => 'Draw the red limit'],
@@ -240,9 +241,9 @@ return [
         'release' => ['label' => 'Release', 'options' => ['all' => 'All', 'current' => 'Current only', 'previous' => 'Previous']],
         'filter' => [
             'label' => 'Filter',
-            'placeholder' => 'route, queue, job or host; * matches anything',
-            'on' => ['queue' => 'Queue', 'host' => 'Host', 'job' => 'Job', 'route' => 'Route'],
-            'all' => ['queue' => 'All queues; pick one, or use * as a wildcard', 'host' => 'All hosts; pick one, or use * as a wildcard', 'job' => 'All jobs; * matches anything', 'route' => 'All routes, such as /checkout*'],
+            'placeholder' => 'route, queue, job, host or check; * matches anything',
+            'on' => ['queue' => 'Queue', 'host' => 'Host', 'job' => 'Job', 'route' => 'Route', 'check' => 'Database check'],
+            'all' => ['queue' => 'All queues; pick one, or use * as a wildcard', 'host' => 'All hosts; pick one, or use * as a wildcard', 'job' => 'All jobs; * matches anything', 'route' => 'All routes, such as /checkout*', 'check' => 'All database checks; pick one, or use * as a wildcard'],
         ],
         'show_title' => ['label' => 'Show title'],
         'status_colors' => ['label' => 'Color the tile by status'],

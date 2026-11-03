@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Models\QueueSample;
 use App\Domains\Mcp\Models\McpToken;
@@ -14,12 +15,13 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\Health\CreatesDatabaseHealthResults;
 use Tests\Support\Metrics\CreatesMetricsCredentials;
 use Tests\Support\Performance\CreatesRequestCounts;
 
 covers(MetricsApiController::class, AuthenticateMetricsCredential::class);
 
-uses(CreatesMetricsCredentials::class, CreatesRequestCounts::class);
+uses(CreatesMetricsCredentials::class, CreatesRequestCounts::class, CreatesDatabaseHealthResults::class);
 
 beforeEach(function () {
     $this->travelTo(now()->setTime(12, 0, 10));
@@ -133,6 +135,30 @@ describe('public stats', function () {
 });
 
 describe('the series', function () {
+    it('serves database size and connections per check from reported health results', function () {
+        $project = Project::factory()->create();
+        $pgsql = HealthCheck::factory()->for($project)->create(['slug' => 'database:pgsql']);
+        $mysql = HealthCheck::factory()->for($project)->create(['slug' => 'database:mysql']);
+        $this->createDatabaseResult($pgsql, ['size_bytes' => 2048, 'connections' => 4, 'max_connections' => 100], now()->subMinutes(20)->toImmutable());
+        $this->createDatabaseResult($mysql, ['size_bytes' => 1024, 'connections' => 8, 'max_connections' => 10], now()->subMinutes(20)->toImmutable());
+        $range = '?from='.now()->subHour()->getTimestampMs().'&to='.now()->getTimestampMs().'&interval=1h';
+        $token = $this->createMetricsToken($project);
+
+        $this->withToken($token)->getJson("/api/v1/projects/{$project->slug}/series/db_size{$range}&group_by=check")
+            ->assertOk()
+            ->assertJsonPath('unit', 'bytes')
+            ->assertJsonPath('points', [
+                ['t' => now()->setTime(11, 0)->format('Y-m-d\TH:i:s\Z'), 'series' => 'database:pgsql', 'value' => 2048],
+                ['t' => now()->setTime(11, 0)->format('Y-m-d\TH:i:s\Z'), 'series' => 'database:mysql', 'value' => 1024],
+            ]);
+        $this->withToken($token)->getJson("/api/v1/projects/{$project->slug}/series/db_connections{$range}&check=database:mysql")
+            ->assertOk()
+            ->assertJsonPath('points.0.value', 8);
+        $this->withToken($token)->getJson("/api/v1/projects/{$project->slug}/series/db_connections_used{$range}")
+            ->assertOk()
+            ->assertJsonPath('points.0.value', 0.8);
+    });
+
     it('counts requests from the SDK counts and buckets them', function () {
         $project = Project::factory()->create();
         $this->createRequestCount($project, 95, minute: now()->subMinutes(30)->startOfMinute());
@@ -281,6 +307,7 @@ describe('the Prometheus page', function () {
         QueueSample::query()->create(['project_id' => $project->id, 'host' => 'web-1', 'connection' => 'redis', 'queue' => 'mail', 'size' => 7, 'oldest_age_s' => 30, 'sampled_at' => now()->subMinute()]);
         $agent = ProjectAgent::factory()->for($project)->create();
         HostSample::query()->create(['project_agent_id' => $agent->id, 'cpu_load_1m' => 1, 'cpu_cores' => 2, 'sampled_at' => now()]);
+        $this->createDatabaseResult(HealthCheck::factory()->for($project)->create(), ['size_bytes' => 4096, 'connections' => 3, 'max_connections' => 100]);
 
         $response = $this->withToken($this->createMetricsToken($project))->get('/api/v1/metrics')->assertOk();
 
@@ -290,6 +317,8 @@ describe('the Prometheus page', function () {
             ->toContain('lumberjack_requests{project="shop"} 42')
             ->toContain('lumberjack_queue_size{project="shop",connection="redis",queue="mail"} 7')
             ->toContain('lumberjack_agents_online{project="shop"} 1')
+            ->toContain('lumberjack_database_size_bytes{project="shop",environment="production",check="database:pgsql"} 4096')
+            ->toContain('lumberjack_database_max_connections{project="shop",environment="production",check="database:pgsql"} 100')
             ->toContain('lumberjack_health_checks{project="shop",state="down"} 0');
     });
 

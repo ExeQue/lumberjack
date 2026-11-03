@@ -489,6 +489,7 @@ class ResolveWidgetDataAction
             host: $on('host'),
             release: $this->release($projects, $scope),
             groupBy: $group,
+            check: $on('check'),
         );
     }
 
@@ -532,7 +533,7 @@ class ResolveWidgetDataAction
 
     /**
      * When the latest report behind a snapshot value arrived: the newest queue sample, host
-     * sample, agent heartbeat or health result. Null for values worked out on the spot.
+     * sample, agent heartbeat, health result or database check result. Null for values worked out on the spot.
      *
      * @param  Collection<int, Project>  $projects
      */
@@ -546,6 +547,8 @@ class ResolveWidgetDataAction
             in_array($source->id, ['agents', 'agents_online'], true) => ProjectAgent::query()->whereIn('project_id', $ids)->max('last_seen_at'),
             $source->type === WidgetType::Health => HealthCheckHost::query()
                 ->whereIn('health_check_id', HealthCheck::query()->whereIn('project_id', $ids)->select('id'))->max('last_result_at'),
+            str_starts_with($source->id, 'db_') => HealthCheckHost::query()
+                ->whereIn('health_check_id', HealthCheck::query()->whereIn('project_id', $ids)->whereReportsDatabase()->select('id'))->max('last_result_at'),
             default => null,
         };
 

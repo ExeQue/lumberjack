@@ -15,6 +15,17 @@ export function formatCompact(value: number): string {
     }).format(value);
 }
 
+/** Bytes in B, KB, MB, GB or TB (1024 each), one decimal past bytes. */
+export function formatBytes(bytes: number, fractionDigits?: number): string {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.min(
+        units.length - 1,
+        Math.floor(Math.log(Math.max(1, Math.abs(bytes))) / Math.log(1024)),
+    );
+
+    return `${formatNumber(bytes / 1024 ** i, fractionDigits ?? (i > 0 ? 1 : 0))} ${units[i]}`;
+}
+
 export function formatPercent(ratio: number, fractionDigits = 1): string {
     // Small shares get one more digit, so 0.4 % does not read as 0 %.
     const minimum =

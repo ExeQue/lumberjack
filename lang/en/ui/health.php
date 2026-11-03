@@ -53,6 +53,8 @@ return [
         'worst' => 'Worst',
         'metrics' => 'Metrics',
     ],
+    'connections_of' => ':used of :max connections',
+    'connections' => ':count connections',
     'strip_label' => 'Status over the period, oldest first',
     'no_data' => 'No data',
     'ongoing' => 'Ongoing',
