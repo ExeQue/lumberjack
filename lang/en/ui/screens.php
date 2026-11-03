@@ -258,6 +258,8 @@ return [
         'empty' => 'Nothing to show.',
         'oldest' => 'oldest :age',
         'host_usage' => 'CPU :cpu · memory :memory · disk :disk',
+        'offline' => 'Offline',
+        'usage' => ['cpu' => 'CPU :value', 'memory' => 'Memory :value', 'disk' => 'Disk :value'],
         'escalating' => 'Escalating',
         'regressed' => 'Regressed',
         'task_status' => [

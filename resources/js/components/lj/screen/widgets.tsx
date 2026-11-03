@@ -963,7 +963,12 @@ type RowText = {
     at?: string;
 };
 
-function rowText(source: string, row: Row, t: Translate): RowText {
+function rowText(
+    source: string,
+    row: Row,
+    t: Translate,
+    narrow = false,
+): RowText {
     const percent = (v: unknown) =>
         v === null || v === undefined ? '-' : formatPercent(Number(v), 0);
     const tone = row.state ?? null;
@@ -1036,15 +1041,39 @@ function rowText(source: string, row: Row, t: Translate): RowText {
                           })
                         : undefined,
             };
-        case 'hosts':
+        case 'hosts': {
+            if (row.online === false) {
+                return {
+                    key: String(row.host),
+                    main: '',
+                    tag: { text: t('screens.list.offline'), tone: 'red' },
+                };
+            }
+
+            // Narrow: only the fullest of CPU, memory and disk, named.
+            const usage = (
+                [
+                    ['cpu', row.cpu_load],
+                    ['memory', row.memory_used],
+                    ['disk', row.disk_used],
+                ] as const
+            ).filter(([, v]) => v !== null && v !== undefined);
+            const [name, top] = usage.reduce(
+                (a, b) => (Number(b[1]) > Number(a[1]) ? b : a),
+                usage[0] ?? ['cpu', null],
+            );
+
             return {
                 key: String(row.host),
-                main: t('screens.list.host_usage', {
-                    cpu: percent(row.cpu_load),
-                    memory: percent(row.memory_used),
-                    disk: percent(row.disk_used),
-                }),
+                main: narrow
+                    ? t(`screens.list.usage.${name}`, { value: percent(top) })
+                    : t('screens.list.host_usage', {
+                          cpu: percent(row.cpu_load),
+                          memory: percent(row.memory_used),
+                          disk: percent(row.disk_used),
+                      }),
             };
+        }
         case 'agents':
             return {
                 key: '●',
@@ -1070,7 +1099,7 @@ function List({ widget, schema, data, now, t }: BodyProps) {
     return (
         <ul className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {rows.map((row, i) => {
-                const text = rowText(String(data.source), row, t);
+                const text = rowText(String(data.source), row, t, narrow);
 
                 return (
                     <li
@@ -1080,9 +1109,12 @@ function List({ widget, schema, data, now, t }: BodyProps) {
                         {text.key && (
                             <span
                                 className="w-[6.5em] flex-none truncate font-mono text-(--s-ink-2)"
+                                // A symbol always shows its state; a name only when it needs attention.
                                 style={{
                                     color:
-                                        text.key.length <= 1
+                                        text.key.length <= 1 ||
+                                        row.state === 'red' ||
+                                        row.state === 'amber'
                                             ? (ROW_COLOR[row.state ?? 'ok'] ??
                                               undefined)
                                             : undefined,
