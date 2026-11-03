@@ -8,6 +8,7 @@ use App\Domains\Health\Enums\HealthCheckSource;
 use App\Domains\Health\Enums\HealthStatus;
 use App\Domains\Health\Models\HealthCheck;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -36,6 +37,22 @@ class HealthCheckBuilder extends Builder
     public function orWhereUnhealthy(): self
     {
         return $this->orWhereIn('status', [HealthStatus::Degraded->value, HealthStatus::Down->value]);
+    }
+
+    /**
+     * Reported checks that have sent nothing since the given time (or never, if older).
+     */
+    public function whereReportedSilentSince(?CarbonInterface $datetime = null): self
+    {
+        $since = $datetime ?? now();
+
+        return $this->where('source', HealthCheckSource::Reported->value)
+            ->where(fn (self $q) => $q->where('last_result_at', '<', $since)->orWhere(fn (self $n) => $n->whereNull('last_result_at')->where('created_at', '<', $since)));
+    }
+
+    public function orWhereReportedSilentSince(?CarbonInterface $datetime = null): self
+    {
+        return $this->orWhere(fn (self $q) => $q->whereReportedSilentSince($datetime));
     }
 
     public function whereMonitored(): self

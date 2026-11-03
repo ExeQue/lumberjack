@@ -39,6 +39,16 @@ after 15 minutes while the spacing is not known yet. A stale check has no uptime
 sends no alert; it comes back by itself with its next result. **Archive** puts away a
 check that will not report again, for example after renaming a slug.
 
+### Cleaning up
+
+- **Hosts** that stop reporting a check (a replaced Kubernetes pod, a retired server)
+  are forgotten after 24 hours, so the host list does not grow with every deploy.
+- **Reported checks** that have sent nothing for 7 days are archived by themselves.
+  An archived check that reports again comes back with its history.
+- **Delete** in a check's details removes it with its results and outages. A reported
+  check that is deleted but still registered in the app comes back as a new check on
+  its next result, so remove it from the app first.
+
 ## Checks Lumberjack runs
 
 **Add check** offers five types. Each runs every 1, 5, 15 or 60 minutes, can carry an

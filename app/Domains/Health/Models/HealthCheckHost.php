@@ -8,7 +8,9 @@ use App\Domains\Health\Enums\HealthResultStatus;
 use App\Domains\Health\Enums\HealthStatus;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -34,6 +36,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class HealthCheckHost extends Model
 {
+    use Prunable;
+
+    /** A host that stopped reporting (a replaced pod, a retired server) is forgotten after a day. */
+    public const int FORGET_AFTER_HOURS = 24;
+
     /** Stale after this long without a result when the usual spacing is not known yet. */
     public const int STALE_AFTER_UNKNOWN_S = 900;
 
@@ -61,5 +68,15 @@ class HealthCheckHost extends Model
         $after = $this->interval_s !== null ? 3 * $this->interval_s : self::STALE_AFTER_UNKNOWN_S;
 
         return $this->last_result_at === null || $this->last_result_at->lt(($at ?? now())->subSeconds($after));
+    }
+
+    /**
+     * Hosts of reported checks only: a check Lumberjack runs has one host, kept for good.
+     *
+     * @return Builder<static>
+     */
+    public function prunable(): Builder
+    {
+        return static::query()->where('host', '!=', '')->where('last_result_at', '<', now()->subHours(self::FORGET_AFTER_HOURS));
     }
 }
