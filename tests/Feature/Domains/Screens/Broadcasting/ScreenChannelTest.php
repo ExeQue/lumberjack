@@ -6,12 +6,13 @@ use App\Domains\Screens\Broadcasting\ScreenChannel;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Models\TvPairing;
+use App\Domains\Screens\Support\TvViewer;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Illuminate\Broadcasting\Broadcasters\Broadcaster;
 use Illuminate\Support\Facades\Broadcast;
 
-covers(ScreenChannel::class);
+covers(ScreenChannel::class, TvViewer::class);
 
 describe('listening to a screen', function () {
     beforeEach(function () {
@@ -29,12 +30,14 @@ describe('listening to a screen', function () {
     });
 
     it('lets a display listen to the screen it shows, and no other', function () {
-        $showing = Display::factory()->showing($this->screen)->create();
-        $sameTeam = Display::factory()->showing(Screen::factory()->for($this->screen->team)->create())->create();
+        $other = Screen::factory()->for($this->screen->team)->create();
+        $viewer = fn (Display ...$displays): TvViewer => new TvViewer(collect($displays), collect());
 
-        expect(app(ScreenChannel::class)->join($showing, $this->screen))->toBeTrue()
-            ->and(app(ScreenChannel::class)->join($sameTeam, $this->screen))->toBeFalse()
-            ->and(app(ScreenChannel::class)->join(TvPairing::factory()->create(), $this->screen))->toBeFalse();
+        expect(app(ScreenChannel::class)->join($viewer(Display::factory()->showing($this->screen)->create()), $this->screen))->toBeTrue()
+            ->and(app(ScreenChannel::class)->join($viewer(Display::factory()->showing($other)->create()), $this->screen))->toBeFalse()
+            // In turn: any screen of its playlist.
+            ->and(app(ScreenChannel::class)->join($viewer(Display::factory()->showing($other)->create(['playlist' => [$other->id, $this->screen->id]])), $this->screen))->toBeTrue()
+            ->and(app(ScreenChannel::class)->join(new TvViewer(collect(), collect([TvPairing::factory()->create()])), $this->screen))->toBeFalse();
     });
 
     it('is registered on screen.{uuid}, bound to the screen, for users and displays', function () {

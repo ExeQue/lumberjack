@@ -61,6 +61,21 @@ describe('the list of displays', function () {
         $this->actingAs($this->admin)->get(route('team.displays'))->assertInertia(fn (Assert $page) => $page->where('can_manage', true));
     });
 
+    it('keeps the windows of one computer together, in window order', function () {
+        $computer = str_repeat('c', 64);
+        Display::factory()->for($this->screen->team)->create(['name' => 'Zed window 2', 'slot' => 2, 'device_hash' => $computer]);
+        Display::factory()->for($this->screen->team)->create(['name' => 'Alpha window 1', 'slot' => 1, 'device_hash' => $computer]);
+
+        $this->actingAs($this->member)->get(route('team.displays'))->assertInertia(fn (Assert $page) => $page
+            ->where('displays.0.name', 'Alpha window 1')
+            ->where('displays.1.name', 'Zed window 2')
+            ->where('displays.1.slot', 2)
+            ->where('displays.0.computer', fn (string $key): bool => strlen($key) === 12 && ! str_contains($computer, $key))
+            ->where('displays.1.computer', fn (string $key): bool => $key !== '')
+            ->where('displays.2.name', 'Office TV')
+            ->where('displays.2.playlist', []));
+    });
+
     it('sends someone without a team to the team page', function () {
         $this->actingAs(User::factory()->create())->get(route('team.displays'))->assertRedirect(route('team.show'));
     });
@@ -79,6 +94,38 @@ describe('changing a display', function () {
             ->and($display->name)->toBe('Lobby');
         Event::assertDispatched(DisplayChanged::class, fn (DisplayChanged $e): bool => $e->broadcastAs() === 'display.changed'
             && $e->broadcastOn()->name === 'private-display.'.$this->display->uuid && $e->broadcastWith() === []);
+    });
+
+    it('shows several screens in turn, its team\'s only, and one again from the single pick', function () {
+        $this->display->update(['theme' => DisplayTheme::Dark]);
+
+        $this->actingAs($this->admin)->put(route('displays.update', $this->display), [
+            'playlist' => [$this->other->uuid, $this->screen->uuid], 'rotate_seconds' => 45, 'hold_on_alert' => false,
+        ])->assertRedirect();
+
+        $display = $this->display->refresh();
+        expect($display->playlist)->toBe([$this->other->id, $this->screen->id])
+            ->and($display->screen_id)->toBe($this->other->id)
+            ->and($display->rotate_seconds)->toBe(45)
+            ->and($display->hold_on_alert)->toBeFalse();
+        $this->actingAs($this->admin)->get(route('team.displays'))->assertInertia(fn (Assert $page) => $page
+            ->where('displays.0.playlist', [$this->other->uuid, $this->screen->uuid]));
+
+        $this->actingAs($this->admin)->put(route('displays.update', $this->display), ['screen' => $this->screen->uuid])->assertRedirect();
+        expect($this->display->refresh()->playlist)->toBeNull()->and($this->display->screen_id)->toBe($this->screen->id);
+    });
+
+    it('takes a playlist of one as that one screen, and leaves out screens of other teams', function () {
+        $foreign = Screen::factory()->create();
+
+        app(UpdateDisplayAction::class)->execute($this->display, ['playlist' => [$foreign->id, $this->other->id]]);
+
+        expect($this->display->refresh()->playlist)->toBeNull()->and($this->display->screen_id)->toBe($this->other->id);
+    });
+
+    it('refuses a playlist with a screen of another team, or a too short time', function () {
+        $this->actingAs($this->admin)->put(route('displays.update', $this->display), ['playlist' => [Screen::factory()->create()->uuid]])->assertSessionHasErrors('playlist.0');
+        $this->actingAs($this->admin)->put(route('displays.update', $this->display), ['rotate_seconds' => 3])->assertSessionHasErrors('rotate_seconds');
     });
 
     it('shows no screen at all', function () {
@@ -124,7 +171,7 @@ describe('removing a display', function () {
         Event::assertDispatched(DisplayChanged::class, fn (DisplayChanged $e): bool => $e->broadcastAs() === 'display.removed');
 
         auth()->logout();
-        $this->withCredentials()->withCookie(TvCredentials::DISPLAY_COOKIE, 'ljd_token')->getJson(route('tv.data'))->assertUnauthorized();
-        $this->withCookie(TvCredentials::DISPLAY_COOKIE, 'ljd_token')->get(route('tv'))->assertInertia(fn (Assert $page) => $page->component('tv/pair'));
+        $this->withCredentials()->withCookie(TvCredentials::displayCookieName(1), 'ljd_token')->getJson(route('tv.data', 1))->assertUnauthorized();
+        $this->withCookie(TvCredentials::displayCookieName(1), 'ljd_token')->get(route('tv'))->assertInertia(fn (Assert $page) => $page->component('tv/pair'));
     });
 });

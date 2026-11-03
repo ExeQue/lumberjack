@@ -4,12 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import { LogMark } from '@/components/lj/logo';
 import { useNow } from '@/components/lj/relative';
 import { bareUrl, QrCode, withSlot } from '@/components/lj/screen/qr';
-import { DISPLAY_TOKEN_KEY } from '@/components/lj/screen/tv';
+import { displayTokenKey } from '@/components/lj/screen/tv';
+import type { TvUrls } from '@/components/lj/screen/tv';
 import { sendJson } from '@/lib/http';
 import { useT } from '@/lib/i18n';
-import { pairing as pairingRoute, restore as restoreRoute } from '@/routes/tv';
 
 type Props = {
+    /** Which window of this computer: /tv/{slot}. */
+    slot: number;
+    urls: TvUrls;
     /** K7Q-M2X */
     code: string;
     pair_url: string;
@@ -30,6 +33,8 @@ const POLL_MS = 3_000;
  * token (a cookie, plus a copy in local storage) and opens its screen.
  */
 export default function TvPair({
+    slot,
+    urls,
     code,
     pair_url,
     pair_base,
@@ -50,13 +55,13 @@ export default function TvPair({
         }
 
         asking.current = true;
-        sendJson<{ status: string; token?: string }>(pairingRoute().url, 'POST')
+        sendJson<{ status: string; token?: string }>(urls.claim, 'POST')
             .then(({ json }) => {
                 if (json?.status === 'paired' && json.token) {
                     setPaired(true);
 
                     try {
-                        localStorage.setItem(DISPLAY_TOKEN_KEY, json.token);
+                        localStorage.setItem(displayTokenKey(slot), json.token);
                     } catch {
                         // The cookie is enough; the copy is only a fallback.
                     }
@@ -79,18 +84,18 @@ export default function TvPair({
         let kept: string | null = null;
 
         try {
-            kept = localStorage.getItem(DISPLAY_TOKEN_KEY);
+            kept = localStorage.getItem(displayTokenKey(slot));
         } catch {
             kept = null;
         }
 
         if (kept) {
-            void sendJson(restoreRoute().url, 'POST', { token: kept }).then(
+            void sendJson(urls.restore, 'POST', { token: kept }).then(
                 ({ status }) => {
                     if (status === 200) {
                         window.location.reload();
                     } else if (status === 404) {
-                        localStorage.removeItem(DISPLAY_TOKEN_KEY);
+                        localStorage.removeItem(displayTokenKey(slot));
                     }
                 },
             );
@@ -127,6 +132,11 @@ export default function TvPair({
                     <LogMark />
                 </span>
                 <span className="text-[1.6vw] font-bold">Lumberjack</span>
+                {slot > 1 && (
+                    <span className="ml-[0.6vw] rounded-full border border-(--s-line-strong) px-[0.8vw] py-[0.2vw] text-[1.1vw] text-(--s-ink-2)">
+                        {t('screens.tv.window', { slot })}
+                    </span>
+                )}
             </div>
             <main className="flex flex-1 flex-wrap items-center justify-center gap-[6vw]">
                 <div className="flex max-w-[40vw] flex-col gap-[1.5vw]">

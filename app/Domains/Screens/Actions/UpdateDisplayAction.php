@@ -12,18 +12,29 @@ use App\Domains\Screens\Models\Screen;
 class UpdateDisplayAction
 {
     /**
-     * Its name, the screen it shows (one of its team's, or none) and its theme; the TV
-     * switches at once.
+     * Its name, what it shows (one of its team's screens, several in turn, or none), how
+     * long each shows, and its theme; the TV switches at once. Screens of other teams are
+     * left out.
      *
-     * @param  array{name?: string, screen_id?: int|null, theme?: DisplayTheme}  $settings
+     * @param  array{name?: string, screen_id?: int|null, playlist?: list<int>, rotate_seconds?: int, hold_on_alert?: bool, theme?: DisplayTheme}  $settings
      */
     public function execute(Display $display, array $settings): Display
     {
-        $display->fill(array_intersect_key($settings, array_flip(['name', 'screen_id', 'theme'])));
+        $display->fill(array_intersect_key($settings, array_flip(['name', 'theme', 'rotate_seconds', 'hold_on_alert'])));
 
-        // Only a screen of its own team.
-        if ($display->isDirty('screen_id') && $display->screen_id !== null && Screen::query()->whereKey($display->screen_id)->value('team_id') !== $display->team_id) {
-            $display->screen_id = $display->getOriginal('screen_id');
+        if (array_key_exists('playlist', $settings)) {
+            $own = Screen::query()->whereTeam($display->team)->whereIn('id', $settings['playlist'])->pluck('id')->all();
+            $playlist = array_values(array_filter($settings['playlist'], fn (int $id): bool => in_array($id, $own, true)));
+            // One screen is no playlist.
+            $display->playlist = count($playlist) > 1 ? $playlist : null;
+            $display->screen_id = $playlist[0] ?? null;
+        } elseif (array_key_exists('screen_id', $settings)) {
+            $own = $settings['screen_id'] === null || Screen::query()->whereTeam($display->team)->whereKey($settings['screen_id'])->exists();
+
+            if ($own) {
+                $display->screen_id = $settings['screen_id'];
+                $display->playlist = null;
+            }
         }
 
         if ($display->isDirty()) {

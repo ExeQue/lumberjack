@@ -51,6 +51,8 @@ describe('the confirm page', function () {
             ->where('code', 'K7Q-M2X')
             ->where('pairing.code', 'K7Q-M2X')
             ->where('pairing.device', 'Fire TV · Silk')
+            ->where('pairing.slot', 1)
+            ->where('pairing.next_url', route('tv', 2))
             ->has('screens', 1)
             ->where('screens.0.uuid', $this->screen->uuid)
             ->where('screens.0.team', $this->screen->team->name)
@@ -89,10 +91,20 @@ describe('confirming a code', function () {
         Event::assertDispatched(TvPairingConfirmed::class, fn (TvPairingConfirmed $e): bool => $e->broadcastOn()->name === 'private-tv-pairing.'.$this->pairing->uuid
             && $e->broadcastAs() === 'pairing.confirmed' && $e->broadcastWith() === []);
 
-        $this->get(route('pair', ['paired' => $display->uuid]))->assertInertia(fn (Assert $page) => $page->where('paired', ['display' => 'Office TV', 'screen' => 'Ops']));
+        $this->get(route('pair', ['paired' => $display->uuid]))->assertInertia(fn (Assert $page) => $page->where('paired', ['display' => 'Office TV', 'screen' => 'Ops', 'slot' => 1, 'next_url' => route('tv', 2)]));
         // Only for the team's members.
         $this->actingAs(User::factory()->inTeam()->create())->get(route('pair', ['paired' => $display->uuid]))->assertInertia(fn (Assert $page) => $page->where('paired', null));
         $this->get(route('pair', ['paired' => 'not-a-uuid']))->assertInertia(fn (Assert $page) => $page->where('paired', null));
+    });
+
+    it('pairs a window of a computer as that window, offering no window past the last', function () {
+        $this->pairing->update(['slot' => 9, 'device_hash' => str_repeat('a', 64)]);
+
+        $this->actingAs($this->admin)->get(route('pair.show', 'K7QM2X'))->assertInertia(fn (Assert $page) => $page
+            ->where('pairing.slot', 9)->where('pairing.next_url', null));
+        $this->actingAs($this->admin)->post(route('pair.confirm', 'K7QM2X'), ['screen' => $this->screen->uuid, 'name' => 'Office PC 9']);
+
+        expect(Display::query()->sole()->only('slot', 'device_hash'))->toBe(['slot' => 9, 'device_hash' => str_repeat('a', 64)]);
     });
 
     it('works once', function () {

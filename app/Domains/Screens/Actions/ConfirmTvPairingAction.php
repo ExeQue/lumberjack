@@ -51,6 +51,8 @@ class ConfirmTvPairingAction
                 'theme' => DisplayTheme::Default,
                 'user_agent' => $locked->user_agent,
                 'ip' => $locked->ip,
+                'slot' => $locked->slot,
+                'device_hash' => $locked->device_hash,
             ]);
 
             // The TV gets as long again to pick up its token.

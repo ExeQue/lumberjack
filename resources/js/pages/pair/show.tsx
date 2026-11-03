@@ -2,6 +2,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { LogMark } from '@/components/lj/logo';
+import { bareUrl, withSlot } from '@/components/lj/screen/qr';
 import { useNow } from '@/components/lj/relative';
 import { Button, Field, Input, LinkButton, Select } from '@/components/lj/ui';
 import { formatRelative } from '@/lib/format';
@@ -19,11 +20,20 @@ type Props = {
         device: string | null;
         created_at: string | null;
         expires_at: string;
+        /** Which window of its computer asks: /tv/{slot}. */
+        slot: number;
+        /** Where another window of that computer pairs; null past the last. */
+        next_url: string | null;
     } | null;
     /** Screens of the teams the user administers. */
     screens: { uuid: string; name: string; team: string | null }[];
     /** Just paired: what it shows. */
-    paired: { display: string; screen: string } | null;
+    paired: {
+        display: string;
+        screen: string | null;
+        slot: number;
+        next_url: string | null;
+    } | null;
 };
 
 /**
@@ -153,8 +163,15 @@ function ConfirmForm({
                 {t('screens.pair.question')}
             </h1>
             <div className="flex flex-col gap-1.5 rounded-xl border border-line bg-panel px-4 py-3.5">
-                <span className="font-mono text-3xl font-bold tracking-widest">
-                    {pairing.code}
+                <span className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-3xl font-bold tracking-widest">
+                        {pairing.code}
+                    </span>
+                    {pairing.slot > 1 && (
+                        <span className="rounded-full border border-line-strong px-2.5 py-0.5 text-xs text-ink-2">
+                            {t('screens.tv.window', { slot: pairing.slot })}
+                        </span>
+                    )}
                 </span>
                 <span className="text-sm text-ink-2">
                     {t('screens.pair.device', {
@@ -232,6 +249,7 @@ function ConfirmForm({
                     time: formatRelative(pairing.expires_at, now),
                 })}
             </span>
+            <NextWindow url={pairing.next_url} />
         </form>
     );
 }
@@ -250,10 +268,11 @@ function Done({ paired }: { paired: NonNullable<Props['paired']> }) {
             <h1 className="text-2xl font-bold">
                 {t('screens.pair.done', {
                     display: paired.display,
-                    screen: paired.screen,
+                    screen: paired.screen ?? '-',
                 })}
             </h1>
             <p className="text-sm text-ink-2">{t('screens.pair.done_body')}</p>
+            <NextWindow url={paired.next_url} />
             <div className="flex flex-wrap gap-2">
                 <LinkButton href={pair().url}>
                     {t('screens.pair.another')}
@@ -263,5 +282,24 @@ function Done({ paired }: { paired: NonNullable<Props['paired']> }) {
                 </LinkButton>
             </div>
         </div>
+    );
+}
+
+/** One computer, several screens: the address of its next window. */
+function NextWindow({ url }: { url: string | null }) {
+    const t = useT();
+
+    if (url === null) {
+        return null;
+    }
+
+    return (
+        <p className="rounded-xl border border-line bg-panel px-3.5 py-3 text-xs text-ink-2">
+            {withSlot(
+                (r) => t('screens.pair.another_window', r),
+                'url',
+                <span className="font-mono text-amber">{bareUrl(url)}</span>,
+            )}
+        </p>
     );
 }

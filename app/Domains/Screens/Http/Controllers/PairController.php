@@ -51,13 +51,24 @@ class PairController
         return redirect()->route('pair', ['paired' => $display->uuid]);
     }
 
-    /** @return array{display: string, screen: string|null}|null */
+    /** Where another window of the same computer pairs; none past the last slot. */
+    private static function nextWindow(int $slot): ?string
+    {
+        return $slot < Display::MAX_SLOT ? TvController::url($slot + 1) : null;
+    }
+
+    /** @return array{display: string, screen: string|null, slot: int, next_url: string|null}|null */
     private function paired(Request $request, User $user): ?array
     {
         $uuid = $request->query('paired');
         $display = is_string($uuid) && Str::isUuid($uuid) ? Display::query()->with('screen:id,name', 'team')->where('uuid', $uuid)->first() : null;
 
-        return $display === null || ! $user->belongsToTeam($display->team) ? null : ['display' => $display->name, 'screen' => $display->screen?->name];
+        return $display === null || ! $user->belongsToTeam($display->team) ? null : [
+            'display' => $display->name,
+            'screen' => $display->screen?->name,
+            'slot' => $display->slot,
+            'next_url' => self::nextWindow($display->slot),
+        ];
     }
 
     private function page(Request $request, ?string $code, ?TvPairing $pairing): Response
@@ -73,6 +84,8 @@ class PairController
                 'device' => DeviceName::from($pairing->user_agent),
                 'created_at' => $pairing->created_at?->toIso8601String(),
                 'expires_at' => $pairing->expires_at->toIso8601String(),
+                'slot' => $pairing->slot,
+                'next_url' => self::nextWindow($pairing->slot),
             ],
             // The screens of every team the user administers: only admins pair.
             'screens' => Screen::query()->whereIn('team_id', $teams->modelKeys())->orderBy('name')->get(['id', 'uuid', 'name', 'team_id'])

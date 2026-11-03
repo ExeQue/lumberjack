@@ -29,6 +29,18 @@ describe('a display', function () {
         expect($display->getRouteKeyName())->toBe('uuid')->and($display->screen->is($screen))->toBeTrue();
     });
 
+    it('shows its playlist in order, else its one screen, of its own team only', function () {
+        $a = Screen::factory()->create();
+        $b = Screen::factory()->for($a->team)->create();
+        $gone = Screen::factory()->for($a->team)->create();
+        $display = Display::factory()->showing($a)->create(['playlist' => [$b->id, $gone->id, $a->id, Screen::factory()->create()->id]]);
+        $gone->delete();
+
+        expect(array_map(fn (Screen $s): int => $s->id, $display->screens()))->toBe([$b->id, $a->id])
+            ->and(Display::factory()->showing($a)->make()->screenIds())->toBe([$a->id])
+            ->and(Display::factory()->make()->screenIds())->toBe([]);
+    });
+
     it('is found by team or by its token hash', function () {
         $a = Display::factory()->withToken('ljd_a')->create();
         $b = Display::factory()->withToken('ljd_b')->create();

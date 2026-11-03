@@ -6,7 +6,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Broadcasting\DisplayChannel;
 use App\Domains\Screens\Broadcasting\ScreenChannel;
 use App\Domains\Screens\Broadcasting\TvPairingChannel;
-use App\Domains\Screens\Models\Display;
+use App\Domains\Screens\Support\TvViewer;
 use App\Domains\Teams\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
@@ -21,7 +21,7 @@ Broadcast::channel('project.{projectUuid}', function (mixed $viewer, string $pro
         return false;
     }
 
-    return $viewer instanceof Display ? $project->team_id === $viewer->team_id : $viewer instanceof User && $viewer->can('view', $project);
+    return $viewer instanceof TvViewer ? $viewer->seesTeam($project->team_id) : $viewer instanceof User && $viewer->can('view', $project);
 }, ['guards' => ['web', 'tv']]);
 
 Broadcast::channel('team.{teamUuid}', function (User $user, string $teamUuid): bool {

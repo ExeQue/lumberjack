@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Screens\Broadcasting;
 
 use App\Domains\Screens\Models\Display;
+use App\Domains\Screens\Support\TvViewer;
 use Illuminate\Broadcasting\PrivateChannel;
 
 /**
@@ -25,6 +26,6 @@ class DisplayChannel
 
     public function join(mixed $viewer, Display $display): bool
     {
-        return $viewer instanceof Display && $viewer->is($display);
+        return $viewer instanceof TvViewer && $viewer->isDisplay($display);
     }
 }
