@@ -111,29 +111,39 @@ export function KioskFrame({
                     transform: `translate(${shift[0]}px, ${shift[1]}px)`,
                 }}
             >
-                <header className="flex items-center justify-between gap-[1cqw]">
-                    <div className="flex min-w-0 items-center gap-[0.9cqw]">
-                        <span
-                            aria-hidden="true"
-                            className="flex size-[2.3cqw] items-center justify-center rounded-[0.5cqw] bg-(--s-panel) [&_svg]:size-[1.5cqw]"
-                        >
-                            <LogMark />
-                        </span>
-                        <div className="flex min-w-0 flex-col">
-                            <h1 className="truncate text-[1.5cqw] leading-tight font-bold">
-                                {header.title}
-                            </h1>
-                            <span className="truncate text-[0.85cqw] text-(--s-ink-2)">
-                                {header.subtitle}
+                {screen.show_header && (
+                    <header className="flex items-center justify-between gap-[1cqw]">
+                        <div className="flex min-w-0 items-center gap-[0.9cqw]">
+                            <span
+                                aria-hidden="true"
+                                className="flex size-[2.3cqw] items-center justify-center rounded-[0.5cqw] bg-(--s-panel) [&_svg]:size-[1.5cqw]"
+                            >
+                                <LogMark />
                             </span>
+                            <div className="flex min-w-0 flex-col">
+                                <h1 className="truncate text-[1.5cqw] leading-tight font-bold">
+                                    {header.title}
+                                </h1>
+                                <span className="truncate text-[0.85cqw] text-(--s-ink-2)">
+                                    {header.subtitle}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-[1.3cqw]">
-                        {header.right}
-                    </div>
-                </header>
+                        <div className="flex items-center gap-[1.3cqw]">
+                            {header.right}
+                        </div>
+                    </header>
+                )}
 
-                {banner}
+                {/* Without a header the offline notice lies over the grid's top. */}
+                {banner &&
+                    (screen.show_header ? (
+                        banner
+                    ) : (
+                        <div className="pointer-events-none absolute inset-x-[2.3cqw] top-[1.9cqw] z-30">
+                            {banner}
+                        </div>
+                    ))}
 
                 {gridProps ? (
                     <main
@@ -194,16 +204,19 @@ export function kioskClock(screen: Screen, at: number): string {
 }
 
 /**
- * A box of the previewed size, scaled down to the width it has and the window's height
- * less the toolbar, never up; its outside takes the scaled size, so the page lays out
- * around what shows.
+ * Room for a screen in the designer: at a previewed size, scaled down to the width it has
+ * and the window's height less the toolbar (never up), the outside taking the scaled
+ * size; without one (Fit), as large as fits at the screen's shape, unscaled. Either way
+ * what it draws is the TV's own layout at that size.
  */
 export function PreviewScale({
     size,
+    ratio,
     children,
 }: {
-    size: Size;
-    children: ReactNode;
+    size: Size | null;
+    ratio: number;
+    children: (view: Size) => ReactNode;
 }) {
     const ref = useRef<HTMLDivElement>(null);
     const [room, setRoom] = useState(0);
@@ -221,25 +234,31 @@ export function PreviewScale({
         return () => observer.disconnect();
     }, []);
 
-    const scale = Math.min(
-        1,
-        (room || size.w) / size.w,
-        Math.max(200, window.innerHeight - 190) / size.h,
-    );
+    const tall = Math.max(200, window.innerHeight - 190);
+    const fit =
+        room / ratio <= tall
+            ? { w: room, h: room / ratio }
+            : { w: tall * ratio, h: tall };
+    const view = size ?? { w: Math.floor(fit.w), h: Math.floor(fit.h) };
+    const scale = size
+        ? Math.min(1, (room || size.w) / size.w, tall / size.h)
+        : 1;
 
     return (
         <div ref={ref} className="w-full">
-            <div
-                className="relative mx-auto overflow-hidden"
-                style={{ width: size.w * scale, height: size.h * scale }}
-            >
+            {room > 0 && (
                 <div
-                    className="absolute top-0 left-0 origin-top-left"
-                    style={{ transform: `scale(${scale})` }}
+                    className="relative mx-auto overflow-hidden"
+                    style={{ width: view.w * scale, height: view.h * scale }}
                 >
-                    {children}
+                    <div
+                        className="absolute top-0 left-0 origin-top-left"
+                        style={{ transform: `scale(${scale})` }}
+                    >
+                        {children(view)}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

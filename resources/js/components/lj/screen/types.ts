@@ -59,6 +59,8 @@ export type Screen = {
     orientation: ScreenOrientation;
     /** On a display of another shape: keep the screen's (bars around it) or fill it. */
     fit: 'keep' | 'fill';
+    /** Whether the TV shows the name, scope, live state and clock above the grid. */
+    show_header: boolean;
     theme: ScreenTheme;
     light_from: string;
     light_to: string;
