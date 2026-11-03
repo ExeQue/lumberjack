@@ -9,6 +9,7 @@ export type LiveKind =
     | 'logs.changed'
     | 'performance.changed'
     | 'agents.changed'
+    | 'health.changed'
     | 'issue.updated';
 
 /**

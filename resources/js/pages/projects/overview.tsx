@@ -22,11 +22,13 @@ import {
 } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useProjectLive } from '@/lib/use-project-live';
+import { index as healthIndex } from '@/routes/health';
 import { show as issueShow, index as issuesIndex } from '@/routes/issues';
 import { index as jobsIndex } from '@/routes/jobs';
 import { index as routesIndex } from '@/routes/routes';
 import type {
     DashboardFilters,
+    HealthSummary,
     IssueSummary,
     Period,
     ProjectHeader,
@@ -62,6 +64,7 @@ type Overview = {
     failed_jobs: number;
     stuck_jobs: number;
     open_issues: number;
+    health: HealthSummary;
     request_series: SeriesPoint[];
     latency_series: LatencyPoint[];
     error_series: SeriesPoint[];
@@ -342,6 +345,45 @@ function SectionLink({ href, children }: { href: string; children: string }) {
     );
 }
 
+/**
+ * How many health checks pass, linking to the Health page.
+ */
+function HealthCard({
+    summary,
+    href,
+}: {
+    summary: HealthSummary;
+    href: string;
+}) {
+    const t = useT();
+    const bad = summary.down + summary.degraded;
+
+    return (
+        <Link
+            href={href}
+            className="rounded-lg focus-visible:outline-2 focus-visible:outline-amber [&>div]:h-full [&>div]:hover:border-line-strong"
+        >
+            <StatCard
+                label={t('overview.kpis.health')}
+                value={t('overview.kpis.health_value', {
+                    ok: formatNumber(summary.ok),
+                    total: formatNumber(summary.total),
+                })}
+                tone={summary.down > 0 ? 'err' : bad > 0 ? 'warn' : undefined}
+                note={
+                    bad + summary.stale > 0
+                        ? t('overview.kpis.health_note', {
+                              down: formatNumber(summary.down),
+                              degraded: formatNumber(summary.degraded),
+                              stale: formatNumber(summary.stale),
+                          })
+                        : t('overview.kpis.health_all_ok')
+                }
+            />
+        </Link>
+    );
+}
+
 export default function ProjectOverview({ project, filters, overview }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
@@ -353,6 +395,7 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
             'issue.updated',
             'jobs.changed',
             'performance.changed',
+            'health.changed',
         ],
         ['overview'],
     );
@@ -445,6 +488,12 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                         tone={overview.open_issues > 0 ? 'err' : undefined}
                         note={t('overview.kpis.open_issues_note')}
                     />
+                    {overview.health.total > 0 && (
+                        <HealthCard
+                            summary={overview.health}
+                            href={healthIndex(project.uuid).url}
+                        />
+                    )}
                 </div>
 
                 <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] gap-4">

@@ -30,24 +30,25 @@ claude mcp add --transport http lumberjack https://your-lumberjack/mcp \
 Every tool that takes an issue accepts its number (`DEMO-42`) or its id. Durations are
 in microseconds.
 
-| Tool                                                                                | Does                                                                                                         |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `list_projects`                                                                     | The projects the token can see, with the slug other tools take.                                              |
-| `get_project_overview`                                                              | Requests, error rate, percentiles, job failures, newest issues, slowest routes and failed jobs for a period. |
-| `triage_inbox`                                                                      | Your work queue: open issues you have not handled since they last surfaced, and notes that tag you.          |
-| `list_issues`                                                                       | Issues with the issues page's filters.                                                                       |
-| `get_issue`                                                                         | One issue with its latest occurrence (stacktrace, request, user context) and notes.                          |
-| `list_occurrences`                                                                  | Recent occurrences of an issue.                                                                              |
-| `set_issue_status`                                                                  | Resolve, ignore, re-open or mark in progress. Write scope.                                                   |
-| `assign_issue`                                                                      | Assign or unassign. Write scope.                                                                             |
-| `set_issue_labels`                                                                  | Replace an issue's labels. Write scope.                                                                      |
-| `add_issue_note`                                                                    | Add a note; tag members with `<@id>`. Write scope.                                                           |
-| `create_repo_issue`                                                                 | Create a GitHub issue in the linked repository. Write scope.                                                 |
-| `list_members`                                                                      | The team's members, with the ids `assign_issue` takes.                                                       |
-| `list_routes`, `list_queries`, `list_jobs`, `list_commands`, `list_scheduled_tasks` | Statistics per route, query, job class, command and task.                                                    |
-| `get_job`, `get_command`, `get_scheduled_task`                                      | Recent runs of one job class, command or task.                                                               |
-| `get_trace`                                                                         | Everything recorded under one trace id, in time order.                                                       |
-| `search_logs`                                                                       | Log lines by channel, level, text, period and trace id.                                                      |
+| Tool                                                                                | Does                                                                                                                              |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `list_projects`                                                                     | The projects the token can see, with the slug other tools take.                                                                   |
+| `get_project_overview`                                                              | Requests, error rate, percentiles, job failures, health check counts, newest issues, slowest routes and failed jobs for a period. |
+| `triage_inbox`                                                                      | Your work queue: open issues you have not handled since they last surfaced, and notes that tag you.                               |
+| `list_issues`                                                                       | Issues with the issues page's filters.                                                                                            |
+| `get_issue`                                                                         | One issue with its latest occurrence (stacktrace, request, user context) and notes.                                               |
+| `list_occurrences`                                                                  | Recent occurrences of an issue.                                                                                                   |
+| `set_issue_status`                                                                  | Resolve, ignore, re-open or mark in progress. Write scope.                                                                        |
+| `assign_issue`                                                                      | Assign or unassign. Write scope.                                                                                                  |
+| `set_issue_labels`                                                                  | Replace an issue's labels. Write scope.                                                                                           |
+| `add_issue_note`                                                                    | Add a note; tag members with `<@id>`. Write scope.                                                                                |
+| `create_repo_issue`                                                                 | Create a GitHub issue in the linked repository. Write scope.                                                                      |
+| `list_members`                                                                      | The team's members, with the ids `assign_issue` takes.                                                                            |
+| `list_routes`, `list_queries`, `list_jobs`, `list_commands`, `list_scheduled_tasks` | Statistics per route, query, job class, command and task.                                                                         |
+| `get_job`, `get_command`, `get_scheduled_task`                                      | Recent runs of one job class, command or task.                                                                                    |
+| `list_health_checks`                                                                | Health checks with their state, latest result, metrics, per-host status and uptime; `attention` for the bad ones.                 |
+| `get_trace`                                                                         | Everything recorded under one trace id, in time order.                                                                            |
+| `search_logs`                                                                       | Log lines by channel, level, text, period and trace id.                                                                           |
 
 Agents' notes and status changes are shown in Lumberjack with the token's name.
 

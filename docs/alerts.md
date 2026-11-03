@@ -51,6 +51,7 @@ you pick, and can be limited to some environments (comma separated, empty means 
 | Resolved or ignored | Someone resolving or ignoring an issue, with their comment. Bulk changes are left out. | No            |
 | Note                | Every note on an issue, by a person or an agent.                                       | No            |
 | Queue backlog       | A queue over its thresholds for a while, and again when it is back under.              | Yes           |
+| Health check        | A [health check](./health) becoming degraded or down, and again when it recovers.      | Yes           |
 
 At most one message is sent per issue per rule every 30 minutes. Regressions and
 notes are not throttled: a regression only follows someone resolving the issue, so
@@ -104,8 +105,9 @@ turning a status banner on while an issue escalates.
 }
 ```
 
-`event` is the rule (`new_issue`, `regression`, `escalation`, `status_change`, `note`)
-or `test`. `status_change` and `note` are filled in for those events.
+`event` is the rule (`new_issue`, `regression`, `escalation`, `status_change`, `note`,
+`queue_backlog`, `health_check`) or `test`. `status_change` and `note` are filled in
+for those events.
 
 A queue backlog has no issue; its body carries the queue and the thresholds instead,
 with `state` either `started` or `recovered`:
@@ -126,6 +128,32 @@ with `state` either `started` or `recovered`:
         "url": "https://lumberjack.example.com/projects/.../jobs"
     },
     "thresholds": { "size": 1000, "age_minutes": 10, "sustain_minutes": 5 }
+}
+```
+
+A health check has no issue either; `check.state` is `down`, `degraded` or
+`recovered`, and `hosts` lists the servers it fails on (empty for checks Lumberjack
+runs):
+
+```json
+{
+    "version": "1",
+    "sent_at": "2026-11-03T10:12:00+00:00",
+    "event": "health_check",
+    "project": { "id": "...", "slug": "shop", "name": "Shop" },
+    "environment": "production",
+    "check": {
+        "id": "...",
+        "name": "disk:s3",
+        "slug": "disk:s3",
+        "source": "reported",
+        "type": null,
+        "state": "down",
+        "message": "The disk is not writable.",
+        "hosts": ["web-1"],
+        "since": "2026-11-03T10:10:00+00:00",
+        "url": "https://lumberjack.example.com/projects/.../health?check=..."
+    }
 }
 ```
 

@@ -27,6 +27,7 @@ return [
         'schedule' => 'Schedule',
         'commands' => 'Commands',
         'logs' => 'Logs',
+        'health' => 'Health',
         'settings' => 'Settings',
         'all_projects' => 'All projects',
         'team' => 'Members and tokens',

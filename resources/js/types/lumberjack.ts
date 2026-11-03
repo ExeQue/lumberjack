@@ -211,3 +211,79 @@ export type ReleaseStat = {
     } | null;
     change: { error_rate: number | null; p95: number | null };
 };
+
+export type HealthSummary = {
+    total: number;
+    ok: number;
+    degraded: number;
+    down: number;
+    stale: number;
+    pending: number;
+};
+
+/** Where a check stands as shown: stale when it stopped reporting, pending before its first result. */
+export type HealthState = 'ok' | 'degraded' | 'down' | 'stale' | 'pending';
+
+export type HealthResultStatus = 'ok' | 'warning' | 'failed';
+
+export type HealthCheckType = 'http' | 'ssl' | 'tcp' | 'dns' | 'heartbeat';
+
+export type HealthHost = {
+    host: string | null;
+    state: HealthState;
+    last_status: HealthResultStatus | null;
+    last_message: string | null;
+    last_result_at: string | null;
+    duration_us: number | null;
+    metrics: Record<string, number>;
+};
+
+export type HealthCheckRow = {
+    uuid: string;
+    source: 'reported' | 'monitored';
+    type: HealthCheckType | null;
+    name: string;
+    custom_name: string | null;
+    slug: string | null;
+    description: string | null;
+    environment: string | null;
+    state: HealthState;
+    muted: boolean;
+    archived: boolean;
+    degrade_after: number;
+    recover_after: number;
+    thresholds_overridden: boolean;
+    interval_minutes: number | null;
+    config: Record<string, string | number> | null;
+    last_result_at: string | null;
+    last_status: HealthResultStatus | null;
+    last_message: string | null;
+    duration_us: number | null;
+    metrics: Record<string, number>;
+    uptime: number | null;
+    strip: { t: string; s: 'ok' | 'degraded' | 'down' | null }[];
+    hosts: HealthHost[];
+};
+
+export type HealthCheckDetail = {
+    uuid: string;
+    ping_url: string | null;
+    results: {
+        id: number;
+        host: string | null;
+        status: HealthResultStatus;
+        message: string | null;
+        duration_us: number | null;
+        metrics: Record<string, number>;
+        checked_at: string;
+    }[];
+    outages: {
+        id: number;
+        status: 'degraded' | 'down';
+        first_message: string | null;
+        started_at: string;
+        ended_at: string | null;
+        duration_s: number;
+    }[];
+    latency_series: SeriesPoint[];
+};

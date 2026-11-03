@@ -16,6 +16,10 @@ return [
         'failed_jobs_note' => '{1} :rate of 1 job run, :stuck stuck|[0,*] :rate of :count job runs, :stuck stuck',
         'open_issues' => 'Open issues',
         'open_issues_note' => 'All environments, regardless of period',
+        'health' => 'Health checks',
+        'health_value' => ':ok of :total ok',
+        'health_note' => ':down down, :degraded degraded, :stale stale',
+        'health_all_ok' => 'Every check passes',
     ],
     'charts' => [
         'requests' => 'Requests over time',

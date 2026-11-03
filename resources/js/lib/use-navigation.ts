@@ -5,6 +5,7 @@ import { index as adminTeams } from '@/routes/admin/teams';
 import { index as adminUsers } from '@/routes/admin/users';
 import { index as alertsIndex } from '@/routes/alerts';
 import { index as commandsIndex } from '@/routes/commands';
+import { index as healthIndex } from '@/routes/health';
 import { index as issuesIndex } from '@/routes/issues';
 import { index as jobsIndex } from '@/routes/jobs';
 import { index as logsIndex } from '@/routes/logs';
@@ -31,7 +32,13 @@ export type NavItem = {
 export function useNavigation(
     project: Pick<ProjectHeader, 'uuid' | 'can_administer'> | undefined,
     counts:
-        | { issues: number; jobs: number; schedule: number; commands: number }
+        | {
+              issues: number;
+              jobs: number;
+              schedule: number;
+              health: number;
+              commands: number;
+          }
         | undefined,
     is_admin: boolean,
 ): { projectNav: NavItem[]; teamNav: NavItem[]; adminNav: NavItem[] } {
@@ -91,6 +98,12 @@ export function useNavigation(
                   label: t('common.nav.logs'),
                   href: logsIndex(project.uuid).url,
                   active: isAt(logsIndex(project.uuid).url),
+              },
+              {
+                  label: t('common.nav.health'),
+                  href: healthIndex(project.uuid).url,
+                  active: isAt(healthIndex(project.uuid).url),
+                  count: counts?.health,
               },
               ...(project.can_administer
                   ? [
@@ -154,6 +167,7 @@ const sections: Record<string, (project: string) => { url: string }> = {
     schedule: scheduleIndex,
     commands: commandsIndex,
     logs: logsIndex,
+    health: healthIndex,
     settings: projectSettings,
 };
 

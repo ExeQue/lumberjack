@@ -65,6 +65,7 @@ export function Sidebar() {
                       issues: number;
                       jobs: number;
                       schedule: number;
+                      health: number;
                       commands: number;
                   };
               })

@@ -70,6 +70,7 @@ export default defineConfig({
                         link: '/docs/performance',
                     },
                     { text: 'Releases', link: '/docs/releases' },
+                    { text: 'Health', link: '/docs/health' },
                     { text: 'Finding things', link: '/docs/finding-things' },
                     { text: 'MCP', link: '/docs/mcp' },
                 ],
