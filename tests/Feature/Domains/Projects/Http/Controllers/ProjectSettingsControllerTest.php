@@ -9,6 +9,7 @@ use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Teams\Enums\TeamRole;
+use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Teams\CreatesTeamMembers;
 
@@ -116,5 +117,29 @@ describe('agents', function () {
                 ->where('agents.0.metrics.cpu_load_1m', 0.5)
                 ->where('agents.0.metrics.memory_series', fn ($series) => max($series->all()) === 0.95 && in_array(0.5, $series->all(), true))
                 ->where('agents.0.metrics.load_series', fn ($series) => max($series->all()) == 3));
+    });
+});
+
+describe('public stats settings', function () {
+    it('turns public stats on and shows their URL, for admins only', function () {
+        ['user' => $member, 'project' => $project] = $this->memberWithProject(TeamRole::Member);
+        $admin = User::factory()->inTeam($project->team, TeamRole::Admin)->create();
+
+        $this->actingAs($member)->put(route('projects.public-stats', $project), ['enabled' => true])->assertForbidden();
+        $this->actingAs($admin)->put(route('projects.public-stats', $project), ['enabled' => true, 'include_titles' => true])->assertSessionHasNoErrors();
+
+        expect($project->refresh()->stats_key)->not->toBeNull()->and($project->stats_include_titles)->toBeTrue();
+
+        $this->actingAs($admin)->get(route('projects.settings', $project))
+            ->assertInertia(fn (Assert $page) => $page->where('settings.stats_url', url('/api/v1/public/'.$project->stats_key)));
+    });
+
+    it('rotates the key so the old URL stops working', function () {
+        ['user' => $user, 'project' => $project] = $this->memberWithProject(TeamRole::Admin);
+        $project->update(['stats_key' => 'ps_'.str_repeat('a', 40)]);
+
+        $this->actingAs($user)->post(route('projects.rotate-stats-key', $project))->assertSessionHas('status');
+
+        expect($project->refresh()->stats_key)->not->toBe('ps_'.str_repeat('a', 40));
     });
 });

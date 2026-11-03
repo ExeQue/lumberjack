@@ -1,0 +1,279 @@
+{
+    "__inputs": [
+        {
+            "name": "DS_LUMBERJACK",
+            "label": "Lumberjack (Infinity)",
+            "type": "datasource",
+            "pluginId": "yesoreyeram-infinity-datasource",
+            "pluginName": "Infinity"
+        }
+    ],
+    "title": "Lumberjack",
+    "uid": "lumberjack",
+    "schemaVersion": 39,
+    "version": 1,
+    "time": {
+        "from": "now-24h",
+        "to": "now"
+    },
+    "refresh": "30s",
+    "templating": {
+        "list": [
+            {
+                "name": "lumberjack",
+                "label": "Lumberjack URL",
+                "type": "textbox",
+                "query": "https://lumberjack.example.com",
+                "current": {
+                    "text": "https://lumberjack.example.com",
+                    "value": "https://lumberjack.example.com"
+                }
+            },
+            {
+                "name": "project",
+                "label": "Project slug",
+                "type": "textbox",
+                "query": "shop",
+                "current": {
+                    "text": "shop",
+                    "value": "shop"
+                }
+            }
+        ]
+    },
+    "panels": [
+        {
+            "id": 1,
+            "type": "timeseries",
+            "title": "Requests",
+            "datasource": {
+                "type": "yesoreyeram-infinity-datasource",
+                "uid": "${DS_LUMBERJACK}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short"
+                },
+                "overrides": []
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "datasource": {
+                        "type": "yesoreyeram-infinity-datasource",
+                        "uid": "${DS_LUMBERJACK}"
+                    },
+                    "type": "json",
+                    "source": "url",
+                    "format": "timeseries",
+                    "parser": "backend",
+                    "url": "${lumberjack}/api/v1/projects/${project}/series/requests?from=${__from}&to=${__to}&interval=${__interval}",
+                    "url_options": {
+                        "method": "GET"
+                    },
+                    "root_selector": "points",
+                    "columns": [
+                        {
+                            "selector": "t",
+                            "text": "Time",
+                            "type": "timestamp"
+                        },
+                        {
+                            "selector": "value",
+                            "text": "Value",
+                            "type": "number"
+                        },
+                        {
+                            "selector": "series",
+                            "text": "Series",
+                            "type": "string"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "type": "timeseries",
+            "title": "Error rate",
+            "datasource": {
+                "type": "yesoreyeram-infinity-datasource",
+                "uid": "${DS_LUMBERJACK}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percentunit"
+                },
+                "overrides": []
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "datasource": {
+                        "type": "yesoreyeram-infinity-datasource",
+                        "uid": "${DS_LUMBERJACK}"
+                    },
+                    "type": "json",
+                    "source": "url",
+                    "format": "timeseries",
+                    "parser": "backend",
+                    "url": "${lumberjack}/api/v1/projects/${project}/series/error_rate?from=${__from}&to=${__to}&interval=${__interval}",
+                    "url_options": {
+                        "method": "GET"
+                    },
+                    "root_selector": "points",
+                    "columns": [
+                        {
+                            "selector": "t",
+                            "text": "Time",
+                            "type": "timestamp"
+                        },
+                        {
+                            "selector": "value",
+                            "text": "Value",
+                            "type": "number"
+                        },
+                        {
+                            "selector": "series",
+                            "text": "Series",
+                            "type": "string"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "type": "timeseries",
+            "title": "p95 per route",
+            "datasource": {
+                "type": "yesoreyeram-infinity-datasource",
+                "uid": "${DS_LUMBERJACK}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 8
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "ms"
+                },
+                "overrides": []
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "datasource": {
+                        "type": "yesoreyeram-infinity-datasource",
+                        "uid": "${DS_LUMBERJACK}"
+                    },
+                    "type": "json",
+                    "source": "url",
+                    "format": "timeseries",
+                    "parser": "backend",
+                    "url": "${lumberjack}/api/v1/projects/${project}/series/p95?from=${__from}&to=${__to}&interval=${__interval}&group_by=route&top=5",
+                    "url_options": {
+                        "method": "GET"
+                    },
+                    "root_selector": "points",
+                    "columns": [
+                        {
+                            "selector": "t",
+                            "text": "Time",
+                            "type": "timestamp"
+                        },
+                        {
+                            "selector": "value",
+                            "text": "Value",
+                            "type": "number"
+                        },
+                        {
+                            "selector": "series",
+                            "text": "Series",
+                            "type": "string"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 4,
+            "type": "table",
+            "title": "Routes",
+            "datasource": {
+                "type": "yesoreyeram-infinity-datasource",
+                "uid": "${DS_LUMBERJACK}"
+            },
+            "gridPos": {
+                "h": 10,
+                "w": 24,
+                "x": 0,
+                "y": 16
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "datasource": {
+                        "type": "yesoreyeram-infinity-datasource",
+                        "uid": "${DS_LUMBERJACK}"
+                    },
+                    "type": "json",
+                    "source": "url",
+                    "format": "table",
+                    "parser": "backend",
+                    "url": "${lumberjack}/api/v1/projects/${project}/routes?period=24h",
+                    "url_options": {
+                        "method": "GET"
+                    },
+                    "root_selector": "rows",
+                    "columns": [
+                        {
+                            "selector": "0",
+                            "text": "Method",
+                            "type": "string"
+                        },
+                        {
+                            "selector": "1",
+                            "text": "Route",
+                            "type": "string"
+                        },
+                        {
+                            "selector": "2",
+                            "text": "Requests",
+                            "type": "number"
+                        },
+                        {
+                            "selector": "4",
+                            "text": "p95 (ms)",
+                            "type": "number"
+                        },
+                        {
+                            "selector": "6",
+                            "text": "Error rate",
+                            "type": "number"
+                        },
+                        {
+                            "selector": "7",
+                            "text": "Apdex",
+                            "type": "number"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

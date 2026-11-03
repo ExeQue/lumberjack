@@ -88,6 +88,10 @@ return [
             'password_reset_sent' => 'Sent password reset',
             'password_change_required' => 'Required password change',
             'user_invited' => 'Invited user',
+            'public_stats_enabled' => 'Turned on public stats',
+            'public_stats_rotated' => 'Rotated public stats key',
+            'public_stats_changed' => 'Changed public stats',
+            'public_stats_disabled' => 'Turned off public stats',
         ],
     ],
     'retention' => [

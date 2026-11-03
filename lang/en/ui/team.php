@@ -39,9 +39,10 @@ return [
         'send' => 'Send invitation',
     ],
     'tokens' => [
-        'title' => 'MCP tokens',
-        'description' => 'Gives an agent access to the selected projects through MCP.',
+        'title' => 'API and MCP tokens',
+        'description' => 'Gives an agent access to the selected projects through MCP, and Grafana or a script read access through the metrics API.',
         'endpoint' => 'Endpoint:',
+        'api_endpoint' => 'Metrics API:',
         'empty' => 'No tokens yet',
         'name' => 'Name',
         'projects' => 'Projects',
@@ -56,7 +57,7 @@ return [
         'never' => 'Never',
         'scopes' => ['read' => 'read', 'write' => 'write'],
         'scope_hints' => [
-            'read' => 'read only',
+            'read' => 'read only (MCP and the metrics API)',
             'write' => 'read, notes, status, assignment and repository issues',
         ],
         'no_projects' => 'The team has no projects yet.',

@@ -9,5 +9,7 @@ return [
     'saved' => 'Settings saved.',
     'server_token' => 'Server token',
     'public_key_rotated' => 'Public key rotated.',
+    'public_stats_saved' => 'Public stats saved.',
+    'stats_key_rotated' => 'Public stats key rotated. The old URL no longer works.',
     'agent_removed' => 'Agent on :host removed.',
 ];

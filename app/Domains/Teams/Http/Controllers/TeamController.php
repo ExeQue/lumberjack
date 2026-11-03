@@ -61,6 +61,7 @@ class TeamController
             'retention' => $retention->rows($team),
             'retention_stats' => Inertia::defer(fn (): array => $measure->execute(RetentionCategory::forTeams(), $team)),
             'mcp_url' => url('/mcp'),
+            'api_url' => url('/api/v1'),
             'can_create_team' => StoreTeamRequest::allowed($user),
         ]);
     }

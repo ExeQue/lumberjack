@@ -14,9 +14,12 @@ use App\Domains\Logs\Models\LogChannel;
 use App\Domains\Mcp\Triage\ClaudeTriageWorkflow;
 use App\Domains\Projects\Actions\RotatePublicKeyAction;
 use App\Domains\Projects\Actions\RotateServerTokenAction;
+use App\Domains\Projects\Actions\RotateStatsKeyAction;
+use App\Domains\Projects\Actions\SetPublicStatsAction;
 use App\Domains\Projects\Actions\UpdateProjectAction;
 use App\Domains\Projects\Data\AgentClient;
 use App\Domains\Projects\Http\Requests\UpdateProjectRequest;
+use App\Domains\Projects\Http\Requests\UpdatePublicStatsRequest;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Projects\Presenters\ProjectPresenter;
@@ -61,6 +64,8 @@ class ProjectSettingsController
                 'ingest_url' => url('/api/ingest'),
                 'browser_sdk_url' => url('/sdk/v1.js'),
                 'server_url' => url('/'),
+                'stats_url' => $project->stats_key !== null ? url('/api/v1/public/'.$project->stats_key) : null,
+                'stats_include_titles' => $project->stats_include_titles,
             ],
             'labels' => $project->labels()->withCount('issues')->get()->map(fn (Label $l): array => [...$l->toSummary(), 'issues' => (int) $l->issues_count])->all(),
             'agents' => $agents->map(fn (ProjectAgent $a): array => [
@@ -127,5 +132,20 @@ class ProjectSettingsController
         $action->execute($project);
 
         return back()->with('status', __('projects.public_key_rotated'));
+    }
+
+    public function updatePublicStats(UpdatePublicStatsRequest $request, Project $project, SetPublicStatsAction $action): RedirectResponse
+    {
+        $action->execute($project, $request->user(), $request->boolean('enabled'), $request->boolean('include_titles'));
+
+        return back()->with('status', __('projects.public_stats_saved'));
+    }
+
+    public function rotateStatsKey(Request $request, Project $project, RotateStatsKeyAction $action): RedirectResponse
+    {
+        Gate::authorize('update', $project);
+        $action->execute($project, $request->user());
+
+        return back()->with('status', __('projects.stats_key_rotated'));
     }
 }

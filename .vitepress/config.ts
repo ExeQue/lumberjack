@@ -74,6 +74,10 @@ export default defineConfig({
                     { text: 'Health', link: '/docs/health' },
                     { text: 'Finding things', link: '/docs/finding-things' },
                     { text: 'MCP', link: '/docs/mcp' },
+                    {
+                        text: 'Metrics API and Grafana',
+                        link: '/docs/metrics-api',
+                    },
                 ],
             },
             {

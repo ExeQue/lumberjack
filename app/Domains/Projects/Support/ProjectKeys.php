@@ -21,6 +21,14 @@ final class ProjectKeys
         return 'pk_'.Str::lower(Str::random(24));
     }
 
+    /**
+     * The public stats key: in the URL of the metrics API, so it is long enough not to guess.
+     */
+    public static function newStatsKey(): string
+    {
+        return 'ps_'.Str::lower(Str::random(40));
+    }
+
     public static function hash(string $token): string
     {
         return hash('sha256', $token);

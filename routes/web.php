@@ -98,6 +98,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('settings', [ProjectSettingsController::class, 'update'])->name('projects.settings.update');
         Route::post('settings/server-token', [ProjectSettingsController::class, 'rotateToken'])->name('projects.rotate-token');
         Route::post('settings/public-key', [ProjectSettingsController::class, 'rotatePublicKey'])->name('projects.rotate-public-key');
+        Route::put('settings/public-stats', [ProjectSettingsController::class, 'updatePublicStats'])->name('projects.public-stats');
+        Route::post('settings/public-stats/key', [ProjectSettingsController::class, 'rotateStatsKey'])->name('projects.rotate-stats-key');
         Route::post('settings/log-channels', [LogChannelController::class, 'store'])->name('log-channels.store');
         Route::delete('settings/log-channels/{logChannel}', [LogChannelController::class, 'destroy'])->name('log-channels.destroy');
         Route::delete('settings/agents/{agent}', [ProjectAgentController::class, 'destroy'])->name('agents.destroy');

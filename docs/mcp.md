@@ -5,8 +5,8 @@ can read issues and telemetry and help triage them.
 
 ## Tokens
 
-Team owners and admins create tokens under **Members and tokens** on the team page;
-members see the list.
+Team owners and admins create tokens under **API and MCP tokens** on the team page;
+members see the list. The same tokens read the [metrics API](./metrics-api).
 
 - **Name:** up to 100 characters, shown on everything the token does.
 - **Projects:** the projects the token can see, at least one.

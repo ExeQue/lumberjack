@@ -91,6 +91,7 @@ type Props = {
     /** Deferred: counted after the page shows. */
     retention_stats?: RetentionStats;
     mcp_url: string;
+    api_url: string;
     can_create_team: boolean;
 };
 
@@ -102,6 +103,7 @@ export default function TeamShow({
     retention,
     retention_stats,
     mcp_url,
+    api_url,
     can_create_team,
 }: Props) {
     const t = useT();
@@ -492,6 +494,12 @@ export default function TeamShow({
                             {t('team.tokens.endpoint')}{' '}
                             <Mono className="break-all text-ink-2">
                                 {mcp_url}
+                            </Mono>
+                        </p>
+                        <p className="text-xs text-ink-3">
+                            {t('team.tokens.api_endpoint')}{' '}
+                            <Mono className="break-all text-ink-2">
+                                {api_url}
                             </Mono>
                         </p>
                         {tokens.length === 0 ? (

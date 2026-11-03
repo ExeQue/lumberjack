@@ -13,4 +13,5 @@ return [
     App\Domains\Live\Providers\LiveServiceProvider::class,
     App\Domains\Issues\Providers\IssuesServiceProvider::class,
     App\Domains\Mcp\Providers\McpServiceProvider::class,
+    App\Domains\Metrics\Providers\MetricsServiceProvider::class,
 ];

@@ -1,16 +1,16 @@
 # Teams and accounts
 
 Everything in Lumberjack belongs to a team: its projects, its alert channels and rules,
-its MCP tokens. People see the teams they are members of; system administrators see
+its API and MCP tokens. People see the teams they are members of; system administrators see
 every team (see [Setup and system administration](./administration)).
 
 ## Roles
 
-| Role   | Can                                                                                                    |
-| ------ | ------------------------------------------------------------------------------------------------------ |
-| Owner  | Everything an admin can, and transfer ownership. One per team.                                         |
-| Admin  | Create projects, change their settings, manage members, invitations, MCP tokens, alerts and retention. |
-| Member | See every project of the team and work on its issues: status, assignee, labels, notes, watching.       |
+| Role   | Can                                                                                                            |
+| ------ | -------------------------------------------------------------------------------------------------------------- |
+| Owner  | Everything an admin can, and transfer ownership. One per team.                                                 |
+| Admin  | Create projects, change their settings, manage members, invitations, API and MCP tokens, alerts and retention. |
+| Member | See every project of the team and work on its issues: status, assignee, labels, notes, watching.               |
 
 ## The team page
 
@@ -23,7 +23,7 @@ every team (see [Setup and system administration](./administration)).
   the old owner an admin.
 - **Invite by email:** as Admin or Member. Open invitations show when they expire
   (after 7 days), and can be sent again or revoked.
-- **MCP tokens:** see [MCP](./mcp#tokens).
+- **API and MCP tokens:** see [MCP](./mcp#tokens) and the [metrics API](./metrics-api#authentication).
 - **Retention:** the team's [retention](./projects#retention), read only for members.
 
 Anyone can **Create a team**: it starts empty, with them as the owner. The team switcher
