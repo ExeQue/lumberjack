@@ -7,6 +7,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@property --lj-scroll-thumb {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
 @theme {
     --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
@@ -201,21 +207,80 @@
 }
 
 @layer base {
-    /* Slim scrollbars in the brand amber, almost invisible until their pane is hovered. */
     /* Always room for the page's scrollbar, so the layout never jumps; its track is clear. */
     html {
         overflow-y: scroll;
     }
 
+    /*
+     * Style changes ease instead of jumping: hover, focus, selection and theme switches.
+     * Only paint properties, never size or position, so charts and layout stay instant.
+     * Utilities (transition-*, duration-*) still override this.
+     */
+    *,
+    ::before,
+    ::after {
+        transition-property:
+            color, background-color, border-color, outline-color,
+            text-decoration-color, fill, stroke, opacity, box-shadow,
+            --lj-scroll-thumb;
+        transition-duration: 150ms;
+        transition-timing-function: ease-out;
+    }
+
+    /*
+     * Slim scrollbars in the brand amber, almost invisible until their pane is hovered,
+     * fading in and out. The thumb color is a registered property, so it can transition;
+     * it inherits so the scrollbar pseudo-elements see their element's value.
+     */
     * {
-        scrollbar-width: thin;
-        scrollbar-color: color-mix(in oklab, var(--lj-amber) 8%, transparent)
-            transparent;
+        --lj-scroll-thumb: color-mix(in oklab, var(--lj-amber) 8%, transparent);
     }
 
     *:hover {
-        scrollbar-color: color-mix(in oklab, var(--lj-amber) 70%, transparent)
-            transparent;
+        --lj-scroll-thumb: color-mix(
+            in oklab,
+            var(--lj-amber) 70%,
+            transparent
+        );
+    }
+
+    /* Firefox: the standard properties (no arrows there). */
+    @supports not selector(::-webkit-scrollbar) {
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--lj-scroll-thumb) transparent;
+        }
+    }
+
+    /* Chrome, Edge, Safari: the pseudo-elements, which also drop the arrow buttons. */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-button {
+        display: none;
+    }
+
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        border: 2px solid transparent;
+        border-radius: 999px;
+        background: var(--lj-scroll-thumb) padding-box;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        ::before,
+        ::after {
+            transition-duration: 0s !important;
+        }
     }
 
     /* Tailwind v4 leaves the default cursor on buttons; everything clickable gets the pointer. */
