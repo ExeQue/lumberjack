@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Performance\Http\Controllers\RouteController;
+use App\Domains\Performance\Models\QueryRun;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Performance\Queries\RouteStatisticsQuery;
 use App\Domains\Performance\Support\RequestTraffic;
@@ -32,6 +33,21 @@ describe('the routes page', function () {
                 ->where('routes.0.series', fn ($series) => array_sum($series->all()) === 3)
                 ->where('detail.route', '/dashboard')
                 ->has('detail.slowest', 3));
+    });
+
+    it('counts the queries of each slow run in its trace', function () {
+        $project = Project::factory()->create();
+        $user = User::factory()->inTeam($project->team)->create();
+        $traced = RequestRun::factory()->for($project)->forRoute('GET', '/dashboard')->slow()->create(['trace_id' => 'trace-a', 'occurred_at' => now()->subMinutes(5)]);
+        RequestRun::factory()->for($project)->forRoute('GET', '/dashboard')->create(['trace_id' => null, 'occurred_at' => now()->subMinutes(5)]);
+        QueryRun::factory()->for($project)->inTrace('trace-a')->count(4)->create();
+
+        $this->actingAs($user)
+            ->get(route('routes.index', ['project' => $project, 'route' => '/dashboard', 'method' => 'GET']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('detail.slowest.0.trace_id', $traced->trace_id)
+                ->where('detail.slowest.0.queries', 4)
+                ->where('detail.slowest.1.queries', null));
     });
 
     it('shows a url no route matched in detail, with its percentiles per bucket', function () {
