@@ -21,6 +21,78 @@ import type { Schema, Sources, Status, Widget, WidgetData } from './types';
 type Payload = Record<string, unknown>;
 type Translate = ReturnType<typeof useT>;
 
+const SCROLL_PX_PER_SECOND = 18;
+const SCROLL_PAUSE_MS = 4000;
+
+/**
+ * Content taller than its tile glides down, rests, glides back up and rests again, so a
+ * wall shows every row without anyone touching it. Off with reduced motion, and while
+ * the pointer is over it (someone is reading).
+ */
+function useAutoScroll<T extends HTMLElement>(enabled: boolean) {
+    const ref = useRef<T>(null);
+
+    useEffect(() => {
+        const el = ref.current;
+
+        if (
+            !enabled ||
+            !el ||
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ) {
+            return;
+        }
+
+        let frame = 0;
+        let last = 0;
+        let direction = 1;
+        let restUntil = performance.now() + SCROLL_PAUSE_MS;
+        let hovered = false;
+        let position = el.scrollTop;
+        const enter = () => (hovered = true);
+        const leave = () => (hovered = false);
+        el.addEventListener('pointerenter', enter);
+        el.addEventListener('pointerleave', leave);
+
+        const step = (now: number) => {
+            const room = el.scrollHeight - el.clientHeight;
+            const dt = last ? (now - last) / 1000 : 0;
+            last = now;
+
+            if (room <= 1) {
+                position = 0;
+                el.scrollTop = 0;
+            } else if (!hovered && now >= restUntil) {
+                position = Math.min(
+                    room,
+                    Math.max(
+                        0,
+                        position + direction * SCROLL_PX_PER_SECOND * dt,
+                    ),
+                );
+                el.scrollTop = position;
+
+                if (position <= 0 || position >= room) {
+                    direction = -direction;
+                    restUntil = now + SCROLL_PAUSE_MS;
+                }
+            }
+
+            frame = requestAnimationFrame(step);
+        };
+
+        frame = requestAnimationFrame(step);
+
+        return () => {
+            cancelAnimationFrame(frame);
+            el.removeEventListener('pointerenter', enter);
+            el.removeEventListener('pointerleave', leave);
+        };
+    }, [enabled]);
+
+    return ref;
+}
+
 /** A translation, or the fallback when the key has none. */
 function orKey(t: Translate, key: string, fallback: string): string {
     const text = t(key);
@@ -1139,13 +1211,22 @@ function List({ widget, schema, data, now, t }: BodyProps) {
     const wrap = opt<boolean>('wrap') === true;
     // One column wide: the key and the value matter, count and age do not fit.
     const narrow = widget.w <= 1;
+    const scroller = useAutoScroll<HTMLUListElement>(
+        opt<boolean>('auto_scroll') !== false && data.source !== 'hosts',
+    );
 
     if (rows.length === 0) {
         return <span className="lj-tile-small">{t('screens.list.empty')}</span>;
     }
 
     if (data.source === 'hosts') {
-        return <Hosts rows={rows} t={t} />;
+        return (
+            <Hosts
+                rows={rows}
+                t={t}
+                scroll={opt<boolean>('auto_scroll') !== false}
+            />
+        );
     }
 
     const texts = rows.map((row) =>
@@ -1176,6 +1257,7 @@ function List({ widget, schema, data, now, t }: BodyProps) {
 
     return (
         <ul
+            ref={scroller}
             className="grid min-h-0 flex-1 content-start gap-x-[0.8em] overflow-hidden"
             style={{ gridTemplateColumns: template }}
         >
@@ -1242,7 +1324,16 @@ function List({ widget, schema, data, now, t }: BodyProps) {
 }
 
 /** Hosts: each name over three small meters, CPU, memory and disk, colored by limit. */
-function Hosts({ rows, t }: { rows: Row[]; t: Translate }) {
+function Hosts({
+    rows,
+    t,
+    scroll,
+}: {
+    rows: Row[];
+    t: Translate;
+    scroll: boolean;
+}) {
+    const scroller = useAutoScroll<HTMLUListElement>(scroll);
     const meters = [
         ['cpu', 'cpu_load'],
         ['memory', 'memory_used'],
@@ -1256,7 +1347,10 @@ function Hosts({ rows, t }: { rows: Row[]; t: Translate }) {
               : 'var(--s-blue)';
 
     return (
-        <ul className="flex min-h-0 flex-1 flex-col gap-[0.45em] overflow-hidden">
+        <ul
+            ref={scroller}
+            className="flex min-h-0 flex-1 flex-col gap-[0.45em] overflow-hidden"
+        >
             {rows.map((row, i) => (
                 <li
                     key={i}
