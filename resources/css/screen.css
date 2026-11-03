@@ -169,10 +169,17 @@
     opacity: 1;
 }
 
-/* The designer's gear sits in the corner; the period label keeps out of its way on
-   every designer tile, so nothing moves when it shows. Hidden, it takes no clicks. */
+/* The designer's gear takes the period label's place while it shows; nothing moves.
+   Hidden, it takes no clicks. */
 .lj-tile .lj-corner-label {
-    padding-right: 1.4em;
+    transition: opacity 150ms;
+}
+
+.lj-tile:hover .lj-corner-label,
+.lj-tile:focus-visible .lj-corner-label,
+.lj-tile:has(:focus-visible) .lj-corner-label,
+.lj-tile[data-selected='true'] .lj-corner-label {
+    opacity: 0;
 }
 
 .lj-tile .lj-gear {

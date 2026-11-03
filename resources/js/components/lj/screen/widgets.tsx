@@ -404,6 +404,32 @@ export function WidgetTile({
             status !== 'degraded') ||
         (hideWhen === 'empty' && empty);
     const transition = opt<string>('transition') ?? 'fade';
+    // The top right label: a list's order, then the period or how old the report is.
+    const cornerText = [
+        widget.type === 'list' && sourceId
+            ? orKey(
+                  t,
+                  `screens.list.sort_hint.${sourceId}.${opt<string>('sort') ?? 'default'}`,
+                  t(`screens.list.sort_hint.${sourceId}.default`),
+              )
+            : '',
+        // What time it covers, so a 1 h tile next to a 24 h one is not misread.
+        opt<boolean>('show_period') !== false &&
+        typeof payload?.period === 'string'
+            ? // The latest report says how old it is; a period says how long.
+              typeof payload.as_of === 'string'
+                ? shortAge(payload.as_of, now)
+                : t(`screens.period_short.${payload.period}`)
+            : '',
+    ]
+        .filter(Boolean)
+        .join(' · ');
+    const cornerClass = cn(
+        'lj-tile-small whitespace-nowrap',
+        // Room for the designer's gear, whatever the label says.
+        corner && 'min-w-[1.5em] text-right',
+    );
+    const cornerStyle = { fontSize: 'var(--lj-cell-font)' };
     // How long the value has left: frozen (none) while it holds the tile or a tab pins it.
     const progress =
         pinned === undefined &&
@@ -470,8 +496,8 @@ export function WidgetTile({
             }}
         >
             {decoration}
-            {corner && (
-                // The same corner on every tile; the period label makes room while it shows.
+            {corner && !(showTitle && widget.type !== 'empty' && title) && (
+                // Without a title row the gear has the corner to itself.
                 <span
                     className="absolute top-1 right-1 z-20 flex"
                     style={{ fontSize: 'var(--lj-cell-font)' }}
@@ -480,14 +506,25 @@ export function WidgetTile({
                 </span>
             )}
             {showTitle && widget.type !== 'empty' && title && (
+                // The label keeps to the top right corner: a grid with it on the right and
+                // an invisible twin on the left keeps a centered title centered on the tile.
                 <div
                     className={cn(
-                        'flex items-baseline gap-[0.6em]',
+                        'grid items-baseline gap-[0.6em]',
                         align === 'center'
-                            ? 'justify-center'
-                            : 'justify-between',
+                            ? 'grid-cols-[auto_minmax(0,1fr)_auto]'
+                            : 'grid-cols-[minmax(0,1fr)_auto]',
                     )}
                 >
+                    {align === 'center' && (
+                        <span
+                            aria-hidden="true"
+                            className={cn(cornerClass, 'invisible')}
+                            style={cornerStyle}
+                        >
+                            {cornerText}
+                        </span>
+                    )}
                     <span
                         className="lj-tile-title min-w-0 truncate"
                         style={{
@@ -498,36 +535,21 @@ export function WidgetTile({
                         {title}
                     </span>
                     <span
-                        className={cn(
-                            'lj-tile-small flex-none whitespace-nowrap',
-                            corner && 'lj-corner-label',
-                        )}
+                        className={cn(cornerClass, 'relative')}
                         // The same size on every tile, whatever its text or title size.
-                        style={{ fontSize: 'var(--lj-cell-font)' }}
+                        style={cornerStyle}
                     >
-                        {[
-                            widget.type === 'list' && sourceId
-                                ? orKey(
-                                      t,
-                                      `screens.list.sort_hint.${sourceId}.${opt<string>('sort') ?? 'default'}`,
-                                      t(
-                                          `screens.list.sort_hint.${sourceId}.default`,
-                                      ),
-                                  )
-                                : '',
-                            // What time it covers, so a 1 h tile next to a 24 h one is not misread.
-                            opt<boolean>('show_period') !== false &&
-                            typeof payload?.period === 'string'
-                                ? // The latest report says how old it is; a period says how long.
-                                  typeof payload.as_of === 'string'
-                                    ? shortAge(payload.as_of, now)
-                                    : t(
-                                          `screens.period_short.${payload.period}`,
-                                      )
-                                : '',
-                        ]
-                            .filter(Boolean)
-                            .join(' · ')}
+                        <span
+                            className={corner ? 'lj-corner-label' : undefined}
+                        >
+                            {cornerText}
+                        </span>
+                        {/* The designer's gear takes the label's place while it shows. */}
+                        {corner && (
+                            <span className="absolute top-1/2 right-0 flex -translate-y-1/2">
+                                {corner}
+                            </span>
+                        )}
                     </span>
                 </div>
             )}

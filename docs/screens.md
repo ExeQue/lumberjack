@@ -159,7 +159,7 @@ Each widget's settings are grouped in sections that open and close:
   queue after a route) does not take the widget's filter. A rotated value's scope is stored in its `rotate` entry, such as
   `{"source": "queue_size", "scope": {"filter": "bulk"}}`.
 - **Display**: not in the inspector but behind the gear in the tile's top right corner,
-  next to the period, which shows while the pointer is on the tile, it has focus or it is
+  in place of the period label, which shows while the pointer is on the tile, it has focus or it is
   selected (never on the TV). The gear selects the widget and opens its display settings
   in a small panel beside it; Escape or a click elsewhere closes it, and changes save like
   any other. They are whether the title shows and how big, whether the tile is colored by
