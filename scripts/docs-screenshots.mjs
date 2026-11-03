@@ -6,7 +6,7 @@
 // LUMBERJACK_URL     where Lumberjack runs (https://lumberjack.test)
 // DOCS_EMAIL         who signs in (the seeded admin@lumberjack)
 // DOCS_PASSWORD      their password (password)
-// DOCS_PROJECT       the project to show (Demo)
+// DOCS_PROJECT       the project to show (the seeded Storefront)
 // CHROME_PATH        a Chrome or Chromium to use instead of the one Puppeteer downloads
 //
 // It only reads: it opens pages and dialogs but never saves or submits anything.
@@ -19,7 +19,7 @@ const BASE = (process.env.LUMBERJACK_URL ?? 'https://lumberjack.test').replace(
 );
 const EMAIL = process.env.DOCS_EMAIL ?? 'admin@lumberjack';
 const PASSWORD = process.env.DOCS_PASSWORD ?? 'password';
-const PROJECT = process.env.DOCS_PROJECT ?? 'Demo';
+const PROJECT = process.env.DOCS_PROJECT ?? 'Storefront';
 const OUT = new URL('../docs/screenshots/', import.meta.url);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -183,7 +183,8 @@ const shots = {
     schedule: { path: `${project}/schedule` },
     commands: { path: `${project}/commands` },
     logs: { path: `${project}/logs` },
-    releases: { path: `${project}/releases` },
+    // A month, so the deploys before the bad release and its rollback show too.
+    releases: { path: `${project}/releases?period=30d` },
     health: {
         path: `${project}/health`,
         // The check that has had an outage, else the first.
@@ -297,7 +298,7 @@ const shots = {
             await page.keyboard.press('k');
             await page.keyboard.up('Control');
             await sleep(400);
-            await page.keyboard.type('demo');
+            await page.keyboard.type('store');
             await sleep(1200);
         },
     },
