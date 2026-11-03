@@ -232,28 +232,39 @@ function holds(kind: WidgetKind, data: Payload | null | undefined): boolean {
     );
 }
 
+/** The value a rotating tile shows now, and how far into its time on screen it is. */
+export type RotationSlot = {
+    index: number;
+    /** Whole seconds it has shown; null while it holds the tile or nothing rotates. */
+    elapsed: number | null;
+    /** How long it shows, in seconds. */
+    seconds: number;
+};
+
 /**
  * Which value a rotating tile shows at this moment, by its data key (keysOf), each for
  * its own seconds. Every tile and every kiosk counts from the same clock, so tiles with
- * the same timing switch together; one that needs attention holds.
+ * the same timing switch together; one that needs attention holds. The clock ticks once
+ * a second, so a value shows from the first tick of its slot, and whole seconds of
+ * elapsed time line a progress bar up with the tick that switches it.
  */
-export function rotationIndex(
+export function rotationAt(
     kind: WidgetKind,
     keys: string[],
     data: WidgetData | undefined,
     seconds: number[],
     hold: boolean,
     now: number,
-): number {
+): RotationSlot {
     if (keys.length < 2) {
-        return 0;
+        return { index: 0, elapsed: null, seconds: 0 };
     }
 
     if (hold) {
         const bad = keys.findIndex((key) => holds(kind, data?.[key]));
 
         if (bad >= 0) {
-            return bad;
+            return { index: bad, elapsed: null, seconds: 0 };
         }
     }
 
@@ -263,13 +274,13 @@ export function rotationIndex(
 
     for (let i = 0; i < spans.length; i++) {
         if (at < spans[i]) {
-            return i;
+            return { index: i, elapsed: Math.floor(at), seconds: spans[i] };
         }
 
         at -= spans[i];
     }
 
-    return 0;
+    return { index: 0, elapsed: 0, seconds: spans[0] };
 }
 
 /** A value in its unit: counts compact, shares as percent, durations in ms or s, sizes in B to TB. */

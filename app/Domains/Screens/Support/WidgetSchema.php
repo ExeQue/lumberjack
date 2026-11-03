@@ -376,7 +376,7 @@ final class WidgetSchema
             $select('rotate_every', ['5', '10', '20', '30', '60'], '10'),
             $select('transition', ['fade', 'slide', 'none'], 'fade'),
             $toggle('hold_problem', true),
-            $toggle('dots', true),
+            $toggle('progress', true),
             // How long the widget's own source shows; set on its row under Rotate through.
             ['key' => 'source_seconds', 'type' => 'number', 'default' => null, 'data' => false, 'span' => 1, 'min' => 1, 'max' => self::MAX_ROTATE_SECONDS],
         ]);

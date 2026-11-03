@@ -50,9 +50,7 @@ you put it on; cells no widget covers simply stay empty on the TV.
   widget swaps the two (each keeps its size) when both then fit; otherwise the drop is
   refused and the widget stays where it was.
 - **Resize**: drag any edge or corner; sizes follow whole cells, and the left and top
-  edges move the widget as they resize it. A widget only grows into free cells. The
-  **Size** buttons in its settings are shortcuts for 1 x 1, 2 x 1, 2 x 2 and 4 x 2 (a
-  size without room is grayed out).
+  edges move the widget as they resize it. A widget only grows into free cells.
 - **Keyboard**: with a widget focused, the arrow keys move it one cell, Shift and the
   arrows resize it (both only into free cells), Delete removes it and Escape shows the
   screen's settings.
@@ -129,8 +127,12 @@ Each widget's settings are grouped in sections that open and close:
     Below the tabs, **Whole widget** holds what applies to every value: under
     **Rotation**, how often they switch (every 5 seconds to a minute), with a fade, a
     slide or neither, whether a value that needs attention (amber or red) holds the tile
-    until it clears, and the position dots; then Scope and Size (Display is behind the gear). Tiles with the
-    same timing switch together. As stored in the screen's widgets, a `rotate` entry is a
+    until it clears, and a progress bar; then Scope and how often it updates (the rest
+    of Display is behind the gear). Tiles with the same timing switch together. The
+    progress bar runs along the bottom edge of the tile, growing from the center to the
+    full width just as the next value takes over; it stands still while a value holds
+    the tile or a tab is open in the designer, and does not show when the system asks
+    for reduced motion. As stored in the screen's widgets, a `rotate` entry is a
     source id or `{"source": "p95", "seconds": 30, "title": "Latency", "options":
   {"red": 800}, "scope": {"period": "24h"}}`; the first value's seconds are the
     widget's `source_seconds` option.
@@ -158,8 +160,10 @@ Each widget's settings are grouped in sections that open and close:
   any other. They are whether the title shows and how big, whether the tile is colored by
   its status (and whether a calm tile keeps its green border), the text size (fitted to
   the tile, or small to huge), alignment (left or centered, top or vertically centered),
-  how often it updates (live, every minute, every 5 minutes), and whether to hide it
-  while all is ok or while it has nothing to show.
+  and whether to hide it while all is ok or while it has nothing to show. How often it
+  updates (live, every minute, every 5 minutes) is about its data, so it stays in the
+  inspector. The panel opens under the gear, or above it when there is more room there,
+  and scrolls when neither side fits it.
 
     ![A widget's display settings behind its gear](./screenshots/screen-designer-display.png)
 

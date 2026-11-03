@@ -1341,7 +1341,6 @@ export default function EditScreen(props: Props) {
                                         <DisplayGear
                                             widget={widget}
                                             catalog={catalog}
-                                            cols={screen.cols}
                                             onChange={(next) =>
                                                 patch(next.id, next)
                                             }
@@ -1414,15 +1413,6 @@ export default function EditScreen(props: Props) {
                             key={current.id}
                             widget={current}
                             catalog={catalog}
-                            cols={screen.cols}
-                            canResize={(w, h) =>
-                                placeable(current.id, {
-                                    x: current.x,
-                                    y: current.y,
-                                    w,
-                                    h,
-                                })
-                            }
                             onChange={(widget) => patch(widget.id, widget)}
                             onRemove={() => remove(current.id)}
                             tab={pinned}
