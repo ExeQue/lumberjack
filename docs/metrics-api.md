@@ -98,7 +98,9 @@ Query parameters, named so Grafana's macros drop straight in:
 - `from`, `to`: epoch milliseconds (`${__from}`, `${__to}`) or ISO 8601. The last 24
   hours by default.
 - `interval`: the bucket size, such as `30s`, `5m`, `1h` or `1d` (`${__interval}`), or
-  `auto` (the default) for about 300 points. At least a minute.
+  `auto` (the default) for about 300 points. At least a minute, rounded up to whole
+  minutes, and raised so a series has at most 2000 points; the answer's `interval` says
+  what was used.
 - `environment`, `route`, `queue`, `job`, `host`, `release`: filters. `route`, `queue`,
   `job` and `host` take `*` as a wildcard (`/api/*`). A filter a metric's data does not
   carry, such as a route for a queue's size, is ignored.

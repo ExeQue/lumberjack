@@ -12,6 +12,7 @@ use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\Metrics\CreatesMetricsCredentials;
 use Tests\Support\Performance\CreatesRequestCounts;
@@ -182,6 +183,46 @@ describe('the series', function () {
 
         $this->withToken($token)->getJson("/api/v1/projects/{$project->slug}/series/nope")->assertUnprocessable();
         $this->withToken($token)->getJson("/api/v1/projects/{$project->slug}/series/cpu_load?group_by=route")->assertUnprocessable()->assertJsonValidationErrors('group_by');
+    });
+
+    it('reads the interval in any unit, in whole minutes', function (int $days, string $interval, string $expected) {
+        $project = Project::factory()->create();
+
+        $this->withToken($this->createMetricsToken($project))
+            ->getJson("/api/v1/projects/{$project->slug}/series/requests?from=".now()->subDays($days)->getTimestampMs()."&interval={$interval}")
+            ->assertOk()
+            ->assertJsonPath('interval', $expected);
+    })->with([
+        'milliseconds' => [1, '90000ms', '2m'],
+        'seconds, at least a minute' => [1, '30s', '1m'],
+        'hours' => [1, '2h', '2h'],
+        'days' => [30, '7d', '7d'],
+        'too fine for the range' => [30, '1m', '22m'],
+    ]);
+
+    it('keeps the window sane', function () {
+        $project = Project::factory()->create();
+        $token = $this->createMetricsToken($project);
+        $series = fn (string $query) => $this->withToken($token)->getJson("/api/v1/projects/{$project->slug}/series/requests?{$query}")->assertOk();
+
+        $flipped = $series('from='.now()->getTimestampMs().'&to='.now()->subHour()->getTimestampMs());
+        expect(CarbonImmutable::parse($flipped->json('to'))->diffInSeconds(CarbonImmutable::parse($flipped->json('from')), true))->toEqual(60);
+
+        $old = $series('from='.now()->subYear()->getTimestampMs().'&interval=1d');
+        expect(CarbonImmutable::parse($old->json('from'))->diffInDays(CarbonImmutable::parse($old->json('to')), true))->toEqual(90.0);
+
+        // A + in an unencoded query string arrives as a space.
+        $spaced = $series('from='.now()->subHour()->format('Y-m-d\TH:i:s').' 00:00');
+        expect(CarbonImmutable::parse($spaced->json('from'))->diffInMinutes(now()->subHour(), true))->toBeLessThan(1.0);
+    });
+
+    it('refuses a time it cannot read', function () {
+        $project = Project::factory()->create();
+
+        $this->withToken($this->createMetricsToken($project))
+            ->getJson("/api/v1/projects/{$project->slug}/series/requests?from=not-a-time")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('from');
     });
 
     it('answers identical questions from the cache', function () {
