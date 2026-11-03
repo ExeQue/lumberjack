@@ -68,6 +68,10 @@ class PruneProjectTelemetryAction
         $deleted['command_runs'] += $this->deleter->delete('command_runs', fn ($q) => $q->where('project_id', $project->id)
             ->where('status', '!=', 'failed')->where('created_at', '<', $jobsCutoff));
 
+        // Health results come as often as requests; outages, which uptime is counted from, live as long as errors.
+        $deleted['health_check_results'] = $this->deleter->delete('health_check_results', fn ($q) => $q->where('project_id', $project->id)->where('checked_at', '<', $performanceCutoff));
+        $deleted['health_outages'] = $this->deleter->delete('health_outages', fn ($q) => $q->where('project_id', $project->id)->whereNotNull('ended_at')->where('ended_at', '<', $errorsCutoff));
+
         $deleted['log_entries'] = 0;
         foreach ($project->logChannels()->pluck('id') as $channelId) {
             $cutoff = $before($days(RetentionCategory::Logs, channel: $channelId));

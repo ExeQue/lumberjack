@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Domains\Health\Actions\RecordHealthResultAction;
+use App\Domains\Health\Data\HealthResultData;
+use App\Domains\Health\Enums\HealthResultStatus;
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Mcp\Models\McpToken;
@@ -101,6 +105,23 @@ describe('the triage inbox', function () {
             ->and($first['mentions'][0]['body'])->toBe('@'.$this->token->name.' (MCP) please find the deploy that broke this')
             ->and($first['mentions'][0]['issue'])->toBe($issue->reference())
             ->and($second['mentions'])->toBe([]);
+    });
+});
+
+describe('health checks', function () {
+    it('lists the checks with their state, and only those needing attention when asked', function () {
+        $down = HealthCheck::factory()->for($this->project)->create(['slug' => 'disk:s3', 'degrade_after' => 1]);
+        HealthCheck::factory()->for($this->project)->create(['slug' => 'cache:redis']);
+        app(RecordHealthResultAction::class)->execute($down, new HealthResultData(HealthResultStatus::Failed, 'Not writable', host: 'web-1'));
+
+        $all = $this->toolResult($this->callTool('lj_mcp_secret', 'list_health_checks')->assertOk());
+        $attention = $this->toolResult($this->callTool('lj_mcp_secret', 'list_health_checks', ['attention' => true])->assertOk());
+        $overview = $this->toolResult($this->callTool('lj_mcp_secret', 'get_project_overview')->assertOk());
+
+        expect(collect($all['checks'])->pluck('state', 'slug')->all())->toBe(['cache:redis' => 'pending', 'disk:s3' => 'down'])
+            ->and(collect($attention['checks'])->pluck('slug')->all())->toBe(['disk:s3'])
+            ->and($attention['checks'][0]['last_message'])->toBe('Not writable')
+            ->and($overview['health'])->toMatchArray(['total' => 2, 'down' => 1, 'pending' => 1]);
     });
 });
 

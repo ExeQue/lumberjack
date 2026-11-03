@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Overview\Queries;
 
+use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Presenters\IssuePresenter;
 use App\Domains\Jobs\Enums\JobRunStatus;
@@ -20,6 +21,7 @@ class ProjectOverviewQuery
     public function __construct(
         private readonly RouteStatisticsQuery $routes,
         private readonly IssuePresenter $presenter,
+        private readonly HealthChecksQuery $health,
     ) {
     }
 
@@ -70,6 +72,7 @@ class ProjectOverviewQuery
             'job_runs' => $jobRuns,
             'failed_jobs' => $failedJobs,
             'stuck_jobs' => $stuckJobs,
+            'health' => $this->health->summary($project, $environment),
             'open_issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->count(),
             'request_series' => TimeSeries::count($requests, $period),
             'latency_series' => $this->latencySeries($project, $period, $environment),

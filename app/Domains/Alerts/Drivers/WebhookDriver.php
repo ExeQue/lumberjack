@@ -6,6 +6,7 @@ namespace App\Domains\Alerts\Drivers;
 
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
@@ -52,6 +53,30 @@ class WebhookDriver implements ChannelDriver
                     'url' => $alert->url,
                 ],
                 'thresholds' => $alert->settings->toArray(),
+            ]);
+
+            return;
+        }
+
+        if ($alert instanceof HealthCheckAlert) {
+            $check = $alert->check;
+
+            $this->post($channel, [
+                'event' => 'health_check',
+                'project' => ['id' => $check->project->uuid, 'slug' => $check->project->slug, 'name' => $check->project->name],
+                'environment' => $check->environment !== '' ? $check->environment : null,
+                'check' => [
+                    'id' => $check->uuid,
+                    'name' => $check->displayName(),
+                    'slug' => $check->slug,
+                    'source' => $check->source->value,
+                    'type' => $check->type?->value,
+                    'state' => $alert->state,
+                    'message' => $alert->message,
+                    'hosts' => $alert->hosts,
+                    'since' => $alert->since->toIso8601String(),
+                    'url' => $alert->url,
+                ],
             ]);
 
             return;

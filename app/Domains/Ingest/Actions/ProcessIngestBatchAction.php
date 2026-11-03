@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Ingest\Actions;
 
 use App\Domains\Commands\Actions\RecordCommandEventAction;
+use App\Domains\Health\Actions\RecordReportedHealthAction;
 use App\Domains\Ingest\Data\Envelope;
 use App\Domains\Ingest\Support\SignalFactory;
 use App\Domains\Issues\Actions\RecordOccurrenceAction;
@@ -40,6 +41,7 @@ class ProcessIngestBatchAction
         private readonly RecordLogLineAction $recordLogLineAction,
         private readonly RecordScheduleEventAction $recordScheduleEventAction,
         private readonly RecordCommandEventAction $recordCommandEventAction,
+        private readonly RecordReportedHealthAction $recordReportedHealthAction,
         private readonly SignalFactory $signalFactory,
         private readonly SqlNormalizer $sqlNormalizer,
         private readonly BroadcastProjectChangeAction $broadcast,
@@ -83,6 +85,7 @@ class ProcessIngestBatchAction
                     'log' => $this->recordLogLineAction->execute($project, $event, $envelope),
                     'schedule' => $this->recordScheduleEventAction->execute($project, $event, $envelope),
                     'command' => $this->recordCommandEventAction->execute($project, $event, $envelope),
+                    'health' => $this->recordReportedHealthAction->execute($project, $event, $envelope),
                     default => null,
                 };
             } catch (Throwable $e) {

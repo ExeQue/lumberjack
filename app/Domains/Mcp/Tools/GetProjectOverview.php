@@ -20,7 +20,7 @@ class GetProjectOverview extends Tool
 
     protected string $name = 'get_project_overview';
 
-    protected string $description = 'Project overview: requests, error rate, p50/p95/p99 (microseconds), job failures, newest issues, slowest routes and failed jobs for a period.';
+    protected string $description = 'Project overview: requests, error rate, p50/p95/p99 (microseconds), job failures, health check counts (ok, degraded, down, stale), newest issues, slowest routes and failed jobs for a period.';
 
     public function __construct(private readonly ProjectOverviewQuery $overview)
     {

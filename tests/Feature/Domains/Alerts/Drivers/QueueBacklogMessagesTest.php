@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
 use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Drivers\DiscordDriver;
@@ -13,12 +14,13 @@ use App\Domains\Alerts\Drivers\WebhookDriver;
 use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Alerts\Notifications\AlertSummaryNotification;
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 
-covers(QueueBacklogAlert::class, QueueBacklogSettings::class, AlertSummaryNotification::class);
+covers(QueueBacklogAlert::class, QueueBacklogSettings::class, HealthCheckAlert::class, AlertSummaryNotification::class);
 
 describe('queue backlog messages', function () {
     beforeEach(function () {
@@ -73,5 +75,47 @@ describe('queue backlog messages', function () {
 
             return $mail->subject === 'Queue backlog in Shop: redis:emails' && in_array('Waiting: 1,240', $mail->introLines, true);
         });
+    });
+});
+
+describe('health check messages', function () {
+    beforeEach(function () {
+        Http::fake(['*' => Http::response(null, 204)]);
+        $this->check = HealthCheck::factory()->for(Project::factory()->create(['name' => 'Shop']))->create(['slug' => 'disk:s3']);
+        $this->alert = fn (string $state = HealthCheckAlert::DOWN) => new HealthCheckAlert($this->check, $state, 'Disk is not writable', ['web-1', 'web-2'], now()->subMinutes(7)->toImmutable(), 'https://lumberjack.test/health');
+        $this->channel = fn (ChannelType $type, array $config) => NotificationChannel::factory()->for($this->check->project->team)->create(['type' => $type, 'name' => 'Ops', 'config' => $config]);
+    });
+
+    it('lists the same facts in Discord, Slack, Teams and Telegram', function () {
+        app(DiscordDriver::class)->send(($this->channel)(ChannelType::Discord, ['webhook_url' => 'https://discord.com/api/webhooks/1/x']), ($this->alert)());
+        app(SlackDriver::class)->send(($this->channel)(ChannelType::Slack, ['webhook_url' => 'https://hooks.slack.com/services/T/B/x']), ($this->alert)());
+        app(TeamsDriver::class)->send(($this->channel)(ChannelType::Teams, ['webhook_url' => 'https://93.184.215.14/workflows/x']), ($this->alert)());
+        app(TelegramDriver::class)->send(($this->channel)(ChannelType::Telegram, ['bot_token' => '123456:'.str_repeat('a', 35), 'chat_id' => '-100123']), ($this->alert)());
+
+        $sent = Http::recorded()->map(fn (array $pair) => $pair[0]);
+        $discord = collect($sent[0]['embeds'][0]['fields'])->pluck('value', 'name')->all();
+        $slack = collect(collect($sent[1]['blocks'])->firstWhere('fields')['fields'])->mapWithKeys(fn (array $f) => [trim(explode("\n", $f['text'])[0], '*') => explode("\n", $f['text'])[1]])->all();
+        $teams = collect(collect($sent[2]['attachments'][0]['content']['body'])->firstWhere('type', 'FactSet')['facts'])->pluck('value', 'title')->all();
+        preg_match_all('#^<b>([^<]+):</b> (.+)$#m', $sent[3]['text'], $lines, PREG_SET_ORDER);
+        $telegram = collect($lines)->mapWithKeys(fn (array $m) => [$m[1] => $m[2]])->all();
+
+        expect($discord)->toBe(['Status' => 'Down', 'Check' => 'disk:s3', 'Environment' => 'production', 'Hosts' => 'web-1, web-2'])
+            ->and($sent[0]['embeds'][0]['title'])->toBe('Health check down in Shop')
+            ->and($sent[0]['embeds'][0]['description'])->toContain('Disk is not writable')
+            ->and($slack)->toBe($discord)
+            ->and($teams)->toBe($discord)
+            ->and($telegram)->toBe($discord);
+    });
+
+    it('posts the state to a webhook', function () {
+        $channel = ($this->channel)(ChannelType::Webhook, ['url' => 'https://93.184.215.14/hook', 'secret' => 'whsec_x']);
+
+        app(WebhookDriver::class)->send($channel, ($this->alert)(HealthCheckAlert::RECOVERED));
+
+        Http::assertSent(fn (Request $request) => $request['event'] === 'health_check'
+            && $request['check']['id'] === $this->check->uuid
+            && $request['check']['state'] === 'recovered'
+            && $request['check']['slug'] === 'disk:s3'
+            && $request['check']['hosts'] === ['web-1', 'web-2']);
     });
 });

@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Domains\Commands\Enums\CommandRunStatus;
 use App\Domains\Commands\Models\CommandRun;
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Enums\JobRunStatus;
 use App\Domains\Jobs\Models\JobRun;
@@ -82,7 +83,7 @@ class HandleInertiaRequests extends Middleware
      * The project the sidebar keeps showing on pages that are not about one
      * project: the one being viewed, else the last one visited, else the first.
      *
-     * @return array{uuid: string, name: string, can_administer: bool, counts: array{issues: int, jobs: int, schedule: int, commands: int}}|null
+     * @return array{uuid: string, name: string, can_administer: bool, counts: array{issues: int, jobs: int, schedule: int, health: int, commands: int}}|null
      */
     private function sidebarProject(Request $request): ?array
     {
@@ -112,6 +113,7 @@ class HandleInertiaRequests extends Middleware
                 'jobs' => JobRun::query()->where('project_id', $project->id)->where('created_at', '>=', now()->subDay())
                     ->whereStatus(JobRunStatus::Failed, JobRunStatus::Stuck)->count(),
                 'schedule' => ScheduledTask::query()->where('project_id', $project->id)->whereNeedsAttention()->count(),
+                'health' => HealthCheck::query()->where('project_id', $project->id)->whereNotArchived()->whereUnhealthy()->count(),
                 'commands' => CommandRun::query()->where('project_id', $project->id)->where('created_at', '>=', now()->subDay())
                     ->where('status', CommandRunStatus::Failed->value)->count(),
             ],

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Alerts\Console\Commands\CheckQueueBacklogsCommand;
+use App\Domains\Health\Console\Commands\RunHealthChecksCommand;
 use App\Domains\Issues\Console\Commands\ReturnIgnoredIssuesCommand;
 use App\Domains\Jobs\Console\Commands\MarkStuckJobsCommand;
 use App\Domains\Jobs\Models\QueueSample;
@@ -16,6 +17,7 @@ Schedule::command(MarkStuckJobsCommand::class)->everyMinute()->withoutOverlappin
 Schedule::command(MarkMissedScheduledTasksCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(ReturnIgnoredIssuesCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(CheckQueueBacklogsCommand::class)->everyMinute()->withoutOverlapping();
+Schedule::command(RunHealthChecksCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(PruneTelemetryCommand::class)->dailyAt('03:15')->timezone('Europe/Copenhagen')->withoutOverlapping();
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 Schedule::command('model:prune', ['--model' => [ProjectAgent::class, QueueSample::class, HostSample::class]])->hourly()->withoutOverlapping();

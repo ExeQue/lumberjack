@@ -29,6 +29,6 @@ describe('the sidebar project', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('sidebar_project.uuid', $project->uuid)
-                ->where('sidebar_project.counts', ['issues' => 2, 'jobs' => 2, 'schedule' => 0, 'commands' => 0]));
+                ->where('sidebar_project.counts', ['issues' => 2, 'jobs' => 2, 'schedule' => 0, 'health' => 0, 'commands' => 0]));
     });
 });

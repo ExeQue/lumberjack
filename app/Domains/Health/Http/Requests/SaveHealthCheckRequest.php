@@ -1,0 +1,120 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domains\Health\Http\Requests;
+
+use App\Domains\Health\Enums\HealthCheckType;
+use App\Domains\Health\Models\HealthCheck;
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+/**
+ * Adding or editing a check. A check Lumberjack runs takes its type's settings; one
+ * the app reports only takes how it is shown and alerted on.
+ */
+class SaveHealthCheckRequest extends FormRequest
+{
+    /** @var array<string, list<string>> the settings each type keeps */
+    public const array CONFIG_KEYS = [
+        'http' => ['url', 'method', 'expected_status', 'body_contains', 'max_latency_ms', 'timeout_s'],
+        'ssl' => ['host', 'port', 'warn_days', 'fail_days'],
+        'tcp' => ['host', 'port', 'timeout_s'],
+        'dns' => ['name', 'record_type', 'expected'],
+        'heartbeat' => ['grace_minutes'],
+    ];
+
+    private const string HOST = 'regex:/^[A-Za-z0-9.-]{1,253}$|^\[?[0-9A-Fa-f:.]+\]?$/';
+
+    public function check(): ?HealthCheck
+    {
+        $check = $this->route('healthCheck');
+
+        return $check instanceof HealthCheck ? $check : null;
+    }
+
+    public function type(): ?HealthCheckType
+    {
+        return $this->check()->type ?? HealthCheckType::tryFrom((string) $this->input('type'));
+    }
+
+    /**
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        $reported = $this->check()?->isReported() ?? false;
+        $thresholds = [$reported ? 'nullable' : 'required', 'integer', 'min:1', 'max:100'];
+        $common = [
+            'name' => [$reported ? 'nullable' : 'required', 'string', 'max:150'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'degrade_after' => $thresholds,
+            'recover_after' => $thresholds,
+            'muted' => ['boolean'],
+        ];
+
+        if ($reported) {
+            return $common;
+        }
+
+        return [
+            ...$common,
+            'type' => [$this->check() === null ? 'required' : 'nullable', Rule::enum(HealthCheckType::class)],
+            'environment' => ['nullable', 'string', 'max:64'],
+            'interval_minutes' => ['required', 'integer', Rule::in(HealthCheck::INTERVALS)],
+            'config' => ['nullable', 'array'],
+            ...$this->configRules(),
+        ];
+    }
+
+    /**
+     * @return array<string, array<mixed>>
+     */
+    private function configRules(): array
+    {
+        return match ($this->type()) {
+            HealthCheckType::Http => [
+                'config.url' => ['required', 'url:http,https', 'max:2000'],
+                'config.method' => ['nullable', Rule::in(['GET', 'HEAD', 'POST'])],
+                'config.expected_status' => ['nullable', 'integer', 'min:100', 'max:599'],
+                'config.body_contains' => ['nullable', 'string', 'max:200'],
+                'config.max_latency_ms' => ['nullable', 'integer', 'min:1', 'max:60000'],
+                'config.timeout_s' => ['nullable', 'integer', 'min:1', 'max:30'],
+            ],
+            HealthCheckType::Ssl => [
+                'config.host' => ['required', 'string', self::HOST],
+                'config.port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+                'config.warn_days' => ['nullable', 'integer', 'min:1', 'max:365'],
+                'config.fail_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            ],
+            HealthCheckType::Tcp => [
+                'config.host' => ['required', 'string', self::HOST],
+                'config.port' => ['required', 'integer', 'min:1', 'max:65535'],
+                'config.timeout_s' => ['nullable', 'integer', 'min:1', 'max:30'],
+            ],
+            HealthCheckType::Dns => [
+                'config.name' => ['required', 'string', 'max:253', 'regex:/^[A-Za-z0-9._-]+$/'],
+                'config.record_type' => ['required', Rule::in(['A', 'AAAA', 'CNAME', 'MX', 'TXT'])],
+                'config.expected' => ['nullable', 'string', 'max:255'],
+            ],
+            HealthCheckType::Heartbeat => [
+                'config.grace_minutes' => ['nullable', 'integer', 'min:0', 'max:1440'],
+            ],
+            null => [],
+        };
+    }
+
+    /**
+     * The type's settings as entered, empty ones left out so their defaults apply.
+     *
+     * @return array<string, mixed>
+     */
+    public function config(): array
+    {
+        $given = (array) $this->validated('config', []);
+        $keys = self::CONFIG_KEYS[$this->type()?->value] ?? [];
+
+        return array_filter(array_intersect_key($given, array_flip($keys)), fn (mixed $v): bool => $v !== null && $v !== '');
+    }
+}

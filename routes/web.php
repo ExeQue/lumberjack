@@ -10,6 +10,7 @@ use App\Domains\Administration\Http\Middleware\EnsureSetupIsOpen;
 use App\Domains\Administration\Http\Middleware\EnsureUserIsAdmin;
 use App\Domains\Alerts\Http\Controllers\AlertController;
 use App\Domains\Commands\Http\Controllers\CommandController;
+use App\Domains\Health\Http\Controllers\HealthController;
 use App\Domains\Issues\Http\Controllers\IssueActionController;
 use App\Domains\Issues\Http\Controllers\IssueController;
 use App\Domains\Issues\Http\Controllers\LabelController;
@@ -72,6 +73,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('commands', CommandController::class)->name('commands.index');
         Route::delete('schedule/{scheduledTask}', [ScheduleController::class, 'destroy'])->name('schedule.destroy');
         Route::get('logs', LogController::class)->name('logs.index');
+        Route::get('health', [HealthController::class, 'index'])->name('health.index');
+        Route::post('health', [HealthController::class, 'store'])->name('health.store');
+        Route::put('health/{healthCheck}', [HealthController::class, 'update'])->name('health.update');
+        Route::put('health/{healthCheck}/archive', [HealthController::class, 'archive'])->name('health.archive');
+        Route::delete('health/{healthCheck}', [HealthController::class, 'destroy'])->name('health.destroy');
         Route::get('search', SearchController::class)->middleware('throttle:120,1')->name('projects.search');
 
         Route::get('settings', [ProjectSettingsController::class, 'edit'])->name('projects.settings');

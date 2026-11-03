@@ -200,7 +200,8 @@ return [
     |
     | "ingest" has its own workers so a burst of batches never delays
     | alerts; "background" runs alerts, mail and the long clean-up jobs,
-    | which is why its timeout covers a project purge.
+    | which is why its timeout covers a project purge. Health checks
+    | Lumberjack runs itself come last there, on "health".
     |
     */
 
@@ -221,7 +222,7 @@ return [
         ],
         'background' => [
             'connection' => 'redis',
-            'queue' => ['alerts', 'default'],
+            'queue' => ['alerts', 'default', 'health'],
             'balance' => 'auto',
             'autoScalingStrategy' => 'time',
             'minProcesses' => 1,

@@ -12,6 +12,7 @@ enum AlertRuleType: string
     case Escalation = 'escalation';
     case StatusChange = 'status_change';
     case QueueBacklog = 'queue_backlog';
+    case HealthCheck = 'health_check';
 
     /**
      * Notes and status changes go to shared channels only when someone turns that on.

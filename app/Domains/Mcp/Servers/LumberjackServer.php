@@ -14,6 +14,7 @@ use App\Domains\Mcp\Tools\GetProjectOverview;
 use App\Domains\Mcp\Tools\GetScheduledTask;
 use App\Domains\Mcp\Tools\GetTrace;
 use App\Domains\Mcp\Tools\ListCommands;
+use App\Domains\Mcp\Tools\ListHealthChecks;
 use App\Domains\Mcp\Tools\ListIssues;
 use App\Domains\Mcp\Tools\ListJobs;
 use App\Domains\Mcp\Tools\ListMembers;
@@ -59,6 +60,7 @@ class LumberjackServer extends Server
         GetScheduledTask::class,
         ListCommands::class,
         GetCommand::class,
+        ListHealthChecks::class,
         SearchLogs::class,
         ListMembers::class,
         SetIssueStatus::class,

@@ -13,6 +13,7 @@ return [
         'escalation' => ['label' => 'Escalation', 'description' => 'An open issue suddenly happening far more often than usual: at least 10 occurrences in 5 minutes.'],
         'status_change' => ['label' => 'Resolved or ignored', 'description' => 'Every issue someone resolves or ignores, with who did it and their comment. Bulk changes on the issues list are left out.'],
         'note' => ['label' => 'Note', 'description' => 'Every note written on an issue, by a person or an agent over MCP. Not throttled.'],
+        'health_check' => ['label' => 'Health check', 'description' => 'A health check that becomes degraded or down after its threshold, reported by the app or run by Lumberjack, and again when it recovers. Muted checks send nothing.'],
         'queue_backlog' => ['label' => 'Queue backlog', 'description' => 'A queue with too many jobs waiting, or one waiting too long, for a while, from the sizes the agents report. Catches dead workers, which start no job to measure. Tells again when it is back under.'],
     ],
     'messages' => [
@@ -33,6 +34,15 @@ return [
         'unknown_author' => 'Someone',
         'queue_backlog' => 'Queue backlog in :project',
         'queue_backlog_recovered' => 'Queue backlog cleared in :project',
+        'health_check_down' => 'Health check down in :project',
+        'health_check_degraded' => 'Health check degraded in :project',
+        'health_check_recovered' => 'Health check recovered in :project',
+    ],
+    'health_check' => [
+        'recovered' => '{1} Recovered after 1 minute.|[2,*] Recovered after :count minutes.',
+        'states' => ['down' => 'Down', 'degraded' => 'Degraded', 'recovered' => 'Recovered'],
+        'types' => ['http' => 'HTTP', 'ssl' => 'SSL certificate', 'tcp' => 'TCP port', 'dns' => 'DNS record', 'heartbeat' => 'Heartbeat'],
+        'facts' => ['status' => 'Status', 'check' => 'Check', 'environment' => 'Environment', 'hosts' => 'Hosts'],
     ],
     'queue_backlog' => [
         'threshold_size' => '{1} more than 1 job|[2,*] more than :size jobs',

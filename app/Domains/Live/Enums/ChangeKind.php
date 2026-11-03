@@ -13,4 +13,5 @@ enum ChangeKind: string
     case Logs = 'logs.changed';
     case Performance = 'performance.changed';
     case Agents = 'agents.changed';
+    case Health = 'health.changed';
 }

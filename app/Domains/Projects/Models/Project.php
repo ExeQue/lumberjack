@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Projects\Models;
 
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Label;
 use App\Domains\Logs\Models\LogChannel;
@@ -98,6 +99,12 @@ class Project extends Model
     public function scheduledTasks(): HasMany
     {
         return $this->hasMany(ScheduledTask::class);
+    }
+
+    /** @return HasMany<HealthCheck, $this> */
+    public function healthChecks(): HasMany
+    {
+        return $this->hasMany(HealthCheck::class);
     }
 
     /** @return HasMany<ProjectAgent, $this> */
