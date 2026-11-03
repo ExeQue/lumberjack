@@ -88,7 +88,7 @@ return [
         'data' => 'Data',
         'layout' => 'Layout',
         'none' => 'No widget matches.',
-        'hint' => 'Drag onto the grid, or click to add at the end.',
+        'hint' => 'Drag onto any free cell of the grid, or click to add in the first free spot.',
     ],
 
     'designer' => [
@@ -118,9 +118,9 @@ return [
         'too_many' => 'A screen holds at most 48 widgets.',
         // Button, opens the full screen view in a new tab.
         'open_kiosk' => 'Open kiosk',
-        'overflow' => '{1} 1 widget does not fit on the :cols x :rows screen and does not show on the TV. Add columns or rows, or make widgets smaller.|[2,*] :count widgets do not fit on the :cols x :rows screen and do not show on the TV. Add columns or rows, or make widgets smaller.',
-        'drop_end' => 'Drop here to add at the end',
-        'help' => 'Drag a widget to move it, its corner to resize it. With a widget focused: arrows move it, Shift and arrows resize it, Delete removes it, Escape shows the screen settings.',
+        'overflow' => '{1} 1 widget does not fit on the :cols x :rows screen and does not show on the TV. Drag it back onto free cells, add columns or rows, or remove it.|[2,*] :count widgets do not fit on the :cols x :rows screen and do not show on the TV. Drag them back onto free cells, add columns or rows, or remove them.',
+        'no_room' => 'No free cell left. Make room, or add columns or rows.',
+        'help' => 'Drag a widget onto free cells to move it, any edge or corner to resize it; green shows where it fits, red where it does not. With a widget focused: arrows move it, Shift and arrows resize it, Delete removes it, Escape shows the screen settings.',
         'tile' => ':kind: :title, :w by :h',
         'tile_untitled' => ':kind, :w by :h',
     ],

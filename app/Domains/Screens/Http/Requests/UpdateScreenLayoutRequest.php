@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Screens\Http\Requests;
 
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Screens\Support\ScreenLayout;
 use App\Domains\Screens\Support\WidgetSchema;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -43,7 +44,8 @@ class UpdateScreenLayoutRequest extends FormRequest
     }
 
     /**
-     * Each widget id once: the designer and kiosks tell widgets apart by it.
+     * Each widget id once (the designer and kiosks tell widgets apart by it), and no two
+     * widgets on one cell.
      *
      * @return list<Closure(Validator): void>
      */
@@ -60,6 +62,16 @@ class UpdateScreenLayoutRequest extends FormRequest
                 }
 
                 $seen[(string) $id] = true;
+            }
+
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $widgets = ScreenLayout::positioned(array_values((array) $this->input('widgets', [])), $this->integer('cols'), $this->integer('rows'));
+
+            foreach (ScreenLayout::overlapping($widgets) as $i) {
+                $validator->errors()->add("widgets.{$i}.x", __('ui/screens.validation.overlap'));
             }
         }];
     }

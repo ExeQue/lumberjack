@@ -9,6 +9,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Queries\ProjectEnvironmentsQuery;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Screens\Support\ScreenLayout;
 use App\Domains\Screens\Support\ScreenQr;
 use App\Domains\Screens\Support\WidgetSchema;
 use App\Domains\Screens\Support\WidgetSources;
@@ -44,7 +45,7 @@ class ScreenPresenter
                 'environment' => $screen->scope['environment'] ?? null,
                 'period' => $screen->scope['period'] ?? '24h',
             ],
-            'widgets' => $screen->widgets,
+            'widgets' => ScreenLayout::positioned($screen->widgets, $screen->cols, $screen->rows),
             'updated_at' => $screen->updated_at?->toIso8601String(),
         ];
     }

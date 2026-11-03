@@ -20,8 +20,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A status screen of a team: a grid of cols x rows cells that a TV shows exactly, filled
- * in order by the widgets (see WidgetSchema for their shape).
+ * A status screen of a team: a grid of cols x rows cells that a TV shows exactly, each
+ * widget on the cells its x, y, w and h cover (see WidgetSchema and ScreenLayout).
  *
  * @property int $id
  * @property string $uuid
