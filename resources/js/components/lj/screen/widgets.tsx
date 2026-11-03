@@ -191,10 +191,14 @@ export function WidgetTile({
     const source = sources[widget.type]?.find((s) => s.id === sourceId);
     const colored = opt<boolean>('status_colors') !== false;
     const status: Status = colored ? statusOf(widget.type, payload) : null;
+    // One picked health check names the tile after itself unless it has a title.
+    const single = (payload?.check as { name?: string } | null | undefined)
+        ?.name;
     const title =
         shown.length > 1
             ? (source?.label ?? '')
             : (widget.title ??
+              single ??
               source?.label ??
               t(`screens.kinds.${widget.type}`));
     const showTitle = opt<boolean>('show_title') !== false;
