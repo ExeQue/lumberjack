@@ -46,7 +46,7 @@ class JobStatisticsQuery
                 COUNT(*) FILTER (WHERE r.status IN ('queued', 'processing')) AS pending,
                 COUNT(*) FILTER (WHERE r.attempt > 1) AS retries,
                 COUNT(*) FILTER (WHERE r.status = 'failed')::float / COUNT(*) AS failure_rate,
-                ".Percentiles::select('r.duration_us', 0.50, 'p50_duration').', '.Percentiles::select('r.duration_us', 0.95, 'p95_duration').', '.Percentiles::select('r.wait_us', 0.95, 'p95_wait')."
+                ".Percentiles::select('r.duration_us', '0.50', 'p50_duration').', '.Percentiles::select('r.duration_us', '0.95', 'p95_duration').', '.Percentiles::select('r.wait_us', '0.95', 'p95_wait')."
             FROM runs r
             GROUP BY r.name ORDER BY {$order} DESC LIMIT ".(int) $limit, $bindings);
 

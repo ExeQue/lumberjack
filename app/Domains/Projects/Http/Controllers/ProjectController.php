@@ -34,7 +34,7 @@ class ProjectController
         }
 
         $since = Period::Day->since();
-        $p95 = Percentiles::select('duration_us', 0.95, 'p95');
+        $p95 = Percentiles::select('duration_us', '0.95', 'p95');
 
         $projects = $team->projects()->orderBy('name')->with('agents')->get()->map(function (Project $project) use ($since, $p95): array {
             $latency = DB::selectOne("SELECT {$p95} FROM request_runs WHERE project_id = ? AND occurred_at >= ?", [$project->id, $since->format('Y-m-d H:i:s')]);

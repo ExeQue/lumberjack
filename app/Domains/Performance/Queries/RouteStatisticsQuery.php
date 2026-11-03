@@ -40,9 +40,9 @@ class RouteStatisticsQuery
 
         $order = self::SORTS[$sort] ?? 'p95';
 
-        $p50 = Percentiles::select('duration_us', 0.50, 'p50');
-        $p95 = Percentiles::select('duration_us', 0.95, 'p95');
-        $p99 = Percentiles::select('duration_us', 0.99, 'p99');
+        $p50 = Percentiles::select('duration_us', '0.50', 'p50');
+        $p95 = Percentiles::select('duration_us', '0.95', 'p95');
+        $p99 = Percentiles::select('duration_us', '0.99', 'p99');
         $limit = (int) $limit;
         $target = self::APDEX_TARGET_US;
         $tolerated = 4 * $target;

@@ -31,7 +31,7 @@ class ReleaseHealthQuery
             $bindings[] = $environment;
         }
 
-        $p95 = Percentiles::select('duration_us', 0.95, 'p95');
+        $p95 = Percentiles::select('duration_us', '0.95', 'p95');
         $limit = (int) $limit;
 
         // First and last seen are within the period: older traffic is not looked at.

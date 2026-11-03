@@ -59,7 +59,7 @@ class RouteController
             ->when($environment !== null)->where('environment', $environment);
 
         $byBucket = DB::table('request_runs')->tap($scope)
-            ->select(DB::raw("FLOOR(EXTRACT(EPOCH FROM occurred_at) / {$size}) * {$size} AS bucket, ".Percentiles::select('duration_us', 0.50, 'p50').', '.Percentiles::select('duration_us', 0.95, 'p95')))
+            ->selectRaw("FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?) * ? AS bucket, ".Percentiles::select('duration_us', '0.50', 'p50').', '.Percentiles::select('duration_us', '0.95', 'p95'), [$size, $size])
             ->groupByRaw('1')
             ->get()
             ->mapWithKeys(fn (object $row): array => [(int) $row->bucket => ['p50' => (int) $row->p50, 'p95' => (int) $row->p95]]);
