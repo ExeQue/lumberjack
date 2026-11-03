@@ -8,6 +8,7 @@ use App\Domains\Screens\Actions\CountScreenViewersAction;
 use App\Domains\Screens\Actions\CreateScreenAction;
 use App\Domains\Screens\Actions\DeleteScreenAction;
 use App\Domains\Screens\Actions\DuplicateScreenAction;
+use App\Domains\Screens\Actions\RequestReloadAction;
 use App\Domains\Screens\Actions\ResolveScreenDataAction;
 use App\Domains\Screens\Actions\UpdateScreenAction;
 use App\Domains\Screens\Actions\UpdateScreenLayoutAction;
@@ -15,6 +16,7 @@ use App\Domains\Screens\Actions\UpdateScreenWidgetAction;
 use App\Domains\Screens\Broadcasting\ScreenChannel;
 use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenTemplate;
+use App\Domains\Screens\Exceptions\ReloadTooSoonException;
 use App\Domains\Screens\Exceptions\WidgetNotFoundException;
 use App\Domains\Screens\Http\Requests\ScreenDataRequest;
 use App\Domains\Screens\Http\Requests\StoreScreenRequest;
@@ -112,6 +114,23 @@ class ScreenController
         }
 
         return $this->saved($screen);
+    }
+
+    /** Everything showing the screen loads the page afresh; at most once every few seconds. */
+    public function reload(Screen $screen, RequestReloadAction $action): JsonResponse
+    {
+        Gate::authorize('update', $screen);
+
+        try {
+            $count = $action->execute($screen);
+        } catch (ReloadTooSoonException $e) {
+            return response()->json(['message' => $e->getMessage()], 429, ['Retry-After' => (string) $e->retryAfter]);
+        }
+
+        return response()->json([
+            'count' => $count,
+            'message' => $count === null ? __('screens.reload.sent_unknown') : trans_choice('screens.reload.sent', $count, ['count' => $count]),
+        ]);
     }
 
     public function duplicate(Screen $screen, DuplicateScreenAction $action): RedirectResponse

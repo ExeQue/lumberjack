@@ -21,6 +21,14 @@ return [
     ],
 
     // Flash messages on Team settings > Displays.
+    // Asking what shows a screen, or one display, to load the page afresh.
+    'reload' => [
+        'sent' => '{0} Reload sent; no screen shows it right now|{1} Reload sent to 1 screen|[2,*] Reload sent to :count screens',
+        'sent_unknown' => 'Reload sent.',
+        'sent_display' => 'Reload sent to :name.',
+        'too_soon' => 'A reload went out moments ago; try again in :seconds s.',
+    ],
+
     'displays' => [
         'saved' => 'Display saved.',
         'removed' => 'Display removed; it shows a pairing code again.',

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Domains\Screens\Http\Controllers;
 
 use App\Domains\Screens\Actions\RemoveDisplayAction;
+use App\Domains\Screens\Actions\RequestReloadAction;
 use App\Domains\Screens\Actions\UpdateDisplayAction;
 use App\Domains\Screens\Enums\DisplayTheme;
+use App\Domains\Screens\Exceptions\ReloadTooSoonException;
 use App\Domains\Screens\Http\Requests\UpdateDisplayRequest;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Presenters\ScreenPresenter;
@@ -67,6 +69,20 @@ class DisplayController
         $action->execute($display, $request->settings());
 
         return back()->with('status', __('screens.displays.saved'));
+    }
+
+    /** The TV loads its page afresh; at most once every few seconds. */
+    public function reload(Display $display, RequestReloadAction $action): RedirectResponse
+    {
+        Gate::authorize('update', $display);
+
+        try {
+            $action->execute($display);
+        } catch (ReloadTooSoonException $e) {
+            return back()->with('status', $e->getMessage());
+        }
+
+        return back()->with('status', __('screens.reload.sent_display', ['name' => $display->name]));
     }
 
     public function destroy(Request $request, Display $display, RemoveDisplayAction $action): RedirectResponse

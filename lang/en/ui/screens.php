@@ -110,6 +110,10 @@ return [
         'swap_hint' => 'Turns the layout on its side, for a display turned to portrait or back.',
         'swap_refused' => 'Only when every widget is on the grid and both counts stay within 2 to 12.',
         // The designer's preview: as large as fits, or the TV's layout at a resolution.
+        // Button in the top bar: every TV showing the screen loads its page afresh.
+        'reload' => 'Reload TVs',
+        'reload_hint' => 'Every TV, kiosk and share link showing this screen loads its page afresh, within a few seconds.',
+        'reload_failed' => 'The reload could not be sent.',
         'preview_at' => 'Preview at',
         'preview_fit' => 'Fit',
         'preview_tvs' => 'On a TV now',
@@ -501,6 +505,9 @@ return [
         'last_seen' => 'Last seen :time',
         'never_seen' => 'Never connected',
         // Button.
+        // Button: the TV loads its page afresh.
+        'reload' => 'Reload',
+        'reload_hint' => 'Loads the page on this TV afresh, as after an update.',
         'remove' => 'Remove',
         'remove_question' => 'Remove :name? The TV goes back to showing a pairing code.',
         'read_only' => 'Only team admins change displays.',
