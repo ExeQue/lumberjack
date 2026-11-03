@@ -361,12 +361,15 @@ export function Bars({
     color = 'var(--lj-line-strong)',
     height = 140,
     highlightNonZero,
+    tips,
 }: {
     values: number[];
     label: string;
     color?: string;
     height?: number;
     highlightNonZero?: string;
+    /** One line per bar, shown on hover: "10:00 PM · 15". */
+    tips?: string[];
 }) {
     const max = Math.max(1, ...values);
 
@@ -380,16 +383,107 @@ export function Bars({
             {values.map((v, i) => (
                 <div
                     key={i}
-                    className="flex-1 rounded-t-sm"
-                    style={{
-                        height: `${Math.max(2, (v / max) * 100)}%`,
-                        background:
-                            highlightNonZero && v > 0
-                                ? highlightNonZero
-                                : color,
-                    }}
-                />
+                    className="group relative flex h-full flex-1 items-end"
+                >
+                    <div
+                        className="w-full rounded-t-sm group-hover:brightness-125"
+                        style={{
+                            height: `${Math.max(2, (v / max) * 100)}%`,
+                            background:
+                                highlightNonZero && v > 0
+                                    ? highlightNonZero
+                                    : color,
+                        }}
+                    />
+                    {tips?.[i] && (
+                        <span
+                            className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block"
+                            aria-hidden="true"
+                        >
+                            {tips[i]}
+                        </span>
+                    )}
+                </div>
             ))}
+        </div>
+    );
+}
+
+/**
+ * The time a bucket starts, the way the period reads: a time of day for 1h and 24h, a
+ * date beyond.
+ */
+export function bucketLabel(iso: string, period: string): string {
+    const lang = document.documentElement.lang || undefined;
+    const date = new Date(iso);
+
+    return period === '1h' || period === '24h'
+        ? date.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })
+        : date.toLocaleDateString(lang, { day: 'numeric', month: 'short' });
+}
+
+/**
+ * Bars over time with their axes: the highest value and 0 on the left, five times
+ * underneath, and each bar's time and value on hover.
+ */
+export function TimeBars({
+    series,
+    period,
+    label,
+    color,
+    highlightNonZero,
+    height,
+    formatValue = (v) => String(v),
+}: {
+    series: { t: string; v: number }[];
+    period: string;
+    label: string;
+    color?: string;
+    highlightNonZero?: string;
+    height?: number;
+    formatValue?: (v: number) => string;
+}) {
+    const values = series.map((p) => p.v);
+    // ponytail: five evenly spaced ticks, enough for 1h to 30d buckets
+    const ticks =
+        series.length > 1
+            ? [0, 0.25, 0.5, 0.75, 1].map(
+                  (f) => series[Math.round(f * (series.length - 1))],
+              )
+            : series;
+
+    return (
+        <div className="flex flex-col gap-1.5">
+            <div className="flex gap-2">
+                <div
+                    className="flex w-10 shrink-0 flex-col justify-between text-right font-mono text-[11px] text-ink-3"
+                    aria-hidden="true"
+                >
+                    <span>{formatValue(Math.max(1, ...values))}</span>
+                    <span>0</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                    <Bars
+                        values={values}
+                        color={color}
+                        highlightNonZero={highlightNonZero}
+                        height={height}
+                        label={label}
+                        tips={series.map(
+                            (p) =>
+                                `${bucketLabel(p.t, period)} · ${formatValue(p.v)}`,
+                        )}
+                    />
+                </div>
+            </div>
+            <div
+                className="ml-12 flex justify-between font-mono text-[11px] text-ink-3"
+                aria-hidden="true"
+            >
+                {ticks.map((p, i) => (
+                    <span key={i}>{bucketLabel(p.t, period)}</span>
+                ))}
+            </div>
         </div>
     );
 }

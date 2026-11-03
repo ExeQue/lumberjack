@@ -14,10 +14,11 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import type { Mentionable } from '@/components/lj/mentions';
+import { CopyText } from '@/components/lj/copy-text';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
-    Bars,
+    TimeBars,
     Button,
     Card,
     CardHeader,
@@ -794,9 +795,10 @@ export default function IssueShow({
                         </div>
                         <h1 className="font-mono text-lg font-medium break-all">
                             {issue.reference && (
-                                <span className="mr-2 text-ink-3">
-                                    {issue.reference}
-                                </span>
+                                <CopyText
+                                    text={issue.reference}
+                                    className="mr-2 text-ink-3"
+                                />
                             )}
                             {issue.title}
                         </h1>
@@ -962,13 +964,17 @@ export default function IssueShow({
                             </span>
                         )}
                     </div>
-                    <Bars
-                        values={series.map((p) => p.v)}
-                        label={seriesSummary}
-                        height={72}
-                        color="var(--lj-line)"
-                        highlightNonZero="var(--lj-err)"
-                    />
+                    <div>
+                        <TimeBars
+                            series={series}
+                            period="24h"
+                            label={seriesSummary}
+                            height={96}
+                            color="var(--lj-line)"
+                            highlightNonZero="var(--lj-err)"
+                            formatValue={formatNumber}
+                        />
+                    </div>
                 </Card>
 
                 <div className="flex flex-wrap items-start gap-4">

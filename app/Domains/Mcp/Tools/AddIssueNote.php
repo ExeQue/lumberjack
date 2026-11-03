@@ -29,7 +29,7 @@ class AddIssueNote extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'issue' => $schema->string()->required(),
+            'issue' => $schema->string()->description('The issue\'s number as people write it, e.g. DEMO-42, or its id.')->required(),
             'body' => $schema->string()->description('Markdown. Keep the first line a one-sentence summary. <@id> tags a team member.')->required(),
         ];
     }

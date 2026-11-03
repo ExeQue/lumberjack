@@ -65,6 +65,8 @@ return [
     'secret_once' => 'Copy it now. It is shown only this once and cannot be retrieved later.',
     'copy' => 'Copy',
     'copied' => 'Copied',
+    'copy_text' => 'Copy :text',
+    'copied_text' => 'Copied :text',
     'done' => 'Done',
     'save' => 'Save',
     'cancel' => 'Cancel',

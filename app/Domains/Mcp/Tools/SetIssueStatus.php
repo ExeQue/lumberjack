@@ -33,7 +33,7 @@ class SetIssueStatus extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'issue' => $schema->string()->required(),
+            'issue' => $schema->string()->description('The issue\'s number as people write it, e.g. DEMO-42, or its id.')->required(),
             'status' => $schema->string()->enum(['open', 'in_progress', 'resolved', 'ignored'])->required(),
             'note' => $schema->string()->description('Optional comment, e.g. why it is resolved or ignored; added as a note.'),
             'until' => $schema->string()->enum(IgnoreCondition::CHOICES)->description('For ignored: when it comes back on its own. Defaults to escalation (a sudden spike); or 1h/24h/7d, count:N more occurrences, or forever.'),

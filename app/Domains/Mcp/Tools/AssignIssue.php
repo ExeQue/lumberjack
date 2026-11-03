@@ -33,7 +33,7 @@ class AssignIssue extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'issue' => $schema->string()->required(),
+            'issue' => $schema->string()->description('The issue\'s number as people write it, e.g. DEMO-42, or its id.')->required(),
             'user_id' => $schema->integer()->description('Omit to unassign.'),
         ];
     }

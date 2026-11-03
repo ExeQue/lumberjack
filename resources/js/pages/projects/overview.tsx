@@ -2,7 +2,8 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
-    Bars,
+    bucketLabel,
+    TimeBars,
     Card,
     CardHeader,
     EmptyState,
@@ -84,15 +85,6 @@ const jobTone: Record<FailedJobRun['status'], Tone> = {
 const rowClass = 'flex items-center justify-between gap-3 px-4 py-2.5 text-ink';
 const itemClass = 'border-b border-line/60 last:border-b-0';
 
-function bucketLabel(iso: string, period: Period): string {
-    const lang = document.documentElement.lang || undefined;
-    const date = new Date(iso);
-
-    return period === '1h' || period === '24h'
-        ? date.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })
-        : date.toLocaleDateString(lang, { day: 'numeric', month: 'short' });
-}
-
 type LatencyPoint = { t: string; p50: number | null; p95: number | null };
 
 /**
@@ -171,35 +163,63 @@ function LatencyChart({
                         <span>{formatDuration(max)}</span>
                         <span>0</span>
                     </div>
-                    <svg
-                        viewBox={`0 0 ${width} ${height}`}
-                        preserveAspectRatio="none"
-                        className="block min-w-0 flex-1"
-                        style={{ height }}
-                        role="img"
-                        aria-label={summary}
-                    >
-                        {segments('p50').map((points, i) => (
-                            <polyline
-                                key={`p50-${i}`}
-                                points={points.join(' ')}
-                                fill="none"
-                                stroke="var(--lj-ink-3)"
-                                strokeWidth={1.5}
-                                vectorEffect="non-scaling-stroke"
-                            />
-                        ))}
-                        {segments('p95').map((points, i) => (
-                            <polyline
-                                key={`p95-${i}`}
-                                points={points.join(' ')}
-                                fill="none"
-                                stroke="var(--lj-amber)"
-                                strokeWidth={2}
-                                vectorEffect="non-scaling-stroke"
-                            />
-                        ))}
-                    </svg>
+                    <div className="relative min-w-0 flex-1">
+                        <svg
+                            viewBox={`0 0 ${width} ${height}`}
+                            preserveAspectRatio="none"
+                            className="block w-full"
+                            style={{ height }}
+                            role="img"
+                            aria-label={summary}
+                        >
+                            {segments('p50').map((points, i) => (
+                                <polyline
+                                    key={`p50-${i}`}
+                                    points={points.join(' ')}
+                                    fill="none"
+                                    stroke="var(--lj-ink-3)"
+                                    strokeWidth={1.5}
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                            ))}
+                            {segments('p95').map((points, i) => (
+                                <polyline
+                                    key={`p95-${i}`}
+                                    points={points.join(' ')}
+                                    fill="none"
+                                    stroke="var(--lj-amber)"
+                                    strokeWidth={2}
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                            ))}
+                        </svg>
+                        {/* Hover: a guide line and the bucket's values, one column per point. */}
+                        <div className="absolute inset-0" aria-hidden="true">
+                            {series.map((p, i) => {
+                                const step =
+                                    100 / Math.max(1, series.length - 1);
+
+                                return (
+                                    <div
+                                        key={p.t}
+                                        className="group absolute inset-y-0 -translate-x-1/2"
+                                        style={{
+                                            left: `${i * step}%`,
+                                            width: `${step}%`,
+                                        }}
+                                    >
+                                        <div className="absolute inset-y-0 left-1/2 hidden w-px bg-line-strong group-hover:block" />
+                                        <span className="pointer-events-none absolute top-0 left-1/2 z-10 hidden -translate-x-1/2 -translate-y-full rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block">
+                                            {bucketLabel(p.t, period)}
+                                            {p.p95 === null
+                                                ? ' · -'
+                                                : ` · p95 ${formatDuration(p.p95)} · p50 ${formatDuration(p.p50)}`}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
                 <div
                     className="ml-16 flex justify-between font-mono text-[11px] text-ink-3"
@@ -244,14 +264,6 @@ function SeriesChart({
                   time: bucketLabel(peak.t, period),
               })
             : t('overview.charts.no_data');
-    // ponytail: five evenly spaced ticks, enough for 1h to 30d buckets
-    const ticks =
-        series.length > 1
-            ? [0, 0.25, 0.5, 0.75, 1].map(
-                  (f) => series[Math.round(f * (series.length - 1))],
-              )
-            : series;
-
     return (
         <Card aria-labelledby={id}>
             <CardHeader
@@ -259,35 +271,18 @@ function SeriesChart({
                 title={title}
                 aside={<span className="text-xs text-ink-3">{peakText}</span>}
             />
-            <div className="flex flex-col gap-1.5 p-4">
-                <div className="flex gap-2">
-                    <div
-                        className="flex w-10 shrink-0 flex-col justify-between text-right font-mono text-[11px] text-ink-3"
-                        aria-hidden="true"
-                    >
-                        <span>{formatNumber(Math.max(1, ...values))}</span>
-                        <span>0</span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                        <Bars
-                            values={values}
-                            color={color}
-                            label={t('overview.charts.summary', {
-                                total: formatNumber(total),
-                                unit,
-                                peak: peakText,
-                            })}
-                        />
-                    </div>
-                </div>
-                <div
-                    className="ml-12 flex justify-between font-mono text-[11px] text-ink-3"
-                    aria-hidden="true"
-                >
-                    {ticks.map((p, i) => (
-                        <span key={i}>{bucketLabel(p.t, period)}</span>
-                    ))}
-                </div>
+            <div className="p-4">
+                <TimeBars
+                    series={series}
+                    period={period}
+                    color={color}
+                    formatValue={formatNumber}
+                    label={t('overview.charts.summary', {
+                        total: formatNumber(total),
+                        unit,
+                        peak: peakText,
+                    })}
+                />
             </div>
         </Card>
     );

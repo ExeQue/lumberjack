@@ -29,7 +29,7 @@ class ListOccurrences extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'issue' => $schema->string()->required(),
+            'issue' => $schema->string()->description('The issue\'s number as people write it, e.g. DEMO-42, or its id.')->required(),
             'limit' => $schema->integer()->min(1)->max(100)->description('Defaults to 20.'),
         ];
     }

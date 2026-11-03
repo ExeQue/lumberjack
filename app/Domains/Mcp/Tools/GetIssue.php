@@ -29,7 +29,7 @@ class GetIssue extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'issue' => $schema->string()->description('Issue id as returned by list_issues or triage_inbox.')->required(),
+            'issue' => $schema->string()->description('The issue\'s number as people write it, e.g. DEMO-42, or its id.')->required(),
         ];
     }
 

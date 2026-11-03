@@ -431,38 +431,71 @@ function HourlyChart({ hourly }: { hourly: Detail['hourly'] }) {
           })
         : t('routes.detail.no_requests');
 
+    const ticks =
+        hourly.length > 1
+            ? [0, 0.25, 0.5, 0.75, 1].map(
+                  (f) => hourly[Math.round(f * (hourly.length - 1))],
+              )
+            : hourly;
+    const tip = (h: Detail['hourly'][number]) =>
+        h.p95 === null
+            ? `${formatTime(h.t)} · -`
+            : `${formatTime(h.t)} · p95 ${formatDuration(h.p95)} · p50 ${formatDuration(h.p50)}`;
+
     return (
         <>
-            <div
-                role="img"
-                aria-label={label}
-                className="flex h-[120px] items-end gap-[3px]"
-            >
-                {hourly.map((h) =>
-                    h.p95 === null ? (
+            <div className="flex gap-2">
+                <div
+                    className="flex w-14 shrink-0 flex-col justify-between text-right font-mono text-[11px] text-ink-3"
+                    aria-hidden="true"
+                >
+                    <span>{formatDuration(max)}</span>
+                    <span>0</span>
+                </div>
+                <div
+                    role="img"
+                    aria-label={label}
+                    className="flex h-[120px] min-w-0 flex-1 items-end gap-[3px]"
+                >
+                    {hourly.map((h) => (
                         <div
                             key={h.t}
-                            className="h-[2px] flex-1 rounded-t-sm bg-line"
-                            title={`${formatTime(h.t)}: -`}
-                        />
-                    ) : (
-                        <div
-                            key={h.t}
-                            className="relative flex-1 rounded-t-sm bg-info/45"
-                            style={{
-                                height: `${Math.max(2, (h.p95 / max) * 100)}%`,
-                            }}
-                            title={`${formatTime(h.t)}: p50 ${formatDuration(h.p50)}, p95 ${formatDuration(h.p95)}`}
+                            className="group relative flex h-full flex-1 items-end"
                         >
-                            <div
-                                className="absolute inset-x-0 bottom-0 bg-info"
-                                style={{
-                                    height: `${h.p95 ? ((h.p50 ?? 0) / h.p95) * 100 : 0}%`,
-                                }}
-                            />
+                            {h.p95 === null ? (
+                                <div className="h-[2px] w-full rounded-t-sm bg-line" />
+                            ) : (
+                                <div
+                                    className="relative w-full rounded-t-sm bg-info/45 group-hover:brightness-125"
+                                    style={{
+                                        height: `${Math.max(2, (h.p95 / max) * 100)}%`,
+                                    }}
+                                >
+                                    <div
+                                        className="absolute inset-x-0 bottom-0 bg-info"
+                                        style={{
+                                            height: `${h.p95 ? ((h.p50 ?? 0) / h.p95) * 100 : 0}%`,
+                                        }}
+                                    />
+                                </div>
+                            )}
+                            <span
+                                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block"
+                                aria-hidden="true"
+                            >
+                                {tip(h)}
+                            </span>
                         </div>
-                    ),
-                )}
+                    ))}
+                </div>
+            </div>
+            <div
+                className="ml-16 flex justify-between font-mono text-[11px] text-ink-3"
+                aria-hidden="true"
+            >
+                {ticks.map((h, i) => (
+                    <span key={i}>{formatTime(h.t)}</span>
+                ))}
             </div>
             <div className="flex gap-4 text-xs text-ink-2">
                 <span className="inline-flex items-center gap-1.5">
