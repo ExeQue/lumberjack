@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Domains\Health\Enums\HealthStatus;
+use App\Domains\Health\Models\HealthCheck;
+use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Ingest\Http\Controllers\IngestController;
 use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Issues\Enums\IssueStatus;
@@ -125,6 +128,20 @@ describe('server ingest', function () {
         $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'name' => 'queue'], $this->auth)->assertOk();
 
         expect($this->project->agents()->orderBy('name')->pluck('name')->all())->toBe(['queue', 'web']);
+    });
+
+    it('answers a heartbeat with the health states of its environment', function () {
+        $this->freezeTime();
+        $check = fn (string $environment): HealthCheck => HealthCheck::factory()->for($this->project)->create(['environment' => $environment, 'slug' => 'disk:s3', 'status' => HealthStatus::Down, 'status_changed_at' => now()]);
+        HealthCheckHost::query()->create(['health_check_id' => $check('production')->id, 'host' => 'web-2', 'status' => HealthStatus::Down, 'last_message' => 'No space', 'last_result_at' => now()]);
+        $check('staging');
+
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'environment' => 'production'], $this->auth)->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(1, 'health.checks')
+            ->assertJsonPath('health.checks.0', ['slug' => 'disk:s3', 'environment' => 'production', 'state' => 'down', 'since' => now()->toIso8601String(), 'message' => 'No space']);
+
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2'], $this->auth)->assertJsonCount(2, 'health.checks');
     });
 
     it('stores the queue sizes a heartbeat reports', function () {

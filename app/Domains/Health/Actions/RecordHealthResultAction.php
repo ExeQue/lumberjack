@@ -15,6 +15,7 @@ use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Health\Models\HealthCheckResult;
 use App\Domains\Health\Models\HealthOutage;
+use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Live\Actions\BroadcastProjectChangeAction;
 use App\Domains\Live\Enums\ChangeKind;
 use Carbon\CarbonImmutable;
@@ -80,6 +81,7 @@ class RecordHealthResultAction
             SendHealthCheckAlert::dispatch(...$alert);
         }
 
+        HealthChecksQuery::forgetStates($check->project_id);
         $this->broadcast->execute($check->project_id, ChangeKind::Health);
 
         return $row;

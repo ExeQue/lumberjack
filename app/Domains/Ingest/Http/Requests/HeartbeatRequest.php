@@ -23,6 +23,8 @@ class HeartbeatRequest extends FormRequest
             // Sent by agents before they described themselves; the SDK's version.
             'version' => ['nullable', 'string', 'max:32'],
             'name' => ['nullable', 'string', 'max:64'],
+            // The app's environment: the health states in the answer are those of it.
+            'environment' => ['nullable', 'string', 'max:64'],
             'client' => ['nullable', 'array:sdk,agent,runtime,framework'],
             'client.sdk.name' => ['nullable', 'string', 'max:64', 'regex:/^[a-z0-9][a-z0-9.-]*$/'],
             'client.agent.name' => ['nullable', 'string', 'max:64', 'regex:/^[a-z0-9][a-z0-9.-]*$/'],
@@ -73,6 +75,13 @@ class HeartbeatRequest extends FormRequest
         $metrics = $this->validated('metrics');
 
         return is_array($metrics) ? array_map(fn ($v): int|float|null => is_numeric($v) ? $v + 0 : null, $metrics) : [];
+    }
+
+    public function environment(): ?string
+    {
+        $environment = $this->validated('environment');
+
+        return is_string($environment) && $environment !== '' ? $environment : null;
     }
 
     public function project(): Project

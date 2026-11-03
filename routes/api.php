@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Health\Http\Controllers\HealthPingController;
+use App\Domains\Health\Http\Controllers\HealthStatesController;
 use App\Domains\Ingest\Http\Controllers\IngestController;
 use App\Domains\Ingest\Http\Middleware\AuthenticateProjectToken;
 use Illuminate\Support\Facades\Route;
@@ -14,6 +15,11 @@ Route::middleware([AuthenticateProjectToken::class, 'throttle:ingest'])->group(f
 
 Route::post('ingest/browser', [IngestController::class, 'browser'])->middleware('throttle:ingest-browser')->name('ingest.browser');
 Route::options('ingest/browser', [IngestController::class, 'browserPreflight'])->name('ingest.browser.preflight');
+
+// The app reads its health check states back, e.g. when its agent is not running.
+Route::get('health', HealthStatesController::class)
+    ->middleware([AuthenticateProjectToken::class, 'throttle:health-states'])
+    ->name('health.states');
 
 // A heartbeat check's secret URL: cron jobs and backups call it when they are done.
 Route::match(['get', 'post'], 'health/ping/{token}', HealthPingController::class)

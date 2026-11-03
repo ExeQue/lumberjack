@@ -158,6 +158,52 @@ LUMBERJACK_HEALTH_ALERT_THROTTLE=30
 Muted and archived checks send nothing.
 See [Alerts](./alerts#webhooks) for the webhook body.
 
+## Reading states from the app
+
+The app can read back where its reported checks stand, to skip a broken dependency
+or show a notice before people run into it. Lumberjack answers in two places, with the
+same body:
+
+- **The agent's heartbeat.** `POST /api/ingest/heartbeat` answers with the states
+  under `health`. An agent that sends `environment` gets the checks of that
+  environment; without it, those of every environment.
+- **`GET /api/health`**, with the server token as a bearer token, for apps that ask
+  without an agent. `?environment=` and `?slug=` narrow the list. A missing or unknown
+  token gets a 401; more than 120 requests a minute per project get a 429.
+
+```json
+{
+    "checks": [
+        {
+            "slug": "disk:s3",
+            "environment": "production",
+            "state": "down",
+            "since": "2026-11-03T09:12:00+00:00",
+            "message": "No space left on device",
+            "hosts": [
+                { "host": "web-1", "state": "ok" },
+                { "host": "web-2", "state": "down" }
+            ]
+        }
+    ],
+    "at": "2026-11-03T09:15:04+00:00"
+}
+```
+
+| Field         | Meaning                                                                                  |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| `slug`        | The check's slug                                                                         |
+| `environment` | Its environment, `null` for a check sent without one                                     |
+| `state`       | `ok`, `degraded`, `down`, `recovering`, `stale` or `pending` (no result yet)             |
+| `since`       | When it entered the state; for `stale`, its last result. `null` when nothing came in yet |
+| `message`     | The latest result's message, `null` when it had none                                     |
+| `hosts`       | Only when several servers report the slug: each server's own state                       |
+| `at`          | When Lumberjack worked the list out                                                      |
+
+Only checks the app reports are listed, archived ones left out; checks Lumberjack
+runs have no slug for the app to ask by. The answer is cached for up to 10 seconds
+and starts fresh as soon as a result moves a check.
+
 ## Retention
 
 Results are kept as long as the project's performance data; outages, which uptime is

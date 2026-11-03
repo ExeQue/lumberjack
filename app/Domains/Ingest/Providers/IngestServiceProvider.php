@@ -24,6 +24,8 @@ class IngestServiceProvider extends ServiceProvider
      */
     public const int BROWSER_PER_MINUTE = 30;
 
+    public const int HEALTH_STATES_PER_MINUTE = 120;
+
     #[Override]
     public function register(): void
     {
@@ -35,6 +37,13 @@ class IngestServiceProvider extends ServiceProvider
             $project = $request->attributes->get('project');
 
             return Limit::perMinute(self::BATCHES_PER_MINUTE)->by('ingest:'.($project instanceof Project ? $project->id : $request->ip()));
+        });
+
+        // GET /api/health with the server token: an app asks at most every few seconds.
+        RateLimiter::for('health-states', function (Request $request): Limit {
+            $project = $request->attributes->get('project');
+
+            return Limit::perMinute(self::HEALTH_STATES_PER_MINUTE)->by('health-states:'.($project instanceof Project ? $project->id : $request->ip()));
         });
 
         RateLimiter::for('ingest-browser', fn (Request $request): Limit => Limit::perMinute(self::BROWSER_PER_MINUTE)
