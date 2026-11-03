@@ -502,3 +502,40 @@ export function regrid(
 
     return result;
 }
+
+/**
+ * Dropping a widget onto another swaps them: each takes the other's top left cell,
+ * keeping its own size. Returns the other widget's id when both then fit in the grid
+ * without covering anything else, null otherwise.
+ */
+export function swapTarget(
+    widgets: Widget[],
+    cols: number,
+    rows: number,
+    moving: Widget,
+    cell: { x: number; y: number },
+): string | null {
+    const other = widgets.find(
+        (o) =>
+            o.id !== moving.id &&
+            cell.x >= o.x &&
+            cell.x < o.x + o.w &&
+            cell.y >= o.y &&
+            cell.y < o.y + o.h,
+    );
+
+    if (!other) {
+        return null;
+    }
+
+    const rest = widgets.filter((o) => o.id !== moving.id && o.id !== other.id);
+    const movingThere = { x: other.x, y: other.y, w: moving.w, h: moving.h };
+    const otherHere = { x: moving.x, y: moving.y, w: other.w, h: other.h };
+    const apart = isFree([{ ...moving, ...movingThere }], otherHere);
+
+    return canPlace(rest, cols, rows, movingThere) &&
+        canPlace(rest, cols, rows, otherHere) &&
+        apart
+        ? other.id
+        : null;
+}

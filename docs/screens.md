@@ -46,8 +46,9 @@ you put it on; cells no widget covers simply stay empty on the TV.
   by what it can show, so "queue" finds Stat, Gauge, Chart and List.
 - **Move**: drag a widget to other cells. While you drag, every cell of the grid shows
   as a drop zone and the widget's footprint follows the pointer: green where it fits,
-  red where it would cover another widget or reach past the grid. A red drop is refused
-  and the widget stays where it was.
+  red where it would cover another widget or reach past the grid. Dropping onto another
+  widget swaps the two (each keeps its size) when both then fit; otherwise the drop is
+  refused and the widget stays where it was.
 - **Resize**: drag any edge or corner; sizes follow whole cells, and the left and top
   edges move the widget as they resize it. A widget only grows into free cells. The
   **Size** buttons in its settings are shortcuts for 1 x 1, 2 x 1, 2 x 2 and 4 x 2 (a
