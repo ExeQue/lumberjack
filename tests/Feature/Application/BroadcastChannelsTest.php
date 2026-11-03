@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\TvPairing;
+use App\Domains\Screens\Support\TvViewer;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Illuminate\Broadcasting\Broadcasters\Broadcaster;
@@ -25,9 +26,8 @@ describe('the project channel', function () {
 
         expect(($this->join)($member, $this->project->uuid))->toBeTrue()
             ->and(($this->join)(User::factory()->inTeam()->create(), $this->project->uuid))->toBeFalse()
-            ->and(($this->join)(Display::factory()->for($this->project->team)->create(), $this->project->uuid))->toBeTrue()
-            ->and(($this->join)(Display::factory()->create(), $this->project->uuid))->toBeFalse()
-            ->and(($this->join)(TvPairing::factory()->create(), $this->project->uuid))->toBeFalse()
+            ->and(($this->join)(new TvViewer(collect([Display::factory()->for($this->project->team)->create()]), collect()), $this->project->uuid))->toBeTrue()
+            ->and(($this->join)(new TvViewer(collect([Display::factory()->create()]), collect([TvPairing::factory()->create()])), $this->project->uuid))->toBeFalse()
             ->and(($this->join)($member, (string) Str::uuid()))->toBeFalse()
             ->and($this->guards)->toBe(['guards' => ['web', 'tv']]);
     });

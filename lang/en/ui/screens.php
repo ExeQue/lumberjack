@@ -344,6 +344,8 @@ return [
         'waiting' => 'Waiting for confirmation',
         'new_code_in' => 'new code in :time',
         'paired' => 'Paired. Opening the screen...',
+        // Which browser window of a computer this is, /tv/2 being window 2.
+        'window' => 'Window :slot',
         'start_page' => 'Opened this page by hand? Make :url the start page of the TV browser, and it will show its screen after every restart.',
     ],
 
@@ -372,6 +374,7 @@ return [
         // Buttons.
         'another' => 'Pair another TV',
         'displays' => 'Go to Displays',
+        'another_window' => 'Another screen on this computer? Open :url in a second window (or on the second monitor) and pair it the same way.',
     ],
 
     // How to put a screen on a TV, in the designer and on Displays.
@@ -431,6 +434,20 @@ return [
         'remove' => 'Remove',
         'remove_question' => 'Remove :name? The TV goes back to showing a pairing code.',
         'read_only' => 'Only team admins change displays.',
+        // ":device: window 1, window 2" for a computer showing several screens.
+        'computer' => ':device: :windows',
+        'window' => 'window :slot',
+        // Button; opens the playlist of a display.
+        'rotate' => 'In turn',
+        'rotating' => '{1} 1 screen|[2,*] :count screens in turn',
+        'playlist_title' => 'Screens in turn on :name',
+        'playlist_hint' => 'Tick the screens to show one after another, in this order. Fewer than two shows one screen.',
+        'move_up' => 'Move :name up',
+        'move_down' => 'Move :name down',
+        'seconds' => 'Seconds per screen',
+        'hold' => 'Stay on a screen while it has something red',
+        // Button.
+        'save' => 'Save',
     ],
 
     'validation' => [

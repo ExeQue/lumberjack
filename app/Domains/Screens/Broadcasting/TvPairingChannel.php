@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Screens\Broadcasting;
 
 use App\Domains\Screens\Models\TvPairing;
+use App\Domains\Screens\Support\TvViewer;
 use Illuminate\Broadcasting\PrivateChannel;
 
 /**
@@ -25,6 +26,6 @@ class TvPairingChannel
 
     public function join(mixed $viewer, string $uuid): bool
     {
-        return $viewer instanceof TvPairing && hash_equals($viewer->uuid, $uuid);
+        return $viewer instanceof TvViewer && $viewer->holdsPairing($uuid);
     }
 }

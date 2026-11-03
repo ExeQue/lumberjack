@@ -32,17 +32,30 @@ class DisplayController
             return redirect()->route('team.show');
         }
 
+        $displays = Display::query()->whereTeam($team)->orderBy('name')->get();
+        $screens = $team->screens()->orderBy('name')->get(['id', 'uuid', 'name']);
+        $uuids = $screens->pluck('uuid', 'id');
+        // A computer sorts by the first name among its windows.
+        $groups = $displays->groupBy(fn (Display $d): string => $d->device_hash ?? $d->uuid)->map(fn ($g): string => (string) $g->min('name'));
+
         return Inertia::render('team/displays', [
-            'displays' => Display::query()->whereTeam($team)->with('screen:id,uuid')->orderBy('name')->get()->map(fn (Display $d): array => [
+            // The windows of one computer together, in window order.
+            'displays' => $displays->sortBy(fn (Display $d): string => ($groups[$d->device_hash ?? $d->uuid] ?? '').'|'.$d->slot)->values()->map(fn (Display $d): array => [
                 'uuid' => $d->uuid,
                 'name' => $d->name,
-                'screen' => $d->screen?->uuid,
+                'screen' => $d->screen_id === null ? null : $uuids->get($d->screen_id),
+                'playlist' => array_values(array_filter(array_map(fn (int $id): ?string => $uuids->get($id), $d->playlist ?? []))),
+                'rotate_seconds' => $d->rotate_seconds,
+                'hold_on_alert' => $d->hold_on_alert,
                 'theme' => $d->theme->value,
                 'device' => DeviceName::from($d->user_agent),
+                // Which computer it runs on, as an opaque key: windows of one share it.
+                'computer' => substr(hash('sha256', 'computer|'.($d->device_hash ?? $d->uuid)), 0, 12),
+                'slot' => $d->slot,
                 'online' => $d->isOnline(),
                 'last_seen_at' => $d->last_seen_at?->toIso8601String(),
             ])->all(),
-            'screens' => $team->screens()->orderBy('name')->get(['uuid', 'name'])->map(fn ($s): array => ['uuid' => $s->uuid, 'name' => $s->name])->all(),
+            'screens' => $screens->map(fn ($s): array => ['uuid' => $s->uuid, 'name' => $s->name])->values()->all(),
             'themes' => array_map(fn (DisplayTheme $t): string => $t->value, DisplayTheme::cases()),
             'can_manage' => $user->canAdministerTeam($team),
             'tv' => $presenter->tvInstructions(),

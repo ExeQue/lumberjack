@@ -31,11 +31,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable $expires_at
  * @property int|null $display_id
  * @property CarbonImmutable|null $confirmed_at
+ * @property int $slot the window of its computer that asks, /tv/{slot}
+ * @property string|null $device_hash
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['code', 'secret_hash', 'user_agent', 'ip', 'expires_at', 'display_id', 'confirmed_at'])]
-#[Hidden(['secret_hash'])]
+#[Fillable(['code', 'secret_hash', 'user_agent', 'ip', 'expires_at', 'display_id', 'confirmed_at', 'slot', 'device_hash'])]
+#[Hidden(['secret_hash', 'device_hash'])]
 #[UseEloquentBuilder(TvPairingBuilder::class)]
 #[UseFactory(TvPairingFactory::class)]
 class TvPairing extends Model
@@ -62,6 +64,7 @@ class TvPairing extends Model
         return [
             'expires_at' => 'datetime',
             'confirmed_at' => 'datetime',
+            'slot' => 'integer',
         ];
     }
 

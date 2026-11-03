@@ -11,15 +11,19 @@ use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Cookie;
 
 /**
- * What a TV proves itself with, without a session: the pairing cookie while it shows a
- * code, the display token once paired. Both are httpOnly cookies (encrypted like every
- * cookie), never in a URL; only their sha256 is stored.
+ * What a TV proves itself with, without a session: per window (slot, /tv/{slot}) the
+ * pairing cookie while it shows a code and the display token once paired, plus one device
+ * cookie that tells the windows of one computer apart from other computers. All are
+ * httpOnly cookies (encrypted like every cookie), never in a URL; only their sha256 is
+ * stored.
  */
 final class TvCredentials
 {
-    public const string DISPLAY_COOKIE = 'lj_display';
+    public const string DISPLAY_COOKIE = 'lj_display_';
 
-    public const string PAIRING_COOKIE = 'lj_tv_pairing';
+    public const string PAIRING_COOKIE = 'lj_tv_pairing_';
+
+    public const string DEVICE_COOKIE = 'lj_tv_device';
 
     /** A year; sent again on every visit and heartbeat, so it rolls. */
     public const int DISPLAY_COOKIE_MINUTES = 525_600;
@@ -54,20 +58,30 @@ final class TvCredentials
         return hash('sha256', $value);
     }
 
-    /** The display whose token the request's cookie carries. */
-    public static function display(Request $request): ?Display
+    /** @return non-empty-string */
+    public static function displayCookieName(int $slot): string
     {
-        $token = self::cookie($request, self::DISPLAY_COOKIE);
-
-        return $token !== null ? self::displayFor($token) : null;
+        return self::DISPLAY_COOKIE.$slot;
     }
 
-    /** A cookie's value, when the request carries it as a non empty string. */
-    public static function cookie(Request $request, string $name): ?string
+    /** @return non-empty-string */
+    public static function pairingCookieName(int $slot): string
     {
-        $value = $request->cookie($name);
+        return self::PAIRING_COOKIE.$slot;
+    }
 
-        return is_string($value) && $value !== '' ? $value : null;
+    /** The display token of a window, as its cookie carries it. */
+    public static function displayToken(Request $request, int $slot): ?string
+    {
+        return self::cookie($request, self::displayCookieName($slot));
+    }
+
+    /** The display of a window, by the token its cookie carries. */
+    public static function display(Request $request, int $slot): ?Display
+    {
+        $token = self::displayToken($request, $slot);
+
+        return $token !== null ? self::displayFor($token) : null;
     }
 
     public static function displayFor(string $token): ?Display
@@ -79,10 +93,10 @@ final class TvCredentials
         return $display !== null && hash_equals((string) $display->token_hash, $hash) ? $display : null;
     }
 
-    /** The pairing this browser started, in whatever state it is now. */
-    public static function pairing(Request $request): ?TvPairing
+    /** The pairing a window started, in whatever state it is now. */
+    public static function pairing(Request $request, int $slot): ?TvPairing
     {
-        $secret = self::cookie($request, self::PAIRING_COOKIE);
+        $secret = self::cookie($request, self::pairingCookieName($slot));
 
         if ($secret === null) {
             return null;
@@ -94,14 +108,59 @@ final class TvCredentials
         return $pairing !== null && hash_equals($pairing->secret_hash, $hash) ? $pairing : null;
     }
 
-    public static function displayCookie(string $token): Cookie
+    /**
+     * Every display and pairing the browser's cookies prove, over all its windows: whom
+     * a broadcast channel asks about, as it does not know which window asks.
+     */
+    public static function viewer(Request $request): ?TvViewer
     {
-        return cookie(self::DISPLAY_COOKIE, $token, self::DISPLAY_COOKIE_MINUTES, httpOnly: true, sameSite: 'lax');
+        $tokens = [];
+        $secrets = [];
+
+        foreach (range(1, Display::MAX_SLOT) as $slot) {
+            $tokens[] = self::displayToken($request, $slot);
+            $secrets[] = self::cookie($request, self::pairingCookieName($slot));
+        }
+
+        $tokens = array_map(self::hash(...), array_filter($tokens));
+        $secrets = array_map(self::hash(...), array_filter($secrets));
+        $viewer = new TvViewer(
+            $tokens === [] ? collect() : Display::query()->whereIn('token_hash', $tokens)->get(),
+            $secrets === [] ? collect() : TvPairing::query()->whereIn('secret_hash', $secrets)->get(),
+        );
+
+        return $viewer->isEmpty() ? null : $viewer;
     }
 
-    public static function pairingCookie(string $secret): Cookie
+    /** The computer's device cookie, hashed as it is stored. */
+    public static function deviceHash(Request $request): ?string
     {
-        return cookie(self::PAIRING_COOKIE, $secret, self::PAIRING_COOKIE_MINUTES, httpOnly: true, sameSite: 'lax');
+        $device = self::cookie($request, self::DEVICE_COOKIE);
+
+        return $device === null ? null : self::hash($device);
+    }
+
+    /** A cookie's value, when the request carries it as a non empty string. */
+    public static function cookie(Request $request, string $name): ?string
+    {
+        $value = $request->cookie($name);
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public static function displayCookie(int $slot, string $token): Cookie
+    {
+        return cookie(self::displayCookieName($slot), $token, self::DISPLAY_COOKIE_MINUTES, httpOnly: true, sameSite: 'lax');
+    }
+
+    public static function pairingCookie(int $slot, string $secret): Cookie
+    {
+        return cookie(self::pairingCookieName($slot), $secret, self::PAIRING_COOKIE_MINUTES, httpOnly: true, sameSite: 'lax');
+    }
+
+    public static function deviceCookie(string $device): Cookie
+    {
+        return cookie(self::DEVICE_COOKIE, $device, self::DISPLAY_COOKIE_MINUTES, httpOnly: true, sameSite: 'lax');
     }
 
     public static function forget(string $name): Cookie

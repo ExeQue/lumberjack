@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domains\Administration\Enums\AdminAction;
 use App\Domains\Administration\Models\AdminAuditEntry;
+use App\Domains\Screens\Actions\DuplicateScreenAction;
 use App\Domains\Screens\Actions\ResolveScreenDataAction;
 use App\Domains\Screens\Actions\RotateScreenShareKeyAction;
 use App\Domains\Screens\Actions\SetScreenShareAction;
@@ -27,6 +28,7 @@ covers(
     UpdateScreenShareRequest::class,
     SetScreenShareAction::class,
     RotateScreenShareKeyAction::class,
+    DuplicateScreenAction::class,
     ScreenShareChannel::class,
     ScreenUnshared::class,
     ScreenChanged::class,
@@ -114,6 +116,15 @@ describe('turning a share link on and off', function () {
         Event::assertDispatched(ScreenUnshared::class, fn (ScreenUnshared $e): bool => $e->broadcastOn()->name === 'screen-share.'.hash('sha256', $old));
         $this->get('/s/'.$old)->assertNotFound();
         $this->get('/s/'.$screen->share_key)->assertOk();
+    });
+
+    it('leaves a duplicate unshared', function () {
+        $screen = ($this->share)();
+
+        $this->actingAs($this->admin)->post(route('screens.duplicate', $screen))->assertRedirect();
+
+        $copy = Screen::query()->whereKeyNot($screen->id)->sole();
+        expect($copy->share_key)->toBeNull()->and($copy->share_key_hash)->toBeNull()->and($copy->share_titles)->toBeFalse();
     });
 
     it('rotates nothing while the screen is not shared', function () {

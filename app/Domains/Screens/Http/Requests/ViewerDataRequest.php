@@ -22,6 +22,8 @@ class ViewerDataRequest extends FormRequest
     {
         return [
             'widget' => ['nullable', 'string', 'max:40'],
+            // A display showing screens in turn asks for each by uuid.
+            'screen' => ['nullable', 'uuid'],
         ];
     }
 

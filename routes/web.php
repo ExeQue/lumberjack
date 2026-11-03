@@ -62,11 +62,13 @@ Route::post('invitations/{token}', [InvitationController::class, 'accept'])->mid
 
 // A TV's start page and what it asks without a session, by its httpOnly cookies; and a
 // screen by its share link. See docs/screens.md.
-Route::get('tv', [TvController::class, 'show'])->middleware('throttle:30,1')->name('tv');
-Route::post('tv/pairing', [TvController::class, 'pairing'])->middleware('throttle:screen-viewer')->name('tv.pairing');
-Route::post('tv/restore', [TvController::class, 'restore'])->middleware('throttle:10,1')->name('tv.restore');
-Route::get('tv/data', [TvController::class, 'data'])->middleware('throttle:screen-viewer')->name('tv.data');
-Route::get('tv/heartbeat', [TvController::class, 'heartbeat'])->middleware('throttle:screen-viewer')->name('tv.heartbeat');
+Route::get('tv/{slot?}', [TvController::class, 'show'])->whereIn('slot', range(1, 9))->middleware('throttle:30,1')->name('tv');
+Route::prefix('tv/{slot}')->whereIn('slot', range(1, 9))->middleware('throttle:screen-viewer')->group(function () {
+    Route::post('pairing', [TvController::class, 'claim'])->name('tv.claim');
+    Route::post('restore', [TvController::class, 'restore'])->withoutMiddleware('throttle:screen-viewer')->middleware('throttle:10,1')->name('tv.restore');
+    Route::get('data', [TvController::class, 'data'])->name('tv.data');
+    Route::get('heartbeat', [TvController::class, 'heartbeat'])->name('tv.heartbeat');
+});
 Route::get('s/{key}', [SharedScreenController::class, 'show'])->where('key', 'ls_[a-z0-9]{40}')->middleware('throttle:screen-viewer')->name('screens.shared');
 Route::get('s/{key}/data', [SharedScreenController::class, 'data'])->where('key', 'ls_[a-z0-9]{40}')->middleware('throttle:screen-viewer')->name('screens.shared.data');
 

@@ -27,6 +27,10 @@ type Props = {
     share?: boolean;
     /** The data URL says the screen is gone for this viewer (a paired TV: display removed). */
     onGone?: () => void;
+    /** What to reload when the designer saved; a TV showing screens in turn reloads them all. */
+    reloadOnly?: string[];
+    /** Whether a widget is red, for a TV that holds a screen while it is. */
+    onAlert?: (red: boolean) => void;
 };
 
 /** Pixel offsets the whole screen cycles through against burn-in. */
@@ -56,6 +60,8 @@ export default function Kiosk({
     channel,
     share = false,
     onGone,
+    reloadOnly = ['screen'],
+    onAlert,
 }: Props) {
     const t = useT();
     const now = useNow();
@@ -79,7 +85,7 @@ export default function Kiosk({
     useEcho(
         channel,
         '.screen.changed',
-        () => router.reload({ only: ['screen'] }),
+        () => router.reload({ only: reloadOnly }),
         [],
         share ? 'public' : 'private',
     );
@@ -131,6 +137,9 @@ export default function Kiosk({
     const attention = shown.filter(
         (w) => statuses[w.id] === 'down' || statuses[w.id] === 'degraded',
     ).length;
+    const red = shown.some((w) => statuses[w.id] === 'down');
+
+    useEffect(() => onAlert?.(red), [red, onAlert]);
     const scopeNames =
         screen.scope.projects.length > 0
             ? projects

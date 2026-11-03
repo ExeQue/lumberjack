@@ -1,50 +1,72 @@
 import { Head, router } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ComponentProps } from 'react';
 import { LogMark } from '@/components/lj/logo';
-import { DISPLAY_TOKEN_KEY } from '@/components/lj/screen/tv';
+import { displayTokenKey } from '@/components/lj/screen/tv';
+import type { TvUrls } from '@/components/lj/screen/tv';
 import { useT } from '@/lib/i18n';
 import Kiosk from '@/pages/screens/kiosk';
-import { heartbeat } from '@/routes/tv';
 
-type KioskProps = Omit<ComponentProps<typeof Kiosk>, 'share' | 'onGone'>;
+type KioskProps = Omit<
+    ComponentProps<typeof Kiosk>,
+    'share' | 'onGone' | 'reloadOnly' | 'onAlert'
+>;
 
 type Props = {
+    slot: number;
     display: { uuid: string; name: string };
     display_channel: string;
     /** What the display shows; the heartbeat says when it changed. */
     version: string;
-} & (KioskProps | { screen: null });
+    /** The screens it shows, in turn when more than one. */
+    screens: KioskProps[];
+    rotate_seconds: number;
+    /** Stay on a screen while one of its widgets is red. */
+    hold_on_alert: boolean;
+    urls: TvUrls;
+};
 
 const HEARTBEAT_MS = 60_000;
 
-/** Back to /tv from scratch: the display was removed, so it shows a pairing code. */
-function unpair() {
-    try {
-        localStorage.removeItem(DISPLAY_TOKEN_KEY);
-    } catch {
-        // Nothing kept, nothing to forget.
-    }
-
-    window.location.reload();
-}
-
 /**
- * /tv on a paired TV: its display's screen in the kiosk, read only. Another screen or
- * theme picked under Displays reloads it in place; removing the display sends it back
- * to the pairing code. A heartbeat every minute catches what a missed broadcast said.
+ * /tv on a paired window: its display's screens in the kiosk, read only, in turn and
+ * fading between them when there are several. Another screen or theme picked under
+ * Displays reloads it in place; removing the display sends it back to the pairing code.
+ * A heartbeat every minute catches what a missed broadcast said.
  */
-export default function TvShow(props: Props) {
+export default function TvShow({
+    slot,
+    display,
+    display_channel,
+    version,
+    screens,
+    rotate_seconds,
+    hold_on_alert,
+    urls,
+}: Props) {
     const t = useT();
-    const { display, display_channel, version } = props;
+    const [current, setCurrent] = useState(0);
+    const [red, setRed] = useState<Record<string, boolean>>({});
+    const shown = screens[current % Math.max(1, screens.length)];
+
+    // Back to /tv from scratch: the display was removed, so it shows a pairing code.
+    const unpair = useCallback(() => {
+        try {
+            localStorage.removeItem(displayTokenKey(slot));
+        } catch {
+            // Nothing kept, nothing to forget.
+        }
+
+        window.location.reload();
+    }, [slot]);
 
     useEcho(display_channel, '.display.changed', () => router.reload());
     useEcho(display_channel, '.display.removed', () => unpair());
 
     useEffect(() => {
         const beat = () =>
-            fetch(heartbeat().url, {
+            fetch(urls.heartbeat, {
                 headers: { Accept: 'application/json' },
                 credentials: 'same-origin',
             })
@@ -69,9 +91,26 @@ export default function TvShow(props: Props) {
         const timer = window.setInterval(beat, HEARTBEAT_MS);
 
         return () => window.clearInterval(timer);
-    }, [version]);
+    }, [version, urls.heartbeat, unpair]);
 
-    if (props.screen === null) {
+    // In turn: the next screen every so many seconds, unless this one is red and holds.
+    const holding =
+        hold_on_alert && shown !== undefined && red[shown.screen.uuid];
+
+    useEffect(() => {
+        if (screens.length < 2 || holding) {
+            return;
+        }
+
+        const timer = window.setTimeout(
+            () => setCurrent((i) => (i + 1) % screens.length),
+            rotate_seconds * 1000,
+        );
+
+        return () => window.clearTimeout(timer);
+    }, [current, screens.length, rotate_seconds, holding]);
+
+    if (shown === undefined) {
         return (
             <div
                 className="lj-screen fixed inset-0 flex flex-col items-center justify-center gap-[1vw] text-center"
@@ -94,7 +133,38 @@ export default function TvShow(props: Props) {
         );
     }
 
-    const kiosk = props as KioskProps;
+    return (
+        <>
+            {screens.map((kiosk) => {
+                const visible = kiosk.screen.uuid === shown.screen.uuid;
 
-    return <Kiosk key={kiosk.screen.uuid} {...kiosk} onGone={unpair} />;
+                return (
+                    <div
+                        key={kiosk.screen.uuid}
+                        aria-hidden={!visible || undefined}
+                        inert={!visible}
+                        className="transition-opacity duration-700"
+                        style={{ opacity: visible ? 1 : 0 }}
+                    >
+                        <Kiosk
+                            {...kiosk}
+                            onGone={() => router.reload()}
+                            reloadOnly={['screens']}
+                            onAlert={(isRed) =>
+                                setRed((all) =>
+                                    all[kiosk.screen.uuid] === isRed
+                                        ? all
+                                        : {
+                                              ...all,
+                                              [kiosk.screen.uuid]: isRed,
+                                          },
+                                )
+                            }
+                        />
+                    </div>
+                );
+            })}
+            <Head title={shown.screen.name} />
+        </>
+    );
 }
