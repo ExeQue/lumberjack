@@ -9,6 +9,7 @@ use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Http\Controllers\ProjectController;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Projects\Models\ProjectAgent;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Teams\CreatesTeamMembers;
 
@@ -41,6 +42,16 @@ describe('creating a project', function () {
 });
 
 describe('the projects page', function () {
+    it('names an offline agent with its host, beside an online one on the same host', function () {
+        ['user' => $user, 'project' => $project] = $this->memberWithProject();
+        ProjectAgent::factory()->for($project)->create(['host' => 'web-1', 'name' => 'web', 'last_seen_at' => now()]);
+        ProjectAgent::factory()->for($project)->offline()->create(['host' => 'web-1', 'name' => '']);
+        ProjectAgent::factory()->for($project)->offline()->create(['host' => 'web-2', 'name' => 'worker']);
+
+        $this->actingAs($user)->get(route('projects.index'))
+            ->assertInertia(fn (Assert $page) => $page->where('projects.0.offline_agents', ['unnamed agent on web-1', 'worker on web-2']));
+    });
+
     it('shows each project\'s day in a few grouped queries', function () {
         ['user' => $user, 'project' => $project] = $this->memberWithProject();
         $project->forceFill(['name' => 'Aa shop'])->save();
