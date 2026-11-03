@@ -225,7 +225,7 @@ export default function RoutesIndex({
                                         <tr
                                             key={`${r.method} ${r.route}`}
                                             className={cn(
-                                                'hover:bg-panel-2/60',
+                                                'lj-row hover:bg-panel-2/60',
                                                 active && 'bg-panel-2',
                                             )}
                                         >
@@ -241,7 +241,7 @@ export default function RoutesIndex({
                                                     type="button"
                                                     aria-pressed={active}
                                                     onClick={() => pick(r)}
-                                                    className="cursor-pointer text-left font-mono text-xs text-ink hover:text-amber"
+                                                    className="lj-row-link cursor-pointer text-left font-mono text-xs text-ink hover:text-amber"
                                                 >
                                                     <span className="text-ink-3">
                                                         {r.method}

@@ -307,7 +307,7 @@ export default function IssuesIndex({
                                 {issues.data.map((issue) => (
                                     <tr
                                         key={issue.id}
-                                        className="hover:bg-panel-2/60"
+                                        className="lj-row hover:bg-panel-2/60"
                                     >
                                         <td className={`${tdClass} align-top`}>
                                             <label
@@ -352,7 +352,7 @@ export default function IssuesIndex({
                                                         issue.id,
                                                     ]).url
                                                 }
-                                                className="flex flex-col gap-1 text-ink hover:text-amber"
+                                                className="lj-row-link flex flex-col gap-1 text-ink hover:text-amber"
                                             >
                                                 <span className="flex flex-wrap items-center gap-2">
                                                     {issue.reference && (

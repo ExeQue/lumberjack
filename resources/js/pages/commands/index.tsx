@@ -202,7 +202,7 @@ export default function CommandsIndex({
                                         <tr
                                             key={c.name}
                                             className={cn(
-                                                'hover:bg-panel-2/60',
+                                                'lj-row hover:bg-panel-2/60',
                                                 c.name === filters.command &&
                                                     'bg-panel-2',
                                             )}
@@ -224,7 +224,7 @@ export default function CommandsIndex({
                                                                     : c.name,
                                                         })
                                                     }
-                                                    className="text-left hover:text-amber"
+                                                    className="lj-row-link text-left hover:text-amber"
                                                 >
                                                     {c.name}
                                                 </button>

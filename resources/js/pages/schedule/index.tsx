@@ -222,7 +222,7 @@ export default function ScheduleIndex({
                                                 task.id === filters.task
                                             }
                                             className={cn(
-                                                'hover:bg-panel-2/60',
+                                                'lj-row hover:bg-panel-2/60',
                                                 task.id === filters.task &&
                                                     'bg-panel-2',
                                             )}
@@ -243,7 +243,7 @@ export default function ScheduleIndex({
                                                                 : task.id,
                                                         )
                                                     }
-                                                    className="text-left hover:text-amber"
+                                                    className="lj-row-link text-left hover:text-amber"
                                                 >
                                                     {task.name}
                                                 </button>

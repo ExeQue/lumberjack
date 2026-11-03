@@ -274,7 +274,7 @@ export default function JobsIndex({
                                             <tr
                                                 key={j.name}
                                                 className={cn(
-                                                    'hover:bg-panel-2/60',
+                                                    'lj-row hover:bg-panel-2/60',
                                                     active && 'bg-panel-2',
                                                 )}
                                             >
@@ -295,7 +295,7 @@ export default function JobsIndex({
                                                                     : j.name,
                                                             })
                                                         }
-                                                        className="cursor-pointer text-left font-mono text-xs text-ink hover:text-amber"
+                                                        className="lj-row-link cursor-pointer text-left font-mono text-xs text-ink hover:text-amber"
                                                     >
                                                         <ClassName
                                                             name={j.name}

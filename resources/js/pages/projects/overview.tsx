@@ -574,22 +574,35 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                                 {overview.slowest_routes.map((route) => (
                                     <li
                                         key={`${route.method} ${route.route}`}
-                                        className={`${itemClass} ${rowClass}`}
+                                        className={itemClass}
                                     >
-                                        <span className="min-w-0 truncate font-mono text-xs">
-                                            <span className="text-ink-3">
-                                                {route.method}
-                                            </span>{' '}
-                                            {route.route}
-                                        </span>
-                                        <span
-                                            className={`shrink-0 font-mono text-xs ${route.p95 >= 1_000_000 ? 'text-err' : route.p95 >= 500_000 ? 'text-warn' : ''}`}
+                                        <Link
+                                            href={
+                                                routesIndex(project.uuid, {
+                                                    query: {
+                                                        route: route.route,
+                                                        method: route.method,
+                                                        period: filters.period,
+                                                    },
+                                                }).url
+                                            }
+                                            className={`${rowClass} hover:bg-panel-2/60`}
                                         >
-                                            <span className="sr-only">
-                                                p95{' '}
+                                            <span className="min-w-0 truncate font-mono text-xs">
+                                                <span className="text-ink-3">
+                                                    {route.method}
+                                                </span>{' '}
+                                                {route.route}
                                             </span>
-                                            {formatDuration(route.p95)}
-                                        </span>
+                                            <span
+                                                className={`shrink-0 font-mono text-xs ${route.p95 >= 1_000_000 ? 'text-err' : route.p95 >= 500_000 ? 'text-warn' : ''}`}
+                                            >
+                                                <span className="sr-only">
+                                                    p95{' '}
+                                                </span>
+                                                {formatDuration(route.p95)}
+                                            </span>
+                                        </Link>
                                     </li>
                                 ))}
                             </ul>
@@ -613,49 +626,58 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                         ) : (
                             <ul>
                                 {overview.failed_job_runs.map((run, i) => (
-                                    <li
-                                        key={i}
-                                        className={`${itemClass} ${rowClass}`}
-                                    >
-                                        <span className="flex min-w-0 flex-col gap-0.5">
-                                            <span className="truncate font-mono text-xs">
-                                                {run.name}
+                                    <li key={i} className={itemClass}>
+                                        <Link
+                                            href={
+                                                jobsIndex(project.uuid, {
+                                                    query: {
+                                                        job: run.name,
+                                                        period: filters.period,
+                                                    },
+                                                }).url
+                                            }
+                                            className={`${rowClass} hover:bg-panel-2/60`}
+                                        >
+                                            <span className="flex min-w-0 flex-col gap-0.5">
+                                                <span className="truncate font-mono text-xs">
+                                                    {run.name}
+                                                </span>
+                                                <span className="text-xs text-ink-3">
+                                                    {run.max_tries
+                                                        ? t(
+                                                              'overview.failed_jobs.attempt_of',
+                                                              {
+                                                                  attempt:
+                                                                      run.attempt,
+                                                                  max: run.max_tries,
+                                                              },
+                                                          )
+                                                        : t(
+                                                              'overview.failed_jobs.attempt',
+                                                              {
+                                                                  attempt:
+                                                                      run.attempt,
+                                                              },
+                                                          )}
+                                                    {', '}
+                                                    <time
+                                                        dateTime={
+                                                            run.at ?? undefined
+                                                        }
+                                                        title={formatDateTime(
+                                                            run.at,
+                                                        )}
+                                                    >
+                                                        {formatRelative(run.at)}
+                                                    </time>
+                                                </span>
                                             </span>
-                                            <span className="text-xs text-ink-3">
-                                                {run.max_tries
-                                                    ? t(
-                                                          'overview.failed_jobs.attempt_of',
-                                                          {
-                                                              attempt:
-                                                                  run.attempt,
-                                                              max: run.max_tries,
-                                                          },
-                                                      )
-                                                    : t(
-                                                          'overview.failed_jobs.attempt',
-                                                          {
-                                                              attempt:
-                                                                  run.attempt,
-                                                          },
-                                                      )}
-                                                {', '}
-                                                <time
-                                                    dateTime={
-                                                        run.at ?? undefined
-                                                    }
-                                                    title={formatDateTime(
-                                                        run.at,
-                                                    )}
-                                                >
-                                                    {formatRelative(run.at)}
-                                                </time>
-                                            </span>
-                                        </span>
-                                        <Badge tone={jobTone[run.status]}>
-                                            {t(
-                                                `common.job_statuses.${run.status}`,
-                                            )}
-                                        </Badge>
+                                            <Badge tone={jobTone[run.status]}>
+                                                {t(
+                                                    `common.job_statuses.${run.status}`,
+                                                )}
+                                            </Badge>
+                                        </Link>
                                     </li>
                                 ))}
                             </ul>

@@ -60,6 +60,12 @@ export default defineConfig({
                 ],
             },
             {
+                text: 'Using it',
+                items: [
+                    { text: 'Finding things', link: '/docs/finding-things' },
+                ],
+            },
+            {
                 text: 'Operating it',
                 items: [
                     {

@@ -226,6 +226,26 @@
         @apply border-border;
     }
 
+    /*
+     * A list row that opens something: its main link or button (.lj-row-link) covers
+     * the whole row, and the row's other controls sit above it.
+     */
+    .lj-row {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .lj-row-link::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+    }
+
+    .lj-row :is(a, button, input, label, select):not(.lj-row-link, .sr-only) {
+        position: relative;
+        z-index: 1;
+    }
+
     body {
         @apply bg-background text-foreground;
     }
