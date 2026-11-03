@@ -69,7 +69,7 @@ import {
 type Props = {
     screen: Screen;
     team: { name: string };
-    /** The sizes the team's TVs report, to preview the screen at. */
+    /** The sizes the TVs showing this screen report, to preview it at. */
     displays: { name: string; w: number; h: number }[];
     projects: { uuid: string; name: string }[];
     data_url: string;
@@ -1437,22 +1437,36 @@ export default function EditScreen(props: Props) {
                                     <option value="fit">
                                         {t('screens.designer.preview_fit')}
                                     </option>
-                                    {presets.map(([w, h]) => (
-                                        <option
-                                            key={`p${w}x${h}`}
-                                            value={`${w}x${h}`}
+                                    {props.displays.length > 0 && (
+                                        <optgroup
+                                            label={t(
+                                                'screens.designer.preview_tvs',
+                                            )}
                                         >
-                                            {`${w} × ${h}`}
-                                        </option>
-                                    ))}
-                                    {props.displays.map((d, i) => (
-                                        <option
-                                            key={`d${i}`}
-                                            value={`${d.w}x${d.h}`}
-                                        >
-                                            {`${d.name}, ${d.w} × ${d.h}`}
-                                        </option>
-                                    ))}
+                                            {props.displays.map((d, i) => (
+                                                <option
+                                                    key={`d${i}`}
+                                                    value={`${d.w}x${d.h}`}
+                                                >
+                                                    {`${d.name}, ${d.w} × ${d.h}`}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                    <optgroup
+                                        label={t(
+                                            'screens.designer.preview_common',
+                                        )}
+                                    >
+                                        {presets.map(([w, h]) => (
+                                            <option
+                                                key={`p${w}x${h}`}
+                                                value={`${w}x${h}`}
+                                            >
+                                                {`${w} × ${h}`}
+                                            </option>
+                                        ))}
+                                    </optgroup>
                                     {/* A size not offered keeps showing as itself. */}
                                     {preview.mode === 'size' &&
                                         !preview.custom &&

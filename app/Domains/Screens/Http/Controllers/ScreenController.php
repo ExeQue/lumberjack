@@ -80,6 +80,7 @@ class ScreenController
             'tv' => $presenter->tvInstructions(),
             'screen' => $presenter->present($screen),
             'team' => ['name' => $screen->team->name],
+            'displays' => $presenter->previewDisplays($screen),
             'projects' => $presenter->projects($screen->team),
             'data_url' => route('screens.data', $screen, absolute: false),
             'templates' => ScreenTemplate::forDesigner(),

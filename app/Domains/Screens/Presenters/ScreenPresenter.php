@@ -142,6 +142,19 @@ class ScreenPresenter
     }
 
     /**
+     * The TVs showing this screen that said how large their window is, to preview it at.
+     *
+     * @return list<array{name: string, w: int, h: int}>
+     */
+    public function previewDisplays(Screen $screen): array
+    {
+        $displays = Display::query()->whereTeam($screen->team)->whereNotNull('viewport_width')->orderBy('name')->get()
+            ->filter(fn (Display $d): bool => in_array($screen->id, $d->screenIds(), true));
+
+        return array_values($displays->map(fn (Display $d): array => ['name' => $d->name, 'w' => (int) $d->viewport_width, 'h' => (int) $d->viewport_height])->all());
+    }
+
+    /**
      * What the designer offers to pick from besides the catalog: the team's environments
      * and health checks, and the grid's limits.
      *
@@ -164,9 +177,6 @@ class ScreenPresenter
                 'check' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->whereReportsDatabase()
                     ->distinct()->orderBy('slug')->pluck('slug')->all(),
             ],
-            // The sizes the team's TVs report, to preview a screen at.
-            'displays' => Display::query()->whereTeam($team)->whereNotNull('viewport_width')->orderBy('name')->get()
-                ->map(fn (Display $d): array => ['name' => $d->name, 'w' => $d->viewport_width, 'h' => $d->viewport_height])->values()->all(),
             'limits' => ['min_cols' => Screen::MIN_COLS, 'max_cols' => Screen::MAX_COLS, 'min_rows' => Screen::MIN_ROWS, 'max_rows' => Screen::MAX_ROWS, 'max_widgets' => WidgetSchema::MAX_WIDGETS],
         ];
     }
