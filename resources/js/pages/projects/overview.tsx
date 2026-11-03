@@ -82,7 +82,9 @@ const jobTone: Record<FailedJobRun['status'], Tone> = {
     released: 'info',
 };
 
-const rowClass = 'flex items-center justify-between gap-3 px-4 py-2.5 text-ink';
+// One height for every row, so lists of the same length line up side by side.
+const rowClass =
+    'flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 text-ink';
 const itemClass = 'border-b border-line/60 last:border-b-0';
 
 type LatencyPoint = { t: string; p50: number | null; p95: number | null };
