@@ -48,6 +48,7 @@ return [
         ],
         // Buttons
         'make_admin' => 'Make administrator',
+        'make_admin_question' => 'Make :name an administrator? They can see every team and manage every user.',
         'revoke_admin' => 'Revoke administrator',
         'revoke_admin_question' => 'Take administration away from :name?',
         'suspend' => 'Suspend',

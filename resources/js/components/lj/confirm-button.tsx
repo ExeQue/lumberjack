@@ -1,10 +1,18 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/lj/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { useT } from '@/lib/i18n';
 
 /**
- * Two-step button: the first click asks in place, the second does it. Replaces window.confirm.
+ * A button that asks first, in a small dialog, so the question fits wherever the
+ * button sits (a table cell, a card). Replaces window.confirm.
  */
 export function ConfirmButton({
     children,
@@ -24,8 +32,8 @@ export function ConfirmButton({
     const t = useT();
     const [asking, setAsking] = useState(false);
 
-    if (!asking) {
-        return (
+    return (
+        <>
             <Button
                 variant={variant}
                 disabled={disabled}
@@ -33,29 +41,33 @@ export function ConfirmButton({
             >
                 {children}
             </Button>
-        );
-    }
-
-    return (
-        <span
-            role="group"
-            aria-label={question}
-            className="inline-flex flex-wrap items-center justify-end gap-2"
-        >
-            <span className="text-xs text-ink-2">{question}</span>
-            <Button
-                variant="danger"
-                autoFocus
-                onClick={() => {
-                    setAsking(false);
-                    onConfirm();
-                }}
-            >
-                {confirmLabel}
-            </Button>
-            <Button variant="ghost" onClick={() => setAsking(false)}>
-                {t('common.cancel')}
-            </Button>
-        </span>
+            <Dialog open={asking} onOpenChange={setAsking}>
+                <DialogContent className="gap-5 border-line bg-panel sm:max-w-md [&>button:last-child]:hidden">
+                    <DialogTitle className="text-sm leading-relaxed font-normal text-ink">
+                        {question}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {confirmLabel}
+                    </DialogDescription>
+                    <DialogFooter>
+                        <Button onClick={() => setAsking(false)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button
+                            variant={
+                                variant === 'danger' ? 'danger' : 'primary'
+                            }
+                            autoFocus
+                            onClick={() => {
+                                setAsking(false);
+                                onConfirm();
+                            }}
+                        >
+                            {confirmLabel}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

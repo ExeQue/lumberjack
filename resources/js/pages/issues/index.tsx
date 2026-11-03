@@ -1,10 +1,10 @@
 import { MessageSquare } from 'lucide-react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { ConfirmButton } from '@/components/lj/confirm-button';
 import { useEffect, useState } from 'react';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
-    Button,
     Card,
     EmptyState,
     Input,
@@ -517,28 +517,49 @@ export default function IssuesIndex({
                     </span>
                     <div className="flex flex-wrap gap-2">
                         {filters.status !== 'resolved' && (
-                            <Button
+                            <ConfirmButton
+                                variant="default"
                                 disabled={selected.length === 0}
-                                onClick={() => bulk('resolved')}
+                                question={t(
+                                    'issues.bulk_question.resolved',
+                                    {},
+                                    selected.length,
+                                )}
+                                confirmLabel={t('issues.resolve_selected')}
+                                onConfirm={() => bulk('resolved')}
                             >
                                 {t('issues.resolve_selected')}
-                            </Button>
+                            </ConfirmButton>
                         )}
                         {filters.status !== 'ignored' && (
-                            <Button
+                            <ConfirmButton
+                                variant="default"
                                 disabled={selected.length === 0}
-                                onClick={() => bulk('ignored')}
+                                question={t(
+                                    'issues.bulk_question.ignored',
+                                    {},
+                                    selected.length,
+                                )}
+                                confirmLabel={t('issues.ignore_selected')}
+                                onConfirm={() => bulk('ignored')}
                             >
                                 {t('issues.ignore_selected')}
-                            </Button>
+                            </ConfirmButton>
                         )}
                         {filters.status !== 'open' && (
-                            <Button
+                            <ConfirmButton
+                                variant="default"
                                 disabled={selected.length === 0}
-                                onClick={() => bulk('open')}
+                                question={t(
+                                    'issues.bulk_question.open',
+                                    {},
+                                    selected.length,
+                                )}
+                                confirmLabel={t('issues.reopen_selected')}
+                                onConfirm={() => bulk('open')}
                             >
                                 {t('issues.reopen_selected')}
-                            </Button>
+                            </ConfirmButton>
                         )}
                         {issues.prev_page_url && (
                             <Link

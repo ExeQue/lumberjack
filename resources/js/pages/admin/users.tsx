@@ -275,8 +275,18 @@ export default function AdminUsers({ filters, users, teams }: Props) {
                                                                     )}
                                                                 </ConfirmButton>
                                                             ) : (
-                                                                <Button
-                                                                    onClick={() =>
+                                                                <ConfirmButton
+                                                                    variant="default"
+                                                                    question={t(
+                                                                        'admin.users.make_admin_question',
+                                                                        {
+                                                                            name: user.name,
+                                                                        },
+                                                                    )}
+                                                                    confirmLabel={t(
+                                                                        'admin.users.make_admin',
+                                                                    )}
+                                                                    onConfirm={() =>
                                                                         router.put(
                                                                             setAdmin(
                                                                                 user.id,
@@ -292,7 +302,7 @@ export default function AdminUsers({ filters, users, teams }: Props) {
                                                                     {t(
                                                                         'admin.users.make_admin',
                                                                     )}
-                                                                </Button>
+                                                                </ConfirmButton>
                                                             ))}
                                                         {!you &&
                                                             (user.suspended ? (

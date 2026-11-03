@@ -38,6 +38,11 @@ return [
     'resolve_selected' => 'Resolve selected',
     'ignore_selected' => 'Ignore selected',
     'reopen_selected' => 'Re-open selected',
+    'bulk_question' => [
+        'resolved' => '{1} Resolve 1 issue?|[2,*] Resolve :count issues?',
+        'ignored' => '{1} Ignore 1 issue? It stays ignored until it escalates.|[2,*] Ignore :count issues? They stay ignored until they escalate.',
+        'open' => '{1} Re-open 1 issue?|[2,*] Re-open :count issues?',
+    ],
     'empty_title' => 'No issues here',
     'empty_body' => 'Nothing matches these filters.',
 ];

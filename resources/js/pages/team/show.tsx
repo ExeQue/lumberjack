@@ -370,8 +370,17 @@ export default function TeamShow({
                                                             {invitation.email}
                                                         </span>
                                                     </Button>
-                                                    <Button
-                                                        onClick={() =>
+                                                    <ConfirmButton
+                                                        question={t(
+                                                            'team.invitations.revoke_question',
+                                                            {
+                                                                email: invitation.email,
+                                                            },
+                                                        )}
+                                                        confirmLabel={t(
+                                                            'team.invitations.revoke',
+                                                        )}
+                                                        onConfirm={() =>
                                                             router.delete(
                                                                 invitationDestroy(
                                                                     invitation.id,
@@ -389,7 +398,7 @@ export default function TeamShow({
                                                             {' '}
                                                             {invitation.email}
                                                         </span>
-                                                    </Button>
+                                                    </ConfirmButton>
                                                 </span>
                                             )}
                                         </li>

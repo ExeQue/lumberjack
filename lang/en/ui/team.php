@@ -32,6 +32,7 @@ return [
         'expired' => 'Expired',
         // Button
         'revoke' => 'Revoke',
+        'revoke_question' => 'Revoke the invitation for :email? The link stops working.',
         'email' => 'Invite by email',
         'email_placeholder' => 'name@company.com',
         // Button
