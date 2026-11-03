@@ -354,6 +354,7 @@ final class WidgetSchema
             $toggle('show_title', true),
             $data ? $toggle('show_period', true) : null,
             $data ? $toggle('status_colors', true) : null,
+            $data ? $toggle('ok_border', true) : null,
             $select('text_size', ['auto', 's', 'm', 'l', 'xl'], 'auto'),
             $select('title_size', ['s', 'm', 'l', 'xl'], 'm'),
             $select('align', ['left', 'center'], 'left'),

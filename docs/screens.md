@@ -140,7 +140,7 @@ Each widget's settings are grouped in sections that open and close:
 - **Scope**: the projects, environment, period and release the widget shows, each the
   screen's default unless set, and a filter on the route, queue, job, host or database check (`*`
   matches anything, so `POST /checkout*` or `payments*`).
-- **Display**: whether the title shows and how big, whether the tile is colored by its status,
+- **Display**: whether the title shows and how big, whether the tile is colored by its status (and whether a calm tile keeps its green border),
   the text size (fitted to the tile, or small to huge), alignment (left or centered, top or vertically centered), how often it updates
   (live, every minute, every 5 minutes), and whether to hide it while all is ok or while
   it has nothing to show.

@@ -439,7 +439,12 @@ export function WidgetTile({
             {...props}
             className={cn('lj-tile', className)}
             data-kind={widget.type}
-            data-status={status ?? undefined}
+            data-status={
+                // A calm tile can drop its green border; problems always show.
+                status === 'ok' && opt<boolean>('ok_border') === false
+                    ? undefined
+                    : (status ?? undefined)
+            }
             data-flash={flash || undefined}
             style={{
                 gridColumn: `${widget.x + 1} / span ${widget.w}`,
