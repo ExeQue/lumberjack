@@ -7,7 +7,9 @@ use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Http\Controllers\AlertController;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Teams\Enums\TeamRole;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Teams\CreatesTeamMembers;
 
 covers(AlertController::class);
@@ -61,6 +63,17 @@ describe('editing a channel', function () {
         $this->actingAs($member->fresh())->put(route('alerts.channels.update', $this->channel), [
             'type' => 'discord', 'name' => 'x', 'config' => [],
         ])->assertForbidden();
+    });
+});
+
+describe('the alerts page', function () {
+    it('shows members only where a channel delivers, not its secret parts', function () {
+        ['user' => $member, 'project' => $project] = $this->memberWithProject(TeamRole::Member);
+        $admin = User::factory()->inTeam($project->team, TeamRole::Admin)->create();
+        NotificationChannel::factory()->for($project->team)->create(['type' => ChannelType::Ntfy, 'name' => 'Phones', 'config' => ['url' => 'https://ntfy.sh/ops-secret-topic']]);
+
+        $this->actingAs($member)->get(route('alerts.index'))->assertInertia(fn (Assert $page) => $page->where('channels.0.target', 'ntfy.sh/••••'));
+        $this->actingAs($admin)->get(route('alerts.index'))->assertInertia(fn (Assert $page) => $page->where('channels.0.target', 'https://ntfy.sh/ops-secret-topic'));
     });
 });
 
