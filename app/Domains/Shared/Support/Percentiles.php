@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace App\Domains\Shared\Support;
 
 /**
- * SQL fragments for nearest-rank percentiles over a ROW_NUMBER() window, so one
- * ranked CTE gives several percentiles at once.
+ * SQL for nearest-rank percentiles as ordered-set aggregates: percentile_disc picks the
+ * first value whose rank reaches the fraction, so no window has to rank every row.
+ * Postgres sorts once for several percentiles of the same column in one query.
  */
 final class Percentiles
 {
     public static function select(string $column, float $percentile, string $alias): string
     {
+        return self::of($column, $percentile)." AS {$alias}";
+    }
+
+    public static function of(string $column, float $percentile): string
+    {
         $p = number_format($percentile, 2, '.', '');
 
-        return "MAX(CASE WHEN rn = GREATEST(1, CEIL(cnt * {$p})) THEN {$column} END) AS {$alias}";
+        return "percentile_disc({$p}) WITHIN GROUP (ORDER BY {$column})";
     }
 }

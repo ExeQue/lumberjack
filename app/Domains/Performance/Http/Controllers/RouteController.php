@@ -49,23 +49,20 @@ class RouteController
     {
         $since = $period->since();
         $size = $period->bucketSeconds();
-        $scope = fn ($q) => $q->where('project_id', $project->id)->where('occurred_at', '>=', $since)
-            ->where('method', $method)->where(fn ($r) => $r->where('route', $route)->orWhere(fn ($u) => $u->whereNull('route')->where('url', $route)))
+        // A named route by its index; only a request no route matched is found by its url.
+        // Split rather than OR-ed, so the (project_id, route, occurred_at) index is used.
+        $named = DB::table('request_runs')->where('project_id', $project->id)->where('route', $route)->where('occurred_at', '>=', $since)->exists();
+        $scope = fn ($q) => $q->where('project_id', $project->id)->where('occurred_at', '>=', $since)->where('method', $method)
+            ->when($named)->where('route', $route)
+            ->when(! $named)->whereNull('route')
+            ->when(! $named)->where('url', $route)
             ->when($environment !== null)->where('environment', $environment);
 
-        $p50 = Percentiles::select('duration_us', 0.50, 'p50');
-        $p95 = Percentiles::select('duration_us', 0.95, 'p95');
-
         $byBucket = DB::table('request_runs')->tap($scope)
-            ->selectRaw('FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?) * ? AS bucket, duration_us', [$size, $size])
+            ->select(DB::raw("FLOOR(EXTRACT(EPOCH FROM occurred_at) / {$size}) * {$size} AS bucket, ".Percentiles::select('duration_us', 0.50, 'p50').', '.Percentiles::select('duration_us', 0.95, 'p95')))
+            ->groupByRaw('1')
             ->get()
-            ->groupBy(fn ($row): int => (int) $row->bucket)
-            ->map(function ($rows): array {
-                $values = $rows->pluck('duration_us')->map(fn ($v): int => (int) $v)->sort()->values();
-                $at = fn (float $p): int => (int) $values->get(max(0, (int) ceil($values->count() * $p) - 1), 0);
-
-                return ['p50' => $at(0.5), 'p95' => $at(0.95)];
-            });
+            ->mapWithKeys(fn (object $row): array => [(int) $row->bucket => ['p50' => (int) $row->p50, 'p95' => (int) $row->p95]]);
 
         // Every bucket of the period, empty where no request came in, so one busy hour is
         // one bar among the rest and not the whole chart.
@@ -75,8 +72,6 @@ class RouteController
         for ($at = $start; $at <= now()->getTimestamp(); $at += $size) {
             $hourly[] = ['t' => date(DATE_ATOM, $at), 'p50' => $byBucket[$at]['p50'] ?? null, 'p95' => $byBucket[$at]['p95'] ?? null];
         }
-
-        unset($p50, $p95);
 
         return [
             'method' => $method,

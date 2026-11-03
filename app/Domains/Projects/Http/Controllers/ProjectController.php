@@ -37,7 +37,7 @@ class ProjectController
         $p95 = Percentiles::select('duration_us', 0.95, 'p95');
 
         $projects = $team->projects()->orderBy('name')->with('agents')->get()->map(function (Project $project) use ($since, $p95): array {
-            $latency = DB::selectOne("WITH ranked AS (SELECT duration_us, ROW_NUMBER() OVER (ORDER BY duration_us) AS rn, COUNT(*) OVER () AS cnt FROM request_runs WHERE project_id = ? AND occurred_at >= ?) SELECT {$p95} FROM ranked", [$project->id, $since->format('Y-m-d H:i:s')]);
+            $latency = DB::selectOne("SELECT {$p95} FROM request_runs WHERE project_id = ? AND occurred_at >= ?", [$project->id, $since->format('Y-m-d H:i:s')]);
             $jobs = JobRun::query()->where('project_id', $project->id)->where('created_at', '>=', $since);
             $runs = (clone $jobs)->count();
             $offline = $project->agents->reject(fn (ProjectAgent $a): bool => $a->isOnline());

@@ -36,16 +36,11 @@ class ReleaseHealthQuery
 
         // First and last seen are within the period: older traffic is not looked at.
         $rows = DB::select("
-            WITH ranked AS (
-                SELECT release, duration_us, status_code, occurred_at,
-                    ROW_NUMBER() OVER (PARTITION BY release ORDER BY duration_us) AS rn,
-                    COUNT(*) OVER (PARTITION BY release) AS cnt
-                FROM request_runs WHERE {$where}
-            ), requests AS (
-                SELECT release, MAX(cnt) AS requests, {$p95},
-                    COUNT(*) FILTER (WHERE status_code >= 500)::float / MAX(cnt) AS error_rate,
+            WITH requests AS (
+                SELECT release, COUNT(*) AS requests, {$p95},
+                    COUNT(*) FILTER (WHERE status_code >= 500)::float / COUNT(*) AS error_rate,
                     MIN(occurred_at) AS first_seen, MAX(occurred_at) AS last_seen
-                FROM ranked GROUP BY release
+                FROM request_runs WHERE {$where} GROUP BY release
             ), errors AS (
                 SELECT release, COUNT(*) AS occurrences, MIN(occurred_at) AS first_seen, MAX(occurred_at) AS last_seen
                 FROM occurrences WHERE {$where} GROUP BY release

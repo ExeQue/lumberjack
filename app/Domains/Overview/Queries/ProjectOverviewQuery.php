@@ -40,11 +40,8 @@ class ProjectOverviewQuery
         $bindings = array_filter([$project->id, $since->format('Y-m-d H:i:s'), $environment], fn ($v): bool => $v !== null);
 
         $latency = DB::selectOne("
-            WITH ranked AS (
-                SELECT duration_us, status_code, ROW_NUMBER() OVER (ORDER BY duration_us) AS rn, COUNT(*) OVER () AS cnt
-                FROM request_runs WHERE project_id = ? AND occurred_at >= ?{$envSql}
-            )
-            SELECT MAX(cnt) AS requests, COUNT(*) FILTER (WHERE status_code >= 500) AS server_errors, {$p50}, {$p95}, {$p99} FROM ranked", $bindings);
+            SELECT COUNT(*) AS requests, COUNT(*) FILTER (WHERE status_code >= 500) AS server_errors, {$p50}, {$p95}, {$p99}
+            FROM request_runs WHERE project_id = ? AND occurred_at >= ?{$envSql}", $bindings);
 
         $errors = DB::table('occurrences')->where('project_id', $project->id)->where('occurred_at', '>=', $since);
 
@@ -102,11 +99,8 @@ class ProjectOverviewQuery
         $bindings = array_filter([$project->id, ...$range, $environment], fn ($v): bool => $v !== null);
 
         $latency = DB::selectOne("
-            WITH ranked AS (
-                SELECT duration_us, ROW_NUMBER() OVER (ORDER BY duration_us) AS rn, COUNT(*) OVER () AS cnt
-                FROM request_runs WHERE project_id = ? AND occurred_at >= ? AND occurred_at < ?{$envSql}
-            )
-            SELECT MAX(cnt) AS requests, {$p95} FROM ranked", $bindings);
+            SELECT COUNT(*) AS requests, {$p95}
+            FROM request_runs WHERE project_id = ? AND occurred_at >= ? AND occurred_at < ?{$envSql}", $bindings);
 
         $errors = DB::table('occurrences')->where('project_id', $project->id)->whereBetween('occurred_at', $range);
         $jobs = JobRun::query()->where('project_id', $project->id)->whereBetween('created_at', $range)->whereStatus(JobRunStatus::Failed);
@@ -136,17 +130,12 @@ class ProjectOverviewQuery
         $start = intdiv($since->getTimestamp(), $size) * $size;
         $envSql = $environment !== null ? ' AND environment = ?' : '';
         $bucket = 'FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?)';
-        $bindings = [$size, $size, $size, $project->id, $since->format('Y-m-d H:i:s'), ...($environment !== null ? [$environment] : [])];
+        $bindings = [$size, $project->id, $since->format('Y-m-d H:i:s'), ...($environment !== null ? [$environment] : [])];
 
         $rows = DB::select("
-            WITH ranked AS (
-                SELECT {$bucket} AS bucket, duration_us,
-                    ROW_NUMBER() OVER (PARTITION BY {$bucket} ORDER BY duration_us) AS rn,
-                    COUNT(*) OVER (PARTITION BY {$bucket}) AS cnt
-                FROM request_runs WHERE project_id = ? AND occurred_at >= ?{$envSql}
-            )
-            SELECT bucket, ".Percentiles::select('duration_us', 0.50, 'p50').', '.Percentiles::select('duration_us', 0.95, 'p95').'
-            FROM ranked GROUP BY bucket', $bindings);
+            SELECT {$bucket} AS bucket, ".Percentiles::select('duration_us', 0.50, 'p50').', '.Percentiles::select('duration_us', 0.95, 'p95')."
+            FROM request_runs WHERE project_id = ? AND occurred_at >= ?{$envSql}
+            GROUP BY 1", $bindings);
 
         $byBucket = [];
 
