@@ -59,6 +59,15 @@ type Props = {
     };
     sharing: Sharing;
     tv: TvInstructionsProps;
+    /** Ready layouts an empty screen can be filled from. */
+    templates: {
+        id: string;
+        label: string;
+        description: string;
+        cols: number;
+        rows: number;
+        widgets: Widget[];
+    }[];
 };
 
 const SAVE_DELAY_MS = 300;
@@ -903,6 +912,50 @@ export default function EditScreen(props: Props) {
                             gridAutoRows: 'minmax(0, 1fr)',
                         }}
                     >
+                        {screen.widgets.length === 0 && (
+                            <div
+                                className="flex flex-col items-center justify-center gap-[1em] rounded-[8px] border border-dashed border-(--s-line-strong) p-[2em] text-center"
+                                style={{
+                                    gridColumn: '1 / -1',
+                                    gridRow: '1 / -1',
+                                }}
+                            >
+                                <span className="text-[1.1em] font-semibold text-(--s-ink)">
+                                    {t('screens.designer.empty.title')}
+                                </span>
+                                <span className="max-w-[36em] text-(--s-ink-3)">
+                                    {t('screens.designer.empty.body')}
+                                </span>
+                                <div className="flex flex-wrap justify-center gap-[0.5em]">
+                                    {props.templates.map((template) => (
+                                        <button
+                                            key={template.id}
+                                            type="button"
+                                            title={template.description}
+                                            className="cursor-pointer rounded-[6px] border border-(--s-line-strong) bg-(--s-panel) px-[0.9em] py-[0.45em] text-(--s-ink-2) hover:border-(--s-amber) hover:text-(--s-ink)"
+                                            onClick={() =>
+                                                change((s) => ({
+                                                    ...s,
+                                                    cols: template.cols,
+                                                    rows: template.rows,
+                                                    widgets:
+                                                        template.widgets.map(
+                                                            (w) => ({
+                                                                ...w,
+                                                                id: newWidgetId(),
+                                                            }),
+                                                        ),
+                                                }))
+                                            }
+                                        >
+                                            {t('screens.designer.empty.use', {
+                                                template: template.label,
+                                            })}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         {screen.widgets.map((widget, i) => (
                             <WidgetTile
                                 key={widget.id}

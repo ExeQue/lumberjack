@@ -91,6 +91,11 @@ return [
     ],
 
     'designer' => [
+        'empty' => [
+            'title' => 'An empty screen',
+            'body' => 'Drag a widget from the left onto the grid, click one to add it, or fill the screen from a ready layout and change it from there.',
+            'use' => 'Use :template',
+        ],
         'title' => 'Design :name',
         'grid' => 'Screen',
         'count' => '{0} No widgets|{1} 1 widget|[2,*] :count widgets',
