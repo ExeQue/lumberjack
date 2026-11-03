@@ -61,7 +61,9 @@ export default function TvShow({
         window.location.reload();
     }, [slot]);
 
-    useEcho(display_channel, '.display.changed', () => router.reload());
+    useEcho(display_channel, '.display.changed', () =>
+        router.reload({ viewTransition: true }),
+    );
     useEcho(display_channel, '.display.removed', () => unpair());
 
     useEffect(() => {
