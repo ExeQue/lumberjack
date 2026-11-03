@@ -151,6 +151,9 @@ return [
         'move_later' => 'Show later',
         'whole_widget' => 'Whole widget',
         'whole_widget_hint' => 'Applies to every value.',
+        // The gear in a designer tile's corner, and where Display went.
+        'display_gear' => 'Display settings',
+        'display_hint' => 'Display settings: the gear on the widget.',
         'limits_above' => 'Turns amber and red at or above the limits; empty uses the defaults shown.',
         'limits_below' => 'Turns amber and red at or below the limits; empty uses the defaults shown.',
         'ratio_hint' => 'Shares go from 0 to 1: 0.05 is 5%.',

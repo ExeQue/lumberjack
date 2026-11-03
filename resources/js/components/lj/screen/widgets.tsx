@@ -312,6 +312,8 @@ export type TileProps = {
     flash?: boolean;
     /** Extra content above the tile's own: the designer's badge and resize handle. */
     decoration?: ReactNode;
+    /** In the tile's top right corner, the period label moving aside: the designer's gear. */
+    corner?: ReactNode;
     /** Told the tile's status whenever it changes, for the kiosk's flash and count. */
     onStatus?: (id: string, status: Status) => void;
 } & Omit<ComponentProps<'div'>, 'children'>;
@@ -331,6 +333,7 @@ export function WidgetTile({
     designer = false,
     flash = false,
     decoration,
+    corner,
     onStatus,
     className,
     style,
@@ -463,6 +466,15 @@ export function WidgetTile({
             }}
         >
             {decoration}
+            {corner && (
+                // The same corner on every tile; the period label makes room while it shows.
+                <span
+                    className="absolute top-1 right-1 z-20 flex"
+                    style={{ fontSize: 'var(--lj-cell-font)' }}
+                >
+                    {corner}
+                </span>
+            )}
             {showTitle && widget.type !== 'empty' && title && (
                 <div
                     className={cn(
@@ -482,7 +494,10 @@ export function WidgetTile({
                         {title}
                     </span>
                     <span
-                        className="lj-tile-small flex-none whitespace-nowrap"
+                        className={cn(
+                            'lj-tile-small flex-none whitespace-nowrap',
+                            corner && 'lj-corner-label',
+                        )}
                         // The same size on every tile, whatever its text or title size.
                         style={{ fontSize: 'var(--lj-cell-font)' }}
                     >

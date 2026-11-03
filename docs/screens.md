@@ -129,7 +129,7 @@ Each widget's settings are grouped in sections that open and close:
     Below the tabs, **Whole widget** holds what applies to every value: under
     **Rotation**, how often they switch (every 5 seconds to a minute), with a fade, a
     slide or neither, whether a value that needs attention (amber or red) holds the tile
-    until it clears, and the position dots; then Scope, Display and Size. Tiles with the
+    until it clears, and the position dots; then Scope and Size (Display is behind the gear). Tiles with the
     same timing switch together. As stored in the screen's widgets, a `rotate` entry is a
     source id or `{"source": "p95", "seconds": 30, "title": "Latency", "options":
   {"red": 800}, "scope": {"period": "24h"}}`; the first value's seconds are the
@@ -151,10 +151,17 @@ Each widget's settings are grouped in sections that open and close:
 - **Scope**: the projects, environment, period and release the widget shows, each the
   screen's default unless set, and a filter on the route, queue, job, host or database check (`*`
   matches anything, so `POST /checkout*` or `payments*`).
-- **Display**: whether the title shows and how big, whether the tile is colored by its status (and whether a calm tile keeps its green border),
-  the text size (fitted to the tile, or small to huge), alignment (left or centered, top or vertically centered), how often it updates
-  (live, every minute, every 5 minutes), and whether to hide it while all is ok or while
-  it has nothing to show.
+- **Display**: not in the inspector but behind the gear in the tile's top right corner,
+  next to the period, which shows while the pointer is on the tile, it has focus or it is
+  selected (never on the TV). The gear selects the widget and opens its display settings
+  in a small panel beside it; Escape or a click elsewhere closes it, and changes save like
+  any other. They are whether the title shows and how big, whether the tile is colored by
+  its status (and whether a calm tile keeps its green border), the text size (fitted to
+  the tile, or small to huge), alignment (left or centered, top or vertically centered),
+  how often it updates (live, every minute, every 5 minutes), and whether to hide it
+  while all is ok or while it has nothing to show.
+
+    ![A widget's display settings behind its gear](./screenshots/screen-designer-display.png)
 
 Older screens may still have an **Empty cell** widget, from when widgets filled the grid
 in order and a gap needed a filler. It still works (dashed in the designer, invisible

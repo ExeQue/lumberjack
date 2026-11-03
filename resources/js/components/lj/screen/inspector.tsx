@@ -1,3 +1,5 @@
+import { Settings } from 'lucide-react';
+import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button, Input, Label, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
@@ -117,6 +119,7 @@ export function WidgetInspector({
     canResize,
     tab = 0,
     onTab = () => {},
+    part = 'all',
 }: {
     widget: Widget;
     catalog: Catalog;
@@ -128,6 +131,8 @@ export function WidgetInspector({
     /** The value of the rotation open in the tabs, which the designer's tile shows. */
     tab?: number;
     onTab?: (index: number) => void;
+    /** Only the Display fields, for the gear on the designer's tile (DisplayGear). */
+    part?: 'all' | 'display';
 }) {
     const t = useT();
     const { schema, sources } = catalog;
@@ -831,7 +836,20 @@ export function WidgetInspector({
             : (pool.find((s) => s.id === r.source)?.label ?? r.source));
     const sections = schema[widget.type] ?? [];
     const [valueSection, ...rest] = sections;
-    const whole = rest.filter((s) => s.id !== 'rotation' || items.length > 1);
+    // Display lives behind the gear on the tile.
+    const whole = rest.filter(
+        (s) => s.id !== 'display' && (s.id !== 'rotation' || items.length > 1),
+    );
+
+    if (part === 'display') {
+        return (
+            <div className="grid grid-cols-2 gap-2.5">
+                {sections
+                    .find((s) => s.id === 'display')
+                    ?.fields.map((field) => renderField(field, false))}
+            </div>
+        );
+    }
 
     const value = (
         <>
@@ -1198,6 +1216,12 @@ export function WidgetInspector({
                     </Section>
                 ))}
 
+                {sections.some((s) => s.id === 'display') && (
+                    <p className="text-xs text-ink-3">
+                        {t('screens.inspector.display_hint')}
+                    </p>
+                )}
+
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[13px] font-medium">
                         {t('screens.inspector.size')}
@@ -1374,5 +1398,103 @@ export function ScreenSettings({
                 </span>
             </div>
         </div>
+    );
+}
+
+/** Width of the gear's popover, to keep it on screen. */
+const GEAR_WIDTH = 300;
+
+/**
+ * The gear in a designer tile's top right corner: the widget's Display settings in a
+ * popover next to it (a native popover: Escape and a click outside close it).
+ */
+export function DisplayGear({
+    widget,
+    catalog,
+    onChange,
+    onOpen,
+    cols,
+}: {
+    widget: Widget;
+    catalog: Catalog;
+    onChange: (widget: Widget) => void;
+    onOpen: () => void;
+    cols: number;
+}) {
+    const t = useT();
+    const gear = useRef<HTMLButtonElement>(null);
+    const [at, setAt] = useState({ top: 0, left: 0 });
+    const popover = `display-${widget.id}`;
+    // Keeps the designer's tile handlers (select, drag, keys) out of the popover.
+    const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
+
+    return (
+        <>
+            <button
+                ref={gear}
+                type="button"
+                popoverTarget={popover}
+                aria-label={t('screens.inspector.display_gear')}
+                title={t('screens.inspector.display_gear')}
+                draggable={false}
+                className="lj-badge z-20 flex size-[1.5em] cursor-pointer items-center justify-center rounded border border-(--s-line) bg-(--s-ground) text-(--s-ink-2) hover:text-(--s-ink)"
+                onPointerDown={stop}
+                onClick={() => {
+                    const r = gear.current?.getBoundingClientRect();
+
+                    if (r) {
+                        setAt({
+                            top: r.bottom + 4,
+                            left: Math.max(
+                                8,
+                                Math.min(
+                                    r.right - GEAR_WIDTH,
+                                    window.innerWidth - GEAR_WIDTH - 8,
+                                ),
+                            ),
+                        });
+                    }
+
+                    onOpen();
+                }}
+            >
+                <Settings aria-hidden="true" className="size-[1em]" />
+            </button>
+            <div
+                id={popover}
+                popover="auto"
+                role="dialog"
+                aria-label={t('screens.inspector.display_gear')}
+                draggable={false}
+                className="m-0 cursor-auto rounded-md border border-line bg-panel p-3 text-left text-[13px] text-ink shadow-lg"
+                style={{
+                    position: 'fixed',
+                    inset: 'auto',
+                    top: at.top,
+                    left: at.left,
+                    width: GEAR_WIDTH,
+                }}
+                onClick={stop}
+                onPointerDown={stop}
+                onKeyDown={stop}
+                onDragStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }}
+            >
+                <h3 className="mb-2.5 text-[11px] font-semibold tracking-wide text-ink-3 uppercase">
+                    {t('screens.sections.display')}
+                </h3>
+                <WidgetInspector
+                    part="display"
+                    widget={widget}
+                    catalog={catalog}
+                    onChange={onChange}
+                    onRemove={() => {}}
+                    cols={cols}
+                    canResize={() => false}
+                />
+            </div>
+        </>
     );
 }

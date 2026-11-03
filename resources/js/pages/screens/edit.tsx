@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useNow } from '@/components/lj/relative';
 import {
     ScreenSettings,
+    DisplayGear,
     WidgetInspector,
 } from '@/components/lj/screen/inspector';
 import type { Catalog } from '@/components/lj/screen/inspector';
@@ -1335,6 +1336,21 @@ export default function EditScreen(props: Props) {
                                     });
                                 }}
                                 onDragEnd={endDrag}
+                                corner={
+                                    widget.type !== 'empty' && (
+                                        <DisplayGear
+                                            widget={widget}
+                                            catalog={catalog}
+                                            cols={screen.cols}
+                                            onChange={(next) =>
+                                                patch(next.id, next)
+                                            }
+                                            onOpen={() =>
+                                                setSelected(widget.id)
+                                            }
+                                        />
+                                    )
+                                }
                                 decoration={
                                     <>
                                         <span
