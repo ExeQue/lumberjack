@@ -236,7 +236,7 @@ export function Sidebar() {
                         </span>
                     </span>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuContent side="top" align="start" className="w-56">
                     <DropdownMenuItem asChild>
                         <Link href={profileEdit().url}>
                             <UserCog className="size-4" aria-hidden="true" />
