@@ -164,8 +164,21 @@
 
 .lj-tile:hover .lj-badge,
 .lj-tile:focus-visible .lj-badge,
+.lj-tile:has(:focus-visible) .lj-badge,
 .lj-tile[data-selected='true'] .lj-badge {
     opacity: 1;
+}
+
+/* The designer's gear sits in the corner; the period label moves aside while it shows. */
+.lj-tile .lj-corner-label {
+    transition: padding-right 150ms;
+}
+
+.lj-tile:hover .lj-corner-label,
+.lj-tile:focus-visible .lj-corner-label,
+.lj-tile:has(:focus-visible) .lj-corner-label,
+.lj-tile[data-selected='true'] .lj-corner-label {
+    padding-right: 1.4em;
 }
 
 .lj-tile-title {

@@ -265,6 +265,11 @@ const shots = {
         before: () => click('aside [role=tab]:last-child'),
         element: 'aside:has([role=tablist])',
     },
+    // The first widget's display settings, behind the gear in its corner.
+    'screen-designer-display': {
+        path: screen,
+        before: () => click('[aria-label="Display settings"]'),
+    },
     'screen-designer-incident': {
         path: screen,
         before: () => click('::-p-text(Show an incident)'),
