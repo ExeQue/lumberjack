@@ -32,12 +32,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $started_at
  * @property CarbonImmutable|null $finished_at
  * @property int|null $duration_us
+ * @property float $sample_rate
+ * @property bool $sampled
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
 #[Fillable([
     'project_id', 'occurrence_id', 'run_uuid', 'trace_id', 'environment', 'host', 'name', 'arguments', 'options',
-    'status', 'exit_code', 'started_at', 'finished_at', 'duration_us',
+    'status', 'exit_code', 'started_at', 'finished_at', 'duration_us', 'sample_rate', 'sampled',
 ])]
 #[DateFormat('Y-m-d H:i:s.v')]
 #[UseFactory(CommandRunFactory::class)]
@@ -49,6 +51,8 @@ class CommandRun extends Model
     protected function casts(): array
     {
         return [
+            'sample_rate' => 'float',
+            'sampled' => 'boolean',
             'arguments' => 'array',
             'options' => 'array',
             'status' => CommandRunStatus::class,

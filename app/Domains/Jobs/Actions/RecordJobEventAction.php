@@ -61,6 +61,11 @@ class RecordJobEventAction
             'parameters' => $this->parameters($project, $event) ?? $run->parameters,
         ]);
 
+        // Only an event that says how its run was picked changes it; a late "queued" says nothing.
+        if (array_key_exists('sample_rate', $event) || array_key_exists('sampled', $event)) {
+            $run->fill(Envelope::sampling($event));
+        }
+
         match ($status) {
             JobRunStatus::Queued => $run->queued_at ??= $at,
             JobRunStatus::Processing => $run->started_at ??= $at,

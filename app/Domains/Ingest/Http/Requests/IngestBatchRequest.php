@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Ingest\Http\Requests;
 
 use App\Domains\Ingest\Http\Requests\Concerns\DecodesIngestBody;
+use App\Domains\Performance\Actions\RecordRequestCountsAction;
 use App\Domains\Projects\Models\Project;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -15,7 +16,7 @@ class IngestBatchRequest extends FormRequest
 
     public const int MAX_EVENTS = 5000;
 
-    public const array TYPES = ['request', 'query', 'exception', 'job', 'log', 'schedule', 'command', 'span', 'health'];
+    public const array TYPES = ['request', 'query', 'exception', 'job', 'log', 'schedule', 'command', 'span', 'health', 'request_counts'];
 
     public function authorize(): bool
     {
@@ -35,6 +36,20 @@ class IngestBatchRequest extends FormRequest
                 foreach (is_array($events) ? $events : [] as $i => $event) {
                     if (! is_array($event) || ! in_array($event['type'] ?? null, self::TYPES, true)) {
                         $fail(__('validation.in', ['attribute' => "{$attribute}.{$i}.type"]));
+
+                        return;
+                    }
+
+                    $counts = $event['type'] === 'request_counts' ? ($event['counts'] ?? null) : [];
+
+                    if (! is_array($counts) || ! array_is_list($counts)) {
+                        $fail(__('validation.list', ['attribute' => "{$attribute}.{$i}.counts"]));
+
+                        return;
+                    }
+
+                    if (count($counts) > RecordRequestCountsAction::MAX_ROWS) {
+                        $fail(__('validation.max.array', ['attribute' => "{$attribute}.{$i}.counts", 'max' => RecordRequestCountsAction::MAX_ROWS]));
 
                         return;
                     }

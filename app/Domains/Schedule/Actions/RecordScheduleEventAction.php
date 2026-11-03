@@ -70,6 +70,11 @@ class RecordScheduleEventAction
             'host' => $envelope->host,
         ]);
 
+        // Only an event that says how its run was picked changes it; an older SDK says nothing.
+        if (array_key_exists('sample_rate', $event) || array_key_exists('sampled', $event)) {
+            $run->fill(Envelope::sampling($event));
+        }
+
         // A late "started" never rolls back a run that already ended.
         if (! $run->exists || $status !== ScheduledRunStatus::Running) {
             $run->status = $status;

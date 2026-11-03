@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Jobs\Models\JobRun;
+use App\Domains\Performance\Models\RequestCount;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Retention\Actions\PruneAuditLogAction;
 use App\Domains\Retention\Actions\PruneProjectTelemetryAction;
@@ -37,6 +38,19 @@ describe('pruning', function () {
             expect($this->retentionRows($category))->toBe($category === $kept ? 2 : 1, $category->value);
         }
     })->with(fn () => array_map(fn (RetentionCategory $c): array => [$c], RetentionCategory::forTeams()));
+
+    it('prunes the per-minute request counts with the request runs', function () {
+        RetentionPolicy::factory()->create(['project_id' => $this->project->id, 'category' => RetentionCategory::Requests, 'days' => 7]);
+
+        foreach ([now()->subDays(8), now()->subDays(6)] as $minute) {
+            RequestCount::query()->create(['project_id' => $this->project->id, 'minute' => $minute->startOfMinute(), 'method' => 'GET', 'route' => '/', 'status_code' => 200, 'count' => 1, 'duration_us' => 1]);
+        }
+
+        $deleted = app(PruneProjectTelemetryAction::class)->execute($this->project);
+
+        expect(RequestCount::query()->pluck('minute')->map->toDateString()->all())->toBe([now()->subDays(6)->toDateString()])
+            ->and($deleted['requests'])->toBe(1);
+    });
 
     it('follows the built-in default of queue and host samples, which no longer prune themselves', function () {
         foreach ([RetentionCategory::QueueSamples, RetentionCategory::HostSamples] as $category) {

@@ -53,6 +53,11 @@ class RecordCommandEventAction
             'options' => $this->input($project, $event['options'] ?? null) ?? $run->options,
         ]);
 
+        // Only an event that says how its run was picked changes it; an older SDK says nothing.
+        if (array_key_exists('sample_rate', $event) || array_key_exists('sampled', $event)) {
+            $run->fill(Envelope::sampling($event));
+        }
+
         if (! $finished) {
             $run->started_at ??= $at;
             $run->status = $run->exists && $run->status !== CommandRunStatus::Running ? $run->status : CommandRunStatus::Running;

@@ -27,10 +27,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $url
  * @property int $status_code
  * @property int $duration_us
+ * @property float $sample_rate
+ * @property bool $sampled
  * @property int|null $memory_peak
  * @property CarbonImmutable $occurred_at
  */
-#[Fillable(['project_id', 'trace_id', 'environment', 'release', 'host', 'method', 'route', 'url', 'status_code', 'duration_us', 'memory_peak', 'occurred_at'])]
+#[Fillable(['project_id', 'trace_id', 'environment', 'release', 'host', 'method', 'route', 'url', 'status_code', 'duration_us', 'memory_peak', 'sample_rate', 'sampled', 'occurred_at'])]
 #[WithoutTimestamps]
 #[DateFormat('Y-m-d H:i:s.v')]
 #[UseFactory(RequestRunFactory::class)]
@@ -42,6 +44,8 @@ class RequestRun extends Model
     protected function casts(): array
     {
         return [
+            'sample_rate' => 'float',
+            'sampled' => 'boolean',
             'occurred_at' => 'datetime',
         ];
     }

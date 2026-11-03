@@ -34,9 +34,51 @@ and answers a compressed body with a 415: browsers send plain JSON.
 ```
 
 `environment` and `release` are at most 64 characters, `host` 255. A batch holds at
-most 5,000 events, each of type `request`, `query`, `exception`, `job`, `log`,
-`schedule`, `command`, `span` or `health`. Lumberjack answers `202` with
+most 5,000 events, each of type `request`, `request_counts`, `query`, `exception`, `job`,
+`log`, `schedule`, `command`, `span` or `health`. Lumberjack answers `202` with
 `{"accepted": <count>}` and processes the batch on its `ingest` queue.
+
+### Sampling
+
+An SDK that samples says so on each run, so Lumberjack can show the true traffic. A
+`request`, `job`, `command` or `schedule` event, and each `query` and `span` of a run,
+may carry:
+
+- `sample_rate`: the share of runs the SDK picks, from 0 to 1.
+- `sampled`: `true` when the run was picked, `false` when it was kept only because it
+  was slow or failed.
+
+An event without them counts as `sample_rate: 1`, `sampled: true`.
+
+A `request_counts` event counts every request the SDK recorded, sampled or not, since
+its last one:
+
+```json
+{
+    "type": "request_counts",
+    "counts": [
+        {
+            "method": "GET",
+            "route": "/orders/{order}",
+            "status": 200,
+            "count": 2,
+            "duration_ms_sum": 31.4
+        }
+    ],
+    "from": 1762179000.12,
+    "to": 1762179005.34,
+    "timestamp": 1762179005.34
+}
+```
+
+`route` is the route's URI, or the path when no route matched. `counts` is a list of at
+most 501 rows; a batch with a longer one, or none, is turned down with a 422. A row
+without a positive `count` is skipped. Lumberjack adds the counts up per project,
+environment, minute (of `timestamp`), method, route and status, so one event per request
+(PHP-FPM) and one per few seconds (a long-running worker) end up the same. The counts
+are kept as long as the [request runs](./projects#retention).
+
+How the pages use these is under [Sampling](./performance#sampling).
 
 ## Heartbeat
 
