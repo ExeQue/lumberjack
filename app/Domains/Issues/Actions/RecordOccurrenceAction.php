@@ -12,6 +12,7 @@ use App\Domains\Issues\Events\IssueRegressed;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Issues\Support\Fingerprinter;
+use App\Domains\Live\Actions\BroadcastProjectChangeAction;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,7 @@ class RecordOccurrenceAction
         private readonly DetectEscalationAction $detectEscalation,
         private readonly RecordIssueEventAction $history,
         private readonly ReturnIgnoredIssueAction $returnIgnored,
+        private readonly BroadcastProjectChangeAction $broadcast,
     ) {
     }
 
@@ -43,6 +45,8 @@ class RecordOccurrenceAction
 
         if ($occurrence->issue !== null) {
             $this->detectEscalation->execute($occurrence->issue, $signal->environment);
+            // The issue's own page listens for this; the project-wide issues.changed only reloads lists.
+            $this->broadcast->issueTouched($project->id, $occurrence->issue->uuid, $project->uuid);
         }
 
         return $occurrence;
