@@ -56,7 +56,7 @@ return [
         'environments_hint' => 'Comma separated. Empty means all.',
         'empty' => 'This project has no rules.',
         'no_projects' => 'Create a project to set up rules.',
-        'hint' => 'At most one message per issue per rule every 30 minutes. Ignored issues and browser errors never send.',
+        'hint' => 'At most one message per issue per rule every 30 minutes; every regression and note is sent. Ignored issues and browser errors never send.',
     ],
     'wizard' => [
         'add_title' => 'Add an alert channel',

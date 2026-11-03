@@ -55,6 +55,17 @@ describe('sending an alert', function () {
         Http::assertSentCount(1);
     });
 
+    it('sends every regression, as each follows someone resolving the issue', function () {
+        ($this->ok)();
+        $regression = AlertRule::factory()->for($this->issue->project)->create(['type' => AlertRuleType::Regression]);
+        $regression->channels()->attach($this->channel);
+
+        app(SendIssueAlertsAction::class)->execute($this->issue, AlertRuleType::Regression, 'production');
+        app(SendIssueAlertsAction::class)->execute($this->issue, AlertRuleType::Regression, 'production');
+
+        Http::assertSentCount(2);
+    });
+
     it('skips an environment the rule does not cover', function () {
         $this->rule->update(['environments' => ['production']]);
 

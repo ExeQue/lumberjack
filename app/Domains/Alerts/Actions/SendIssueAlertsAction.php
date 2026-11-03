@@ -16,8 +16,8 @@ use App\Domains\Issues\Models\IssueNote;
 use Throwable;
 
 /**
- * Sends one alert per enabled rule and channel, at most once per issue,
- * rule and channel within the throttle window. Ignored issues never alert.
+ * Sends one alert per enabled rule and channel, at most once per issue, rule and
+ * channel within the throttle window (regressions always). Ignored issues never alert.
  */
 class SendIssueAlertsAction
 {
@@ -40,7 +40,9 @@ class SendIssueAlertsAction
         $summary = is_string($note) ? strtok($note, "\n") : null;
         $alert = new IssueAlert($issue, $type, $environment, route('issues.show', [$issue->project, $issue]), $summary ?: null, burst: $burst);
 
-        return $this->deliver($issue, $type, $environment, $alert, throttle: true);
+        // A regression only follows someone resolving the issue, so each one is news; the
+        // throttle is for escalations and the like that can repeat by themselves.
+        return $this->deliver($issue, $type, $environment, $alert, throttle: $type !== AlertRuleType::Regression);
     }
 
     /**

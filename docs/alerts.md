@@ -47,8 +47,9 @@ you pick, and can be limited to some environments (comma separated, empty means 
 | Resolved or ignored | Someone resolving or ignoring an issue, with their comment. Bulk changes are left out. | No            |
 | Note                | Every note on an issue, by a person or an agent.                                       | No            |
 
-At most one message is sent per issue per rule every 30 minutes (notes are not
-throttled). Ignored issues and browser errors never send. If the issue has a triage
+At most one message is sent per issue per rule every 30 minutes. Regressions and
+notes are not throttled: a regression only follows someone resolving the issue, so
+each one is news. Ignored issues and browser errors never send. If the issue has a triage
 note, its first line is included in the message.
 
 ## Webhooks
