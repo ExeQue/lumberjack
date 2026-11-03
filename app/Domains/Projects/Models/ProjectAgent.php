@@ -17,10 +17,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $project_id
  * @property string $host
  * @property string $name
- * @property string|null $version
+ * @property string|null $sdk
+ * @property string|null $sdk_version
+ * @property string|null $agent
+ * @property string|null $agent_version
+ * @property string|null $runtime
+ * @property string|null $runtime_version
+ * @property string|null $framework
+ * @property string|null $framework_version
  * @property CarbonImmutable $last_seen_at
  */
-#[Fillable(['project_id', 'host', 'name', 'version', 'last_seen_at'])]
+#[Fillable(['project_id', 'host', 'name', 'sdk', 'sdk_version', 'agent', 'agent_version', 'runtime', 'runtime_version', 'framework', 'framework_version', 'last_seen_at'])]
 #[UseFactory(ProjectAgentFactory::class)]
 class ProjectAgent extends Model
 {

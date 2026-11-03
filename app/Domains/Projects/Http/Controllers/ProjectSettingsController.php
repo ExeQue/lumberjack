@@ -14,6 +14,7 @@ use App\Domains\Mcp\Triage\ClaudeTriageWorkflow;
 use App\Domains\Projects\Actions\RotatePublicKeyAction;
 use App\Domains\Projects\Actions\RotateServerTokenAction;
 use App\Domains\Projects\Actions\UpdateProjectAction;
+use App\Domains\Projects\Data\AgentClient;
 use App\Domains\Projects\Http\Requests\UpdateProjectRequest;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
@@ -57,7 +58,7 @@ class ProjectSettingsController
             ],
             'labels' => $project->labels()->withCount('issues')->get()->map(fn (Label $l): array => [...$l->toSummary(), 'issues' => (int) $l->issues_count])->all(),
             'agents' => $project->agents()->orderBy('host')->get()->map(fn (ProjectAgent $a): array => [
-                'host' => $a->host, 'name' => $a->name !== '' ? $a->name : null, 'version' => $a->version, 'last_seen_at' => $a->last_seen_at->toIso8601String(), 'online' => $a->isOnline(),
+                'host' => $a->host, 'name' => $a->name !== '' ? $a->name : null, 'client' => AgentClient::fromAgent($a)->label(), 'client_details' => AgentClient::fromAgent($a)->details(), 'last_seen_at' => $a->last_seen_at->toIso8601String(), 'online' => $a->isOnline(),
             ])->all(),
             'channels' => $project->logChannels()->orderByRaw('name = ? DESC', [LogChannel::DEFAULT])->orderBy('name')->get()->map(fn (LogChannel $c): array => [
                 'id' => $c->id,

@@ -64,7 +64,7 @@ return [
         'empty' => 'No agent has reported yet',
         'host' => 'Host',
         'name' => 'Name',
-        'version' => 'Version',
+        'client' => 'Running',
         'last_seen' => 'Last seen',
         'status' => 'Status',
         'online' => 'Online',

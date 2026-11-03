@@ -13,6 +13,7 @@ use App\Domains\Logs\Models\LogChannel;
 use App\Domains\Logs\Models\LogEntry;
 use App\Domains\Performance\Models\QueryRun;
 use App\Domains\Performance\Models\RequestRun;
+use App\Domains\Projects\Data\AgentClient;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Schedule\Enums\ScheduledRunStatus;
 use App\Domains\Schedule\Models\ScheduledTask;
@@ -88,10 +89,32 @@ describe('server ingest', function () {
         $this->postJson('/api/ingest', $this->batch([['type' => 'telepathy']]), $this->auth)->assertUnprocessable();
     });
 
-    it('records an agent heartbeat', function () {
+    it('records an agent heartbeat with what the agent is', function () {
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'client' => [
+            'sdk' => ['name' => 'lumberjack.php.laravel', 'version' => '0.2.0'],
+            'agent' => ['name' => 'lumberjack-agent-php', 'version' => '0.2.0'],
+            'runtime' => ['name' => 'php', 'version' => '8.5.1'],
+            'framework' => ['name' => 'laravel', 'version' => '13.2.0'],
+        ]], $this->auth)->assertOk();
+
+        expect($this->project->agents()->sole())
+            ->host->toBe('web-2')
+            ->sdk->toBe('lumberjack.php.laravel')
+            ->sdk_version->toBe('0.2.0')
+            ->agent->toBe('lumberjack-agent-php')
+            ->runtime_version->toBe('8.5.1')
+            ->framework->toBe('laravel')
+            ->and(AgentClient::fromAgent($this->project->agents()->sole())->label())->toBe('Laravel 0.2.0 · PHP 8.5.1');
+    });
+
+    it('reads an older agent\'s version as the Laravel SDK', function () {
         $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'version' => '0.1.0'], $this->auth)->assertOk();
 
-        expect($this->project->agents()->sole()->host)->toBe('web-2');
+        expect($this->project->agents()->sole())->sdk->toBe('lumberjack.php.laravel')->sdk_version->toBe('0.1.0');
+    });
+
+    it('refuses a client name that is no plain id', function () {
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'client' => ['sdk' => ['name' => 'Laravel <b>']]], $this->auth)->assertUnprocessable();
     });
 
     it('keeps named agents on one host apart', function () {

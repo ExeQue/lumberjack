@@ -47,7 +47,7 @@ class IngestController
     public function heartbeat(HeartbeatRequest $request, RecordAgentHeartbeatAction $action, BroadcastProjectChangeAction $broadcast): JsonResponse
     {
         $project = $request->project();
-        $action->execute($project, $request->string('host')->toString(), $request->input('version'), $request->input('name'));
+        $action->execute($project, $request->string('host')->toString(), $request->client(), $request->input('name'));
         $broadcast->execute($project->id, ChangeKind::Agents);
 
         return response()->json(['ok' => true]);

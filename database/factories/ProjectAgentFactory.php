@@ -18,7 +18,8 @@ class ProjectAgentFactory extends Factory
         return [
             'project_id' => Project::factory(),
             'host' => 'web-'.fake()->unique()->numberBetween(1, 99),
-            'version' => '0.1.0',
+            'sdk' => 'lumberjack.php.laravel',
+            'sdk_version' => '0.1.0',
             'last_seen_at' => now(),
         ];
     }

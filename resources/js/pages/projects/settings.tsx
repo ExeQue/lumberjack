@@ -73,7 +73,8 @@ type Settings = {
 type Agent = {
     host: string;
     name: string | null;
-    version: string | null;
+    client: string | null;
+    client_details: string | null;
     last_seen_at: string;
     online: boolean;
 };
@@ -791,7 +792,7 @@ function AgentsSection({ agents }: Props) {
                                     {t('settings.agents.host')}
                                 </th>
                                 <th className={thClass}>
-                                    {t('settings.agents.version')}
+                                    {t('settings.agents.client')}
                                 </th>
                                 <th className={thClass}>
                                     {t('settings.agents.last_seen')}
@@ -825,7 +826,14 @@ function AgentsSection({ agents }: Props) {
                                             'font-mono text-xs',
                                         )}
                                     >
-                                        {agent.version ?? '-'}
+                                        <span
+                                            title={
+                                                agent.client_details ??
+                                                undefined
+                                            }
+                                        >
+                                            {agent.client ?? '-'}
+                                        </span>
                                     </td>
                                     <td className={tdClass}>
                                         {formatRelative(agent.last_seen_at)}
