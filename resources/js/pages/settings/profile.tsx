@@ -1,5 +1,6 @@
 import { Form, Head, usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
+import { useState } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
 import { NotificationSettings } from '@/components/lj/notification-settings';
@@ -27,6 +28,7 @@ export default function Profile({
     notifications: NotificationPreferences;
 }) {
     const { auth } = usePage<PageProps>().props;
+    const [email, setEmail] = useState(auth.user.email);
 
     return (
         <>
@@ -77,6 +79,7 @@ export default function Profile({
                                     type="email"
                                     className="mt-1 block w-full"
                                     defaultValue={auth.user.email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                     name="email"
                                     required
                                     autoComplete="username"
@@ -88,6 +91,29 @@ export default function Profile({
                                     message={errors.email}
                                 />
                             </div>
+
+                            {email !== auth.user.email && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="current_password">
+                                        Current password
+                                    </Label>
+
+                                    <Input
+                                        id="current_password"
+                                        type="password"
+                                        className="mt-1 block w-full"
+                                        name="current_password"
+                                        required
+                                        autoComplete="current-password"
+                                        placeholder="Needed to change your email address"
+                                    />
+
+                                    <InputError
+                                        className="mt-2"
+                                        message={errors.current_password}
+                                    />
+                                </div>
+                            )}
 
                             {mustVerifyEmail &&
                                 auth.user.email_verified_at === null && (

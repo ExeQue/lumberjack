@@ -30,6 +30,7 @@ describe('the profile settings', function () {
             ->patch(route('profile.update'), [
                 'name' => 'Test User',
                 'email' => 'test@example.com',
+                'current_password' => 'password',
             ]);
 
         $response
@@ -58,6 +59,18 @@ describe('the profile settings', function () {
             ->assertRedirect(route('profile.edit'));
 
         expect($user->refresh()->email_verified_at)->not->toBeNull();
+    });
+
+    test('a new email address needs the current password', function () {
+        $user = User::factory()->create();
+        $email = $user->email;
+
+        $this->actingAs($user)->patch(route('profile.update'), ['name' => 'Test User', 'email' => 'attacker@example.com'])
+            ->assertSessionHasErrors('current_password');
+        $this->actingAs($user)->patch(route('profile.update'), ['name' => 'Test User', 'email' => 'attacker@example.com', 'current_password' => 'wrong-password'])
+            ->assertSessionHasErrors('current_password');
+
+        expect($user->refresh()->email)->toBe($email);
     });
 
     test('user can delete their account', function () {
