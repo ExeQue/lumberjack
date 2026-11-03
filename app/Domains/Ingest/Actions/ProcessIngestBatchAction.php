@@ -6,6 +6,7 @@ namespace App\Domains\Ingest\Actions;
 
 use App\Domains\Commands\Actions\RecordCommandEventAction;
 use App\Domains\Health\Actions\RecordReportedHealthAction;
+use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Ingest\Data\Envelope;
 use App\Domains\Ingest\Support\SignalFactory;
 use App\Domains\Issues\Actions\RecordOccurrenceAction;
@@ -96,6 +97,8 @@ class ProcessIngestBatchAction
 
             $touched[(string) $type] = true;
         }
+
+        $this->recordLogLineAction->flush();
 
         foreach (array_chunk($requests, self::INSERT_CHUNK) as $chunk) {
             DB::table('request_runs')->insert($chunk);
@@ -260,6 +263,12 @@ class ProcessIngestBatchAction
 
         if (isset($touched['request']) || isset($touched['query']) || isset($touched['vital'])) {
             $kinds[] = ChangeKind::Performance;
+        }
+
+        // Once for all the batch's health results, not once per result.
+        if (isset($touched['health'])) {
+            HealthChecksQuery::forgetStates($project->id);
+            $kinds[] = ChangeKind::Health;
         }
 
         foreach ($kinds as $kind) {

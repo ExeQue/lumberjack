@@ -36,7 +36,10 @@ class RecordHealthResultAction
     ) {
     }
 
-    public function execute(HealthCheck $check, HealthResultData $result): HealthCheckResult
+    /**
+     * @param  bool  $announce  false when the caller forgets the cached states and broadcasts itself, once for many results
+     */
+    public function execute(HealthCheck $check, HealthResultData $result, bool $announce = true): HealthCheckResult
     {
         $at = $result->at ?? now()->toImmutable();
 
@@ -81,8 +84,10 @@ class RecordHealthResultAction
             SendHealthCheckAlert::dispatch(...$alert);
         }
 
-        HealthChecksQuery::forgetStates($check->project_id);
-        $this->broadcast->execute($check->project_id, ChangeKind::Health);
+        if ($announce) {
+            HealthChecksQuery::forgetStates($check->project_id);
+            $this->broadcast->execute($check->project_id, ChangeKind::Health);
+        }
 
         return $row;
     }

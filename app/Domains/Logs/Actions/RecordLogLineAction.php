@@ -15,6 +15,7 @@ use App\Domains\Logs\Models\LogEntry;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Support\Scrubber;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A log line lands in its channel; an unknown channel name lands in default with
@@ -22,8 +23,18 @@ use Illuminate\Support\Collection;
  */
 class RecordLogLineAction
 {
-    /** @var array<int, Collection<string, LogChannel>> */
+    public const int INSERT_CHUNK = 500;
+
+    /**
+     * Per instance, and the action is resolved per ingest job: a singleton would keep
+     * stale channels and grow per project.
+     *
+     * @var array<int, Collection<string, LogChannel>>
+     */
     private array $channels = [];
+
+    /** @var list<array<string, mixed>> lines waiting for one bulk insert */
+    private array $pending = [];
 
     public function __construct(
         private readonly RecordOccurrenceAction $recordOccurrenceAction,
@@ -33,9 +44,13 @@ class RecordLogLineAction
     }
 
     /**
+     * Lines that do not become issues wait for one bulk insert (see flush), so a batch
+     * of lines is a few statements, not one per line; those return null. A line that
+     * becomes an issue is stored at once, after the waiting ones so ids keep the order.
+     *
      * @param  array<string, mixed>  $event
      */
-    public function execute(Project $project, array $event, Envelope $envelope): LogEntry
+    public function execute(Project $project, array $event, Envelope $envelope): ?LogEntry
     {
         $sent = Envelope::short($event['channel'] ?? null) ?? LogChannel::DEFAULT;
         $channel = $this->channel($project, $sent);
@@ -44,7 +59,7 @@ class RecordLogLineAction
         $exception = is_array($context['exception'] ?? null) ? $context['exception'] : null;
         unset($context['exception']);
 
-        $entry = LogEntry::create([
+        $attributes = [
             'project_id' => $project->id,
             'log_channel_id' => $channel->id,
             'sent_channel' => $channel->name === $sent ? null : $sent,
@@ -56,7 +71,25 @@ class RecordLogLineAction
             'release' => $envelope->release,
             'host' => $envelope->host,
             'occurred_at' => Envelope::time($event['timestamp'] ?? null),
-        ]);
+        ];
+
+        if (! $level->createsIssue()) {
+            $this->pending[] = [
+                ...$attributes,
+                'level' => $level->value,
+                'context' => $attributes['context'] !== null ? json_encode($attributes['context']) : null,
+                'occurred_at' => $attributes['occurred_at']->format('Y-m-d H:i:s.v'),
+            ];
+
+            if (count($this->pending) >= self::INSERT_CHUNK) {
+                $this->flush();
+            }
+
+            return null;
+        }
+
+        $this->flush();
+        $entry = LogEntry::create($attributes);
 
         if ($level->createsIssue()) {
             $signal = $exception !== null
@@ -81,6 +114,20 @@ class RecordLogLineAction
         }
 
         return $entry;
+    }
+
+    /**
+     * Stores the lines still waiting. Call it once the batch is through.
+     */
+    public function flush(): void
+    {
+        if ($this->pending === []) {
+            return;
+        }
+
+        $rows = $this->pending;
+        $this->pending = [];
+        DB::table('log_entries')->insert($rows);
     }
 
     private function channel(Project $project, string $name): LogChannel
