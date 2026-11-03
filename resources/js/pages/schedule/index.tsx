@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { TriangleAlert } from 'lucide-react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
@@ -16,7 +17,7 @@ import {
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import { formatDateTime, formatDuration, formatRelative } from '@/lib/format';
+import { formatDateTime, formatDuration } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useProjectLive } from '@/lib/use-project-live';
@@ -92,7 +93,7 @@ function When({ iso }: { iso: string | null }) {
 
     return iso ? (
         <time dateTime={iso} title={formatDateTime(iso)}>
-            {formatRelative(iso)}
+            <Relative iso={iso} />
         </time>
     ) : (
         <span className="text-ink-3">{t('schedule.never')}</span>

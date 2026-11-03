@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
@@ -17,7 +18,6 @@ import {
     thClass,
 } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import { formatRelative } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -188,11 +188,9 @@ export default function AdminUsers({ filters, users, teams }: Props) {
                                                         'whitespace-nowrap text-ink-2',
                                                     )}
                                                 >
-                                                    {user.created_at
-                                                        ? formatRelative(
-                                                              user.created_at,
-                                                          )
-                                                        : '-'}
+                                                    <Relative
+                                                        iso={user.created_at}
+                                                    />
                                                 </td>
                                                 <td
                                                     className={cn(

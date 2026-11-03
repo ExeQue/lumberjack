@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { Head, router, useForm, usePage, Link } from '@inertiajs/react';
 import { ChevronRight, CircleDot } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -34,12 +35,7 @@ import {
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import {
-    formatDateTime,
-    formatNumber,
-    formatRelative,
-    formatTime,
-} from '@/lib/format';
+import { formatDateTime, formatNumber, formatTime } from '@/lib/format';
 import { languageOf, useHighlightedLines } from '@/lib/highlight';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -474,7 +470,7 @@ function IssueHistory({
                                 title={formatDateTime(e.at)}
                                 className="text-xs text-ink-3"
                             >
-                                {formatRelative(e.at)}
+                                <Relative iso={e.at} />
                             </time>
                         </span>
                         {e.type === 'note' &&
@@ -938,13 +934,13 @@ export default function IssueShow({
                         [
                             t('issue.stats.first_seen'),
                             <span title={formatDateTime(issue.first_seen_at)}>
-                                {formatRelative(issue.first_seen_at)}
+                                <Relative iso={issue.first_seen_at} />
                             </span>,
                         ],
                         [
                             t('issue.stats.last_seen'),
                             <span title={formatDateTime(issue.last_seen_at)}>
-                                {formatRelative(issue.last_seen_at)}
+                                <Relative iso={issue.last_seen_at} />
                             </span>,
                         ],
                         [
@@ -1288,7 +1284,7 @@ export default function IssueShow({
                                                     n.created_at,
                                                 )}
                                             >
-                                                {formatRelative(n.created_at)}
+                                                <Relative iso={n.created_at} />
                                             </time>
                                         </span>
                                     </div>

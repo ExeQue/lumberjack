@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { ExternalLink, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -35,7 +36,7 @@ import {
     numClass,
 } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import { formatNumber, formatPercent, formatRelative } from '@/lib/format';
+import { formatNumber, formatPercent } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -1017,7 +1018,7 @@ function AgentsSection({ project, agents }: Props) {
                                     </td>
                                     <HostCells metrics={agent.metrics} />
                                     <td className={tdClass}>
-                                        {formatRelative(agent.last_seen_at)}
+                                        <Relative iso={agent.last_seen_at} />
                                     </td>
                                     <td className={tdClass}>
                                         <Badge

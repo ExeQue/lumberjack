@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { Form, router } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
@@ -11,7 +12,6 @@ import {
     Field,
     Input,
 } from '@/components/lj/ui';
-import { formatRelative } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -699,7 +699,7 @@ function DeliveryBadge({ channel }: { channel: Channel }) {
             {ok ? t('alerts.channels.delivered') : t('alerts.channels.failed')}
             {channel.last_delivery_at && (
                 <span className="font-normal opacity-80">
-                    {formatRelative(channel.last_delivery_at)}
+                    <Relative iso={channel.last_delivery_at} />
                 </span>
             )}
         </Badge>

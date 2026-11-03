@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
@@ -18,7 +19,6 @@ import {
     formatDuration,
     formatNumber,
     formatPercent,
-    formatRelative,
 } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useProjectLive } from '@/lib/use-project-live';
@@ -795,7 +795,9 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                                                             run.at,
                                                         )}
                                                     >
-                                                        {formatRelative(run.at)}
+                                                        <Relative
+                                                            iso={run.at}
+                                                        />
                                                     </time>
                                                 </span>
                                             </span>

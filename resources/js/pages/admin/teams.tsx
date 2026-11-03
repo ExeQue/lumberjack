@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { TopBar } from '@/components/lj/top-bar';
@@ -15,7 +16,6 @@ import {
     thClass,
 } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import { formatRelative } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { destroy, open, store } from '@/routes/admin/teams';
@@ -147,11 +147,9 @@ export default function AdminTeams({ teams, users }: Props) {
                                                     'text-ink-2',
                                                 )}
                                             >
-                                                {team.created_at
-                                                    ? formatRelative(
-                                                          team.created_at,
-                                                      )
-                                                    : '-'}
+                                                <Relative
+                                                    iso={team.created_at}
+                                                />
                                             </td>
                                             <td
                                                 className={cn(
