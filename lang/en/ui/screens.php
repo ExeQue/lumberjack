@@ -210,6 +210,7 @@ return [
         'status_colors' => ['label' => 'Color the tile by status'],
         'text_size' => ['label' => 'Text size', 'options' => ['auto' => 'Fit to tile', 's' => 'Small', 'm' => 'Medium', 'l' => 'Large', 'xl' => 'Huge']],
         'align' => ['label' => 'Align', 'options' => ['left' => 'Left', 'center' => 'Center']],
+        'valign' => ['label' => 'Vertically', 'options' => ['top' => 'Top', 'middle' => 'Middle']],
         'refresh' => ['label' => 'Update', 'options' => ['live' => 'Live', '1m' => 'Every minute', '5m' => 'Every 5 minutes']],
         'hide_when' => ['label' => 'Hide when', 'options' => ['never' => 'Never', 'ok' => 'All is ok', 'empty' => 'Empty']],
     ],

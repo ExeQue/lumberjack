@@ -255,6 +255,7 @@ final class WidgetSchema
             $data ? $toggle('status_colors', true) : null,
             $select('text_size', ['auto', 's', 'm', 'l', 'xl'], 'auto'),
             $select('align', ['left', 'center'], 'left'),
+            $select('valign', ['top', 'middle'], 'top'),
             $data ? $select('refresh', ['live', '1m', '5m'], 'live') : null,
             $data ? $select('hide_when', ['never', 'ok', 'empty'], 'never') : null,
         ])));
