@@ -22,8 +22,10 @@ covers(RecordHealthResultAction::class, HealthChecksQuery::class);
 beforeEach(function () {
     Http::fake(['*' => Http::response(null, 204)]);
     $this->project = Project::factory()->create(['name' => 'Shop']);
-    $this->rule = AlertRule::factory()->for($this->project)->create(['type' => AlertRuleType::HealthCheck]);
-    $this->rule->channels()->attach(NotificationChannel::factory()->for($this->project->team)->create(['type' => ChannelType::Discord, 'config' => ['webhook_url' => 'https://discord.com/api/webhooks/1/x']]));
+    $channel = NotificationChannel::factory()->for($this->project->team)->create(['type' => ChannelType::Discord, 'config' => ['webhook_url' => 'https://discord.com/api/webhooks/1/x']]);
+    foreach ([AlertRuleType::HealthDegraded, AlertRuleType::HealthDown, AlertRuleType::HealthRecovered] as $type) {
+        AlertRule::factory()->for($this->project)->create(['type' => $type])->channels()->attach($channel);
+    }
     $this->check = HealthCheck::factory()->for($this->project)->create(['degrade_after' => 2, 'recover_after' => 3]);
     // One result a minute, as the SDK's schedule sends them.
     $this->report = function (string $status, string $host = 'web-1'): void {
@@ -144,6 +146,16 @@ describe('alerts', function () {
         ($this->report)('failed');
 
         expect(($this->titles)())->toBe(['Health check degraded in Shop', 'Health check down in Shop']);
+    });
+
+    it('sends degraded, down and recovered through their own rules, each of which can be off', function () {
+        AlertRule::query()->where('type', AlertRuleType::HealthDegraded)->update(['enabled' => false]);
+
+        foreach (['warning', 'warning', 'failed', 'failed', 'ok', 'ok', 'ok'] as $status) {
+            ($this->report)($status);
+        }
+
+        expect(($this->titles)())->toBe(['Health check down in Shop', 'Health check recovered in Shop']);
     });
 
     it('stays quiet when a flapping check goes down again within 30 minutes', function () {

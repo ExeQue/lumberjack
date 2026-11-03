@@ -112,7 +112,7 @@ describe('health check messages', function () {
 
         app(WebhookDriver::class)->send($channel, ($this->alert)(HealthCheckAlert::RECOVERED));
 
-        Http::assertSent(fn (Request $request) => $request['event'] === 'health_check'
+        Http::assertSent(fn (Request $request) => $request['event'] === 'health_recovered'
             && $request['check']['id'] === $this->check->uuid
             && $request['check']['state'] === 'recovered'
             && $request['check']['slug'] === 'disk:s3'

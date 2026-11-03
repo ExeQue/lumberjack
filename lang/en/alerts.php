@@ -13,7 +13,9 @@ return [
         'escalation' => ['label' => 'Escalation', 'description' => 'An open issue suddenly happening far more often than usual: at least 10 occurrences in 5 minutes.'],
         'status_change' => ['label' => 'Resolved or ignored', 'description' => 'Every issue someone resolves or ignores, with who did it and their comment. Bulk changes on the issues list are left out.'],
         'note' => ['label' => 'Note', 'description' => 'Every note written on an issue, by a person or an agent over MCP. Not throttled.'],
-        'health_check' => ['label' => 'Health check', 'description' => 'A health check that becomes degraded or down after its threshold, reported by the app or run by Lumberjack, and again when it recovers. Muted checks send nothing.'],
+        'health_degraded' => ['label' => 'Health check degraded', 'description' => 'A health check that keeps warning past its threshold, reported by the app or run by Lumberjack. Muted checks send nothing.'],
+        'health_down' => ['label' => 'Health check down', 'description' => 'A health check that keeps failing past its threshold, including one that was degraded first. Muted checks send nothing.'],
+        'health_recovered' => ['label' => 'Health check recovered', 'description' => 'A health check that was degraded or down and passes again past its recovery threshold.'],
         'queue_backlog' => ['label' => 'Queue backlog', 'description' => 'A queue with too many jobs waiting, or one waiting too long, for a while, from the sizes the agents report. Catches dead workers, which start no job to measure. Tells again when it is back under.'],
     ],
     'messages' => [
