@@ -612,6 +612,11 @@ function seriesColor(source: string, i: number, split: boolean): string {
         ][i % 5];
     }
 
+    // Requests and errors draws its requests in the bar color; only the errors are red.
+    if (source === 'requests_errors') {
+        return 'var(--s-bar)';
+    }
+
     if (/error|failed/.test(source)) {
         return 'var(--s-red)';
     }
@@ -699,8 +704,9 @@ function Chart({ widget, schema, data, t }: BodyProps) {
                                         <rect
                                             x={x(i) - 40 / n}
                                             width={80 / n}
-                                            y={y(err)}
-                                            height={40 - y(err)}
+                                            // A few errors under a lot of traffic stay visible.
+                                            y={Math.min(y(err), 38.8)}
+                                            height={Math.max(40 - y(err), 1.2)}
                                             rx="0.4"
                                             fill="var(--s-red)"
                                         />
