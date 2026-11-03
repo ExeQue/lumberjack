@@ -50,6 +50,10 @@ The whole setup, the compose file included, is in [docs/docker.md](docs/docker.m
   [Performance and traces](docs/performance.md), [Releases](docs/releases.md),
   [Health](docs/health.md), [Finding things](docs/finding-things.md) and
   [MCP](docs/mcp.md): using it.
+- [Status screens](docs/screens.md): dashboards for TVs, pairing, displays and
+  share links.
+- [Metrics API](docs/metrics-api.md): read figures from Grafana, Prometheus or a
+  script, and public stats.
 - [Ingest and API](docs/api.md): the endpoints SDKs and agents send to, and their
   limits.
 

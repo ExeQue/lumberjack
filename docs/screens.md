@@ -69,8 +69,9 @@ this browser, kept per screen, not part of the screen.
 - **Move**: drag a widget to other cells. While you drag, every cell of the grid shows
   as a drop zone and the widget's footprint follows the pointer: green where it fits,
   red where it would cover another widget or reach past the grid. Dropping onto another
-  widget swaps the two (each keeps its size) when both then fit; otherwise the drop is
-  refused and the widget stays where it was.
+  widget swaps the two (each keeps its size) when both then fit; dropping onto widgets
+  that exactly fill the moved one's footprint (a 2 x 2 onto two 2 x 1) swaps it with all
+  of them. Otherwise the drop is refused and the widget stays where it was.
 - **Resize**: drag any edge or corner; sizes follow whole cells, and the left and top
   edges move the widget as they resize it. A widget only grows into free cells.
 - **Keyboard**: with a widget focused, the arrow keys move it one cell, Shift and the
@@ -105,7 +106,7 @@ A widget is a way of showing something; what it shows is picked under **Shows**.
 | Widget         | Shows                                                                                                                                                                                                                                                                                                                    |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Stat           | One number with its trend against an earlier period and a sparkline: requests, requests per minute (the last five minutes, now), error rate, p95, Apdex, open issues, users affected, failed jobs, queue size, agents online, highest host CPU, memory or disk, current release, LCP p75, database size and connections. |
-| Gauge          | One value on a half circle against its limits: error rate, p95, Apdex, host CPU, memory or disk, queue size, health uptime, the share of database connections in use.                                                                                                                                                    |
+| Gauge          | One value on a half circle against its limits: requests per minute, error rate, p95, Apdex, host CPU, memory or disk, queue size, health uptime, the share of database connections in use.                                                                                                                               |
 | Chart          | A series over the period: requests and errors, requests, requests per minute, error rate, p95, Apdex, users affected, queue size or wait, failed jobs, host CPU, memory or disk, LCP, database size or connections. It can split by route, queue, host, database check, environment, release or project.                 |
 | List           | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents.                                                                                                                                                                                                         |
 | Health         | The health checks of the projects: a count at 1 x 1, a list when narrow, small cards when two or more fit side by side. With exactly one check picked, that check alone with its uptime, timeline and last message, and for a database check its connections (amber at 80% of the maximum, red at 90%) and size.         |
@@ -173,7 +174,8 @@ Each widget's settings are grouped in sections that open and close:
 
     ![A rotating widget's value tabs](./screenshots/screen-designer-rotation.png)
 
-- **Scope**, on each value's tab: the projects, environment and release it shows,
+- **Scope**, on each value's tab: the projects, environment and release (**All**,
+  **Current only** or **Previous**) it shows,
   each the widget's (on the first tab the screen's) default unless set, and a filter
   named after what the value can narrow: the route, queue, job, host or database check
   (`*` matches anything, so `POST /checkout*` or `payments*`); a route filter also
@@ -325,7 +327,7 @@ For a window:
   window removes the device.
 
 The designer's **Preview at** lists the windows showing the screen by device and window
-("Office PC, window 2, 1920 × 1080").
+("Office PC, window 2, 1920 x 1080").
 
 ## Share links
 
@@ -335,8 +337,10 @@ designer, press **Share** and **Share with a link**. The link can be copied, rep
 a new one (**New link**) or turned off (**Stop sharing**); screens showing a link that
 stopped working say **This screen was unshared**. Only team admins share screens.
 
-A share link shows counts and numbers only, no issue titles or names, unless **Show
-issue titles and names** is ticked. It may be shown inside another site's page. Every
+Unless **Show issue titles and names** is ticked, a share link leaves out issue
+titles, alert channel names and health check messages, and numbers hosts, agents and
+health checks ("host 1", "check 2"), in lists and in charts split by them. Route, job,
+queue and scheduled task names show as they do on the metrics API's public stats. It may be shown inside another site's page. Every
 change to a share link goes in the audit log. Prefer pairing: a paired TV needs no link
 that could be passed on.
 

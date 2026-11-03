@@ -70,7 +70,7 @@ until you show them.
 ## Users affected
 
 Each issue counts the signed-in users it happened to, from the user id the SDK sends
-with each error (the Laravel SDK takes it from `auth()`, the browser script from
+with each error (a server SDK takes it from the signed-in user, the browser script from
 `data-user` or `Lumberjack.setUser()`). The issue list can sort by it, the issue page
 shows it beside the occurrences, and alerts include it. One user hitting an error 400
 times and 400 users hitting it once are different problems.

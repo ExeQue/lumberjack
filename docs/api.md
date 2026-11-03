@@ -1,8 +1,8 @@
 # Ingest and API
 
 SDKs and their agents send to Lumberjack over HTTP. This page lists the endpoints and
-their limits, for running Lumberjack behind a proxy or writing an SDK of your own. The
-Laravel SDK does all of this for you.
+their limits, for running Lumberjack behind a proxy or writing an SDK of your own. An
+SDK does all of this for you.
 
 | Endpoint                                 | Auth                              | Limit                                                     |
 | ---------------------------------------- | --------------------------------- | --------------------------------------------------------- |
@@ -89,7 +89,7 @@ on a `request` event, and counts without one are kept apart under no domain. `co
 most 501 rows; a batch with a longer one, or none, is turned down with a 422. A row
 without a positive `count` is skipped. Lumberjack adds the counts up per project,
 environment, minute (of `timestamp`), method, domain, route and status, so one event per request
-(PHP-FPM) and one per few seconds (a long-running worker) end up the same. The counts
+(a process per request) and one per few seconds (a long-running worker) end up the same. The counts
 are kept as long as the [request runs](./projects#retention).
 
 How the pages use these is under [Sampling](./performance#sampling).
