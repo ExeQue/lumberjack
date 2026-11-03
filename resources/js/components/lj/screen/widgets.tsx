@@ -93,6 +93,21 @@ function lasted(iso: string | null | undefined, now: number): string {
         : '';
 }
 
+/** The next round number at or above n: 1, 2, 2.5 or 5 times a power of ten. */
+function niceCeil(n: number): number {
+    if (n <= 0) {
+        return 1;
+    }
+
+    const power = 10 ** Math.floor(Math.log10(n));
+
+    return (
+        ([1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(
+            (step) => step * power >= n,
+        ) ?? 10) * power
+    );
+}
+
 function timeOf(iso: string, withDate: boolean): string {
     return new Intl.DateTimeFormat(document.documentElement.lang || 'en', {
         ...(withDate ? { day: 'numeric', month: 'short' } : {}),
@@ -701,7 +716,10 @@ function Chart({ widget, schema, data, t }: BodyProps) {
     const values = [...series, ...(previous ? [previous] : [])].flatMap((s) =>
         s.points.map((p) => p.v ?? 0),
     );
-    const top = Math.max(1e-9, ...values, red ?? 0) * 1.05;
+    const showY = opt<boolean>('y_axis') !== false;
+    const showGrid = opt<boolean>('grid') !== false;
+    // A round top for the value axis, so its labels read 0, 1.5k, 3k rather than 0, 1472, 2944.
+    const top = niceCeil(Math.max(1e-9, ...values, red ?? 0) * 1.05);
     const bottom =
         opt<boolean>('y_zero') !== false ? 0 : Math.min(...values, top) * 0.95;
     const points = series[0]?.points ?? [];
@@ -711,8 +729,28 @@ function Chart({ widget, schema, data, t }: BodyProps) {
     const x = (i: number) => ((i + 0.5) / n) * 100;
     const line = (s: Series) =>
         s.points.map((p, i) => `${x(i)},${y(p.v)}`).join(' ');
-    const label = (iso: string | undefined) =>
-        iso ? timeOf(iso, !String(data.interval).match(/[ms]$/)) : '';
+    const withDate = !String(data.interval).match(/[ms]$/);
+    const spansDays =
+        points.length > 1 &&
+        new Date(points[points.length - 1].t).getDate() !==
+            new Date(points[0].t).getDate();
+    // The date only where it changes along the axis; the time on every tick.
+    const day = (iso: string | undefined) =>
+        iso ? new Date(iso).toDateString() : '';
+    const label = (iso: string | undefined, previous?: string) =>
+        iso
+            ? timeOf(
+                  iso,
+                  withDate &&
+                      spansDays &&
+                      (previous === undefined || day(previous) !== day(iso)),
+              )
+            : '';
+    const yTicks = [top, (top + bottom) / 2, bottom];
+    const xTicks = Math.min(5, points.length);
+    const xAt = Array.from({ length: xTicks }, (_, k) =>
+        Math.round((k * (points.length - 1)) / Math.max(1, xTicks - 1)),
+    );
     const total = series.reduce(
         (sum, s) => sum + s.points.reduce((a, p) => a + (p.v ?? 0), 0),
         0,
@@ -720,105 +758,166 @@ function Chart({ widget, schema, data, t }: BodyProps) {
 
     return (
         <>
-            <div className="relative min-h-0 flex-1">
-                <svg
-                    viewBox="0 0 100 40"
-                    preserveAspectRatio="none"
-                    className="absolute inset-0 h-full w-full"
-                    role="img"
-                    aria-label={t('screens.chart.label', {
-                        points: points.length,
-                        total: formatValue(total, String(data.unit)),
-                    })}
-                >
-                    {style === 'bars' &&
-                        points.map((p, i) => {
-                            const err = stacked
-                                ? (series[1]?.points[i]?.v ?? 0)
-                                : 0;
-
-                            return (
-                                <g key={i}>
-                                    <rect
-                                        x={x(i) - 40 / n}
-                                        width={80 / n}
-                                        y={y(p.v)}
-                                        height={40 - y(p.v)}
-                                        rx="0.4"
-                                        fill={seriesColor(
-                                            String(data.source),
-                                            0,
-                                            false,
-                                        )}
-                                    />
-                                    {err > 0 && (
-                                        <rect
-                                            x={x(i) - 40 / n}
-                                            width={80 / n}
-                                            // A few errors under a lot of traffic stay visible.
-                                            y={Math.min(y(err), 38.8)}
-                                            height={Math.max(40 - y(err), 1.2)}
-                                            rx="0.4"
-                                            fill="var(--s-red)"
-                                        />
-                                    )}
-                                </g>
-                            );
+            <div className="flex min-h-0 flex-1 flex-col gap-[0.25em]">
+                <div className="relative min-h-0 flex-1">
+                    {showY &&
+                        yTicks.slice(0, 2).map((v, i) => (
+                            // Each label sits just under its grid line, out of the bars' way.
+                            <span
+                                key={i}
+                                aria-hidden="true"
+                                className="lj-tile-small pointer-events-none absolute left-0 font-mono leading-none"
+                                style={{ top: `calc(${i * 50}% + 0.2em)` }}
+                            >
+                                {formatValue(v, String(data.unit))}
+                            </span>
+                        ))}
+                    <svg
+                        viewBox="0 0 100 40"
+                        preserveAspectRatio="none"
+                        className="absolute inset-0 h-full w-full"
+                        role="img"
+                        aria-label={t('screens.chart.label', {
+                            points: points.length,
+                            total: formatValue(total, String(data.unit)),
                         })}
-                    {style === 'area' && series[0] && (
-                        <polygon
-                            points={`${x(0)},40 ${line(series[0])} ${x(n - 1)},40`}
-                            fill={seriesColor(String(data.source), 0, false)}
-                            opacity="0.6"
-                        />
-                    )}
-                    {(style === 'line' || style === 'area') &&
-                        series
-                            .slice(
-                                0,
-                                stacked && style === 'area' ? 1 : undefined,
-                            )
-                            .map((s, i) => (
-                                <polyline
-                                    key={s.name}
-                                    points={line(s)}
-                                    fill="none"
-                                    stroke={
-                                        stacked && i === 1
-                                            ? 'var(--s-red)'
-                                            : seriesColor(
-                                                  String(data.source),
-                                                  i,
-                                                  split,
-                                              )
-                                    }
-                                    strokeWidth="1.6"
+                    >
+                        {showGrid &&
+                            [0, 20, 40].map((gy) => (
+                                <line
+                                    key={gy}
+                                    x1="0"
+                                    x2="100"
+                                    y1={gy}
+                                    y2={gy}
+                                    stroke="var(--s-line)"
+                                    strokeWidth="1"
                                     vectorEffect="non-scaling-stroke"
                                 />
                             ))}
-                    {previous && (
-                        <polyline
-                            points={line(previous)}
-                            fill="none"
-                            stroke="var(--s-ink-4)"
-                            strokeWidth="1.2"
-                            strokeDasharray="3 3"
-                            vectorEffect="non-scaling-stroke"
-                        />
-                    )}
-                    {red !== null && red <= top && (
-                        <line
-                            x1="0"
-                            x2="100"
-                            y1={y(red)}
-                            y2={y(red)}
-                            stroke="var(--s-red)"
-                            strokeWidth="1"
-                            strokeDasharray="4 3"
-                            vectorEffect="non-scaling-stroke"
-                        />
-                    )}
-                </svg>
+                        {style === 'bars' &&
+                            points.map((p, i) => {
+                                const err = stacked
+                                    ? (series[1]?.points[i]?.v ?? 0)
+                                    : 0;
+
+                                return (
+                                    <g key={i}>
+                                        <rect
+                                            x={x(i) - 40 / n}
+                                            width={80 / n}
+                                            y={y(p.v)}
+                                            height={40 - y(p.v)}
+                                            rx="0.4"
+                                            fill={seriesColor(
+                                                String(data.source),
+                                                0,
+                                                false,
+                                            )}
+                                        />
+                                        {err > 0 && (
+                                            <rect
+                                                x={x(i) - 40 / n}
+                                                width={80 / n}
+                                                // A few errors under a lot of traffic stay visible.
+                                                y={Math.min(y(err), 38.8)}
+                                                height={Math.max(
+                                                    40 - y(err),
+                                                    1.2,
+                                                )}
+                                                rx="0.4"
+                                                fill="var(--s-red)"
+                                            />
+                                        )}
+                                    </g>
+                                );
+                            })}
+                        {style === 'area' && series[0] && (
+                            <polygon
+                                points={`${x(0)},40 ${line(series[0])} ${x(n - 1)},40`}
+                                fill={seriesColor(
+                                    String(data.source),
+                                    0,
+                                    false,
+                                )}
+                                opacity="0.6"
+                            />
+                        )}
+                        {(style === 'line' || style === 'area') &&
+                            series
+                                .slice(
+                                    0,
+                                    stacked && style === 'area' ? 1 : undefined,
+                                )
+                                .map((s, i) => (
+                                    <polyline
+                                        key={s.name}
+                                        points={line(s)}
+                                        fill="none"
+                                        stroke={
+                                            stacked && i === 1
+                                                ? 'var(--s-red)'
+                                                : seriesColor(
+                                                      String(data.source),
+                                                      i,
+                                                      split,
+                                                  )
+                                        }
+                                        strokeWidth="1.6"
+                                        vectorEffect="non-scaling-stroke"
+                                    />
+                                ))}
+                        {previous && (
+                            <polyline
+                                points={line(previous)}
+                                fill="none"
+                                stroke="var(--s-ink-4)"
+                                strokeWidth="1.2"
+                                strokeDasharray="3 3"
+                                vectorEffect="non-scaling-stroke"
+                            />
+                        )}
+                        {red !== null && red <= top && (
+                            <line
+                                x1="0"
+                                x2="100"
+                                y1={y(red)}
+                                y2={y(red)}
+                                stroke="var(--s-red)"
+                                strokeWidth="1"
+                                strokeDasharray="4 3"
+                                vectorEffect="non-scaling-stroke"
+                            />
+                        )}
+                    </svg>
+                </div>
+                {opt<boolean>('axis') !== false && points.length > 1 && (
+                    <div
+                        aria-hidden="true"
+                        className="lj-tile-small relative h-[1.2em] font-mono"
+                    >
+                        {xAt.map((i, k) => (
+                            <span
+                                key={i}
+                                className="absolute whitespace-nowrap"
+                                style={{
+                                    left: `${x(i)}%`,
+                                    transform:
+                                        k === 0
+                                            ? 'translateX(-10%)'
+                                            : k === xAt.length - 1
+                                              ? 'translateX(-90%)'
+                                              : 'translateX(-50%)',
+                                }}
+                            >
+                                {label(
+                                    points[i]?.t,
+                                    k > 0 ? points[xAt[k - 1]]?.t : undefined,
+                                )}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
             {opt<boolean>('legend') && series.length > 0 && (
                 <div className="lj-tile-small flex flex-wrap gap-x-3">
@@ -844,15 +943,6 @@ function Chart({ widget, schema, data, t }: BodyProps) {
                                 : t(`screens.chart.series.${s.name}`)}
                         </span>
                     ))}
-                </div>
-            )}
-            {opt<boolean>('axis') !== false && points.length > 1 && (
-                <div className="lj-tile-small flex justify-between font-mono">
-                    <span>{label(points[0]?.t)}</span>
-                    <span>
-                        {label(points[Math.floor(points.length / 2)]?.t)}
-                    </span>
-                    <span>{label(points[points.length - 1]?.t)}</span>
                 </div>
             )}
         </>

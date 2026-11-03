@@ -87,7 +87,7 @@ Each widget's settings are grouped in sections that open and close:
   itself offers, such as the amber and red limits of a stat or gauge (empty uses the
   defaults shown; shares go from 0 to 1, durations are in milliseconds), whether low
   values are bad (Apdex, uptime), what to compare with, decimals, a prefix and suffix,
-  the chart style and how many series, how many rows a list shows and in which order.
+  the chart style and how many series, its time axis, value axis and grid lines (each on or off), how many rows a list shows and in which order.
 - **Rotation**: a stat, gauge, chart or list can show several values in turn on one
   tile. Pick them under **Rotate through**; the title follows the value shown. They
   switch every 5 seconds to a minute, with a fade, a slide or neither, and all tiles of

@@ -186,6 +186,8 @@ return [
         'y_zero' => ['label' => 'Y axis starts at zero'],
         'legend' => ['label' => 'Legend'],
         'axis' => ['label' => 'Time axis'],
+        'y_axis' => ['label' => 'Value axis'],
+        'grid' => ['label' => 'Grid lines'],
         'limit' => ['label' => 'Rows', 'options' => ['auto' => 'Fit to tile', '3' => '3', '5' => '5', '10' => '10', '20' => '20']],
         'sort' => ['label' => 'Sort', 'options' => ['newest' => 'Newest first', 'most_frequent' => 'Most frequent']],
         'only_problems' => ['label' => 'Only what needs attention'],

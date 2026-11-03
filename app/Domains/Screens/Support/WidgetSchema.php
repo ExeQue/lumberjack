@@ -294,6 +294,8 @@ final class WidgetSchema
                     $toggle('y_zero', true),
                     $toggle('legend', false),
                     $toggle('axis', true),
+                    $toggle('y_axis', true),
+                    $toggle('grid', true),
                 ]),
                 $rotation, $scope(true), $display(true),
             ],
