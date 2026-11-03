@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -39,6 +40,14 @@ class AppServiceProvider extends ServiceProvider
         $proxies = (string) config('app.trusted_proxies');
         if ($proxies !== '') {
             TrustProxies::at($proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)));
+        }
+
+        // Links (password resets, invitations, alerts) always point at APP_URL, never at a
+        // Host or X-Forwarded-Host header someone sent.
+        $root = rtrim((string) config('app.url'), '/');
+        if ($root !== '') {
+            URL::forceRootUrl($root);
+            URL::forceScheme(str_starts_with($root, 'https://') ? 'https' : 'http');
         }
 
         // A wiped database has no users, so first-run setup has to come back with it.

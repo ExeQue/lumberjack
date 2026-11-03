@@ -30,6 +30,19 @@ describe('password reset', function () {
         Notification::assertSentTo($user, ResetPassword::class);
     });
 
+    test('the reset link points at APP_URL whatever host the request named', function () {
+        Notification::fake();
+        $user = User::factory()->create();
+
+        $this->post('http://evil.example/forgot-password', ['email' => $user->email], ['X-Forwarded-Host' => 'evil.example']);
+
+        Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user): bool {
+            $html = (string) $notification->toMail($user)->render();
+
+            return str_contains($html, rtrim((string) config('app.url'), '/').'/reset-password/') && ! str_contains($html, 'evil.example');
+        });
+    });
+
     test('reset password screen can be rendered', function () {
         Notification::fake();
 

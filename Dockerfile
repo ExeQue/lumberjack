@@ -50,7 +50,7 @@ ENV APP_NAME=Lumberjack \
     REVERB_SCHEME=http \
     REVERB_SERVER_HOST=127.0.0.1 \
     REVERB_SERVER_PORT=8081 \
-    TRUSTED_PROXIES=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7 \
+    TRUSTED_PROXIES=127.0.0.1,172.16.0.0/12 \
     SERVER_NAME=:8080
 
 COPY --from=build --chown=www-data:www-data /app /app
