@@ -212,7 +212,12 @@ export default function QueriesIndex({
                                         {t('queries.columns.max')}
                                     </th>
                                     <th className={thClass}>
-                                        {t('queries.columns.most_from')}
+                                        {t(
+                                            filters.period === '7d' ||
+                                                filters.period === '30d'
+                                                ? 'queries.columns.most_from_day'
+                                                : 'queries.columns.most_from',
+                                        )}
                                     </th>
                                 </tr>
                             </thead>

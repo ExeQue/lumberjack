@@ -19,6 +19,9 @@ class QueryStatisticsQuery
      */
     public const int N_PLUS_ONE_THRESHOLD = 5;
 
+    /** Seconds of queries read for where each one comes from and how often it repeats per trace. */
+    public const int SAMPLE_SECONDS = 86_400;
+
     /**
      * @return array{rows: list<array{sql_hash: string, sql: string, connection: string, calls: int, total_us: int, share: float, p95: int, max: int, most_from: string|null, location: string|null, per_trace: int, n_plus_one: bool}>, total_us: int, calls: int, distinct: int}
      */
@@ -62,9 +65,13 @@ class QueryStatisticsQuery
 
         $grand = max(1, (int) $totals->total_us);
         $hashes = array_values(array_map(fn (object $row): string => (string) ((array) $row)['sql_hash'], $rows));
-        $mostFrom = $this->mostFrom($projectId, $period, $hashes);
-        $locations = $this->locations($projectId, $period, $hashes);
-        $perTrace = $this->perTrace($projectId, $period, $hashes);
+        // ponytail: where a query comes from and its N+1 count read at most the last day,
+        // whatever the period: joining a month of queries to their traces is the slowest
+        // part of the page. A per-batch tally at ingest is the upgrade if a day is not enough.
+        $sample = max($period->since(), now()->subSeconds(self::SAMPLE_SECONDS)->toImmutable())->format('Y-m-d H:i:s');
+        $mostFrom = $this->mostFrom($projectId, $sample, $hashes);
+        $locations = $this->locations($projectId, $sample, $hashes);
+        $perTrace = $this->perTrace($projectId, $sample, $hashes);
 
         return [
             'rows' => array_values(array_map(function (object $row) use ($grand, $mostFrom, $locations, $perTrace): array {
@@ -98,13 +105,11 @@ class QueryStatisticsQuery
      * @param  list<string>  $hashes
      * @return array<string, string>
      */
-    private function mostFrom(int $projectId, Period $period, array $hashes): array
+    private function mostFrom(int $projectId, string $since, array $hashes): array
     {
         if ($hashes === []) {
             return [];
         }
-
-        $since = $period->since()->format('Y-m-d H:i:s');
 
         $fromRequests = DB::table('query_runs as q')
             ->join('request_runs as r', fn ($join) => $join->on('r.trace_id', '=', 'q.trace_id')->on('r.project_id', '=', 'q.project_id'))
@@ -137,7 +142,7 @@ class QueryStatisticsQuery
      * @param  list<string>  $hashes
      * @return array<string, string>
      */
-    private function locations(int $projectId, Period $period, array $hashes): array
+    private function locations(int $projectId, string $since, array $hashes): array
     {
         if ($hashes === []) {
             return [];
@@ -146,7 +151,7 @@ class QueryStatisticsQuery
         $best = [];
 
         DB::table('query_runs')
-            ->where('project_id', $projectId)->where('occurred_at', '>=', $period->since()->format('Y-m-d H:i:s'))
+            ->where('project_id', $projectId)->where('occurred_at', '>=', $since)
             ->whereIn('sql_hash', $hashes)->whereNotNull('location')
             ->selectRaw('sql_hash, location, COUNT(*) AS c')
             ->groupBy('sql_hash', 'location')
@@ -168,14 +173,14 @@ class QueryStatisticsQuery
      * @param  list<string>  $hashes
      * @return array<string, int>
      */
-    private function perTrace(int $projectId, Period $period, array $hashes): array
+    private function perTrace(int $projectId, string $since, array $hashes): array
     {
         if ($hashes === []) {
             return [];
         }
 
         $perTrace = DB::table('query_runs')
-            ->where('project_id', $projectId)->where('occurred_at', '>=', $period->since()->format('Y-m-d H:i:s'))
+            ->where('project_id', $projectId)->where('occurred_at', '>=', $since)
             ->whereIn('sql_hash', $hashes)->whereNotNull('trace_id')
             ->selectRaw('sql_hash, trace_id, COUNT(*) AS c')
             ->groupBy('sql_hash', 'trace_id');
