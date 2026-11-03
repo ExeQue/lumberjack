@@ -106,6 +106,14 @@ function orKey(t: Translate, key: string, fallback: string): string {
 const CONNECTIONS_AMBER = 0.8;
 const CONNECTIONS_RED = 0.9;
 
+function hasDatabaseFigures(
+    metrics: Record<string, number> | undefined,
+): boolean {
+    return (
+        metrics?.connections !== undefined || metrics?.size_bytes !== undefined
+    );
+}
+
 /** A database check's latest connections and size: "4 of 100 connections · 13.8 MB". */
 function DatabaseLine({ metrics }: { metrics: Record<string, number> }) {
     const t = useT();
@@ -126,7 +134,7 @@ function DatabaseLine({ metrics }: { metrics: Record<string, number> }) {
                 : undefined;
 
     return (
-        <span className="lj-tile-small shrink-0">
+        <span className="lj-tile-small max-w-full shrink-0 truncate text-[0.68em]">
             {connections !== undefined && (
                 <span style={{ color }}>
                     {max !== undefined
@@ -947,7 +955,7 @@ function Chart({ widget, schema, data, t }: BodyProps) {
                             <span
                                 key={i}
                                 aria-hidden="true"
-                                className="lj-tile-small pointer-events-none absolute left-0 font-mono leading-none"
+                                className="lj-tile-small pointer-events-none absolute left-0 z-10 rounded-[3px] bg-(--s-panel)/80 px-[0.2em] font-mono leading-none"
                                 style={{
                                     top: `calc(${(i * 100) / bands}% + 0.2em)`,
                                 }}
@@ -1558,14 +1566,14 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                     className="lj-tile-big"
                     style={{
                         // Leaves room for the lines under it on a one row tile.
-                        fontSize: 'min(24cqh, 15cqw)',
+                        fontSize: 'min(27cqh, 15cqw)',
                         color: STATE_COLOR[state],
                     }}
                 >
                     {word(state)}
                 </span>
                 <span
-                    className="lj-tile-small shrink-0"
+                    className="lj-tile-small shrink-0 text-[0.68em]"
                     style={{ color: STATE_COLOR[state] }}
                 >
                     {[
@@ -1585,13 +1593,17 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                         .filter(Boolean)
                         .join(' · ')}
                 </span>
-                <DatabaseLine metrics={detail.metrics ?? {}} />
-                {/* The line is kept even when empty, so a message never shifts the state. */}
-                {opt<boolean>('show_message') !== false && (
-                    <span className="lj-tile-small max-w-full shrink-0 truncate">
-                        {detail.last_message || '\u00a0'}
-                    </span>
-                )}
+                {/* One line under the state, kept even when empty so tiles line up: the
+                    database's figures when it reports them, the last message otherwise. */}
+                {opt<boolean>('show_message') !== false &&
+                    (hasDatabaseFigures(detail.metrics) &&
+                    !detail.last_message ? (
+                        <DatabaseLine metrics={detail.metrics ?? {}} />
+                    ) : (
+                        <span className="lj-tile-small max-w-full shrink-0 truncate text-[0.68em]">
+                            {detail.last_message || '\u00a0'}
+                        </span>
+                    ))}
                 {opt<boolean>('show_timeline') !== false &&
                     widget.h >= 2 &&
                     detail.strip.length > 0 && (
