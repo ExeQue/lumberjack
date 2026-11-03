@@ -126,8 +126,90 @@ When Lumberjack cannot be reached the screen says **Offline since** with the tim
 dims the numbers it has, and tries again every 30 seconds; it never lets old numbers
 look current.
 
-For now a TV signs in like any browser. Pairing a TV with a code, and share links for
-signage systems, come next.
+A TV does not sign in: it is paired once, with a code, and shows its screen from then
+on (see below). `/screens/<id>` is for a browser that is signed in anyway.
+
+## Setting up a TV
+
+Nothing long is ever typed on the TV. Pairing works like a streaming app: the TV shows
+a code, and a phone or laptop that is signed in confirms it.
+
+1. On the TV, open `/tv` on your Lumberjack (`lumberjack.example.com/tv`): short enough
+   to type with a remote, and a good start page for a kiosk browser (Fire TV Silk,
+   Android TV, Fully Kiosk Browser, Chromium `--kiosk` on a Raspberry Pi). It shows a
+   six character code such as `K7Q-M2X` (no 0, O, 1 or I, so it reads well across the
+   room), a QR code, and how long the code lasts.
+2. On your phone, scan the QR code, or open `/pair` and type the code. Sign in if you
+   are asked. The page shows which browser asks (**Fire TV · Silk**) and when the code
+   was made, so you pair the right TV. Pick the screen, name the TV ("Office TV") and
+   press **Show on the TV**.
+3. The TV shows the screen within a second. Make `/tv` its start page and it shows its
+   screen again after every restart.
+
+![A TV waiting to be paired](./screenshots/tv-pairing.png)
+
+![Confirming the code on a phone](./screenshots/tv-pair-confirm.png)
+
+A code lasts 10 minutes and works once; the TV shows a new one when it runs out. Only
+team admins pair TVs. **Open on a TV** in the designer shows the same steps, with the
+`/tv` address as a QR code for a TV stick or kiosk browser with a camera.
+
+### Several screens on one computer
+
+One computer can drive several screens: two monitors, or two browser windows side by
+side. Each window is a display of its own: open `/tv` in the first, `/tv/2` in the
+second, up to `/tv/9`, and pair each with its own code. The pairing page says which
+window it is (**Window 2**), and after confirming, the phone offers the address of the
+next window. Displays lists the windows of one computer together.
+
+## Displays
+
+**Displays** in the sidebar (Team settings) lists the team's paired TVs: their name,
+the screen each shows, its theme, the browser it runs in, and whether it is online
+(heard from in the last three minutes) or when it was last seen.
+
+![The team's displays](./screenshots/displays.png)
+
+Team admins change them; every member can see them.
+
+- **Shows**: another screen switches the TV at once, so nobody has to touch it again.
+- **In turn**: several screens one after another on the same TV, in the order you set,
+  10 seconds to an hour each (30 by default), fading from one to the next. While a
+  screen has something red it stays until that clears, unless you turn that off.
+- **Theme**: the screen's own theme, or always **Dark**, **Light** or **By time of
+  day**, for a TV in a bright room showing a screen that is dark elsewhere.
+- **Remove**: the TV goes back to showing a pairing code at once.
+
+## Share links
+
+Where pairing is not possible (a signage system that takes a URL, a page that embeds
+one), a screen can have a share link: `/s/<key>`, readable without signing in. Open the
+designer, press **Share** and **Share with a link**. The link can be copied, replaced by
+a new one (**New link**) or turned off (**Stop sharing**); screens showing a link that
+stopped working say **This screen was unshared**. Only team admins share screens.
+
+A share link shows counts and numbers only, no issue titles or names, unless **Show
+issue titles and names** is ticked. It may be shown inside another site's page. Every
+change to a share link goes in the audit log. Prefer pairing: a paired TV needs no link
+that could be passed on.
+
+## QR codes
+
+The QR codes (on the TV's pairing page, in **Open on a TV**, on **Pair a TV** in
+Displays and for the share link) carry the Lumberjack mark, amber on the dark panel.
+**Download QR for printing** under **Share** gives the share link as a PNG, dark on
+white with darker amber corners, for a sticker on the wall.
+
+## What a TV keeps
+
+A paired TV holds a display token, as a cookie only the server can read (and a copy
+in the browser's local storage, in case a TV browser drops its cookies). It is never
+part of an address, so it cannot leak through history, logs or a Referer, and only its
+hash is stored. It lasts a year from the TV's last visit, can only read the screens of
+its own team that the display shows, and stops working the moment the display is
+removed. A code alone is useless in another browser: the token goes only to the
+browser that showed the code. Looking up and confirming codes is limited per user and
+per address.
 
 ## Theme
 

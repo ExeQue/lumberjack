@@ -146,6 +146,15 @@ const screen = await href('a[href$="/edit"]');
 const kiosk = screen ? screen.replace(/\/edit$/, '') : null;
 const tv = { width: 1920, height: 1080 };
 
+// A TV waiting to be paired (in the script's own browser), and its
+// code to show the confirm page with. Visiting it starts a pairing; nothing is confirmed.
+await open('/tv');
+const pairCode = await page
+    .$eval('[aria-label^="Pairing code"]', (el) =>
+        el.getAttribute('aria-label').split(' ').pop().replace('-', ''),
+    )
+    .catch(() => null);
+
 const shots = {
     overview: { path: project },
     'overview-light': { path: project, theme: 'light' },
@@ -221,6 +230,12 @@ const shots = {
                 document.querySelector('.lj-screen').dataset.theme = 'light';
             }),
     },
+    'tv-pairing': { path: '/tv', viewport: tv },
+    'tv-pair-confirm': {
+        path: pairCode ? `/pair/${pairCode}` : null,
+        viewport: { width: 390, height: 844 },
+    },
+    displays: { path: '/team/displays' },
     'command-palette': {
         path: project,
         before: async () => {
