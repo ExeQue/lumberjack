@@ -169,16 +169,42 @@
     opacity: 1;
 }
 
-/* The designer's gear sits in the corner; the period label moves aside while it shows. */
+/* The designer's gear sits in the corner; the period label keeps out of its way on
+   every designer tile, so nothing moves when it shows. Hidden, it takes no clicks. */
 .lj-tile .lj-corner-label {
-    transition: padding-right 150ms;
+    padding-right: 1.4em;
 }
 
-.lj-tile:hover .lj-corner-label,
-.lj-tile:focus-visible .lj-corner-label,
-.lj-tile:has(:focus-visible) .lj-corner-label,
-.lj-tile[data-selected='true'] .lj-corner-label {
-    padding-right: 1.4em;
+.lj-tile .lj-gear {
+    pointer-events: none;
+}
+
+.lj-tile:hover .lj-gear,
+.lj-tile:focus-visible .lj-gear,
+.lj-tile:has(:focus-visible) .lj-gear,
+.lj-tile[data-selected='true'] .lj-gear {
+    pointer-events: auto;
+}
+
+/* A rotating tile's time left on its value: see RotationProgress. */
+.lj-progress {
+    opacity: 0.7;
+    transform: scaleX(0);
+    animation-name: lj-progress;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+}
+
+@keyframes lj-progress {
+    to {
+        transform: scaleX(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lj-progress {
+        display: none;
+    }
 }
 
 .lj-tile-title {

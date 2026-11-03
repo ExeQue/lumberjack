@@ -13,7 +13,7 @@ import {
     incident as incidentPreview,
     option,
     keysOf,
-    rotationIndex,
+    rotationAt,
     rotationOf,
     shownAs,
     statusOf,
@@ -350,17 +350,19 @@ export function WidgetTile({
     const previewData: WidgetData | undefined = data
         ? Object.fromEntries(keys.map((key) => [key, preview(key) ?? null]))
         : undefined;
+    const slot = rotationAt(
+        stored.type,
+        keys,
+        previewData,
+        items.map((item) => item.seconds ?? every),
+        option<boolean>(schema, stored, 'hold_problem') !== false,
+        now,
+    );
+    // The designer holds the tile on the open tab, with no progress to show.
     const index =
         pinned !== undefined
             ? Math.min(pinned, Math.max(0, items.length - 1))
-            : rotationIndex(
-                  stored.type,
-                  keys,
-                  previewData,
-                  items.map((item) => item.seconds ?? every),
-                  option<boolean>(schema, stored, 'hold_problem') !== false,
-                  now,
-              );
+            : slot.index;
     // The value shown now draws with its own settings over the widget's.
     const widget = shownAs(stored, index > 0 ? items[index] : undefined);
     const opt = <T,>(key: string) => option<T>(schema, widget, key);
@@ -402,7 +404,11 @@ export function WidgetTile({
             status !== 'degraded') ||
         (hideWhen === 'empty' && empty);
     const transition = opt<string>('transition') ?? 'fade';
-    const dots = shown.length > 1 && opt<boolean>('dots') !== false;
+    // How long the value has left: frozen (none) while it holds the tile or a tab pins it.
+    const progress =
+        pinned === undefined &&
+        slot.elapsed !== null &&
+        opt<boolean>('progress') !== false;
 
     let body: ReactNode = null;
 
@@ -459,8 +465,6 @@ export function WidgetTile({
                 textAlign: align,
                 ['--lj-text-scale' as string]: TEXT_SCALE[textSize] ?? 1,
                 visibility: hidden && !designer ? 'hidden' : undefined,
-                // Room for the position dots (6px up, 4px tall) and a gap above them.
-                paddingBottom: dots ? 'max(0.8em, 16px)' : undefined,
                 opacity: hidden && designer ? 0.45 : undefined,
                 ...style,
             }}
@@ -531,8 +535,6 @@ export function WidgetTile({
                 key={keys[index] ?? 'tile'}
                 className={cn(
                     'flex min-h-0 flex-1 flex-col gap-[0.3em]',
-                    // What does not fit stops above the dots instead of running under them.
-                    dots && 'overflow-hidden',
                     shown.length > 1 &&
                         transition === 'fade' &&
                         'animate-in duration-500 fade-in',
@@ -547,27 +549,51 @@ export function WidgetTile({
             >
                 {body}
             </div>
-            {dots && (
-                <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-x-0 bottom-1.5 flex justify-center gap-1"
-                >
-                    {keys.map((key, i) => (
-                        <span
-                            key={key}
-                            className="h-1 rounded-full transition-all"
-                            style={{
-                                width: i === index ? 14 : 4,
-                                background:
-                                    i === index
-                                        ? 'var(--s-ink)'
-                                        : 'var(--s-ink-4)',
-                            }}
-                        />
-                    ))}
-                </div>
+            {progress && (
+                <RotationProgress
+                    // A new bar for every value shown, so it starts over on the switch.
+                    key={`${keys[index]}@${Math.floor(now / 1000) - (slot.elapsed ?? 0)}`}
+                    elapsed={slot.elapsed ?? 0}
+                    seconds={slot.seconds}
+                    status={status}
+                />
             )}
         </div>
+    );
+}
+
+/**
+ * A thin bar along the bottom of a rotating tile, growing from the center to full width
+ * when the next value takes over. It runs as a CSS animation from where the value was
+ * when it mounted, so it stays smooth between the clock's ticks; reduced motion hides it.
+ */
+function RotationProgress({
+    elapsed,
+    seconds,
+    status,
+}: {
+    elapsed: number;
+    seconds: number;
+    status: Status;
+}) {
+    // Where it was when it mounted; later renders must not move the animation.
+    const [start] = useState(elapsed);
+
+    return (
+        <span
+            aria-hidden="true"
+            className="lj-progress pointer-events-none absolute inset-x-0 bottom-0 h-[3px] origin-center"
+            style={{
+                background:
+                    status === 'down'
+                        ? 'var(--s-red)'
+                        : status === 'degraded'
+                          ? 'var(--s-amber)'
+                          : 'var(--s-ink-4)',
+                animationDuration: `${seconds}s`,
+                animationDelay: `-${start}s`,
+            }}
+        />
     );
 }
 

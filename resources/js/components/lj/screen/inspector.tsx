@@ -1,5 +1,5 @@
 import { Settings } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Button, Input, Label, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
@@ -115,8 +115,6 @@ export function WidgetInspector({
     catalog,
     onChange,
     onRemove,
-    cols,
-    canResize,
     tab = 0,
     onTab = () => {},
     part = 'all',
@@ -125,9 +123,6 @@ export function WidgetInspector({
     catalog: Catalog;
     onChange: (widget: Widget) => void;
     onRemove: () => void;
-    cols: number;
-    /** Whether the widget has room for that size where it is. */
-    canResize: (w: number, h: number) => boolean;
     /** The value of the rotation open in the tabs, which the designer's tile shows. */
     tab?: number;
     onTab?: (index: number) => void;
@@ -789,13 +784,6 @@ export function WidgetInspector({
         }
     };
 
-    const sizes: [number, number][] = [
-        [1, 1],
-        [2, 1],
-        [2, 2],
-        [Math.min(4, cols), 2],
-    ];
-
     // The open value: the widget itself on the first tab, else its rotate entry.
     const valueSource = first
         ? source
@@ -846,7 +834,8 @@ export function WidgetInspector({
             <div className="grid grid-cols-2 gap-2.5">
                 {sections
                     .find((s) => s.id === 'display')
-                    ?.fields.map((field) => renderField(field, false))}
+                    ?.fields.filter((field) => field.key !== 'refresh')
+                    .map((field) => renderField(field, false))}
             </div>
         );
     }
@@ -1216,46 +1205,24 @@ export function WidgetInspector({
                     </Section>
                 ))}
 
+                {/* How often it updates is about its data, so it stays here. */}
+                {sections
+                    .find((s) => s.id === 'display')
+                    ?.fields.filter((field) => field.key === 'refresh')
+                    .map((field) => (
+                        <div
+                            key={field.key}
+                            className="grid grid-cols-2 gap-2.5"
+                        >
+                            {renderField(field, false)}
+                        </div>
+                    ))}
+
                 {sections.some((s) => s.id === 'display') && (
                     <p className="text-xs text-ink-3">
                         {t('screens.inspector.display_hint')}
                     </p>
                 )}
-
-                <div className="flex flex-col gap-1.5">
-                    <span className="text-[13px] font-medium">
-                        {t('screens.inspector.size')}
-                    </span>
-                    <div
-                        role="group"
-                        aria-label={t('screens.inspector.size')}
-                        className="grid grid-cols-4 gap-1.5"
-                    >
-                        {sizes.map(([w, h]) => {
-                            const on = widget.w === w && widget.h === h;
-
-                            return (
-                                <button
-                                    key={`${w}x${h}`}
-                                    type="button"
-                                    aria-pressed={on}
-                                    disabled={!on && !canResize(w, h)}
-                                    className={cn(
-                                        'h-8 rounded-md border border-line text-[13px] disabled:opacity-40',
-                                        on
-                                            ? 'bg-amber text-amber-ink'
-                                            : 'bg-rail text-ink-2',
-                                    )}
-                                    onClick={() =>
-                                        onChange({ ...widget, w, h })
-                                    }
-                                >
-                                    {`${w} × ${h}`}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
             </div>
         </div>
     );
@@ -1413,17 +1380,40 @@ export function DisplayGear({
     catalog,
     onChange,
     onOpen,
-    cols,
 }: {
     widget: Widget;
     catalog: Catalog;
     onChange: (widget: Widget) => void;
     onOpen: () => void;
-    cols: number;
 }) {
     const t = useT();
     const gear = useRef<HTMLButtonElement>(null);
-    const [at, setAt] = useState({ top: 0, left: 0 });
+    const panel = useRef<HTMLDivElement>(null);
+    // Under the gear, or above it when there is more room there; never off screen, and
+    // scrolling inside when neither side has room for all of it. Written to the element
+    // right after it opens, before the browser paints it, so it never shows elsewhere.
+    const place = () => {
+        const r = gear.current?.getBoundingClientRect();
+        const el = panel.current;
+
+        if (!r || !el) {
+            return;
+        }
+
+        const gap = 4;
+        const pad = 10;
+        const below = window.innerHeight - r.bottom - gap - pad;
+        const above = r.top - gap - pad;
+        el.style.maxHeight = '';
+        const down = el.scrollHeight <= below || below >= above;
+
+        el.style.top = down ? `${r.bottom + gap}px` : 'auto';
+        el.style.bottom = down
+            ? 'auto'
+            : `${window.innerHeight - r.top + gap}px`;
+        el.style.left = `${Math.max(pad, Math.min(r.right - GEAR_WIDTH, window.innerWidth - GEAR_WIDTH - pad))}px`;
+        el.style.maxHeight = `${down ? below : above}px`;
+    };
     const popover = `display-${widget.id}`;
     // Keeps the designer's tile handlers (select, drag, keys) out of the popover.
     const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
@@ -1437,30 +1427,29 @@ export function DisplayGear({
                 aria-label={t('screens.inspector.display_gear')}
                 title={t('screens.inspector.display_gear')}
                 draggable={false}
-                className="lj-badge z-20 flex size-[1.5em] cursor-pointer items-center justify-center rounded border border-(--s-line) bg-(--s-ground) text-(--s-ink-2) hover:text-(--s-ink)"
+                className="lj-badge lj-gear z-20 flex size-[1.5em] cursor-pointer items-center justify-center rounded border border-(--s-line) bg-(--s-ground) text-(--s-ink-2) hover:text-(--s-ink)"
                 onPointerDown={stop}
-                onClick={() => {
-                    const r = gear.current?.getBoundingClientRect();
+                onClick={(e) => {
+                    // Opened here rather than by popoverTarget, so it is placed before
+                    // the first paint; popoverTarget still keeps a click on the gear
+                    // from counting as a click outside.
+                    e.preventDefault();
 
-                    if (r) {
-                        setAt({
-                            top: r.bottom + 4,
-                            left: Math.max(
-                                8,
-                                Math.min(
-                                    r.right - GEAR_WIDTH,
-                                    window.innerWidth - GEAR_WIDTH - 8,
-                                ),
-                            ),
-                        });
+                    if (panel.current?.matches(':popover-open')) {
+                        panel.current.hidePopover();
+
+                        return;
                     }
 
+                    panel.current?.showPopover();
+                    place();
                     onOpen();
                 }}
             >
                 <Settings aria-hidden="true" className="size-[1em]" />
             </button>
             <div
+                ref={panel}
                 id={popover}
                 popover="auto"
                 role="dialog"
@@ -1469,9 +1458,9 @@ export function DisplayGear({
                 className="m-0 cursor-auto rounded-md border border-line bg-panel p-3 text-left text-[13px] text-ink shadow-lg"
                 style={{
                     position: 'fixed',
+                    // Placed by place(); top, bottom and left are set there.
                     inset: 'auto',
-                    top: at.top,
-                    left: at.left,
+                    overflowY: 'auto',
                     width: GEAR_WIDTH,
                 }}
                 onClick={stop}
@@ -1491,8 +1480,6 @@ export function DisplayGear({
                     catalog={catalog}
                     onChange={onChange}
                     onRemove={() => {}}
-                    cols={cols}
-                    canResize={() => false}
                 />
             </div>
         </>
