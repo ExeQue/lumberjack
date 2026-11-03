@@ -388,6 +388,7 @@ function HealthCard({
 
 const healthDot: Record<HealthState, string> = {
     ok: 'bg-ok',
+    recovering: 'bg-info',
     degraded: 'bg-warn',
     down: 'bg-err',
     stale: 'bg-ink-3',
@@ -437,6 +438,8 @@ function HealthStrip({
                                     'border-err-line bg-err-bg text-err',
                                 check.state === 'degraded' &&
                                     'border-warn-line bg-warn-bg text-warn',
+                                check.state === 'recovering' &&
+                                    'border-info-line bg-info-bg text-info',
                             )}
                         >
                             <span

@@ -26,7 +26,7 @@ beforeEach(function () {
     foreach ([AlertRuleType::HealthDegraded, AlertRuleType::HealthDown, AlertRuleType::HealthRecovered] as $type) {
         AlertRule::factory()->for($this->project)->create(['type' => $type])->channels()->attach($channel);
     }
-    $this->check = HealthCheck::factory()->for($this->project)->create(['degrade_after' => 2, 'recover_after' => 3]);
+    $this->check = HealthCheck::factory()->for($this->project)->create(['degrade_after' => 2, 'down_after' => 2, 'recover_after' => 3]);
     // One result a minute, as the SDK's schedule sends them.
     $this->report = function (string $status, string $host = 'web-1'): void {
         $this->travel(1)->minutes();
@@ -36,7 +36,7 @@ beforeEach(function () {
 });
 
 describe('the state machine', function () {
-    it('goes down after degrade_after failures and recovers after recover_after successes', function () {
+    it('goes straight down when down_after equals degrade_after, and recovers after recover_after successes', function () {
         ($this->report)('ok');
         ($this->report)('failed');
 
@@ -47,7 +47,7 @@ describe('the state machine', function () {
 
         ($this->report)('ok');
         ($this->report)('ok');
-        expect($this->check->refresh()->status)->toBe(HealthStatus::Down);
+        expect($this->check->refresh()->status)->toBe(HealthStatus::Recovering);
 
         ($this->report)('ok');
         expect($this->check->refresh()->status)->toBe(HealthStatus::Ok);
@@ -57,6 +57,10 @@ describe('the state machine', function () {
         ($this->report)('warning');
         ($this->report)('warning');
 
+        expect($this->check->refresh()->status)->toBe(HealthStatus::Degraded);
+
+        // The warnings do not count toward down; it takes down_after failures of its own.
+        ($this->report)('failed');
         expect($this->check->refresh()->status)->toBe(HealthStatus::Degraded);
 
         ($this->report)('failed');
@@ -91,10 +95,110 @@ describe('the state machine', function () {
     });
 });
 
+describe('a separate down threshold', function () {
+    beforeEach(function () {
+        $this->check->update(['down_after' => 5]);
+        $this->statuses = function (array $results): array {
+            return array_map(function (string $status): string {
+                ($this->report)($status);
+
+                return $this->check->refresh()->status->value ?? 'pending';
+            }, $results);
+        };
+    });
+
+    it('degrades after two failures and goes down after five', function () {
+        expect(($this->statuses)(['ok', 'failed', 'failed', 'failed', 'failed', 'failed']))
+            ->toBe(['ok', 'ok', 'degraded', 'degraded', 'degraded', 'down']);
+    });
+
+    it('stays degraded on warnings alone', function () {
+        expect(($this->statuses)(array_fill(0, 10, 'warning')))->toBe(['pending', ...array_fill(0, 9, 'degraded')]);
+    });
+
+    it('starts counting failures again after a warning', function () {
+        expect(($this->statuses)(['failed', 'failed', 'failed', 'failed', 'warning', 'failed', 'failed', 'failed', 'failed', 'failed']))
+            ->toBe(['pending', 'degraded', 'degraded', 'degraded', 'degraded', 'degraded', 'degraded', 'degraded', 'degraded', 'down']);
+    });
+
+    it('clamps a down_after below degrade_after to degrade_after', function () {
+        $this->check->update(['degrade_after' => 3, 'down_after' => 1]);
+
+        expect($this->check->downAfter())->toBe(3)
+            ->and(($this->statuses)(['failed', 'failed', 'failed']))->toBe(['pending', 'pending', 'down']);
+    });
+
+    it('uses five for a check without its own down_after', function () {
+        $this->check->update(['down_after' => null]);
+
+        expect($this->check->downAfter())->toBe(HealthCheck::DEFAULT_DOWN_AFTER);
+    });
+
+    it('sends a degraded alert and later a down alert for a failing check', function () {
+        ($this->statuses)(['failed', 'failed']);
+        expect(($this->titles)())->toBe(['Health check degraded in Shop']);
+
+        ($this->statuses)(['failed', 'failed', 'failed']);
+        expect(($this->titles)())->toBe(['Health check degraded in Shop', 'Health check down in Shop'])
+            ->and(HealthOutage::sole()->status)->toBe(HealthStatus::Down);
+    });
+});
+
+describe('recovering', function () {
+    beforeEach(function () {
+        ($this->report)('failed');
+        ($this->report)('failed');
+    });
+
+    it('is recovering on good results until recover_after, then ok with one recovered alert', function () {
+        ($this->report)('ok');
+        ($this->report)('ok');
+
+        expect($this->check->refresh()->status)->toBe(HealthStatus::Recovering)
+            ->and(HealthChecksQuery::state($this->check->load('hosts')))->toBe('recovering')
+            ->and(HealthOutage::sole()->ended_at)->toBeNull()
+            ->and(HealthOutage::sole()->status)->toBe(HealthStatus::Down)
+            ->and(($this->titles)())->toBe(['Health check down in Shop']);
+
+        ($this->report)('ok');
+
+        expect($this->check->refresh()->status)->toBe(HealthStatus::Ok)
+            ->and(HealthOutage::sole()->ended_at)->not->toBeNull()
+            ->and(($this->titles)())->toBe(['Health check down in Shop', 'Health check recovered in Shop']);
+    });
+
+    it('goes back down on a failure without a second down alert', function () {
+        ($this->report)('ok');
+        ($this->report)('failed');
+
+        expect($this->check->refresh()->status)->toBe(HealthStatus::Down)
+            ->and(HealthOutage::count())->toBe(1)
+            ->and(($this->titles)())->toBe(['Health check down in Shop']);
+    });
+
+    it('goes back to degraded, not down, when it was degraded', function () {
+        $this->check->update(['down_after' => 5]);
+        foreach (['ok', 'ok', 'ok', 'warning', 'warning', 'ok', 'warning'] as $status) {
+            ($this->report)($status);
+        }
+
+        expect($this->check->refresh()->status)->toBe(HealthStatus::Degraded);
+    });
+
+    it('does not hide a down host behind a recovering one', function () {
+        ($this->report)('failed', 'web-2');
+        ($this->report)('failed', 'web-2');
+        ($this->report)('ok');
+
+        expect($this->check->refresh()->status)->toBe(HealthStatus::Down);
+    });
+});
+
 describe('outages and uptime', function () {
     it('opens an outage when the check goes bad and closes it when it recovers', function () {
         ($this->report)('warning');
         ($this->report)('warning');
+        ($this->report)('failed');
         ($this->report)('failed');
 
         $outage = HealthOutage::sole();
@@ -107,7 +211,7 @@ describe('outages and uptime', function () {
         }
 
         expect($outage->refresh()->ended_at)->not->toBeNull()
-            ->and((int) $outage->started_at->diffInMinutes($outage->ended_at))->toBe(4);
+            ->and((int) $outage->started_at->diffInMinutes($outage->ended_at))->toBe(5);
     });
 
     it('counts down time against the period, degraded time not', function () {
@@ -172,6 +276,21 @@ describe('alerts', function () {
         $flap();
 
         expect(($this->titles)())->toBe(['Health check down in Shop', 'Health check recovered in Shop']);
+    });
+
+    it('takes the throttle window from the config', function () {
+        config(['health.alert_throttle_minutes' => 3]);
+        $flap = function (): void {
+            foreach (['failed', 'failed', 'ok', 'ok', 'ok'] as $status) {
+                ($this->report)($status);
+            }
+        };
+
+        $flap();
+        $this->travel(5)->minutes();
+        $flap();
+
+        expect(($this->titles)())->toBe(['Health check down in Shop', 'Health check recovered in Shop', 'Health check down in Shop', 'Health check recovered in Shop']);
     });
 
     it('sends nothing for a muted check', function () {

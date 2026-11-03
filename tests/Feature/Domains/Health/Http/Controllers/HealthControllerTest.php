@@ -55,14 +55,28 @@ describe('the health page', function () {
 describe('adding and editing checks', function () {
     it('adds an http check that runs on the next minute', function () {
         $this->actingAs($this->admin)->post(route('health.store', $this->project), [
-            'type' => 'http', 'name' => 'Website', 'interval_minutes' => 5, 'degrade_after' => 2, 'recover_after' => 5,
+            'type' => 'http', 'name' => 'Website', 'interval_minutes' => 5, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 4,
             'config' => ['url' => 'https://example.com/up', 'method' => 'GET', 'expected_status' => 200, 'body_contains' => '', 'ssl' => 'ignored'],
         ])->assertSessionHasNoErrors()->assertRedirect();
 
         $check = HealthCheck::query()->where('name', 'Website')->sole();
         expect($check->config)->toBe(['url' => 'https://example.com/up', 'method' => 'GET', 'expected_status' => 200])
             ->and($check->next_run_at)->toBeNull()
-            ->and($check->ping_token)->toBeNull();
+            ->and($check->ping_token)->toBeNull()
+            ->and($check->down_after)->toBe(4);
+    });
+
+    it('refuses down_after below degrade_after', function () {
+        $this->actingAs($this->admin)->post(route('health.store', $this->project), [
+            'type' => 'tcp', 'name' => 'Database', 'interval_minutes' => 5, 'degrade_after' => 3, 'recover_after' => 5, 'down_after' => 2, 'config' => ['host' => 'db.example.com', 'port' => 5432],
+        ])->assertSessionHasErrors(['down_after' => 'Down after must be at least degraded after (3); set them the same to go straight to down.']);
+
+        // A reported check compares against the degrade_after it already has.
+        $this->reported->update(['degrade_after' => 4]);
+        $this->actingAs($this->admin)->put(route('health.update', [$this->project, $this->reported]), ['down_after' => 3])->assertSessionHasErrors('down_after');
+        $this->actingAs($this->admin)->put(route('health.update', [$this->project, $this->reported]), ['down_after' => 4])->assertSessionHasNoErrors();
+
+        expect($this->reported->refresh())->down_after->toBe(4)->thresholds_overridden->toBeTrue();
     });
 
     it('validates the settings of the type', function () {
@@ -73,7 +87,7 @@ describe('adding and editing checks', function () {
 
     it('is refused to a member who cannot administer the project', function () {
         $this->actingAs($this->member)->post(route('health.store', $this->project), [
-            'type' => 'dns', 'name' => 'Mail', 'interval_minutes' => 60, 'degrade_after' => 2, 'recover_after' => 5, 'config' => ['name' => 'example.com', 'record_type' => 'MX'],
+            'type' => 'dns', 'name' => 'Mail', 'interval_minutes' => 60, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 5, 'config' => ['name' => 'example.com', 'record_type' => 'MX'],
         ])->assertForbidden();
 
         $this->actingAs($this->member)->delete(route('health.destroy', [$this->project, $this->heartbeat]))->assertForbidden();
@@ -90,7 +104,7 @@ describe('adding and editing checks', function () {
             ->thresholds_overridden->toBeTrue()
             ->muted->toBeTrue();
 
-        $this->actingAs($this->admin)->put(route('health.update', [$this->project, $this->reported]), ['degrade_after' => null, 'recover_after' => null]);
+        $this->actingAs($this->admin)->put(route('health.update', [$this->project, $this->reported]), ['degrade_after' => null, 'recover_after' => null, 'down_after' => null]);
 
         expect($this->reported->refresh()->thresholds_overridden)->toBeFalse();
     });

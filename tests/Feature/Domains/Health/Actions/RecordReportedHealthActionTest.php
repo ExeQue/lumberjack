@@ -18,7 +18,7 @@ beforeEach(function () {
     $this->project = Project::factory()->withToken('lj_srv_test-token')->create();
     $this->event = fn (array $extra = []): array => [
         'type' => 'health', 'slug' => 'database:pgsql', 'status' => 'ok', 'message' => null,
-        'metrics' => ['latency_ms' => 1.4], 'duration_ms' => 1.9, 'degrade_after' => 3, 'recover_after' => 4,
+        'metrics' => ['latency_ms' => 1.4], 'duration_ms' => 1.9, 'degrade_after' => 3, 'recover_after' => 4, 'down_after' => 6,
         'trace_id' => str_repeat('a', 32), 'timestamp' => now()->getTimestamp() + 0.5, ...$extra,
     ];
     $this->record = fn (array $event, string $host = 'web-1') => app(RecordReportedHealthAction::class)->execute($this->project, $event, new Envelope('production', 'abc', $host));
@@ -35,6 +35,7 @@ describe('ingesting health events', function () {
             ->and($check->environment)->toBe('production')
             ->and($check->degrade_after)->toBe(3)
             ->and($check->recover_after)->toBe(4)
+            ->and($check->down_after)->toBe(6)
             ->and($result->host)->toBe('web-1')
             ->and($result->metrics)->toBe(['latency_ms' => 1.4])
             ->and($result->duration_us)->toBe(1900);
@@ -69,13 +70,21 @@ describe('ingesting health events', function () {
             ->and(HealthCheck::sole()->degrade_after)->toBe(1000);
     });
 
+    it('uses the default down_after when an older SDK does not send one', function () {
+        $event = ($this->event)();
+        unset($event['down_after']);
+        ($this->record)($event);
+
+        expect(HealthCheck::sole()->down_after)->toBe(HealthCheck::DEFAULT_DOWN_AFTER);
+    });
+
     it('keeps thresholds set in the UI, and brings an archived check back when it reports', function () {
         ($this->record)(($this->event)());
-        HealthCheck::sole()->update(['thresholds_overridden' => true, 'degrade_after' => 10, 'archived_at' => now()]);
+        HealthCheck::sole()->update(['thresholds_overridden' => true, 'degrade_after' => 10, 'down_after' => 20, 'archived_at' => now()]);
 
-        ($this->record)(($this->event)(['degrade_after' => 1]));
+        ($this->record)(($this->event)(['degrade_after' => 1, 'down_after' => 1]));
 
         $check = HealthCheck::sole();
-        expect($check->degrade_after)->toBe(10)->and($check->archived_at)->toBeNull();
+        expect($check->degrade_after)->toBe(10)->and($check->down_after)->toBe(20)->and($check->archived_at)->toBeNull();
     });
 });

@@ -23,6 +23,7 @@ class HealthCheckFactory extends Factory
             'environment' => 'production',
             'slug' => 'database:pgsql',
             'degrade_after' => 2,
+            'down_after' => 5,
             'recover_after' => 5,
         ];
     }

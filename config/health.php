@@ -18,6 +18,9 @@ return [
 
     'allow_private' => (bool) env('LUMBERJACK_HEALTH_ALLOW_PRIVATE', false),
 
+    // At most one "down" or "degraded" alert per check in this many minutes, so a flapping check does not spam.
+    'alert_throttle_minutes' => (int) env('LUMBERJACK_HEALTH_ALERT_THROTTLE', 30),
+
     // The low-priority queue the checks run on; the background workers take it after alerts.
     'queue' => 'health',
 

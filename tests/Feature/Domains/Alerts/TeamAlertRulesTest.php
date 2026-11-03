@@ -216,7 +216,7 @@ describe('project add-ons on a team rule', function () {
     it('sends health alerts to the add-on', function () {
         ($this->teamRule)(AlertRuleType::HealthDown)->channels()->detach();
         ($this->addTo)(AlertRuleType::HealthDown);
-        $check = HealthCheck::factory()->for($this->shop)->create(['degrade_after' => 1]);
+        $check = HealthCheck::factory()->for($this->shop)->create(['degrade_after' => 1, 'down_after' => 1]);
 
         $this->travel(1)->minutes();
         app(RecordHealthResultAction::class)->execute($check, new HealthResultData(HealthResultStatus::Failed, 'msg', host: 'web-1', at: now()->toImmutable()));

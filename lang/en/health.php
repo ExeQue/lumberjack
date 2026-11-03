@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'saved' => ':check is saved.',
     'deleted' => ':check is deleted.',
+    'down_after_too_low' => 'Down after must be at least degraded after (:degrade); set them the same to go straight to down.',
     'results' => [
         'bad_url' => 'The URL is not an http or https URL.',
         'too_many_redirects' => 'More than :max redirects.',

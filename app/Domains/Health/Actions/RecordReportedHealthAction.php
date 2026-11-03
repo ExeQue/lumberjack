@@ -47,6 +47,7 @@ class RecordReportedHealthAction
         if (! $check->thresholds_overridden) {
             $check->degrade_after = self::threshold($event['degrade_after'] ?? null, HealthCheck::DEFAULT_DEGRADE_AFTER);
             $check->recover_after = self::threshold($event['recover_after'] ?? null, HealthCheck::DEFAULT_RECOVER_AFTER);
+            $check->down_after = self::threshold($event['down_after'] ?? null, HealthCheck::DEFAULT_DOWN_AFTER);
         }
 
         $check->archived_at = null;

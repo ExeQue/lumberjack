@@ -244,7 +244,7 @@ export function HealthCheckDialog({
                                     </fieldset>
                                 )}
 
-                                <div className="grid gap-3 sm:grid-cols-3">
+                                <div className="grid gap-3 sm:grid-cols-2">
                                     {!reported && (
                                         <Field
                                             label={t('health.form.interval')}
@@ -296,6 +296,30 @@ export function HealthCheckDialog({
                                                           check?.degrade_after,
                                                       )
                                                     : '2'
+                                            }
+                                        />
+                                    </Field>
+                                    <Field
+                                        label={t('health.form.down_after')}
+                                        htmlFor="health-down"
+                                        hint={t('health.form.down_unit')}
+                                        error={errors.down_after}
+                                    >
+                                        <Input
+                                            id="health-down"
+                                            name="down_after"
+                                            type="number"
+                                            min={1}
+                                            max={100}
+                                            required={!reported}
+                                            className="font-mono"
+                                            defaultValue={threshold(
+                                                check?.down_after ?? 5,
+                                            )}
+                                            placeholder={
+                                                reported
+                                                    ? String(check?.down_after)
+                                                    : '5'
                                             }
                                         />
                                     </Field>

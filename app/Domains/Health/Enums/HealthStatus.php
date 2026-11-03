@@ -6,10 +6,13 @@ namespace App\Domains\Health\Enums;
 
 /**
  * Where a check stands after its thresholds: a single bad result does not move it.
+ * Recovering is a degraded or down check with good results in a row, not yet enough
+ * of them to be ok again.
  */
 enum HealthStatus: string
 {
     case Ok = 'ok';
+    case Recovering = 'recovering';
     case Degraded = 'degraded';
     case Down = 'down';
 
@@ -17,8 +20,9 @@ enum HealthStatus: string
     {
         return match ($this) {
             self::Ok => 0,
-            self::Degraded => 1,
-            self::Down => 2,
+            self::Recovering => 1,
+            self::Degraded => 2,
+            self::Down => 3,
         };
     }
 

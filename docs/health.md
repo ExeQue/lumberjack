@@ -84,43 +84,78 @@ LUMBERJACK_HEALTH_ALLOW_PRIVATE=true
 
 ## Status
 
-A single bad result does not change a check's status:
+A single bad result does not change a check's status. Three thresholds move it, each
+counted per host:
 
-- After **degrade after** (2) bad results in a row it becomes **down** when the latest
-  failed, or **degraded** when it only warned.
-- After **recover after** (5) good results in a row it is **ok** again.
+- After **degrade after** (2) bad results in a row (warnings or failures) it is
+  **degraded**.
+- After **down after** (5) failed results in a row it is **down**. A warning in
+  between starts that count again, so a check that only warns never goes down.
+- On a good result after that it is **recovering**: still part of the outage, but
+  getting better. After **recover after** (5) good results in a row it is **ok**
+  again. A bad result while recovering puts it back where it was, degraded or down.
+
+Down after is never below degrade after: a lower value counts as degrade after. Set
+both the same to go straight from ok to down on failures, as Lumberjack did before
+down after existed.
+
+A check that was ok, fails every minute and then passes again, with the defaults:
+
+| Minute | Result | Status     |
+| ------ | ------ | ---------- |
+| 1      | failed | ok         |
+| 2      | failed | degraded   |
+| 3 to 4 | failed | degraded   |
+| 5      | failed | down       |
+| 6      | ok     | recovering |
+| 7 to 9 | ok     | recovering |
+| 10     | ok     | ok         |
+
+It sends a degraded alert at minute 2, a down alert at minute 5 and a recovered one
+at minute 10; recovering sends nothing.
 
 Checks the app reports send their own thresholds; the details let you set others for
-a slug (leave both empty to go back to the app's). The details also hold a display
+a slug (leave all three empty to go back to the app's). The details also hold a display
 name and description, and **mute**, which keeps showing the check but sends no
 alerts.
 
-Each time a check leaves ok an **outage** starts, with the first message; it ends when
-the check is ok again. The details list the outages with their duration and the worst
+Each time a check becomes degraded or down an **outage** starts, with the first
+message; it ends when the check is ok again, so it stays open while recovering. The details list the outages with their duration and the worst
 status they reached, next to the recent results and a chart of how long the check
 took.
 
 **Uptime** is the share of the period (top of the page) the check was not down, counted
-from when the check was added. Degraded time counts as up, as on a status page. The
+from when the check was added. Degraded time counts as up, as on a status page;
+recovering counts as the outage it is part of. The
 strip on each row has one segment per part of the period, colored by the worst the
 check was in it.
 
 The project overview shows how many checks are ok, and below its numbers every check
-as a chip, worst first: down in red, degraded in amber, stale and pending in gray.
+as a chip, worst first: down in red, degraded in amber, recovering in blue, stale and
+pending in gray.
 Hover a chip for its last message, click it for its details on the Health page. The
-sidebar counts the checks that are degraded or down.
+sidebar counts the checks that are degraded or down; recovering ones are left out.
 
 ## Alerts
 
 Three alert rules, all on by default, each with its own channels and environments:
-**Health degraded** when a check keeps warning, **Health down** when it keeps failing
-(also when a degraded check goes down), and **Health recovered** when it is ok again.
+**Health degraded** when a check keeps warning or starts failing, **Health down** when
+it keeps failing (also when a degraded check goes down), and **Health recovered** when
+it is ok again. Recovering sends nothing, and going back from recovering to degraded or
+down is not a new alert.
 So a check going down can page someone while a degraded one only posts to a channel,
 or recoveries can be left out. A check that is degraded or down is still followed while
 its rule is off: turning **Health degraded** off does not stop the later down or
 recovered message.
 A check that goes bad again within 30 minutes of its last alert stays quiet, so a
-flapping check does not flood the channel. Muted and archived checks send nothing.
+flapping check does not flood the channel. Change the window in the server's `.env`
+(`0` turns it off):
+
+```dotenv
+LUMBERJACK_HEALTH_ALERT_THROTTLE=30
+```
+
+Muted and archived checks send nothing.
 See [Alerts](./alerts#webhooks) for the webhook body.
 
 ## Retention

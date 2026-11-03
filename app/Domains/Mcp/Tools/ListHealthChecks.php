@@ -20,7 +20,7 @@ class ListHealthChecks extends Tool
 
     protected string $name = 'list_health_checks';
 
-    protected string $description = 'The project\'s health checks: reported by the app (by slug, per host) and run by Lumberjack (http, ssl, tcp, dns, heartbeat). Each has its state (ok, degraded, down, stale, pending), latest message, metrics, duration in microseconds and uptime (0 to 1) over the period. Archived checks are left out.';
+    protected string $description = 'The project\'s health checks: reported by the app (by slug, per host) and run by Lumberjack (http, ssl, tcp, dns, heartbeat). Each has its state (ok, recovering, degraded, down, stale, pending), latest message, metrics, duration in microseconds and uptime (0 to 1) over the period. Archived checks are left out.';
 
     public function __construct(private readonly HealthChecksQuery $health)
     {

@@ -11,7 +11,7 @@ use App\Domains\Projects\Models\Project;
 
 /**
  * Adds or edits a check Lumberjack runs, or edits how a reported one is shown and
- * alerted on. A reported check with both thresholds left empty goes back to the ones
+ * alerted on. A reported check with all thresholds left empty goes back to the ones
  * the app sends.
  */
 class SaveHealthCheckAction
@@ -36,11 +36,13 @@ class SaveHealthCheckAction
 
         $degrade = $attributes['degrade_after'] ?? null;
         $recover = $attributes['recover_after'] ?? null;
+        $down = $attributes['down_after'] ?? null;
 
         if ($check->isReported()) {
-            $check->thresholds_overridden = $degrade !== null || $recover !== null;
+            $check->thresholds_overridden = $degrade !== null || $recover !== null || $down !== null;
             $check->degrade_after = (int) ($degrade ?? $check->degrade_after);
             $check->recover_after = (int) ($recover ?? $check->recover_after);
+            $check->down_after = $down !== null ? (int) $down : $check->down_after;
             $check->save();
 
             return $check;
@@ -51,6 +53,7 @@ class SaveHealthCheckAction
             'interval_minutes' => (int) $attributes['interval_minutes'],
             'degrade_after' => (int) $degrade,
             'recover_after' => (int) $recover,
+            'down_after' => (int) $down,
             'config' => $config,
             // Runs on the next minute, so a new or changed check shows a result at once.
             'next_run_at' => null,

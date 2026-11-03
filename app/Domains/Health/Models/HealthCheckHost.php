@@ -21,8 +21,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $health_check_id
  * @property string $host
  * @property HealthStatus|null $status
+ * @property HealthStatus|null $recovering_from the bad status a recovering host goes back to on a bad result
  * @property int $ok_streak
- * @property int $fail_streak
+ * @property int $fail_streak warnings and failures in a row
+ * @property int $failed_streak failures in a row
  * @property HealthResultStatus|null $last_status
  * @property string|null $last_message
  * @property int|null $last_duration_us
@@ -31,7 +33,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $interval_s
  */
 #[Fillable([
-    'health_check_id', 'host', 'status', 'ok_streak', 'fail_streak', 'last_status', 'last_message',
+    'health_check_id', 'host', 'status', 'recovering_from', 'ok_streak', 'fail_streak', 'failed_streak', 'last_status', 'last_message',
     'last_duration_us', 'last_metrics', 'last_result_at', 'interval_s',
 ])]
 class HealthCheckHost extends Model
@@ -48,6 +50,7 @@ class HealthCheckHost extends Model
     {
         return [
             'status' => HealthStatus::class,
+            'recovering_from' => HealthStatus::class,
             'last_status' => HealthResultStatus::class,
             'last_metrics' => 'array',
             'last_result_at' => 'datetime',

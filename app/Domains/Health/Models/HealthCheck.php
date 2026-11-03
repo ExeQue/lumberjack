@@ -39,6 +39,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property array<string, mixed>|null $config
  * @property int|null $interval_minutes
  * @property int $degrade_after
+ * @property int|null $down_after null for the default
  * @property int $recover_after
  * @property bool $thresholds_overridden
  * @property HealthStatus|null $status
@@ -56,7 +57,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Fillable([
     'project_id', 'source', 'type', 'environment', 'slug', 'name', 'description', 'config', 'interval_minutes',
-    'degrade_after', 'recover_after', 'thresholds_overridden', 'status', 'status_changed_at', 'last_result_at',
+    'degrade_after', 'down_after', 'recover_after', 'thresholds_overridden', 'status', 'status_changed_at', 'last_result_at',
     'next_run_at', 'ping_token', 'last_ping_at', 'muted', 'archived_at', 'alerted_status', 'alerted_at',
 ])]
 #[Hidden(['ping_token'])]
@@ -72,11 +73,10 @@ class HealthCheck extends Model
 
     public const int DEFAULT_RECOVER_AFTER = 5;
 
+    public const int DEFAULT_DOWN_AFTER = 5;
+
     /** @var list<int> */
     public const array INTERVALS = [1, 5, 15, 60];
-
-    /** At most one "down" or "degraded" message per check in this window, so a flapping check does not spam. */
-    public const int ALERT_THROTTLE_MINUTES = 30;
 
     /** @return list<string> */
     public function uniqueIds(): array
@@ -135,6 +135,15 @@ class HealthCheck extends Model
     public function isReported(): bool
     {
         return $this->source === HealthCheckSource::Reported;
+    }
+
+    /**
+     * Failures in a row before down; never fewer than degrade_after, so setting both
+     * the same goes straight to down.
+     */
+    public function downAfter(): int
+    {
+        return max($this->down_after ?? self::DEFAULT_DOWN_AFTER, $this->degrade_after);
     }
 
     public function displayName(): string
