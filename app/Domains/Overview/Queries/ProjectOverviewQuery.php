@@ -10,6 +10,7 @@ use App\Domains\Issues\Presenters\IssuePresenter;
 use App\Domains\Jobs\Enums\JobRunStatus;
 use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Performance\Queries\RouteStatisticsQuery;
+use App\Domains\Performance\Support\RequestTraffic;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Support\Percentiles;
@@ -40,7 +41,9 @@ class ProjectOverviewQuery
     private function compute(Project $project, Period $period, ?string $environment): array
     {
         $since = $period->since();
-        $requests = DB::table('request_runs')->where('project_id', $project->id)->when($environment !== null)->where('environment', $environment);
+        $traffic = RequestTraffic::query($project->id, $since, null, $environment);
+        $totals = (clone $traffic)->selectRaw('COALESCE(SUM(requests), 0) AS requests, COALESCE(SUM(requests) FILTER (WHERE status_code >= 500), 0) AS server_errors')->first();
+        $requests = (int) round((float) ($totals->requests ?? 0));
 
         $p50 = Percentiles::select('duration_us', '0.50', 'p50');
         $p95 = Percentiles::select('duration_us', '0.95', 'p95');
@@ -48,9 +51,10 @@ class ProjectOverviewQuery
         $envSql = $environment !== null ? ' AND environment = ?' : '';
         $bindings = array_filter([$project->id, $since->format('Y-m-d H:i:s'), $environment], fn ($v): bool => $v !== null);
 
+        // Percentiles from the runs the SDK picked: a run kept only for being slow would skew them.
         $latency = DB::selectOne("
-            SELECT COUNT(*) AS requests, COUNT(*) FILTER (WHERE status_code >= 500) AS server_errors, {$p50}, {$p95}, {$p99}
-            FROM request_runs WHERE project_id = ? AND occurred_at >= ?{$envSql}", $bindings);
+            SELECT {$p50}, {$p95}, {$p99}
+            FROM request_runs WHERE project_id = ? AND occurred_at >= ?{$envSql} AND sampled", $bindings);
 
         $errors = DB::table('occurrences')->where('project_id', $project->id)->where('occurred_at', '>=', $since);
 
@@ -69,9 +73,9 @@ class ProjectOverviewQuery
 
         return [
             'previous' => $this->previous($project, $period, $environment),
-            'requests' => (int) ($latency->requests ?? 0),
+            'requests' => $requests,
             'errors' => (clone $errors)->count(),
-            'error_rate' => ($latency->requests ?? 0) > 0 ? round((int) $latency->server_errors / (int) $latency->requests, 4) : 0.0,
+            'error_rate' => (float) ($totals->requests ?? 0) > 0 ? round((float) $totals->server_errors / (float) $totals->requests, 4) : 0.0,
             'p50' => (int) ($latency->p50 ?? 0),
             'p95' => (int) ($latency->p95 ?? 0),
             'p99' => (int) ($latency->p99 ?? 0),
@@ -80,7 +84,8 @@ class ProjectOverviewQuery
             'stuck_jobs' => $stuckJobs,
             'health' => $this->health->summary($project, $environment),
             'open_issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->count(),
-            'request_series' => TimeSeries::count($requests, $period),
+            'request_series' => array_map(fn (array $point): array => [...$point, 'v' => round((float) $point['v'])], TimeSeries::count($traffic, $period, aggregate: 'SUM(requests)')),
+            'sample_rate' => $this->routes->sampleRate($project->id, $period, $environment),
             'latency_series' => $this->latencySeries($project, $period, $environment),
             'error_series' => TimeSeries::count($errors, $period),
             'latest_issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->with('assignee')
@@ -108,8 +113,9 @@ class ProjectOverviewQuery
         $bindings = array_filter([$project->id, ...$range, $environment], fn ($v): bool => $v !== null);
 
         $latency = DB::selectOne("
-            SELECT COUNT(*) AS requests, {$p95}
-            FROM request_runs WHERE project_id = ? AND occurred_at >= ? AND occurred_at < ?{$envSql}", $bindings);
+            SELECT {$p95}
+            FROM request_runs WHERE project_id = ? AND occurred_at >= ? AND occurred_at < ?{$envSql} AND sampled", $bindings);
+        $requests = RequestTraffic::query($project->id, $from, $until, $environment)->sum('requests');
 
         $errors = DB::table('occurrences')->where('project_id', $project->id)->whereBetween('occurred_at', $range);
         $jobs = JobRun::query()->where('project_id', $project->id)->whereBetween('created_at', $range)->whereStatus(JobRunStatus::Failed);
@@ -120,7 +126,7 @@ class ProjectOverviewQuery
         }
 
         return [
-            'requests' => (int) ($latency->requests ?? 0),
+            'requests' => (int) round((float) $requests),
             'errors' => $errors->count(),
             'p95' => (int) ($latency->p95 ?? 0),
             'failed_jobs' => $jobs->count(),
@@ -143,7 +149,7 @@ class ProjectOverviewQuery
 
         $rows = DB::select("
             SELECT {$bucket} AS bucket, ".Percentiles::select('duration_us', '0.50', 'p50').', '.Percentiles::select('duration_us', '0.95', 'p95')."
-            FROM request_runs WHERE project_id = ? AND occurred_at >= ?{$envSql}
+            FROM request_runs WHERE project_id = ? AND occurred_at >= ?{$envSql} AND sampled
             GROUP BY 1", $bindings);
 
         $byBucket = [];

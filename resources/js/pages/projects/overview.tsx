@@ -12,6 +12,7 @@ import {
     StatCard,
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
+import { SampleNote } from '@/components/lj/sample-note';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import {
     formatCompact,
@@ -62,6 +63,8 @@ type Overview = {
     p50: number;
     p95: number;
     p99: number;
+    /** The lowest sample rate of the period's requests; null when none was sampled. */
+    sample_rate: number | null;
     job_runs: number;
     failed_jobs: number;
     stuck_jobs: number;
@@ -517,7 +520,14 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
         <>
             {header}
             <PageBody wide>
-                <PageTitle title={t('overview.title')} />
+                <PageTitle
+                    title={t('overview.title')}
+                    description={
+                        overview.sample_rate !== null && (
+                            <SampleNote rate={overview.sample_rate} />
+                        )
+                    }
+                />
 
                 <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
                     <StatCard
@@ -747,7 +757,7 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                                                 {route.route}
                                             </span>
                                             <span
-                                                className={`shrink-0 font-mono text-xs ${route.p95 >= 1_000_000 ? 'text-err' : route.p95 >= 500_000 ? 'text-warn' : ''}`}
+                                                className={`shrink-0 font-mono text-xs ${(route.p95 ?? 0) >= 1_000_000 ? 'text-err' : (route.p95 ?? 0) >= 500_000 ? 'text-warn' : ''}`}
                                             >
                                                 <span className="sr-only">
                                                     p95{' '}

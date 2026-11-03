@@ -15,6 +15,7 @@ import {
     tdClass,
     thClass,
 } from '@/components/lj/ui';
+import { SampleNote } from '@/components/lj/sample-note';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import {
     formatCompact,
@@ -49,6 +50,8 @@ type Props = {
         total_us: number;
         calls: number;
         distinct: number;
+        /** The lowest sample rate of the period's queries; null when none was sampled. */
+        sample_rate: number | null;
     };
 };
 
@@ -65,7 +68,13 @@ export default function QueriesIndex({
     useProjectLive(project.uuid, ['performance.changed'], ['stats']);
 
     const loading = deferred === undefined;
-    const stats = deferred ?? { rows: [], total_us: 0, calls: 0, distinct: 0 };
+    const stats = deferred ?? {
+        rows: [],
+        total_us: 0,
+        calls: 0,
+        distinct: 0,
+        sample_rate: null,
+    };
 
     const apply = (changes: Partial<Filters>) => {
         const query = Object.fromEntries(
@@ -115,7 +124,14 @@ export default function QueriesIndex({
                 />
             </TopBar>
             <PageBody wide>
-                <PageTitle title={t('queries.title')} />
+                <PageTitle
+                    title={t('queries.title')}
+                    description={
+                        stats.sample_rate !== null && (
+                            <SampleNote rate={stats.sample_rate} />
+                        )
+                    }
+                />
 
                 <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
                     <StatCard

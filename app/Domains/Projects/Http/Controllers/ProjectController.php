@@ -71,7 +71,7 @@ class ProjectController
 
         return Cache::remember('projects:cards:'.implode(',', $ids), self::CARDS_SECONDS, function () use ($ids): array {
             $since = Period::Day->since();
-            $p95 = DB::table('request_runs')->whereIn('project_id', $ids)->where('occurred_at', '>=', $since)
+            $p95 = DB::table('request_runs')->whereIn('project_id', $ids)->where('occurred_at', '>=', $since)->where('sampled', true)
                 ->groupBy('project_id')->selectRaw('project_id, '.Percentiles::select('duration_us', '0.95', 'p95'))->pluck('p95', 'project_id');
             $jobs = DB::table('job_runs')->whereIn('project_id', $ids)->where('created_at', '>=', $since)
                 ->groupBy('project_id')->selectRaw("project_id, COUNT(*) AS runs, COUNT(*) FILTER (WHERE status = 'failed') AS failed")->get()->keyBy('project_id');

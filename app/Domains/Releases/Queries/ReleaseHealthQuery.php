@@ -6,7 +6,7 @@ namespace App\Domains\Releases\Queries;
 
 use App\Domains\Issues\Enums\IssueEventType;
 use App\Domains\Shared\Enums\Period;
-use App\Domains\Shared\Support\Percentiles;
+use App\Domains\Shared\Support\Sampling;
 use App\Domains\Shared\Support\StatisticsCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
@@ -40,14 +40,17 @@ class ReleaseHealthQuery
             $bindings[] = $environment;
         }
 
-        $p95 = Percentiles::select('duration_us', '0.95', 'p95');
+        // The request counts carry no release, so a release's traffic is its runs weighed
+        // by their sample rate; its p95 only from the runs the SDK picked.
+        $p95 = 'percentile_disc(0.95) WITHIN GROUP (ORDER BY duration_us) FILTER (WHERE sampled) AS p95';
+        $weight = Sampling::weight();
         $limit = (int) $limit;
 
         // First and last seen are within the period: older traffic is not looked at.
         $rows = DB::select("
             WITH requests AS (
-                SELECT release, COUNT(*) AS requests, {$p95},
-                    COUNT(*) FILTER (WHERE status_code >= 500)::float / COUNT(*) AS error_rate,
+                SELECT release, SUM({$weight}) AS requests, {$p95},
+                    COALESCE(SUM({$weight}) FILTER (WHERE status_code >= 500), 0)::float / SUM({$weight}) AS error_rate,
                     MIN(occurred_at) AS first_seen, MAX(occurred_at) AS last_seen
                 FROM request_runs WHERE {$where} GROUP BY release
             ), errors AS (
@@ -81,7 +84,7 @@ class ReleaseHealthQuery
                 'release' => (string) $row['release'],
                 'first_seen_at' => CarbonImmutable::parse($row['first_seen'])->toIso8601String(),
                 'last_seen_at' => CarbonImmutable::parse($row['last_seen'])->toIso8601String(),
-                'requests' => (int) $row['requests'],
+                'requests' => (int) round((float) $row['requests']),
                 'error_rate' => $row['error_rate'] !== null ? (float) $row['error_rate'] : null,
                 'p95' => $row['p95'] !== null ? (int) $row['p95'] : null,
                 'occurrences' => (int) $row['occurrences'],
