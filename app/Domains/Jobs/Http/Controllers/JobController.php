@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Jobs\Http\Controllers;
 
+use App\Domains\Alerts\Enums\AlertRuleType;
+use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\Alerts\Models\QueueAlertThreshold;
 use App\Domains\Jobs\Enums\JobRunStatus;
 use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Jobs\Queries\JobStatisticsQuery;
@@ -50,6 +53,12 @@ class JobController
                 ->distinct()->limit(5)->pluck('name')->map(fn (string $name): string => class_basename($name))->values(),
             'jobs' => fn (): array => $query->get($project->id, $period, $environment, $sort, $queue),
             'queue_stats' => fn (): array => $queueStats->get($project->id, $period, $environment),
+            // Each queue's own backlog thresholds, and the rule's they fall back to.
+            'queue_alerts' => [
+                'rule' => AlertRule::query()->whereEffectiveFor($project)->whereType(AlertRuleType::QueueBacklog)->first()?->queueBacklogSettings()->toArray(),
+                'own' => QueueAlertThreshold::query()->where('project_id', $project->id)->orderBy('connection')->orderBy('queue')->get()->map(fn (QueueAlertThreshold $t): array => $t->toSummary())->all(),
+                'can_update' => $request->user()->can('update', $project),
+            ],
             'runs' => $runs->map(fn (JobRun $r): array => [
                 'id' => $r->id,
                 'uuid' => $r->job_uuid,

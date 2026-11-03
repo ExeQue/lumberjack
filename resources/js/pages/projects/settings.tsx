@@ -1,5 +1,5 @@
 import { Relative } from '@/components/lj/relative';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ExternalLink, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -56,6 +56,7 @@ import {
 } from '@/routes/labels';
 import { update as settingsUpdate } from '@/routes/projects/settings';
 import { show as teamShow } from '@/routes/team';
+import { index as jobsIndex } from '@/routes/jobs';
 import {
     destroy as repositoryDestroy,
     test as repositoryTest,
@@ -143,6 +144,14 @@ type Props = {
         available: AlertChannel[];
         types: string[];
         rules: ProjectAlertRule[];
+        queue_thresholds: {
+            connection: string;
+            queue: string;
+            size: number | null;
+            oldest_minutes: number | null;
+            sustained_minutes: number | null;
+            muted: boolean;
+        }[];
     };
 };
 
@@ -1891,6 +1900,68 @@ function AlertsSection({ project, alerts }: Props) {
                 channels={alerts.available}
                 canAdminister={project.can_administer}
             />
+            {alerts.queue_thresholds.length > 0 && (
+                <Card aria-labelledby="h-queue-thresholds">
+                    <CardHeader
+                        id="h-queue-thresholds"
+                        title={t('settings.alerts.queues.title')}
+                        description={t('settings.alerts.queues.description')}
+                    />
+                    <ul className="flex flex-col gap-1 px-4 pb-4 text-sm">
+                        {alerts.queue_thresholds.map((q) => (
+                            <li
+                                key={`${q.connection}:${q.queue}`}
+                                className="flex flex-wrap gap-2"
+                            >
+                                <span className="font-mono">
+                                    {q.connection}:{q.queue}
+                                </span>
+                                <span className="text-ink-3">
+                                    {q.muted
+                                        ? t('settings.alerts.queues.muted')
+                                        : [
+                                              q.size !== null &&
+                                                  t(
+                                                      'settings.alerts.queues.size',
+                                                      {
+                                                          size: String(q.size),
+                                                      },
+                                                  ),
+                                              q.oldest_minutes !== null &&
+                                                  t(
+                                                      'settings.alerts.queues.oldest',
+                                                      {
+                                                          minutes: String(
+                                                              q.oldest_minutes,
+                                                          ),
+                                                      },
+                                                  ),
+                                              q.sustained_minutes !== null &&
+                                                  t(
+                                                      'settings.alerts.queues.sustained',
+                                                      {
+                                                          minutes: String(
+                                                              q.sustained_minutes,
+                                                          ),
+                                                      },
+                                                  ),
+                                          ]
+                                              .filter(Boolean)
+                                              .join(', ')}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                    <div className="px-4 pb-4 text-sm">
+                        <Link
+                            href={jobsIndex(project.uuid).url}
+                            className="text-accent underline"
+                        >
+                            {t('settings.alerts.queues.change')}
+                        </Link>
+                    </div>
+                </Card>
+            )}
         </section>
     );
 }

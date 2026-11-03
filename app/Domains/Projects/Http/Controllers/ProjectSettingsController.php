@@ -6,6 +6,7 @@ namespace App\Domains\Projects\Http\Controllers;
 
 use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Models\NotificationChannel;
+use App\Domains\Alerts\Models\QueueAlertThreshold;
 use App\Domains\Alerts\Presenters\AlertRulePresenter;
 use App\Domains\Alerts\Presenters\NotificationChannelPresenter;
 use App\Domains\Issues\Models\Label;
@@ -87,6 +88,7 @@ class ProjectSettingsController
                 'available' => NotificationChannel::query()->whereAvailableTo($project)->orderBy('project_id')->orderBy('name')->get()->map(fn (NotificationChannel $c): array => app(NotificationChannelPresenter::class)->present($c))->all(),
                 'types' => array_map(fn (ChannelType $t): string => $t->value, ChannelType::cases()),
                 'rules' => app(AlertRulePresenter::class)->forProject($project),
+                'queue_thresholds' => QueueAlertThreshold::query()->where('project_id', $project->id)->orderBy('connection')->orderBy('queue')->get()->map(fn (QueueAlertThreshold $t): array => $t->toSummary())->all(),
             ],
             // One entry per agent provider; Claude is the first.
             'triage' => [app(ClaudeTriageWorkflow::class)->describe($project, url('/'))],

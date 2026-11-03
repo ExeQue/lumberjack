@@ -25,6 +25,9 @@ The Jobs page shows a **Queues** card once agents report queue sizes (the packag
   can tell (Redis, database).
 - **p95 wait:** time from queued to started of the jobs that ran in the period.
 - **Size:** the highest size per bucket over the period; hover for each bucket.
+- **Alert:** the queue's own [backlog alert](./alerts#queue-backlog) thresholds, for
+  whoever may change the project. **custom** marks a queue that has some, **muted** one
+  that never alerts.
 
 Queue size keeps growing when every worker is dead, while no job starts and so no wait
 is measured. A [queue backlog alert](./alerts) fires on it.
