@@ -185,7 +185,7 @@ A user whose password an administrator requires to be changed can only reach the
 security settings until they choose a new one.
 
 - **Horizon:** the queue dashboard (`/horizon`), for system administrators only, in
-  every environment including local; anyone else gets a 403.
+  every environment including local; to anyone else it answers 404.
 
 ## Security
 
