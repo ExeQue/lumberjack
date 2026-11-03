@@ -22,8 +22,7 @@ class AuthenticateMcpToken
         $plain = $request->bearerToken();
         $token = $plain !== null && $plain !== '' ? McpToken::query()->where('token_hash', McpToken::hash($plain))->first() : null;
 
-        // A suspended user's tokens stop working with them.
-        if ($token === null || $token->isExpired() || ($token->user?->isSuspended() ?? false)) {
+        if ($token === null || $token->isExpired() || ! $token->isUsable()) {
             return response()->json(['message' => 'Unknown or expired MCP token.'], 401);
         }
 

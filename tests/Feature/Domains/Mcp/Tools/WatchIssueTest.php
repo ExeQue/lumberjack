@@ -36,8 +36,9 @@ describe('watching over MCP', function () {
         $this->token->update(['scope' => 'read']);
         expect($this->callTool('lj_mcp_secret', 'watch_issue', ['issue' => $this->issue->reference()])->json('result.isError'))->toBeTrue();
 
+        // A token whose creator is gone does not authenticate at all.
         $this->token->update(['scope' => 'write', 'user_id' => null]);
-        expect($this->callTool('lj_mcp_secret', 'watch_issue', ['issue' => $this->issue->reference()])->json('result.isError'))->toBeTrue()
-            ->and($this->issue->watchers()->count())->toBe(0);
+        $this->callTool('lj_mcp_secret', 'watch_issue', ['issue' => $this->issue->reference()])->assertUnauthorized();
+        expect($this->issue->watchers()->count())->toBe(0);
     });
 });
