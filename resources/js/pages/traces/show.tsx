@@ -47,6 +47,8 @@ type Props = {
         requests: {
             method: string;
             route: string | null;
+            route_name: string | null;
+            domain: string | null;
             url: string;
             status: number;
             duration_us: number;
@@ -165,6 +167,16 @@ export default function TraceShow({ project, trace }: Props) {
                             <span className="flex flex-wrap items-baseline gap-2">
                                 <Mono>{request.method}</Mono>
                                 <span>{request.route ?? request.url}</span>
+                                {request.route_name && (
+                                    <span className="font-mono text-sm text-ink-3">
+                                        {request.route_name}
+                                    </span>
+                                )}
+                                {request.domain && (
+                                    <span className="font-mono text-sm text-ink-3">
+                                        {request.domain}
+                                    </span>
+                                )}
                             </span>
                         ) : job ? (
                             <Mono>{job.name}</Mono>

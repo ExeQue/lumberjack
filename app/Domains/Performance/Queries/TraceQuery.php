@@ -71,7 +71,7 @@ class TraceQuery
 
         return [
             'requests' => array_values($requests->map(fn (RequestRun $r): array => [
-                'method' => $r->method, 'route' => $r->route, 'url' => $r->url, 'status' => $r->status_code,
+                'method' => $r->method, 'route' => $r->route, 'route_name' => $r->route_name, 'domain' => $r->domain, 'url' => $r->url, 'status' => $r->status_code,
                 'duration_us' => $r->duration_us, 'at' => $r->occurred_at->toIso8601String(), 'host' => $r->host,
                 'offset_us' => $offset($r->occurred_at),
             ])->all()),

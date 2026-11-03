@@ -81,6 +81,10 @@ export type IssueNote = {
 export type RouteStat = {
     method: string;
     route: string;
+    /** The Laravel route name, when the route has one. */
+    route_name: string | null;
+    /** Set only while the table is split by domain; '' for requests without one. */
+    domain: string | null;
     requests: number;
     /** Null where no request of the route was sampled. */
     p50: number | null;

@@ -44,8 +44,8 @@ class ProjectSearchQuery
         $routes = DB::table('request_runs')
             ->where('project_id', $project->id)
             ->where('occurred_at', '>=', $since)
-            ->whereRaw('COALESCE(route, url) ILIKE ?', [$like])
-            ->selectRaw('method, COALESCE(route, url) AS route, COUNT(*) AS c')
+            ->where(fn ($q) => $q->whereRaw('COALESCE(route, url) ILIKE ?', [$like])->orWhere('route_name', 'ILIKE', $like))
+            ->selectRaw('method, COALESCE(route, url) AS route, MAX(route_name) AS route_name, COUNT(*) AS c')
             ->groupByRaw('method, COALESCE(route, url)')
             ->orderByDesc('c')
             ->limit(self::LIMIT)
@@ -55,7 +55,7 @@ class ProjectSearchQuery
             $results[] = [
                 'group' => 'routes',
                 'label' => $row->route,
-                'detail' => $row->method,
+                'detail' => $row->route_name !== null ? "{$row->method} {$row->route_name}" : $row->method,
                 'href' => route('routes.index', [$project, 'route' => $row->route, 'method' => $row->method]),
             ];
         }
