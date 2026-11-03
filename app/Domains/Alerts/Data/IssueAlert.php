@@ -11,7 +11,11 @@ use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\IssueNote;
 use App\Domains\Issues\Support\NoteMentions;
+use Carbon\CarbonImmutable;
 
+/**
+ * For a regression, $resolvedBy and $resolvedAt say who resolved it last and when.
+ */
 final readonly class IssueAlert implements Alert
 {
     public function __construct(
@@ -24,6 +28,9 @@ final readonly class IssueAlert implements Alert
         public ?int $burst = null,
         public ?IssueStatus $statusChange = null,
         public ?string $actor = null,
+        public ?string $triageAuthor = null,
+        public ?string $resolvedBy = null,
+        public ?CarbonImmutable $resolvedAt = null,
     ) {
     }
 
