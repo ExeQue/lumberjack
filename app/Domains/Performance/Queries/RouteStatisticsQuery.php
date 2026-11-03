@@ -144,9 +144,12 @@ class RouteStatisticsQuery
      */
     public function sampleRate(int $projectId, Period $period, ?string $environment = null, ?string $domain = null): ?float
     {
-        return StatisticsCache::remember('routes-sample-rate', $period, [$projectId, $environment, $domain], fn (): ?float => Sampling::lowestRate(
+        $rate = StatisticsCache::remember('routes-sample-rate', $period, [$projectId, $environment, $domain], fn (): ?float => Sampling::lowestRate(
             DB::table('request_runs')->where('project_id', $projectId)->where('occurred_at', '>=', $period->since())->when($environment !== null)->where('environment', $environment)
                 ->when($domain !== null)->where('domain', $domain),
         ));
+
+        // Redis keeps a number as its string, so a cached rate comes back as "0.05".
+        return $rate !== null ? (float) $rate : null;
     }
 }
