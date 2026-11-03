@@ -40,6 +40,7 @@ class TelegramDriver implements ChannelDriver
             '<b>'.self::escape($title).'</b>',
             '<code>'.self::escape($subject).'</code>',
             $body !== [] ? self::escape(implode("\n", $body)) : null,
+            $alert->facts() !== [] ? implode("\n", array_map(fn (string $label, string $value): string => '<b>'.self::escape($label).':</b> '.self::escape($value), array_keys($alert->facts()), $alert->facts())) : null,
             '<a href="'.self::escape($alert->url).'">'.self::escape((string) __('alerts.open_issue')).'</a>',
         ])), 0, 4000), $alert->urgency() === 'low');
     }

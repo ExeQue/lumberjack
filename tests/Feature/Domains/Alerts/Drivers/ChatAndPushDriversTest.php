@@ -26,7 +26,7 @@ beforeEach(function () {
 });
 
 describe('chat messages', function () {
-    it('list the same facts in Discord, Slack and Teams', function () {
+    it('list the same facts in Discord, Slack, Teams and Telegram', function () {
         $this->issue->update(['file' => 'app/Payments.php', 'line' => 12, 'last_release' => 'a1f3c9e']);
         Http::fake(['*' => Http::response(null, 204)]);
 
@@ -39,7 +39,12 @@ describe('chat messages', function () {
         $slack = collect(collect($sent[1]['blocks'])->firstWhere('fields')['fields'])->mapWithKeys(fn (array $f) => [trim(explode("\n", $f['text'])[0], '*') => explode("\n", $f['text'])[1]])->all();
         $teams = collect(collect($sent[2]['attachments'][0]['content']['body'])->firstWhere('type', 'FactSet')['facts'])->pluck('value', 'title')->all();
 
+        app(TelegramDriver::class)->send(($this->channel)(ChannelType::Telegram, ['bot_token' => '123456:'.str_repeat('a', 35), 'chat_id' => '-100123']), ($this->alert)());
+        preg_match_all('#^<b>([^<]+):</b> (.+)$#m', Http::recorded()->last()[0]['text'], $lines, PREG_SET_ORDER);
+        $telegram = collect($lines)->mapWithKeys(fn (array $m) => [$m[1] => $m[2]])->all();
+
         expect($discord)->toBe(['Location' => 'app/Payments.php:12', 'Release' => 'a1f3c9e', 'Occurrences' => (string) $this->issue->occurrences_count])
+            ->and($telegram)->toBe($discord)
             ->and($slack)->toBe($discord)
             ->and($teams)->toBe($discord);
     });

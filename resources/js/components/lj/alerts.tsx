@@ -917,6 +917,11 @@ function TelegramPreview() {
                     {subject(t)}
                 </code>
                 <span>{t('alerts.preview.message')}</span>
+                <PreviewFacts
+                    inline
+                    labelClass="font-bold"
+                    valueClass="text-[#F5F5F5]"
+                />
                 <span className="text-[#6AB2F2] underline">
                     {t('alerts.preview.link')}
                 </span>
