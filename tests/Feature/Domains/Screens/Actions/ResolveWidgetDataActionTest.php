@@ -228,6 +228,18 @@ describe('the edges of each type', function () {
             ->and($rows['web-2'])->toMatchArray(['cpu_load' => null, 'state' => 'red'])
             ->and(($this->resolve)(WidgetType::List, 'agents', ['only_problems' => true])['rows'])->toHaveCount(1);
     });
+
+    it('lists a host once when several agents ran on it, preferring the online one', function () {
+        ProjectAgent::factory()->for($this->project)->create(['host' => 'web-1', 'name' => 'old', 'last_seen_at' => now()->subDay()]);
+        $live = ProjectAgent::factory()->for($this->project)->create(['host' => 'web-1', 'name' => 'new', 'last_seen_at' => now()]);
+        HostSample::query()->create(['project_agent_id' => $live->id, 'cpu_load_1m' => 2.0, 'cpu_cores' => 4, 'memory_used_bytes' => 5, 'memory_total_bytes' => 10,
+            'disk_used_bytes' => 1, 'disk_total_bytes' => 10, 'sampled_at' => now()->subMinute()]);
+
+        $rows = ($this->resolve)(WidgetType::List, 'hosts')['rows'];
+
+        expect($rows)->toHaveCount(1)
+            ->and($rows[0])->toMatchArray(['host' => 'web-1', 'online' => true, 'cpu_load' => 0.5]);
+    });
 });
 
 describe('health', function () {

@@ -1052,10 +1052,10 @@ function rowText(
                         : undefined,
             };
         case 'hosts': {
+            // The host name gets the room; what it uses (or that it is offline) sits right.
             if (row.online === false) {
                 return {
-                    key: String(row.host),
-                    main: '',
+                    main: String(row.host),
                     tag: { text: t('screens.list.offline'), tone: 'red' },
                 };
             }
@@ -1074,14 +1074,22 @@ function rowText(
             );
 
             return {
-                key: String(row.host),
-                main: narrow
-                    ? t(`screens.list.usage.${name}`, { value: percent(top) })
-                    : t('screens.list.host_usage', {
-                          cpu: percent(row.cpu_load),
-                          memory: percent(row.memory_used),
-                          disk: percent(row.disk_used),
-                      }),
+                main: String(row.host),
+                tag: {
+                    text: narrow
+                        ? t(`screens.list.usage.${name}`, {
+                              value: percent(top),
+                          })
+                        : t('screens.list.host_usage', {
+                              cpu: percent(row.cpu_load),
+                              memory: percent(row.memory_used),
+                              disk: percent(row.disk_used),
+                          }),
+                    tone:
+                        row.state === 'red' || row.state === 'amber'
+                            ? String(row.state)
+                            : null,
+                },
             };
         }
         case 'agents':
@@ -1108,6 +1116,10 @@ function List({ widget, schema, data, now, t }: BodyProps) {
 
     if (rows.length === 0) {
         return <span className="lj-tile-small">{t('screens.list.empty')}</span>;
+    }
+
+    if (data.source === 'hosts') {
+        return <Hosts rows={rows} t={t} />;
     }
 
     return (
@@ -1179,6 +1191,87 @@ function List({ widget, schema, data, now, t }: BodyProps) {
                     </li>
                 );
             })}
+        </ul>
+    );
+}
+
+/** Hosts: each name over three small meters, CPU, memory and disk, colored by limit. */
+function Hosts({ rows, t }: { rows: Row[]; t: Translate }) {
+    const meters = [
+        ['cpu', 'cpu_load'],
+        ['memory', 'memory_used'],
+        ['disk', 'disk_used'],
+    ] as const;
+    const tone = (v: number) =>
+        v >= 0.9
+            ? 'var(--s-red)'
+            : v >= 0.8
+              ? 'var(--s-amber)'
+              : 'var(--s-blue)';
+
+    return (
+        <ul className="flex min-h-0 flex-1 flex-col gap-[0.45em] overflow-hidden">
+            {rows.map((row, i) => (
+                <li
+                    key={i}
+                    className="flex flex-col gap-[0.2em] border-t border-(--s-line) pt-[0.35em] first:border-t-0 first:pt-0"
+                >
+                    <div className="flex items-baseline justify-between gap-[0.6em]">
+                        <span
+                            className="min-w-0 truncate font-mono"
+                            style={{
+                                color:
+                                    row.state === 'red' || row.state === 'amber'
+                                        ? ROW_COLOR[row.state]
+                                        : undefined,
+                            }}
+                        >
+                            {String(row.host)}
+                        </span>
+                        {row.online === false && (
+                            <span className="flex-none text-[0.85em] font-semibold text-(--s-red)">
+                                {t('screens.list.offline')}
+                            </span>
+                        )}
+                    </div>
+                    {row.online !== false && (
+                        <div className="grid grid-cols-3 gap-[0.5em]">
+                            {meters.map(([label, key]) => {
+                                const v = row[key] as number | null | undefined;
+
+                                return (
+                                    <div
+                                        key={key}
+                                        className="flex min-w-0 flex-col gap-[0.15em]"
+                                    >
+                                        <span className="lj-tile-small flex justify-between gap-[0.3em] whitespace-nowrap">
+                                            <span className="truncate">
+                                                {t(
+                                                    `screens.list.meter.${label}`,
+                                                )}
+                                            </span>
+                                            <span className="font-mono">
+                                                {v === null || v === undefined
+                                                    ? '-'
+                                                    : formatPercent(v, 0)}
+                                            </span>
+                                        </span>
+                                        <span className="h-[0.3em] overflow-hidden rounded-full bg-(--s-line)">
+                                            <span
+                                                className="block h-full rounded-full"
+                                                style={{
+                                                    width: `${Math.round(Math.min(1, v ?? 0) * 100)}%`,
+                                                    background: tone(v ?? 0),
+                                                }}
+                                            />
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </li>
+            ))}
         </ul>
     );
 }

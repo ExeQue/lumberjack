@@ -378,6 +378,14 @@ class ResolveWidgetDataAction
             return ['project' => $slugs[$a->project_id], 'host' => $host, 'cpu_load' => $cpu, 'memory_used' => $memory, 'disk_used' => $disk, 'online' => $a->isOnline(), 'state' => $a->isOnline() ? $this->state($worst, $limits) : 'red'];
         });
 
+        // A host is one machine however many agents ran on it: keep its online agent with
+        // numbers, so an old agent of the same host does not show it as offline twice.
+        if ($source->id === 'hosts') {
+            $rows = $rows->groupBy(fn (array $r): string => $r['project'].'|'.$r['host'])
+                ->map(fn ($same): array => $same->sortByDesc(fn (array $r): int => ($r['online'] ? 2 : 0) + (($r['cpu_load'] ?? null) !== null ? 1 : 0))->first())
+                ->values();
+        }
+
         $columns = $source->id === 'agents' ? ['host', 'name', 'last_seen_at', 'online'] : ['host', 'cpu_load', 'memory_used', 'disk_used'];
 
         return [$columns, $rows->when($onlyProblems)->filter(fn (array $r): bool => in_array($r['state'], ['amber', 'red'], true))->take($limit)->values()->all()];
