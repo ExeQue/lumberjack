@@ -90,6 +90,8 @@ project uses them, so a new project alerts like the others from the start. Team 
 send to the team's shared channels only, since they serve every project. Only team
 owners and admins change them.
 
+![A project's Alerts settings: its own channels and each rule as the team's default or customized](./screenshots/settings-alerts.png)
+
 In a project's settings, under **Alerts**, each type shows either:
 
 - **Team default**: what the team's rule does (on or off, its channels and

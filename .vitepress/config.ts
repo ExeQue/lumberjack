@@ -63,6 +63,7 @@ export default defineConfig({
                 text: 'Using it',
                 items: [
                     { text: 'Projects', link: '/docs/projects' },
+                    { text: 'Teams and accounts', link: '/docs/teams' },
                     { text: 'Issues', link: '/docs/issues' },
                     { text: 'Alerts', link: '/docs/alerts' },
                     {
@@ -82,6 +83,7 @@ export default defineConfig({
                         text: 'Setup and administration',
                         link: '/docs/administration',
                     },
+                    { text: 'Ingest and API', link: '/docs/api' },
                 ],
             },
         ],

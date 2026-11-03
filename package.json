@@ -12,7 +12,8 @@
         "types:check": "tsc --noEmit",
         "docs:dev": "vitepress dev .",
         "docs:build": "vitepress build .",
-        "docs:preview": "vitepress preview ."
+        "docs:preview": "vitepress preview .",
+        "docs:screenshots": "node scripts/docs-screenshots.mjs"
     },
     "dependencies": {
         "@inertiajs/react": "^3.0.0",
@@ -59,6 +60,7 @@
         "@types/node": "^22.13.5",
         "babel-plugin-react-compiler": "^1.0.0",
         "esbuild": "^0.28.2",
+        "puppeteer": "^25.16.0",
         "typescript": "^7.0.2",
         "vite-plus": "1.4.0",
         "vitepress": "^1.6.4"

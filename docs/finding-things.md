@@ -22,15 +22,19 @@ Type at least two characters and the palette also searches the project you are i
 | Scheduled tasks | task name                                         | the Schedule page                |
 | Traces          | the exact trace id                                | the trace                        |
 
-Use the arrow keys and `Enter`, or click a result.
+Each kind shows at most 5 results. Use the arrow keys and `Enter`, or click a result.
+
+![The command palette searching the project for "demo"](./screenshots/command-palette.png)
 
 ## Search syntax
 
-The same rules apply to the palette and every search field (issues, routes, queries
-and users):
+The same rules apply to the palette and the search fields of issues, routes, queries
+and users:
 
 - A term matches anywhere in the text, regardless of case: `checkout` finds
   `/api/checkout/{order}`.
 - `*` stands for any number of characters: `/api/*/refund` finds
   `/api/orders/{order}/refund`, and `App\Jobs\*Invoice` finds `App\Jobs\SendInvoice`.
 - Every other character, `%` and `_` included, is searched for as itself.
+
+The Logs page is different: it searches whole words, see [Logs](./performance#logs).

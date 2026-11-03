@@ -3,14 +3,22 @@
 A project is one app. It belongs to a team; every member of the team can see it, and
 owners and admins can change its settings.
 
+## The projects list
+
+**All projects** shows every project of the team with its open issues, errors, p95
+and job failures of the last 24 hours, its errors per hour, and a status: **3 open** or **Calm**. **Agent offline** and **Not seen: hosts** warn when the project's
+[agents](#agents) stopped checking in. **Search projects** filters the list.
+
 ## Creating a project
 
-Give it a name and an issue prefix. The prefix is suggested from the name (initials
-for several words, the word itself for one) and is used for
-[issue numbers](./issues#issue-numbers).
+Team owners and admins create projects. Give it a name and an issue prefix. The prefix
+is suggested from the name (initials for several words, the word itself for one) and is
+used for [issue numbers](./issues#issue-numbers): 2 to 8 letters and digits, starting
+with a letter, upper-cased, unique in the team.
 
-The project settings then show how to install the package, the `.env` values and the
-agent setup.
+The new project opens on its **Installation** settings, which show how to install the
+SDK, the `.env` values, the agent setup, the browser script and a test command. The
+server token is shown once, right after creating; copy it then or rotate it later.
 
 ## Switching project
 
@@ -20,29 +28,56 @@ Pages that belong to one thing, like a trace, open the other project's overview.
 
 ## Settings
 
+Only team owners and admins change settings, labels, log channels, agents, retention
+and the repository. Members see everything and work on issues.
+
+The settings are in sections, one open at a time; the address keeps which (for example
+`#agents`), so a link opens the right one.
+
+- **General:** the name, the **slug** (used in URLs and as the project argument in
+  MCP; letters, digits, `-` and `_`, unique in the team), the issue prefix, allowed
+  origins and extra secret fields.
+- **Installation:** what to install and set, as when the project was created.
 - **Keys:** the server token (for the agent) and the public key (for browser errors).
   Both can be rotated; the server token is shown only once.
-- **Allowed origins:** browser errors are only accepted from these origins.
-- **Extra secret fields:** masked before storage in headers, session, Context and log
-  context. A plain word masks every key containing it (`cpr`), `*` is a wildcard on the
-  key name (`card_*`), and a dotted pattern matches the full path
-  (`session.checkout.*`).
-- **Agents:** each server's agent checks in every minute with what it runs (SDK and
+- **Allowed origins:** browser errors are only accepted from these origins (up to 50,
+  each an origin such as `https://shop.example.com`, without a path). Until one is
+  added, browser errors are refused.
+- **Extra secret fields:** masked as `[filtered]` before storage in headers, session,
+  Context and log context, on top of the fields that are always masked (`password`,
+  `passwd`, `pwd`, `secret`, `token`, `authorization`, `cookie`, `api_key`, `apikey`,
+  `access_key`, `private_key`, `jwt`, `dsn`, `credit_card`, `card_number`, `cvv`,
+  `session_id`). Values that look like secrets are masked too, whatever their key; see
+  [Security](./administration#security). A plain word masks every key
+  containing it (`cpr`), `*` is a wildcard on the key name (`card_*`), and a dotted
+  pattern matches the full path (`session.checkout.*`). Up to 50, each at most 64
+  characters.
+- <a id="agents"></a>**Agents:** each server's agent checks in every minute with what it runs (SDK and
   runtime, e.g. "Laravel 0.1.0 · PHP 8.5.1"; hover for the agent and framework). One
-  that stops is shown as offline, and is removed after 24 hours without a heartbeat,
+  that has not checked in for 5 minutes is shown as offline, and is removed after 24 hours without a heartbeat,
   since its server or pod is most likely gone (Kubernetes names every pod for
   itself). **Remove** forgets one right away; it comes back if it checks in again.
-  The heartbeat also reports the size of the app's queues (the package's `queues`
-  config), kept for 30 days by default for the [Jobs page](./performance#queues), and how busy
+  The heartbeat also reports the size of the app's queues (the queues the SDK
+  is set to watch), kept for 30 days by default for the [Jobs page](./performance#queues), and how busy
   its host is: the table shows the 1 minute load against the cores, memory and disk
   in use (hover for the bytes), with the highest load and memory per hour over the
   last day. Memory and disk turn amber past 90%, load past the number of cores. In a
   container the container's own limits count. Host samples are kept for 7 days by
   default. Both follow [retention](#retention).
 - **Alerts:** the project's [own channels, and its rules](./alerts#team-rules-and-project-overrides): the team's by default, or customized for the project.
+- **Log channels:** the channels the project's log lines go to, with the lines of the
+  last 24 hours and their own [retention](#retention). Names are kebab-case, at most 64
+  characters. Lines sent to a channel the project does not have land in `default`,
+  which cannot be deleted; deleting another channel moves its lines there. Channels
+  that lines were sent to in the last 7 days get a **Create** button here and a banner
+  on the Logs page.
 - **Labels:** rename, recolor or delete [issue labels](./issues#working-on-an-issue).
 - **Retention:** see below.
+- **Repository integration:** see [below](#repository-integration).
 - **Automatic triage:** see [MCP](./mcp#automatic-triage).
+- **Danger zone:** see [Deleting a project](#deleting-a-project).
+
+![The Agents section of a project's settings, with the load, memory and disk of each server](./screenshots/settings-agents.png)
 
 ## Browser script
 
@@ -57,17 +92,33 @@ The project settings show the script tag for browser errors:
 ></script>
 ```
 
-| Attribute          | Does                                                            |
-| ------------------ | --------------------------------------------------------------- |
-| `data-key`         | The project's public key. Without it nothing is sent.           |
-| `data-environment` | The environment of the page.                                    |
-| `data-release`     | The release, e.g. a commit hash.                                |
-| `data-user`        | The user's id, for [users affected](./issues#users-affected).   |
-| `data-trace`       | The trace id of the request that rendered the page.             |
-| `data-announce`    | `true` logs a line in the console when the script is active.    |
-| `data-vitals`      | `false` stops measuring [Web Vitals](./performance#web-vitals). |
+| Attribute          | Does                                                                    |
+| ------------------ | ----------------------------------------------------------------------- |
+| `data-key`         | The project's public key. Without it nothing is sent.                   |
+| `data-environment` | The environment of the page.                                            |
+| `data-release`     | The release, e.g. a commit hash.                                        |
+| `data-user`        | The user's id, for [users affected](./issues#users-affected).           |
+| `data-trace`       | The trace id of the request that rendered the page.                     |
+| `data-announce`    | `true` logs a line in the console when the script is active.            |
+| `data-vitals`      | `false` stops measuring [Web Vitals](./performance#web-vitals).         |
+| `data-endpoint`    | Where to send, instead of `/api/ingest/browser` on the script's server. |
 
-Crawlers and automated browsers are skipped.
+Crawlers and automated browsers are skipped, in the browser and again on the server.
+
+The script also has a small API on `window.Lumberjack`:
+
+| Call                                          | Does                                                                                                     |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `Lumberjack.init({ ... })`                    | Sets any of the options above, and `ignore`: strings or regular expressions matched against the message. |
+| `Lumberjack.setUser(id)`                      | Sets the user, `null` to clear it.                                                                       |
+| `Lumberjack.captureException(error, context)` | Sends an error you caught yourself, with extra context.                                                  |
+| `Lumberjack.flush()`                          | Sends what is waiting now.                                                                               |
+| `Lumberjack.version`                          | The script's version.                                                                                    |
+
+A page view sends at most 100 errors, and at most 5 of the same name and message.
+Noise is dropped: "Script error.", "ResizeObserver loop", "Non-Error promise rejection
+captured", "Uncaught (in promise)", and errors whose frames all come from browser
+extensions.
 
 ## Retention
 
@@ -89,6 +140,8 @@ does not change what the levels below store: their values are capped right away,
 as capped, and come back once the limit is raised again. A level that stores nothing
 sets no limit, so a project can keep longer than the built-in default as long as
 neither its team nor the application says otherwise.
+
+![The retention table of a project, with the limit from the team and what is stored](./screenshots/settings-retention.png)
 
 Each table shows per data type what the level inherits, the limit from above, how many
 rows are stored (counted up to 100,000; an estimate on the application page) with the
@@ -127,10 +180,13 @@ runs, and Logs stayed Logs.
 Link a GitHub repository to create GitHub issues from Lumberjack issues, by button or
 through MCP. It needs a fine-grained token with only **Issues: read and write** on that
 repository; **Create token on GitHub** opens GitHub with the right settings filled in.
-Lumberjack warns before the token expires. Creating issues in a public repository has
-to be allowed explicitly.
+Lumberjack warns 14 days before the token expires (GitHub's form is filled in with 90
+days). **Test connection** checks the token and says whether the repository is private
+or public; creating issues in a public repository has to be allowed explicitly.
+Created issues get the labels you list (comma separated).
 
 ## Deleting a project
 
-The danger zone deletes the project and all its data. Raw data is removed in the
+The danger zone deletes the project and all its data, after you type the project's
+name. Raw data is removed in the
 background in batches and can take several minutes.
