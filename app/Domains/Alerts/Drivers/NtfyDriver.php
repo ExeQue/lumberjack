@@ -7,7 +7,6 @@ namespace App\Domains\Alerts\Drivers;
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
-use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Shared\Rules\PublicUrl;
 use Illuminate\Http\Client\PendingRequest;
@@ -66,16 +65,12 @@ class NtfyDriver implements ChannelDriver
     {
         $url = rtrim((string) ($channel->config['url'] ?? ''), '/');
 
-        if (! PublicUrl::allows($url)) {
-            throw AlertDeliveryFailedException::notPublic($channel->name);
-        }
-
         $topic = Str::afterLast($url, '/');
         $server = Str::beforeLast($url, '/');
         $token = $channel->config['access_token'] ?? null;
 
-        $this->deliver($channel, fn (PendingRequest $http) => $http->withoutRedirecting()
+        $this->deliver($channel, fn (PendingRequest $http) => $http
             ->when(is_string($token) && $token !== '')->withToken((string) $token)
-            ->post($server, ['topic' => $topic, ...$message]));
+            ->post($server, ['topic' => $topic, ...$message]), pinTo: $server);
     }
 }

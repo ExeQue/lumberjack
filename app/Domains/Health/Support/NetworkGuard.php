@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace App\Domains\Health\Support;
 
 use App\Domains\Health\Exceptions\PrivateAddressException;
+use App\Domains\Health\Exceptions\ProbeFailedException;
 use App\Domains\Health\Exceptions\UnresolvableHostException;
 
 /**
- * Keeps checks off this server and the network behind it: a host is resolved once,
- * every address it has must be public, and the check connects to that address, so a
- * second lookup cannot point it somewhere else. LUMBERJACK_HEALTH_ALLOW_PRIVATE lets
- * self-hosters check internal services.
+ * Keeps outbound requests (health checks, alert webhooks) off this server and the
+ * network behind it: a host is resolved once, every address it has must be public, and
+ * the request connects to that address, so a second lookup cannot point it somewhere
+ * else. LUMBERJACK_HEALTH_ALLOW_PRIVATE lets self-hosters check internal services,
+ * ALERTS_WEBHOOKS_ALLOW_PRIVATE lets alerts reach them.
  */
 class NetworkGuard
 {
@@ -34,9 +36,10 @@ class NetworkGuard
     }
 
     /**
-     * The address to connect to.
+     * The address to connect to. Private addresses pass only when $allowPrivate is on;
+     * null takes health.allow_private.
      */
-    public function resolve(string $host): string
+    public function resolve(string $host, ?bool $allowPrivate = null): string
     {
         $host = trim($host, '[]');
         $addresses = filter_var($host, FILTER_VALIDATE_IP) !== false ? [$host] : $this->dns->addresses($host);
@@ -45,7 +48,7 @@ class NetworkGuard
             throw UnresolvableHostException::forHost($host);
         }
 
-        if (! (bool) config('health.allow_private', false)) {
+        if (! ($allowPrivate ?? (bool) config('health.allow_private', false))) {
             foreach ($addresses as $address) {
                 if (! self::isPublic($address)) {
                     throw PrivateAddressException::forHost($host);
@@ -54,6 +57,34 @@ class NetworkGuard
         }
 
         return $addresses[0];
+    }
+
+    /**
+     * Guzzle options that make an http(s) request to $url connect to the address this
+     * guard vetted, whatever a later lookup of its host says.
+     *
+     * @return array<string, mixed>
+     */
+    public function pin(string $url, ?bool $allowPrivate = null): array
+    {
+        $parts = parse_url($url);
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = trim((string) ($parts['host'] ?? ''), '[]');
+
+        if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
+            throw new ProbeFailedException(__('health.results.bad_url'));
+        }
+
+        $address = $this->resolve($host, $allowPrivate);
+
+        // An address in the URL is connected to as it is; there is no lookup to pin.
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            return [];
+        }
+
+        $port = (int) ($parts['port'] ?? ($scheme === 'https' ? 443 : 80));
+
+        return ['curl' => [CURLOPT_RESOLVE => [$host.':'.$port.':'.(str_contains($address, ':') ? '['.$address.']' : $address)]]];
     }
 
     public static function isPublic(string $address): bool
@@ -80,12 +111,28 @@ class NetworkGuard
             return true;
         }
 
-        // IPv6: unique local fc00::/7, link-local fe80::/10, multicast ff00::/8, documentation 2001:db8::/32.
         $bytes = (string) inet_pton($address);
+        $hex = bin2hex($bytes);
 
+        // IPv6 that carries an IPv4 address: NAT64 64:ff9b::/96 and 6to4 2002::/16 reach it.
+        if (str_starts_with($hex, '0064ff9b0000000000000000')) {
+            return self::isPublic((string) inet_ntop(substr($bytes, 12, 4)));
+        }
+
+        if (str_starts_with($hex, '2002')) {
+            return self::isPublic((string) inet_ntop(substr($bytes, 2, 4)));
+        }
+
+        // Local-use NAT64 64:ff9b:1::/48, Teredo 2001::/32, IPv4-compatible ::/96, discard 100::/64.
+        if (str_starts_with($hex, '0064ff9b0001') || str_starts_with($hex, '20010000')
+            || str_starts_with($hex, '000000000000000000000000') || str_starts_with($hex, '0100000000000000')) {
+            return false;
+        }
+
+        // Unique local fc00::/7, link-local fe80::/10, multicast ff00::/8, documentation 2001:db8::/32.
         return ! ((ord($bytes[0]) & 0xFE) === 0xFC
             || (ord($bytes[0]) === 0xFE && (ord($bytes[1]) & 0xC0) === 0x80)
             || ord($bytes[0]) === 0xFF
-            || str_starts_with(bin2hex($bytes), '20010db8'));
+            || str_starts_with($hex, '20010db8'));
     }
 }

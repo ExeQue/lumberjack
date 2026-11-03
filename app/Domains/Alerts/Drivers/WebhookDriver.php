@@ -11,7 +11,6 @@ use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
-use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Shared\Rules\PublicUrl;
@@ -144,16 +143,11 @@ class WebhookDriver implements ChannelDriver
     {
         $url = (string) ($channel->config['url'] ?? '');
 
-        // Checked again on every send: the host may resolve somewhere else by now.
-        if (! PublicUrl::allows($url)) {
-            throw AlertDeliveryFailedException::notPublic($channel->name);
-        }
-
         $body = (string) json_encode(['version' => self::VERSION, 'sent_at' => now()->toIso8601String(), ...$payload], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $timestamp = (string) now()->getTimestamp();
 
+        // Checked again on every send, and pinned: the host may resolve somewhere else by now.
         $this->deliver($channel, fn (PendingRequest $http) => $http
-            ->withoutRedirecting()
             ->withHeaders([
                 'User-Agent' => 'Lumberjack-Webhook/'.self::VERSION,
                 'X-Lumberjack-Event' => (string) $payload['event'],
@@ -161,6 +155,6 @@ class WebhookDriver implements ChannelDriver
                 'X-Lumberjack-Signature' => 'sha256='.hash_hmac('sha256', $timestamp.'.'.$body, (string) ($channel->config['secret'] ?? '')),
             ])
             ->withBody($body, 'application/json')
-            ->post($url));
+            ->post($url), pinTo: $url);
     }
 }
