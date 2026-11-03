@@ -148,13 +148,11 @@ So a check going down can page someone while a degraded one only posts to a chan
 or recoveries can be left out. A check that is degraded or down is still followed while
 its rule is off: turning **Health degraded** off does not stop the later down or
 recovered message.
-A check that goes bad again within 30 minutes of its last alert stays quiet, so a
-flapping check does not flood the channel. Change the window in the server's `.env`
-(`0` turns it off):
-
-```dotenv
-LUMBERJACK_HEALTH_ALERT_THROTTLE=30
-```
+Every step for the worse is sent at once: ok to degraded, and degraded to down, also
+when the check recovered a minute ago. There is no time window that holds alerts back;
+the thresholds already keep a flapping check quiet, since it has to fail
+`degrade_after` times in a row before it is degraded and pass `recover_after` times
+before it is ok again.
 
 Muted and archived checks send nothing.
 See [Alerts](./alerts#webhooks) for the webhook body.
