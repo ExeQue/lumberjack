@@ -7,7 +7,10 @@ namespace App\Domains\Issues\Models;
 use App\Domains\Issues\Enums\WatchReason;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Database\Factories\IssueWatcherFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -23,8 +26,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $created_at
  */
 #[Fillable(['issue_id', 'user_id', 'reason', 'unwatched_at'])]
+#[UseFactory(IssueWatcherFactory::class)]
 class IssueWatcher extends Model
 {
+    /** @use HasFactory<IssueWatcherFactory> */
+    use HasFactory;
+
     public const null UPDATED_AT = null;
 
     protected function casts(): array

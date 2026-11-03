@@ -8,8 +8,11 @@ use App\Domains\Issues\Enums\IssueEventType;
 use App\Domains\Mcp\Models\McpToken;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Database\Factories\IssueEventFactory;
 use Illuminate\Database\Eloquent\Attributes\DateFormat;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -28,8 +31,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable(['issue_id', 'type', 'user_id', 'mcp_token_id', 'data', 'occurred_at'])]
 #[DateFormat('Y-m-d H:i:s.v')]
+#[UseFactory(IssueEventFactory::class)]
 class IssueEvent extends Model
 {
+    /** @use HasFactory<IssueEventFactory> */
+    use HasFactory;
+
     public $timestamps = false;
 
     protected function casts(): array

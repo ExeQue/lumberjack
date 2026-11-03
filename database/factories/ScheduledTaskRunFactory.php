@@ -30,4 +30,15 @@ class ScheduledTaskRunFactory extends Factory
             'exit_code' => 0,
         ];
     }
+
+    public function failed(int $exitCode = 1): static
+    {
+        return $this->state(fn () => ['status' => ScheduledRunStatus::Failed, 'exit_code' => $exitCode]);
+    }
+
+    /** Due, but the scheduler never ran it (see MarkMissedScheduledTasksAction). */
+    public function missed(): static
+    {
+        return $this->state(fn () => ['status' => ScheduledRunStatus::Missed, 'host' => null, 'finished_at' => null, 'duration_us' => null, 'exit_code' => null]);
+    }
 }

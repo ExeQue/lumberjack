@@ -7,7 +7,10 @@ namespace Database\Factories;
 use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
+use App\Domains\Issues\Models\Label;
 use App\Domains\Projects\Models\Project;
+use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -61,5 +64,56 @@ class IssueFactory extends Factory
     public function fromBrowser(): static
     {
         return $this->state(fn () => ['source' => IssueSource::Browser, 'title' => 'TypeError']);
+    }
+
+    /** Far more often than usual since this time (see DetectEscalationAction). */
+    public function escalating(?CarbonInterface $at = null): static
+    {
+        return $this->state(fn () => ['status' => IssueStatus::Open, 'escalated_at' => $at ?? now()->subMinutes(20), 'surfaced_at' => $at ?? now()->subMinutes(20)]);
+    }
+
+    public function inProgress(?CarbonInterface $at = null): static
+    {
+        return $this->state(fn () => ['status' => IssueStatus::InProgress, 'in_progress_at' => $at ?? now()]);
+    }
+
+    /** Resolved once, and back since this time. */
+    public function regressed(?CarbonInterface $at = null): static
+    {
+        return $this->state(fn () => ['status' => IssueStatus::Open, 'resolved_at' => null, 'regressed_at' => $at ?? now(), 'surfaced_at' => $at ?? now()]);
+    }
+
+    /** Ignored once, and back since this time. */
+    public function returned(?CarbonInterface $at = null): static
+    {
+        return $this->state(fn () => ['status' => IssueStatus::Open, 'ignored_at' => null, 'returned_at' => $at ?? now(), 'regressed_at' => $at ?? now(), 'surfaced_at' => $at ?? now()]);
+    }
+
+    /**
+     * Ignored until a time, an occurrence count (absolute, as ChangeIssueStatusAction
+     * stores it) or an escalation; with none of them, for good.
+     */
+    public function ignoredUntil(?CarbonInterface $until = null, ?int $count = null, bool $escalation = false): static
+    {
+        return $this->ignored()->state(fn () => ['ignore_until_at' => $until, 'ignore_until_count' => $count, 'ignore_until_escalation' => $escalation]);
+    }
+
+    public function assignedTo(User $user): static
+    {
+        return $this->state(fn () => ['assigned_user_id' => $user->id]);
+    }
+
+    /** With these labels of its project. */
+    public function labelled(string ...$names): static
+    {
+        return $this->afterCreating(fn (Issue $issue) => $issue->labels()->attach(
+            Label::query()->where('project_id', $issue->project_id)->whereIn('name', $names)->pluck('id')->all(),
+        ));
+    }
+
+    /** Grouped from log lines of this channel at error level or above. */
+    public function fromLog(string $channel = 'default'): static
+    {
+        return $this->state(fn () => ['source' => IssueSource::Log, 'log_channel' => $channel, 'file' => null, 'line' => null]);
     }
 }

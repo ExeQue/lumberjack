@@ -7,9 +7,12 @@ namespace App\Domains\Performance\Models;
 use App\Domains\Performance\Enums\SpanKind;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
+use Database\Factories\SpanRunFactory;
 use Illuminate\Database\Eloquent\Attributes\DateFormat;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Attributes\WithoutTimestamps;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -30,8 +33,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['project_id', 'trace_id', 'environment', 'kind', 'name', 'target', 'duration_us', 'attributes', 'occurred_at'])]
 #[WithoutTimestamps]
 #[DateFormat('Y-m-d H:i:s.v')]
+#[UseFactory(SpanRunFactory::class)]
 class SpanRun extends Model
 {
+    /** @use HasFactory<SpanRunFactory> */
+    use HasFactory;
+
     protected function casts(): array
     {
         return [
