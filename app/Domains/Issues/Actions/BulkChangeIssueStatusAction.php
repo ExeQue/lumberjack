@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Issues\Actions;
 
+use App\Domains\Issues\Data\IssueAssignment;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Events\IssuesStatusChangedInBulk;
 use App\Domains\Issues\Models\Issue;
@@ -18,6 +19,7 @@ class BulkChangeIssueStatusAction
 {
     public function __construct(
         private readonly ChangeIssueStatusAction $change,
+        private readonly AssignIssueAction $assign,
     ) {
     }
 
@@ -27,11 +29,25 @@ class BulkChangeIssueStatusAction
      */
     public function execute(Project $project, array $uuids, IssueStatus $status, User $by): int
     {
-        $issues = Issue::query()->where('project_id', $project->id)->whereIn('uuid', $uuids)->get()
+        $issues = Issue::query()->with('assignee')->where('project_id', $project->id)->whereIn('uuid', $uuids)->get()
             ->reject(fn (Issue $issue): bool => $issue->status === $status);
 
         $single = $issues->count() === 1;
-        $issues->each(fn (Issue $issue): Issue => $this->change->execute($issue, $status, $by, announce: $single));
+        $unassigned = [];
+
+        foreach ($issues as $issue) {
+            $from = $issue->assignee;
+            $this->change->execute($issue, $status, $by, announce: $single);
+
+            if ($from !== null && $issue->assigned_user_id === null) {
+                $unassigned[] = new IssueAssignment($issue, $from, null);
+            }
+        }
+
+        if (! $single) {
+            // Resolving takes the issues off their assignees: one message per person.
+            $this->assign->announce($unassigned, $by, resolved: true);
+        }
 
         if ($issues->count() > 1 && ($status === IssueStatus::Resolved || $status === IssueStatus::Ignored)) {
             IssuesStatusChangedInBulk::dispatch($project, array_values($issues->map(fn (Issue $issue): int => $issue->id)->all()), $status, $by->name);

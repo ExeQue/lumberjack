@@ -29,7 +29,7 @@ class ChangeIssueStatusAction
     /**
      * @param  User|null  $by  who changed it; taking an issue in progress assigns it to them if nobody has it
      * @param  string|null  $comment  saved as a note marked with the new status
-     * @param  bool  $announce  false for bulk changes, which send one summary instead (BulkChangeIssueStatusAction)
+     * @param  bool  $announce  false for bulk changes, which send one summary and one unassign message instead (BulkChangeIssueStatusAction)
      * @param  IgnoreCondition|null  $until  when an ignored issue comes back on its own; none means when it escalates
      */
     public function execute(Issue $issue, IssueStatus $status, ?User $by = null, ?string $comment = null, ?McpToken $token = null, bool $announce = true, ?IgnoreCondition $until = null): Issue
@@ -63,6 +63,11 @@ class ChangeIssueStatusAction
 
         if ($status === IssueStatus::InProgress && $by !== null && $issue->assigned_user_id === null && $by->belongsToTeam($issue->project->team)) {
             $this->assign->execute($issue, $by, $by, $token);
+        }
+
+        // A resolved issue needs nobody on it any more; a regression comes back unassigned.
+        if ($status === IssueStatus::Resolved && $issue->assigned_user_id !== null) {
+            $this->assign->execute($issue, null, $by, $token, $announce, resolved: true);
         }
         $this->history->execute($issue, IssueEventType::StatusChanged, $by, $token, array_filter([
             'from' => $from->value,
