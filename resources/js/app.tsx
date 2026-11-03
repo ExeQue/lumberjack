@@ -32,7 +32,10 @@ void createInertiaApp({
         switch (true) {
             case name === 'welcome' ||
                 name === 'screens/kiosk' ||
-                name === 'screens/edit':
+                name === 'screens/edit' ||
+                name === 'screens/unshared' ||
+                name.startsWith('tv/') ||
+                name.startsWith('pair/'):
                 return null;
             case name.startsWith('auth/') || name.startsWith('invitations/'):
                 return AuthLayout;

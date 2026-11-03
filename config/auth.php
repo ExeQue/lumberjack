@@ -44,6 +44,12 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // A TV without a session, by its display or pairing cookie: for broadcast
+        // channels only. See App\Domains\Screens\Providers\ScreensServiceProvider.
+        'tv' => [
+            'driver' => 'tv',
+        ],
     ],
 
     /*

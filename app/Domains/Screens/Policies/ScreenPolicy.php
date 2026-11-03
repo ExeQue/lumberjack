@@ -10,6 +10,7 @@ use App\Models\User;
 /**
  * Every member of the team views and edits its screens, creating and deleting them
  * included: a screen only shows what each member can already see on the project pages.
+ * Sharing it with a link anyone can open is for team admins, like public stats.
  */
 class ScreenPolicy
 {
@@ -26,5 +27,10 @@ class ScreenPolicy
     public function delete(User $user, Screen $screen): bool
     {
         return $user->belongsToTeam($screen->team);
+    }
+
+    public function share(User $user, Screen $screen): bool
+    {
+        return $user->canAdministerTeam($screen->team);
     }
 }

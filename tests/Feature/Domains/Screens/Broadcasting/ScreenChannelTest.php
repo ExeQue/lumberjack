@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Domains\Screens\Broadcasting\ScreenChannel;
+use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Screens\Models\TvPairing;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Illuminate\Broadcasting\Broadcasters\Broadcaster;
@@ -26,13 +28,24 @@ describe('listening to a screen', function () {
             ->and(app(ScreenChannel::class)->join($admin, $this->screen))->toBeTrue();
     });
 
-    it('is registered on screen.{uuid}, bound to the screen', function () {
+    it('lets a display listen to the screen it shows, and no other', function () {
+        $showing = Display::factory()->showing($this->screen)->create();
+        $sameTeam = Display::factory()->showing(Screen::factory()->for($this->screen->team)->create())->create();
+
+        expect(app(ScreenChannel::class)->join($showing, $this->screen))->toBeTrue()
+            ->and(app(ScreenChannel::class)->join($sameTeam, $this->screen))->toBeFalse()
+            ->and(app(ScreenChannel::class)->join(TvPairing::factory()->create(), $this->screen))->toBeFalse();
+    });
+
+    it('is registered on screen.{uuid}, bound to the screen, for users and displays', function () {
         /** @var Broadcaster $broadcaster */
         $broadcaster = Broadcast::driver();
         $channels = (fn (): array => $this->channels)->call($broadcaster);
+        $options = (fn (): array => $this->channelOptions)->call($broadcaster);
 
         expect($channels)->toHaveKey('screen.{screen}')
             ->and($channels['screen.{screen}'])->toBe(ScreenChannel::class)
+            ->and($options['screen.{screen}'])->toBe(['guards' => ['web', 'tv']])
             ->and(ScreenChannel::for($this->screen)->name)->toBe('private-screen.'.$this->screen->uuid);
     });
 });

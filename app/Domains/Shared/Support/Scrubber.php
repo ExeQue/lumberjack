@@ -42,6 +42,8 @@ class Scrubber
         '/\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/' => self::MASK,
         // Stripe keys and webhook secrets
         '/\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{10,}|\bwhsec_[A-Za-z0-9]{10,}/' => self::MASK,
+        // Lumberjack's own status screen share keys (/s/ls_...)
+        '/\bls_[a-z0-9]{40}\b/' => self::MASK,
         // GitHub and Slack tokens
         '/\bgh[pousr]_[A-Za-z0-9]{30,}|\bxox[abposr]-[A-Za-z0-9-]{10,}/' => self::MASK,
     ];

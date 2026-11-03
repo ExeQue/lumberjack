@@ -17,9 +17,20 @@ import type {
     WidgetKind,
 } from '@/components/lj/screen/types';
 import { DATA_KINDS, LAYOUT_KINDS } from '@/components/lj/screen/types';
+import { SharePanel } from '@/components/lj/screen/share-panel';
+import type { Sharing } from '@/components/lj/screen/share-panel';
+import { TvInstructions } from '@/components/lj/screen/tv-instructions';
+import type { TvInstructionsProps } from '@/components/lj/screen/tv-instructions';
 import { useScreenData } from '@/components/lj/screen/use-screen-data';
 import { WidgetTile } from '@/components/lj/screen/widgets';
-import { buttonClass, Input, Select } from '@/components/lj/ui';
+import { Button, buttonClass, Input, Select } from '@/components/lj/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { xsrf } from '@/lib/http';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -46,6 +57,8 @@ type Props = {
         max_rows: number;
         max_widgets: number;
     };
+    sharing: Sharing;
+    tv: TvInstructionsProps;
 };
 
 const SAVE_DELAY_MS = 300;
@@ -77,12 +90,6 @@ const SETTINGS: (keyof Settings)[] = [
     'timezone',
     'scope',
 ];
-
-function xsrf(): string {
-    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
-
-    return match ? decodeURIComponent(match[1]) : '';
-}
 
 async function put(url: string, body: unknown): Promise<void> {
     const response = await fetch(url, {
@@ -158,6 +165,7 @@ export default function EditScreen(props: Props) {
     const [query, setQuery] = useState('');
     const [closed, setClosed] = useState<string[]>([]);
     const [dropTarget, setDropTarget] = useState<string | null>(null);
+    const [dialog, setDialog] = useState<'tv' | 'share' | null>(null);
     const drag = useRef<{ kind?: WidgetKind; tile?: string } | null>(null);
     const resizing = useRef<{
         id: string;
@@ -575,6 +583,18 @@ export default function EditScreen(props: Props) {
                         />
                         {statusText}
                     </span>
+                    <Button onClick={() => setDialog('tv')}>
+                        {t('screens.open_tv.button')}
+                    </Button>
+                    <Button onClick={() => setDialog('share')}>
+                        {t('screens.share.button')}
+                        {props.sharing.url !== null && (
+                            <span
+                                aria-hidden="true"
+                                className="size-1.5 rounded-full bg-ok"
+                            />
+                        )}
+                    </Button>
                     <a
                         href={showRoute(screen.uuid).url}
                         target="_blank"
@@ -585,6 +605,31 @@ export default function EditScreen(props: Props) {
                     </a>
                 </div>
             </header>
+            <Dialog
+                open={dialog !== null}
+                onOpenChange={(open) => !open && setDialog(null)}
+            >
+                <DialogContent className="border-line bg-panel sm:max-w-xl">
+                    <DialogTitle>
+                        {dialog === 'share'
+                            ? t('screens.share.title')
+                            : t('screens.open_tv.title')}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {dialog === 'share'
+                            ? t('screens.share.hint')
+                            : t('screens.open_tv.step_pick')}
+                    </DialogDescription>
+                    {dialog === 'share' ? (
+                        <SharePanel
+                            screen={screen.uuid}
+                            sharing={props.sharing}
+                        />
+                    ) : (
+                        <TvInstructions {...props.tv} />
+                    )}
+                </DialogContent>
+            </Dialog>
 
             <div className="flex min-h-0 flex-1 flex-wrap lg:flex-nowrap">
                 <aside

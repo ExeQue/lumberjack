@@ -11,6 +11,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\ScreenFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -34,10 +35,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $timezone
  * @property array{projects?: list<string>, environment?: string|null, period?: string} $scope
  * @property list<array<string, mixed>> $widgets
+ * @property string|null $share_key encrypted at rest; found by share_key_hash
+ * @property string|null $share_key_hash
+ * @property bool $share_titles whether the share link shows issue titles and names, not only counts
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'name', 'cols', 'rows', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets'])]
+#[Fillable(['team_id', 'name', 'cols', 'rows', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets', 'share_key', 'share_key_hash', 'share_titles'])]
+#[Hidden(['share_key', 'share_key_hash'])]
 #[UseEloquentBuilder(ScreenBuilder::class)]
 #[UseFactory(ScreenFactory::class)]
 class Screen extends Model
@@ -82,6 +87,8 @@ class Screen extends Model
             'rows' => 'integer',
             'scope' => 'array',
             'widgets' => 'array',
+            'share_key' => 'encrypted',
+            'share_titles' => 'boolean',
         ];
     }
 
@@ -89,6 +96,12 @@ class Screen extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
+    }
+
+    /** The share link, while the screen is shared. */
+    public function shareUrl(): ?string
+    {
+        return $this->share_key === null ? null : route('screens.shared', $this->share_key);
     }
 
     /**

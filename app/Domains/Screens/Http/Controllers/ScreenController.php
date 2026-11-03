@@ -62,23 +62,21 @@ class ScreenController
     {
         Gate::authorize('view', $screen);
 
-        return Inertia::render('screens/kiosk', [
-            'screen' => $presenter->present($screen),
-            'team' => ['name' => $screen->team->name],
-            'projects' => $presenter->projects($screen->team),
-            ...$presenter->catalog(),
-            // Where this kiosk reads its data and hears about changes; a display paired
-            // without a session gets its own.
+        // Where this kiosk reads its data and hears about changes; a paired display and a
+        // share link get their own.
+        return Inertia::render('screens/kiosk', $presenter->kiosk($screen, [
             'data_url' => route('screens.data', $screen, absolute: false),
             'channel' => ScreenChannel::name($screen),
-        ]);
+        ]));
     }
 
-    public function edit(Screen $screen, ScreenPresenter $presenter): Response
+    public function edit(Request $request, Screen $screen, ScreenPresenter $presenter): Response
     {
         Gate::authorize('update', $screen);
 
         return Inertia::render('screens/edit', [
+            'sharing' => $presenter->sharing($screen, $request->user()),
+            'tv' => $presenter->tvInstructions(),
             'screen' => $presenter->present($screen),
             'projects' => $presenter->projects($screen->team),
             'data_url' => route('screens.data', $screen, absolute: false),

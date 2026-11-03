@@ -192,8 +192,8 @@ describe('saving from the designer', function () {
             ->and($screen->widgets[0]['options'])->toEqual(['amber' => 5.0, 'compare' => 'none'])
             ->and($screen->widgets[1]['source'])->toBeNull();
         Event::assertDispatched(ScreenChanged::class, fn (ScreenChanged $e): bool => $e->broadcastAs() === 'screen.changed'
-            && $e->broadcastOn()->name === 'private-screen.'.$this->screen->uuid
-            && $e->broadcastWith()['screen'] === $this->screen->uuid);
+            && $e->broadcastOn()[0]->name === 'private-screen.'.$this->screen->uuid
+            && count($e->broadcastOn()) === 1);
     });
 
     it('does not tell anyone when nothing changed', function () {

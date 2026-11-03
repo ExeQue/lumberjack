@@ -51,6 +51,7 @@ test('values that look like secrets are masked whatever their key', function (st
     'JWT' => ['eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl', '[filtered]'],
     'AWS key id' => ['AKIAIOSFODNN7EXAMPLE', '[filtered]'],
     'Stripe secret key' => ['sk_live_abcdefghijklmnop', '[filtered]'],
+    'status screen share link' => ['https://lumberjack.test/s/ls_abcdefghij0123456789abcdefghij0123456789/data', 'https://lumberjack.test/s/[filtered]/data'],
     'harmless text' => ['keyword=lumber&monkey=1', 'keyword=lumber&monkey=1'],
 ]);
 
