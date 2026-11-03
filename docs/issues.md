@@ -21,6 +21,12 @@ Each frame shows the lines around it, highlighted as PHP, JavaScript or TypeScri
 the file's extension, with the line that threw marked. Vendor frames are folded away
 until you show them.
 
+## Request and context
+
+The latest occurrence's request, session and other context sit beside the stacktrace,
+one table per object with its keys in alphabetical order. A table with more than 8
+rows, such as the request's headers, starts folded; click its title to open it.
+
 ## The chart
 
 The issue page charts its occurrences over 1 hour, 24 hours (the default), 7 days or
