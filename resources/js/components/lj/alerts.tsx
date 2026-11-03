@@ -29,6 +29,7 @@ import {
     update as channelUpdate,
 } from '@/routes/alerts/channels';
 import {
+    addOns as ruleAddOns,
     customize as ruleCustomize,
     reset as ruleReset,
     update as ruleUpdate,
@@ -590,6 +591,21 @@ function TeamRuleSummary({
     const names = channels
         .filter((channel) => rule?.channels.includes(channel.id))
         .map((channel) => channel.name);
+    // Any channel the team's rule does not already send to can be added for this project.
+    const extra = channels.filter(
+        (channel) => !rule?.channels.includes(channel.id),
+    );
+    const toggle = (id: number, on: boolean) =>
+        rule &&
+        router.put(
+            ruleAddOns({ project, rule: rule.id }).url,
+            {
+                channels: on
+                    ? [...row.add_ons, id]
+                    : row.add_ons.filter((a) => a !== id),
+            },
+            { preserveScroll: true },
+        );
 
     return (
         <div className="flex flex-wrap items-start gap-4 rounded-lg border border-dashed border-line bg-rail p-3.5">
@@ -619,6 +635,36 @@ function TeamRuleSummary({
                             environments: rule.environments.join(', '),
                         })}
                     </span>
+                )}
+                {rule && extra.length > 0 && (
+                    <fieldset
+                        className="mt-1.5 flex flex-col gap-1"
+                        disabled={!canAdminister}
+                    >
+                        <legend className="mb-1">
+                            {rule.enabled
+                                ? t('alerts.rules.add_ons')
+                                : t('alerts.rules.add_ons_off')}
+                        </legend>
+                        {extra.map((channel) => (
+                            <label
+                                key={channel.id}
+                                className="inline-flex items-center gap-2 text-ink-2"
+                            >
+                                <input
+                                    type="checkbox"
+                                    className="size-4 accent-amber"
+                                    checked={row.add_ons.includes(channel.id)}
+                                    onChange={(e) =>
+                                        toggle(channel.id, e.target.checked)
+                                    }
+                                />
+                                {t('alerts.rules.add_on', {
+                                    channel: channel.name,
+                                })}
+                            </label>
+                        ))}
+                    </fieldset>
                 )}
             </div>
             {canAdminister && (

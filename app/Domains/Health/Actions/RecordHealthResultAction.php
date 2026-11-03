@@ -175,10 +175,9 @@ class RecordHealthResultAction
             ->whereEffectiveFor($check->project)
             ->whereType($type)
             ->whereEnabled()
-            ->whereHas('channels')
             ->first();
 
-        if ($rule === null || ! $rule->appliesToEnvironment($check->environment !== '' ? $check->environment : null)) {
+        if ($rule === null || $rule->channelsFor($check->project)->isEmpty() || ! $rule->appliesToEnvironment($check->environment !== '' ? $check->environment : null)) {
             return null;
         }
 

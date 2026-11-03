@@ -98,7 +98,7 @@ class SendIssueAlertsAction
                 continue;
             }
 
-            foreach ($rule->channels as $channel) {
+            foreach ($rule->channelsFor($issue->project) as $channel) {
                 $recent = $throttle && AlertSend::query()
                     ->where('alert_rule_id', $rule->id)
                     ->where('issue_id', $issue->id)

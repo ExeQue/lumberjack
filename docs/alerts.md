@@ -54,33 +54,20 @@ owners and admins change them.
 In a project's settings, under **Alerts**, each type shows either:
 
 - **Team default**: what the team's rule does (on or off, its channels and
-  environments), read only. **Customize** gives the project a rule of its own for that
-  type, starting as a copy of the team's, to change for this project only. It can also
-  send to the project's own channels, such as a webhook.
+  environments), read only. Below it, the project can add channels of its own, or
+  shared channels the team's rule does not use (**+ channel (this project)**), without
+  customizing the rule. These add-ons follow the team's rule: while it is off they get
+  nothing, so to send anyway, customize it. **Customize** gives the project a rule of
+  its own for that type, starting as a copy of the team's with the add-ons among its
+  channels, to change for this project only.
 - **Customized**: the project's own rule, edited in place. Changes to the team's rule
   no longer reach it. **Use the team's** deletes it, after asking, and the project
-  follows the team's rule again.
+  follows the team's rule again. Channels the team's rule does not send to, such as the
+  project's webhook, become add-ons on it, so a reset never quietly drops one.
 
 A new shared channel is added to the team's rules that are on by default. A new project
-channel is added to the project's rules that are on by default, customizing those that
-still followed the team (a team rule cannot send to one project's channel).
-
-| Rule                | Fires on                                                                               | On by default |
-| ------------------- | -------------------------------------------------------------------------------------- | ------------- |
-| New issue           | The first occurrence of a new issue.                                                   | Yes           |
-| Regression          | A new occurrence of a resolved issue.                                                  | Yes           |
-| Escalation          | An open issue escalating (10+ occurrences in 5 minutes, far above usual).              | Yes           |
-| Resolved or ignored | Someone resolving or ignoring an issue, with their comment. Bulk changes are left out. | No            |
-| Note                | Every note on an issue, by a person or an agent.                                       | No            |
-| Queue backlog       | A queue over its thresholds for a while, and again when it is back under.              | Yes           |
-| Health degraded     | A [health check](./health) that keeps warning past its threshold.                      | Yes           |
-| Health down         | A health check that keeps failing past its threshold, also after being degraded.       | Yes           |
-| Health recovered    | A degraded or down health check that passes again past its recovery threshold.         | Yes           |
-
-At most one message is sent per issue per rule every 30 minutes. Regressions and
-notes are not throttled: a regression only follows someone resolving the issue, so
-each one is news. Ignored issues and browser errors never send. If the issue has a triage
-note, its first line is included in the message.
+channel is added to the rules that count for the project for those types: as an add-on
+where the project uses the team's rule, directly where it has customized one.
 
 ### Queue backlog
 

@@ -48,7 +48,7 @@ class SendQueueBacklogAlert implements ShouldQueue
     {
         $project = $this->project ?? $this->rule->project;
 
-        $action->execute($this->rule, new QueueBacklogAlert(
+        $action->execute($this->rule, $project, new QueueBacklogAlert(
             $project,
             $this->connectionName,
             $this->queueName,

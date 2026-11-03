@@ -33,9 +33,9 @@ class CheckQueueBacklogsAction
             ->get();
 
         foreach ($projects as $project) {
-            $rule = AlertRule::query()->whereEffectiveFor($project)->whereType(AlertRuleType::QueueBacklog)->whereEnabled()->whereHas('channels')->first();
+            $rule = AlertRule::query()->whereEffectiveFor($project)->whereType(AlertRuleType::QueueBacklog)->whereEnabled()->first();
 
-            if ($rule === null) {
+            if ($rule === null || $rule->channelsFor($project)->isEmpty()) {
                 continue;
             }
 

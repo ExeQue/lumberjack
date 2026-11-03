@@ -18,10 +18,6 @@ class SaveNotificationChannelAction
     /** Config fields that are no secret; the edit form shows them filled in. */
     public const array VISIBLE = ['sender_name', 'chat_id'];
 
-    public function __construct(
-        private readonly CustomizeAlertRuleAction $customize,
-    ) {
-    }
 
     /**
      * @param  array<string, string|null>  $config  validated against the driver's rules; null or empty keeps the stored value
@@ -56,15 +52,18 @@ class SaveNotificationChannelAction
         $channel->fill(['type' => $type, 'name' => $name, 'config' => $config, 'project_id' => $project?->id])->save();
 
         // A new channel goes straight into the rules for the kinds that page: a shared one
-        // into the team's, a project's own into the project's, which it customizes where
-        // it used the team's (a team rule cannot send to one project's channel).
+        // into the team's, a project's own into the rules that count for the project, as
+        // an add-on where that is the team's (a team rule cannot hold one project's channel).
         if ($channel->wasRecentlyCreated) {
-            $types = array_values(array_filter(AlertRuleType::cases(), fn (AlertRuleType $type): bool => $type->enabledByDefault()));
-            $rules = $project === null
-                ? $team->alertRules()->whereIn('type', array_map(fn (AlertRuleType $type): string => $type->value, $types))->get()
-                : collect($types)->map(fn (AlertRuleType $type): AlertRule => $this->customize->execute($project, $type));
+            $types = array_map(fn (AlertRuleType $type): string => $type->value, array_filter(AlertRuleType::cases(), fn (AlertRuleType $type): bool => $type->enabledByDefault()));
 
-            $rules->each(fn (AlertRule $rule) => $rule->channels()->syncWithoutDetaching([$channel->id]));
+            if ($project === null) {
+                $team->alertRules()->whereIn('type', $types)->get()->each(fn (AlertRule $rule) => $rule->channels()->syncWithoutDetaching([$channel->id]));
+            } else {
+                AlertRule::query()->whereEffectiveFor($project)->whereIn('type', $types)->get()->each(fn (AlertRule $rule) => $rule->project_id !== null
+                    ? $rule->channels()->syncWithoutDetaching([$channel->id])
+                    : $rule->addOnsFor($project)->syncWithoutDetaching([$channel->id]));
+            }
         }
 
         return $channel;

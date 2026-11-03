@@ -46,7 +46,7 @@ class SendHealthCheckAlert implements ShouldQueue
 
     public function handle(SendProjectAlertAction $action): void
     {
-        $action->execute($this->rule, new HealthCheckAlert(
+        $action->execute($this->rule, $this->check->project, new HealthCheckAlert(
             $this->check,
             $this->state,
             $this->message,

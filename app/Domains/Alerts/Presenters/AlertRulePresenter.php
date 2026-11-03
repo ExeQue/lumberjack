@@ -9,6 +9,7 @@ use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Models\Team;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class AlertRulePresenter
 {
@@ -51,12 +52,14 @@ class AlertRulePresenter
     {
         $team = $this->byType($project->team->alertRules()->with('channels:id')->get());
         $own = $this->byType($project->alertRules()->with('channels:id')->get());
+        $addOns = DB::table('project_alert_rule_channel')->where('project_id', $project->id)->get()->groupBy('alert_rule_id');
 
         return array_map(fn (AlertRuleType $t): array => [
             'type' => $t->value,
             'label' => $t->label(),
             'description' => $t->description(),
             'team' => ($rule = $team->get($t->value)) !== null ? $this->present($rule) : null,
+            'add_ons' => $addOns->get($team->get($t->value)->id ?? 0, collect())->pluck('notification_channel_id')->map(fn ($id): int => (int) $id)->values()->all(),
             'project' => ($rule = $own->get($t->value)) !== null ? $this->present($rule) : null,
         ], AlertRuleType::cases());
     }

@@ -65,13 +65,13 @@ describe('channels of one project', function () {
             ->has('channels', 1)->where('channels.0.type', 'mail')->where('types', ['mail', 'discord', 'slack', 'teams', 'telegram', 'ntfy', 'pushover'])
             ->has('rules', count(AlertRuleType::cases())));
 
-        // The webhook customized the rules that page; note and status change still follow the team.
+        // The webhook is an add-on to the team rules that page, not an override of them.
         $this->actingAs($admin)->get(route('projects.settings', $this->shop))->assertInertia(fn (Assert $page) => $page
             ->has('alerts.channels', 1)->where('alerts.channels.0.type', 'webhook')
             ->has('alerts.available', 2)
             ->has('alerts.rules', count(AlertRuleType::cases()))
-            ->where('alerts.rules.0.type', 'new_issue')->whereNot('alerts.rules.0.project', null)
-            ->where('alerts.rules.2.type', 'note')->where('alerts.rules.2.project', null)->whereNot('alerts.rules.2.team', null));
+            ->where('alerts.rules.0.type', 'new_issue')->where('alerts.rules.0.project', null)->has('alerts.rules.0.add_ons', 1)
+            ->where('alerts.rules.2.type', 'note')->where('alerts.rules.2.project', null)->has('alerts.rules.2.add_ons', 0));
     });
 
     it('adds a webhook for a project through the channel form', function () {
