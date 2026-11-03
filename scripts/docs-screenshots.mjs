@@ -140,6 +140,12 @@ for (const candidate of issues) {
     }
 }
 
+// The first status screen, for the designer and the kiosk.
+await open('/screens');
+const screen = await href('a[href$="/edit"]');
+const kiosk = screen ? screen.replace(/\/edit$/, '') : null;
+const tv = { width: 1920, height: 1080 };
+
 const shots = {
     overview: { path: project },
     'overview-light': { path: project, theme: 'light' },
@@ -199,6 +205,22 @@ const shots = {
     'team-alerts': { path: '/team/alerts', fullPage: true },
     team: { path: '/team' },
     'admin-retention': { path: '/admin/retention', fullPage: true },
+    screens: { path: '/screens' },
+    'screen-designer': { path: screen },
+    'screen-designer-incident': {
+        path: screen,
+        before: () => click('::-p-text(Show an incident)'),
+    },
+    'screen-kiosk': { path: kiosk, viewport: tv },
+    // The kiosk follows the screen's own theme; show its light twin without saving it.
+    'screen-kiosk-light': {
+        path: kiosk,
+        viewport: tv,
+        before: () =>
+            page.evaluate(() => {
+                document.querySelector('.lj-screen').dataset.theme = 'light';
+            }),
+    },
     'command-palette': {
         path: project,
         before: async () => {
@@ -216,6 +238,9 @@ const only = process.argv.slice(2);
 await mkdir(OUT, { recursive: true });
 
 const take = async (name, shot) => {
+    if (shot.viewport) {
+        await page.setViewport(shot.viewport);
+    }
     await open(shot.path, shot.theme);
     await shot.before?.();
     await mask();
