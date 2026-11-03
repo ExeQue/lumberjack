@@ -79,6 +79,49 @@ account.
 | `php artisan lumberjack:make-admin {email} --revoke` | Takes administration away, unless they are the last active administrator.                                                                                                                      |
 | `php artisan setup:clear`                            | Deletes the setup flag.                                                                                                                                                                        |
 
+## Mail
+
+Lumberjack sends these mails, all in one layout with a plain-text version:
+
+| Mail                                    | Sent to                                | From          |
+| --------------------------------------- | -------------------------------------- | ------------- |
+| New error, regression, escalation       | the rule's mail channels, and watchers | alerts        |
+| Note, resolved or ignored, bulk resolve | the rule's mail channels               | alerts        |
+| Health check down, degraded, recovered  | the rule's mail channels               | alerts        |
+| Queue backlog, queue recovered          | the rule's mail channels               | alerts        |
+| Test message                            | the channel being tested               | alerts        |
+| Mention                                 | the member a note tags                 | notifications |
+| Assigned, taken off                     | the member concerned, once per action  | notifications |
+| Updates on a watched issue              | its [watchers](./issues#watching)      | notifications |
+| Invitation                              | the invited address                    | notifications |
+| Password reset, email confirmation      | the account                            | notifications |
+
+Subjects start with the project in brackets (`[Demo] New error: DEMO-12 RuntimeException`),
+so a mail filter can sort them per project. Each mail says in its footer why it was sent
+and where to change that. An address gets [one mail per thing that
+happened](./issues#one-mail-per-thing-that-happened), however many rules and reasons lead
+to it.
+
+| Variable                          | Default             | What it does                                    |
+| --------------------------------- | ------------------- | ----------------------------------------------- |
+| `MAIL_ALERTS_FROM_ADDRESS`        | `MAIL_FROM_ADDRESS` | Sender of what alert rules send.                |
+| `MAIL_NOTIFICATIONS_FROM_ADDRESS` | `MAIL_FROM_ADDRESS` | Sender of personal mail: everything else above. |
+
+Both are sent from the name "Lumberjack" (`MAIL_ALERTS_FROM_NAME`,
+`MAIL_NOTIFICATIONS_FROM_NAME` change it).
+
+Mails follow the reader's light or dark mode where the mail client supports it
+(Apple Mail, iOS, Outlook for Mac, Thunderbird; Outlook.com partly). Clients that invert
+colors by themselves (the Gmail app, Outlook for Windows) get solid buttons and a logo on
+its own background, which survive that. Fonts fall back to the system's when IBM Plex
+Sans and JetBrains Mono are not installed; no web fonts are loaded.
+
+### Previewing mails
+
+In local development (`APP_ENV=local`), signed in, `/dev/mail` lists every mail with
+sample data; each one shows light and dark side by side and the plain text. Nothing is
+sent and nothing is saved. The route does not exist in any other environment.
+
 ## Administration pages
 
 Administrators see an **Administration** section in the sidebar. Everything they
