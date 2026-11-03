@@ -246,48 +246,54 @@ export function RetentionTable({
                                                             error !== undefined
                                                         }
                                                     />
-                                                    {cap === null && (
-                                                        <label className="flex items-center gap-1.5 text-xs text-ink-2">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={
-                                                                    forever
-                                                                }
-                                                                disabled={
-                                                                    readOnly
-                                                                }
-                                                                aria-label={t(
-                                                                    'settings.retention.forever_for',
-                                                                    {
-                                                                        label: row.label,
-                                                                    },
+                                                    {cap === null &&
+                                                        row.effective
+                                                            .forever_allowed && (
+                                                            <label className="flex items-center gap-1.5 text-xs text-ink-2">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={
+                                                                        forever
+                                                                    }
+                                                                    disabled={
+                                                                        readOnly
+                                                                    }
+                                                                    aria-label={t(
+                                                                        'settings.retention.forever_for',
+                                                                        {
+                                                                            label: row.label,
+                                                                        },
+                                                                    )}
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setData(
+                                                                            {
+                                                                                ...data,
+                                                                                forever:
+                                                                                    e
+                                                                                        .target
+                                                                                        .checked
+                                                                                        ? [
+                                                                                              ...data.forever,
+                                                                                              key,
+                                                                                          ]
+                                                                                        : data.forever.filter(
+                                                                                              (
+                                                                                                  f,
+                                                                                              ) =>
+                                                                                                  f !==
+                                                                                                  key,
+                                                                                          ),
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                />
+                                                                {t(
+                                                                    'settings.retention.forever',
                                                                 )}
-                                                                onChange={(e) =>
-                                                                    setData({
-                                                                        ...data,
-                                                                        forever:
-                                                                            e
-                                                                                .target
-                                                                                .checked
-                                                                                ? [
-                                                                                      ...data.forever,
-                                                                                      key,
-                                                                                  ]
-                                                                                : data.forever.filter(
-                                                                                      (
-                                                                                          f,
-                                                                                      ) =>
-                                                                                          f !==
-                                                                                          key,
-                                                                                  ),
-                                                                    })
-                                                                }
-                                                            />
-                                                            {t(
-                                                                'settings.retention.forever',
-                                                            )}
-                                                        </label>
-                                                    )}
+                                                            </label>
+                                                        )}
                                                     {set && !readOnly && (
                                                         <Button
                                                             variant="ghost"

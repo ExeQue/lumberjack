@@ -134,6 +134,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('teams', [TeamController::class, 'store'])->name('teams.store');
     Route::put('teams/{team}/switch', [TeamController::class, 'switch'])->name('teams.switch');
     Route::put('team/retention', [RetentionController::class, 'team'])->name('team.retention');
+    Route::get('team/retention', [RetentionController::class, 'teamShow'])->name('team.retention.show');
     Route::put('team/members/{member}', [MemberController::class, 'update'])->name('members.update');
     Route::delete('team/members/{member}', [MemberController::class, 'destroy'])->name('members.destroy');
     Route::post('team/members/{member}/ownership', [MemberController::class, 'transfer'])->name('members.transfer');

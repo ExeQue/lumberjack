@@ -12,6 +12,7 @@ use App\Domains\Retention\Http\Requests\UpdateRetentionRequest;
 use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Retention\Presenters\RetentionPresenter;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -64,6 +65,23 @@ class RetentionController
         });
 
         return back()->with('status', __('retention.saved'));
+    }
+
+    /**
+     * The team level: defaults and caps for the current team's projects. Members read it, admins change it.
+     */
+    public function teamShow(Request $request, RetentionPresenter $presenter, MeasureRetentionAction $measure): Response|RedirectResponse
+    {
+        $team = $request->user()->currentTeam;
+
+        if ($team === null) {
+            return redirect()->route('team.show');
+        }
+
+        return Inertia::render('team/retention', [
+            'retention' => $presenter->rows($team),
+            'retention_stats' => Inertia::defer(fn (): array => $measure->execute(RetentionCategory::forTeams(), $team)),
+        ]);
     }
 
     public function team(UpdateRetentionRequest $request, SaveRetentionPolicyAction $action): RedirectResponse

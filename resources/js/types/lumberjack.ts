@@ -362,6 +362,8 @@ export type ResolvedRetention = {
     /** The most the levels above allow; null means no cap. */
     cap_days: number | null;
     cap_level: RetentionLevel | null;
+    /** Forever is offered only when the application keeps this data forever. */
+    forever_allowed: boolean;
 };
 
 /** One data type in a retention table at the application, team or project level. */
