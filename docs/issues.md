@@ -15,6 +15,12 @@ Click the copy icon next to the number on the issue page to copy it. The number 
 in the [command palette](./finding-things), in the issues search (`DEMO-42`, `#42` or
 `42`) and in every MCP tool that takes an issue.
 
+## The stacktrace
+
+Each frame shows the lines around it, highlighted as PHP, JavaScript or TypeScript by
+the file's extension, with the line that threw marked. Vendor frames are folded away
+until you show them.
+
 ## The chart
 
 The issue page charts its occurrences over 1 hour, 24 hours (the default), 7 days or

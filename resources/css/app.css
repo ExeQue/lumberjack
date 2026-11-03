@@ -230,6 +230,15 @@
      * A list row that opens something: its main link or button (.lj-row-link) covers
      * the whole row, and the row's other controls sit above it.
      */
+    /* Highlighted code: each token carries both themes' colors (see lib/highlight.ts). */
+    .lj-code [style*='--shiki-light'] {
+        color: var(--shiki-light);
+    }
+
+    .dark .lj-code [style*='--shiki-dark'] {
+        color: var(--shiki-dark);
+    }
+
     .lj-row {
         position: relative;
         cursor: pointer;

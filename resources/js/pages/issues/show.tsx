@@ -1,7 +1,7 @@
 import { Head, router, useForm, usePage, Link } from '@inertiajs/react';
 import { CircleDot } from 'lucide-react';
 import { useRef, useState } from 'react';
-import type { FormEvent, KeyboardEvent } from 'react';
+import type { CSSProperties, FormEvent, KeyboardEvent } from 'react';
 import { LabelEditor } from '@/components/lj/labels';
 import type { IssueLabel } from '@/components/lj/labels';
 import { MentionTextarea, NoteBody, toStored } from '@/components/lj/mentions';
@@ -40,6 +40,7 @@ import {
     formatRelative,
     formatTime,
 } from '@/lib/format';
+import { languageOf, useHighlightedLines } from '@/lib/highlight';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useProjectLive } from '@/lib/use-project-live';
@@ -106,6 +107,10 @@ function frameFunction(frame: StackFrame): string | null {
 function Frame({ frame }: { frame: StackFrame }) {
     const t = useT();
     const fn = frameFunction(frame);
+    const tokens = useHighlightedLines(
+        frame.code?.lines ?? [],
+        languageOf(frame.file),
+    );
 
     return (
         <li className="border-b border-line/60 last:border-b-0">
@@ -126,7 +131,7 @@ function Frame({ frame }: { frame: StackFrame }) {
                 </Badge>
             </div>
             {frame.code && frame.code.lines.length > 0 && (
-                <pre className="overflow-x-auto border-t border-line/60 bg-ground font-mono text-xs leading-5">
+                <pre className="lj-code overflow-x-auto border-t border-line/60 bg-ground font-mono text-xs leading-5">
                     {frame.code.lines.map((text, i) => {
                         const number = frame.code!.start + i;
                         const current = number === frame.line;
@@ -156,7 +161,18 @@ function Frame({ frame }: { frame: StackFrame }) {
                                             {t('issue.stack.error_line')}{' '}
                                         </span>
                                     )}
-                                    {text}
+                                    {tokens?.[i]
+                                        ? tokens[i].map((token, j) => (
+                                              <span
+                                                  key={j}
+                                                  style={
+                                                      token.htmlStyle as CSSProperties
+                                                  }
+                                              >
+                                                  {token.content}
+                                              </span>
+                                          ))
+                                        : text}
                                 </span>
                             </div>
                         );

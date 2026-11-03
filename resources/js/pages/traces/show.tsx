@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { HighlightedCode } from '@/components/lj/highlighted-code';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
@@ -274,9 +275,11 @@ export default function TraceShow({ project, trace }: Props) {
         if (entry.type === 'query') {
             return (
                 <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate font-mono text-xs text-ink">
-                        {entry.sql}
-                    </span>
+                    <HighlightedCode
+                        code={entry.sql ?? ''}
+                        language="sql"
+                        className="truncate font-mono text-xs text-ink"
+                    />
                     {entry.location && (
                         <span className="truncate font-mono text-[11px] text-ink-3">
                             {entry.location}

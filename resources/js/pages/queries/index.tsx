@@ -1,4 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import { HighlightedCode } from '@/components/lj/highlighted-code';
 import { useEffect, useState } from 'react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
@@ -214,12 +215,12 @@ export default function QueriesIndex({
                                         <td
                                             className={`${tdClass} max-w-[520px] min-w-[360px]`}
                                         >
-                                            <code
-                                                className="line-clamp-2 font-mono text-xs break-all text-ink"
+                                            <HighlightedCode
+                                                code={q.sql}
+                                                language="sql"
                                                 title={q.sql}
-                                            >
-                                                {q.sql}
-                                            </code>
+                                                className="line-clamp-2 font-mono text-xs break-all text-ink"
+                                            />
                                             {(q.location || q.n_plus_one) && (
                                                 <span className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
                                                     {q.n_plus_one && (
