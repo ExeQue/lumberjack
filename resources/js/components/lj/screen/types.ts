@@ -113,4 +113,10 @@ export const DATA_KINDS: WidgetKind[] = [
     'health',
 ];
 export const LAYOUT_KINDS: WidgetKind[] = ['clock', 'empty'];
-export const ROTATING_KINDS: WidgetKind[] = ['stat', 'gauge', 'chart', 'list'];
+export const ROTATING_KINDS: WidgetKind[] = [
+    'stat',
+    'gauge',
+    'chart',
+    'list',
+    'health',
+];

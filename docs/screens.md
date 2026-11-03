@@ -112,8 +112,8 @@ Each widget's settings are grouped in sections that open and close:
   defaults shown; shares go from 0 to 1, durations are in milliseconds), whether low
   values are bad (Apdex, uptime), what to compare with, decimals, a prefix and suffix,
   the chart style and how many series, its time axis, value axis and grid lines (each on or off), how many rows a list shows and in which order.
-- **Rotation**: a stat, gauge, chart or list can show several values in turn on one
-  tile. The inspector shows them as tabs at the top, one per value in the order they
+- **Rotation**: a stat, gauge, chart, list or health widget can show several values in
+  turn on one tile. The inspector shows them as tabs at the top, one per value in the order they
   show, the widget's own source first. **+** after the tabs adds the next value not
   shown yet and opens its tab; **Shows** on that tab changes which one it is. A tab
   holds everything about its value: what it shows, its title, its period (**Over**),
@@ -134,6 +134,17 @@ Each widget's settings are grouped in sections that open and close:
     source id or `{"source": "p95", "seconds": 30, "title": "Latency", "options":
   {"red": 800}, "scope": {"period": "24h"}}`; the first value's seconds are the
     widget's `source_seconds` option.
+
+    A health widget's values are sets of checks: each tab picks its own checks and the
+    other settings under **Checks** (view, only problems, uptime, timeline, message,
+    stale). Pick one check per tab and a 1 x 1 tile cycles through the checks, each
+    named after its check; or pick a group per tab. **+** adds a tab with the next check
+    not on a tab yet (with none picked once every check has one), and a tab is named
+    after its title, else its check, else how many checks it shows (**3 checks**), else
+    **All checks**. A tab with no check picked shows every check, not the widget's. A
+    down or degraded check holds the tile while **Stay on a value that needs attention** is on. Stored, every health
+    value names the source `checks`: `{"source": "checks", "seconds": 5, "options":
+    {"checks": ["<check uuid>"]}}`.
 
     ![A rotating widget's value tabs](./screenshots/screen-designer-rotation.png)
 

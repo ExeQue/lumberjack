@@ -140,6 +140,9 @@ return [
         'rotate_on' => 'Shows :count values in turn, each on its own tab. Drag a tab or use the arrows to change the order.',
         'rotate_off' => 'Add a value with + to show several in turn on this tile.',
         'rotate_seconds' => 'Shows for (seconds)',
+        // A health value's tab, named after the checks it shows.
+        'all_checks' => 'All checks',
+        'some_checks' => '{1} 1 check|[2,*] :count checks',
         'same_as_widget' => 'Same as widget (:value)',
         'on' => 'On',
         'off' => 'Off',

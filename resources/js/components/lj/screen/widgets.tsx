@@ -12,6 +12,7 @@ import {
     formatValue,
     incident as incidentPreview,
     option,
+    keysOf,
     rotationIndex,
     rotationOf,
     shownAs,
@@ -134,7 +135,7 @@ function DatabaseLine({ metrics }: { metrics: Record<string, number> }) {
                 : undefined;
 
     return (
-        <span className="lj-tile-small max-w-full shrink-0 truncate text-[0.68em]">
+        <span className="lj-tile-small max-w-full shrink-0 truncate text-[0.68em] leading-[1.15]">
             {connections !== undefined && (
                 <span style={{ color }}>
                     {max !== undefined
@@ -338,28 +339,30 @@ export function WidgetTile({
     const t = useT();
     const items = rotationOf(stored);
     const shown = items.map((item) => item.source);
+    // Where each value's data is: a health widget shows its one source several times.
+    const keys = keysOf(items);
     const every = Number(option<string>(schema, stored, 'rotate_every') ?? 10);
-    const preview = (id: string) =>
-        incident ? incidentPreview(stored.type, data?.[id]) : data?.[id];
+    const preview = (key: string) =>
+        incident ? incidentPreview(stored.type, data?.[key]) : data?.[key];
     const previewData: WidgetData | undefined = data
-        ? Object.fromEntries(shown.map((id) => [id, preview(id) ?? null]))
+        ? Object.fromEntries(keys.map((key) => [key, preview(key) ?? null]))
         : undefined;
     const index =
         pinned !== undefined
             ? Math.min(pinned, Math.max(0, items.length - 1))
             : rotationIndex(
                   stored.type,
-                  shown,
+                  keys,
                   previewData,
                   items.map((item) => item.seconds ?? every),
                   option<boolean>(schema, stored, 'hold_problem') !== false,
                   now,
               );
     // The value shown now draws with its own settings over the widget's.
-    const widget = shownAs(stored, items[index]);
+    const widget = shownAs(stored, index > 0 ? items[index] : undefined);
     const opt = <T,>(key: string) => option<T>(schema, widget, key);
     const sourceId = shown[index] ?? null;
-    const payload = sourceId ? previewData?.[sourceId] : undefined;
+    const payload = sourceId ? previewData?.[keys[index]] : undefined;
     const source = sources[widget.type]?.find((s) => s.id === sourceId);
     const colored = opt<boolean>('status_colors') !== false;
     const status: Status = colored ? statusOf(widget.type, payload) : null;
@@ -368,7 +371,7 @@ export function WidgetTile({
         ?.name;
     const title =
         shown.length > 1
-            ? (items[index]?.title ?? source?.label ?? '')
+            ? (items[index]?.title ?? single ?? source?.label ?? '')
             : (widget.title ??
               single ??
               source?.label ??
@@ -396,6 +399,7 @@ export function WidgetTile({
             status !== 'degraded') ||
         (hideWhen === 'empty' && empty);
     const transition = opt<string>('transition') ?? 'fade';
+    const dots = shown.length > 1 && opt<boolean>('dots') !== false;
 
     let body: ReactNode = null;
 
@@ -452,6 +456,8 @@ export function WidgetTile({
                 textAlign: align,
                 ['--lj-text-scale' as string]: TEXT_SCALE[textSize] ?? 1,
                 visibility: hidden && !designer ? 'hidden' : undefined,
+                // Room for the position dots (6px up, 4px tall) and a gap above them.
+                paddingBottom: dots ? 'max(0.8em, 16px)' : undefined,
                 opacity: hidden && designer ? 0.45 : undefined,
                 ...style,
             }}
@@ -507,9 +513,11 @@ export function WidgetTile({
                 </div>
             )}
             <div
-                key={sourceId ?? 'tile'}
+                key={keys[index] ?? 'tile'}
                 className={cn(
                     'flex min-h-0 flex-1 flex-col gap-[0.3em]',
+                    // What does not fit stops above the dots instead of running under them.
+                    dots && 'overflow-hidden',
                     shown.length > 1 &&
                         transition === 'fade' &&
                         'animate-in duration-500 fade-in',
@@ -524,14 +532,14 @@ export function WidgetTile({
             >
                 {body}
             </div>
-            {shown.length > 1 && opt<boolean>('dots') !== false && (
+            {dots && (
                 <div
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-x-0 bottom-1.5 flex justify-center gap-1"
                 >
-                    {shown.map((id, i) => (
+                    {keys.map((key, i) => (
                         <span
-                            key={id}
+                            key={key}
                             className="h-1 rounded-full transition-all"
                             style={{
                                 width: i === index ? 14 : 4,
@@ -1571,44 +1579,47 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                     className="lj-tile-big"
                     style={{
                         // Leaves room for the lines under it on a one row tile.
-                        fontSize: 'min(27cqh, 15cqw)',
+                        fontSize: 'min(22cqh, 15cqw)',
                         color: STATE_COLOR[state],
                     }}
                 >
                     {word(state)}
                 </span>
-                <span
-                    className="lj-tile-small shrink-0 text-[0.68em]"
-                    style={{ color: STATE_COLOR[state] }}
-                >
-                    {[
-                        detail.since
-                            ? t('screens.health.for', {
-                                  state: word(state),
-                                  time: lasted(detail.since, now),
-                              })
-                            : word(state),
-                        opt<boolean>('show_uptime') !== false &&
-                        detail.uptime !== null
-                            ? t('screens.health.uptime', {
-                                  uptime: formatPercent(detail.uptime, 2),
-                              })
-                            : null,
-                    ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                </span>
-                {/* One line under the state, kept even when empty so tiles line up: the
+                {/* The lines under the state sit close, so a 1 x 1 tile fits them. */}
+                <div className="flex max-w-full min-w-0 shrink-0 flex-col [align-items:inherit]">
+                    <span
+                        className="lj-tile-small max-w-full shrink-0 truncate text-[0.68em] leading-[1.15]"
+                        style={{ color: STATE_COLOR[state] }}
+                    >
+                        {[
+                            detail.since
+                                ? t('screens.health.for', {
+                                      state: word(state),
+                                      time: lasted(detail.since, now),
+                                  })
+                                : word(state),
+                            opt<boolean>('show_uptime') !== false &&
+                            detail.uptime !== null
+                                ? t('screens.health.uptime', {
+                                      uptime: formatPercent(detail.uptime, 2),
+                                  })
+                                : null,
+                        ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                    </span>
+                    {/* One line under the state, kept even when empty so tiles line up: the
                     database's figures when it reports them, the last message otherwise. */}
-                {opt<boolean>('show_message') !== false &&
-                    (hasDatabaseFigures(detail.metrics) &&
-                    !detail.last_message ? (
-                        <DatabaseLine metrics={detail.metrics ?? {}} />
-                    ) : (
-                        <span className="lj-tile-small max-w-full shrink-0 truncate text-[0.68em]">
-                            {detail.last_message || '\u00a0'}
-                        </span>
-                    ))}
+                    {opt<boolean>('show_message') !== false &&
+                        (hasDatabaseFigures(detail.metrics) &&
+                        !detail.last_message ? (
+                            <DatabaseLine metrics={detail.metrics ?? {}} />
+                        ) : (
+                            <span className="lj-tile-small max-w-full shrink-0 truncate text-[0.68em] leading-[1.15]">
+                                {detail.last_message || '\u00a0'}
+                            </span>
+                        ))}
+                </div>
                 {opt<boolean>('show_timeline') !== false &&
                     widget.h >= 2 &&
                     detail.strip.length > 0 && (
