@@ -23,6 +23,7 @@ return [
     'n_plus_one_hint' => 'The same query :count times in one request or job. Load the data at once (eager loading).',
     'columns' => [
         'most_from' => 'Most from',
+        'most_from_day' => 'Most from (last 24 h)',
         'sql' => 'SQL',
         'connection' => 'Connection',
         'calls' => 'Calls',
