@@ -21,9 +21,11 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Projects\Queries\AgentMetricsQuery;
+use App\Domains\Retention\Actions\MeasureRetentionAction;
 use App\Domains\Retention\Actions\ResolveRetentionDaysAction;
 use App\Domains\Retention\Enums\RetentionCategory;
 use App\Domains\Retention\Models\RetentionPolicy;
+use App\Domains\Retention\Presenters\RetentionPresenter;
 use App\Domains\Shared\Support\Scrubber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,7 +36,7 @@ use Inertia\Response;
 
 class ProjectSettingsController
 {
-    public function edit(Request $request, Project $project, ProjectPresenter $presenter, ResolveRetentionDaysAction $retention, AgentMetricsQuery $agentMetrics): Response
+    public function edit(Request $request, Project $project, ProjectPresenter $presenter, ResolveRetentionDaysAction $retention, AgentMetricsQuery $agentMetrics, RetentionPresenter $retentionRows, MeasureRetentionAction $measure): Response
     {
         Gate::authorize('update', $project);
 
@@ -74,12 +76,8 @@ class ProjectSettingsController
             ])->all(),
             'unknown_channels' => DB::table('log_entries')->where('project_id', $project->id)->where('occurred_at', '>=', now()->subDays(7))
                 ->whereNotNull('sent_channel')->distinct()->limit(10)->pluck('sent_channel'),
-            'retention' => collect(RetentionCategory::cases())->map(fn (RetentionCategory $c): array => [
-                'category' => $c->value,
-                'label' => $c->label(),
-                'team_days' => $policies->first(fn (RetentionPolicy $p): bool => $p->category === $c && $p->project_id === null)->days ?? $c->defaultDays(),
-                'project_days' => $policies->first(fn (RetentionPolicy $p): bool => $p->category === $c && $p->project_id === $project->id && $p->job_class === null && $p->log_channel_id === null)?->days,
-            ])->all(),
+            'retention' => $retentionRows->rows($project),
+            'retention_stats' => Inertia::defer(fn (): array => $measure->execute(RetentionCategory::forTeams(), $project)),
             'job_overrides' => $policies->filter(fn (RetentionPolicy $p): bool => $p->project_id === $project->id && $p->job_class !== null)
                 ->map(fn (RetentionPolicy $p): array => ['job_class' => $p->job_class, 'days' => $p->days])->values()->all(),
             'alerts' => [

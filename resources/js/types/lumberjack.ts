@@ -342,3 +342,47 @@ export type ProjectAlertRule = {
     /** Channels the project adds to the team's rule while it uses that. */
     add_ons: number[];
 };
+
+/** Where a retention comes from, broadest first; each level is capped by the ones above. */
+export type RetentionLevel =
+    | 'default'
+    | 'application'
+    | 'team'
+    | 'project'
+    | 'override';
+
+/** The retention in force for one scope; null days means forever. */
+export type ResolvedRetention = {
+    days: number | null;
+    source: RetentionLevel;
+    /** The stored value is above the cap, so the cap applies instead. */
+    capped: boolean;
+    /** The most the levels above allow; null means no cap. */
+    cap_days: number | null;
+    cap_level: RetentionLevel | null;
+};
+
+/** One data type in a retention table at the application, team or project level. */
+export type RetentionRow = {
+    category: string;
+    group: string;
+    label: string;
+    description: string;
+    default_days: number;
+    /** What this level stores; null inherits. Null days inside means forever. */
+    stored: { days: number | null } | null;
+    /** What applies when this level stores nothing. */
+    inherited: ResolvedRetention;
+    effective: ResolvedRetention;
+};
+
+/** Rows stored per data type, counted up to a cap or estimated, and the oldest row. */
+export type RetentionStats = Record<
+    string,
+    {
+        rows: number;
+        rows_more: boolean;
+        rows_estimated: boolean;
+        oldest_at: string | null;
+    }
+>;

@@ -67,9 +67,7 @@ return [
     ],
     'retention' => [
         'title' => 'Team retention',
-        'description' => 'Default for every project; each project can override it.',
-        'days_for' => ':label (days)',
-        'hint' => 'Empty uses the default shown in the field.',
+        'description' => 'Default and maximum for every project of the team. Empty uses the application value; each value is capped by the application.',
     ],
     'create' => [
         'title' => 'Create a team',

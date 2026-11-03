@@ -1,6 +1,11 @@
 import { Relative, useNow } from '@/components/lj/relative';
 import { Form, Head, router, useForm, usePage } from '@inertiajs/react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
+import {
+    RetentionTable,
+    retentionFormData,
+    retentionPayload,
+} from '@/components/lj/retention-table';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
@@ -37,7 +42,11 @@ import {
 } from '@/routes/members';
 import { retention as teamRetention } from '@/routes/team';
 import { store as teamStore } from '@/routes/teams';
-import type { TeamShared } from '@/types/lumberjack';
+import type {
+    RetentionRow,
+    RetentionStats,
+    TeamShared,
+} from '@/types/lumberjack';
 
 const firstError = (
     errors: Record<string, string>,
@@ -71,12 +80,6 @@ type Token = {
     last_used_at: string | null;
     expires_at: string | null;
 };
-type RetentionRow = {
-    category: string;
-    label: string;
-    days: number | null;
-    default_days: number;
-};
 
 type Props = {
     members: Member[];
@@ -84,6 +87,8 @@ type Props = {
     tokens: Token[];
     scopes: string[];
     retention: RetentionRow[];
+    /** Deferred: counted after the page shows. */
+    retention_stats?: RetentionStats;
     mcp_url: string;
 };
 
@@ -93,6 +98,7 @@ export default function TeamShow({
     tokens,
     scopes,
     retention,
+    retention_stats,
     mcp_url,
 }: Props) {
     // Relative times in the text below stay current.
@@ -793,7 +799,11 @@ export default function TeamShow({
                     </div>
                 </Card>
 
-                <TeamRetention retention={retention} admin={admin} />
+                <TeamRetention
+                    retention={retention}
+                    stats={retention_stats}
+                    admin={admin}
+                />
 
                 <Card aria-labelledby="h-new-team">
                     <CardHeader
@@ -839,17 +849,15 @@ export default function TeamShow({
 
 function TeamRetention({
     retention,
+    stats,
     admin,
 }: {
     retention: RetentionRow[];
+    stats: RetentionStats | undefined;
     admin: boolean;
 }) {
     const t = useT();
-    const form = useForm({
-        days: Object.fromEntries(
-            retention.map((r) => [r.category, r.days?.toString() ?? '']),
-        ) as Record<string, string>,
-    });
+    const form = useForm(retentionFormData(retention));
     const errors = form.errors as Record<string, string>;
 
     return (
@@ -863,47 +871,19 @@ function TeamRetention({
                 className="flex flex-col gap-4 p-4"
                 onSubmit={(e) => {
                     e.preventDefault();
-                    form.transform((data) => ({
-                        days: Object.fromEntries(
-                            Object.entries(data.days).map(([key, value]) => [
-                                key,
-                                value.trim() === '' ? null : Number(value),
-                            ]),
-                        ),
-                    }));
+                    form.transform(retentionPayload);
                     form.submit(teamRetention(), { preserveScroll: true });
                 }}
             >
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
-                    {retention.map((row) => (
-                        <Field
-                            key={row.category}
-                            label={t('team.retention.days_for', {
-                                label: row.label,
-                            })}
-                            htmlFor={`team-retention-${row.category}`}
-                            error={errors[`days.${row.category}`]}
-                        >
-                            <Input
-                                id={`team-retention-${row.category}`}
-                                type="number"
-                                min={1}
-                                inputMode="numeric"
-                                className="font-mono"
-                                readOnly={!admin}
-                                placeholder={String(row.default_days)}
-                                value={form.data.days[row.category]}
-                                onChange={(e) =>
-                                    form.setData('days', {
-                                        ...form.data.days,
-                                        [row.category]: e.target.value,
-                                    })
-                                }
-                            />
-                        </Field>
-                    ))}
-                </div>
-                <p className="text-xs text-ink-3">{t('team.retention.hint')}</p>
+                <RetentionTable
+                    level="team"
+                    rows={retention}
+                    stats={stats}
+                    data={form.data}
+                    setData={(next) => form.setData(next)}
+                    errors={errors}
+                    readOnly={!admin}
+                />
                 {admin && (
                     <div>
                         <Button

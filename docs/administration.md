@@ -136,6 +136,8 @@ do there is written to the audit log.
   require a new password, make or revoke administrators, suspend or reinstate.
   Administrators cannot do any of that to their own account.
 - **Audit log:** who did what, and when.
+- **Retention:** how long this Lumberjack keeps each kind of data, as the default
+  and the maximum for every team. See [Retention](./projects#retention).
 
 Administrators can see every team and project, whether or not they are members.
 

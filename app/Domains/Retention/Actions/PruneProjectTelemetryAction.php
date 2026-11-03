@@ -9,10 +9,13 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Retention\Enums\RetentionCategory;
 use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Shared\Support\ChunkedDeleter;
+use Closure;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\DB;
 
 /**
- * Deletes raw rows past their retention. Issues themselves are kept; only
- * their occurrences age out.
+ * Deletes a project's rows past their retention, each data type by its own. Issues themselves
+ * are kept; only their occurrences age out.
  */
 class PruneProjectTelemetryAction
 {
@@ -23,62 +26,91 @@ class PruneProjectTelemetryAction
     }
 
     /**
-     * @return array<string, int> rows deleted per table
+     * @return array<string, int> rows deleted per data type
      */
     public function execute(Project $project): array
     {
         $policies = $this->resolve->policiesFor($project);
-        $days = fn (RetentionCategory $c, ?string $job = null, ?int $channel = null): int => $this->resolve->execute($project, $c, $job, $channel, $policies);
-        $before = fn (int $d): string => now()->subDays($d)->format('Y-m-d H:i:s');
-        $deleted = [];
+        $days = fn (RetentionCategory $c, ?string $job = null, ?int $channel = null): ?int => $this->resolve->execute($c, $project, $job, $channel, $policies)->days;
+        $deleted = array_fill_keys(array_map(fn (RetentionCategory $c): string => $c->value, RetentionCategory::forTeams()), 0);
 
-        $errorsCutoff = $before($days(RetentionCategory::Errors));
-        $deleted['occurrences'] = $this->deleter->delete('occurrences', fn ($q) => $q->where('project_id', $project->id)->where('occurred_at', '<', $errorsCutoff));
-
-        $performanceCutoff = $before($days(RetentionCategory::Performance));
-        foreach (['request_runs', 'query_runs', 'span_runs', 'web_vitals'] as $table) {
-            $deleted[$table] = $this->deleter->delete($table, fn ($q) => $q->where('project_id', $project->id)->where('occurred_at', '<', $performanceCutoff));
+        foreach (RetentionCategory::forTeams() as $category) {
+            $deleted[$category->value] = match ($category) {
+                RetentionCategory::JobRuns, RetentionCategory::ScheduledTaskRuns, RetentionCategory::CommandRuns, RetentionCategory::Logs => 0,
+                default => $this->prune($project, $category, $days($category)),
+            };
         }
 
-        // Failed runs live as long as the errors they belong to.
-        $deleted['job_runs'] = $this->deleter->delete('job_runs', fn ($q) => $q->where('project_id', $project->id)
-            ->where('status', JobRunStatus::Failed->value)->where('created_at', '<', $errorsCutoff));
+        // Failed runs stay at least as long as the errors they belong to.
+        $occurrences = $days(RetentionCategory::Occurrences);
+        $failed = ['job_runs' => [JobRunStatus::Failed->value], 'scheduled_task_runs' => ['failed', 'missed'], 'command_runs' => ['failed']];
 
-        $overrides = $policies->filter(fn (RetentionPolicy $p): bool => $p->project_id === $project->id && $p->job_class !== null);
-        foreach ($overrides as $override) {
-            $cutoff = $before($override->days);
-            $deleted['job_runs'] += $this->deleter->delete('job_runs', fn ($q) => $q->where('project_id', $project->id)
-                ->where('name', $override->job_class)->where('status', '!=', JobRunStatus::Failed->value)->where('created_at', '<', $cutoff));
+        foreach ([RetentionCategory::JobRuns, RetentionCategory::ScheduledTaskRuns, RetentionCategory::CommandRuns] as $category) {
+            $statuses = $failed[$category->value];
+            $deleted[$category->value] += $this->prune($project, $category, $this->longer($occurrences, $days($category)), fn (Builder $q) => $q->whereIn('status', $statuses));
         }
 
-        $jobsCutoff = $before($days(RetentionCategory::Jobs));
-        $overridden = $overrides->pluck('job_class')->all();
-        $deleted['job_runs'] += $this->deleter->delete('job_runs', fn ($q) => $q->where('project_id', $project->id)
-            ->where('status', '!=', JobRunStatus::Failed->value)->whereNotIn('name', $overridden)->where('created_at', '<', $jobsCutoff));
+        $overridden = $policies->filter(fn (RetentionPolicy $p): bool => $p->project_id === $project->id && $p->job_class !== null)->pluck('job_class');
 
-        // Scheduled runs follow the jobs retention; failed and missed ones the errors'.
-        $deleted['scheduled_task_runs'] = $this->deleter->delete('scheduled_task_runs', fn ($q) => $q->where('project_id', $project->id)
-            ->whereIn('status', ['failed', 'missed'])->where('created_at', '<', $errorsCutoff));
-        $deleted['scheduled_task_runs'] += $this->deleter->delete('scheduled_task_runs', fn ($q) => $q->where('project_id', $project->id)
-            ->whereNotIn('status', ['failed', 'missed'])->where('created_at', '<', $jobsCutoff));
+        foreach ($overridden as $jobClass) {
+            $deleted['job_runs'] += $this->prune($project, RetentionCategory::JobRuns, $days(RetentionCategory::JobRuns, $jobClass), fn (Builder $q) => $q
+                ->where('name', $jobClass)->whereNotIn('status', $failed['job_runs']));
+        }
 
-        // Command runs follow the jobs retention; failed ones the errors'.
-        $deleted['command_runs'] = $this->deleter->delete('command_runs', fn ($q) => $q->where('project_id', $project->id)
-            ->where('status', 'failed')->where('created_at', '<', $errorsCutoff));
-        $deleted['command_runs'] += $this->deleter->delete('command_runs', fn ($q) => $q->where('project_id', $project->id)
-            ->where('status', '!=', 'failed')->where('created_at', '<', $jobsCutoff));
+        $deleted['job_runs'] += $this->prune($project, RetentionCategory::JobRuns, $days(RetentionCategory::JobRuns), fn (Builder $q) => $q
+            ->whereNotIn('name', $overridden->all())->whereNotIn('status', $failed['job_runs']));
 
-        // Health results come as often as requests; outages, which uptime is counted from, live as long as errors.
-        $deleted['health_check_results'] = $this->deleter->delete('health_check_results', fn ($q) => $q->where('project_id', $project->id)->where('checked_at', '<', $performanceCutoff));
-        $deleted['health_outages'] = $this->deleter->delete('health_outages', fn ($q) => $q->where('project_id', $project->id)->whereNotNull('ended_at')->where('ended_at', '<', $errorsCutoff));
+        foreach ([RetentionCategory::ScheduledTaskRuns, RetentionCategory::CommandRuns] as $category) {
+            $statuses = $failed[$category->value];
+            $deleted[$category->value] += $this->prune($project, $category, $days($category), fn (Builder $q) => $q->whereNotIn('status', $statuses));
+        }
 
-        $deleted['log_entries'] = 0;
         foreach ($project->logChannels()->pluck('id') as $channelId) {
-            $cutoff = $before($days(RetentionCategory::Logs, channel: $channelId));
-            $deleted['log_entries'] += $this->deleter->delete('log_entries', fn ($q) => $q->where('project_id', $project->id)
-                ->where('log_channel_id', $channelId)->where('occurred_at', '<', $cutoff));
+            $deleted['logs'] += $this->prune($project, RetentionCategory::Logs, $days(RetentionCategory::Logs, channel: $channelId), fn (Builder $q) => $q->where('log_channel_id', $channelId));
         }
 
         return $deleted;
+    }
+
+    /**
+     * Limits a query on the category's table to the rows of the given projects.
+     *
+     * @param  Project|int|list<int>  $projects
+     */
+    public static function scope(Builder $query, RetentionCategory $category, Project|int|array $projects): Builder
+    {
+        $ids = $projects instanceof Project ? [$projects->id] : (array) $projects;
+
+        return match ($category) {
+            RetentionCategory::HostSamples => $query->whereIn('project_agent_id', DB::table('project_agents')->whereIn('project_id', $ids)->select('id')),
+            RetentionCategory::AlertSends => $query->whereIn('issue_id', DB::table('issues')->whereIn('project_id', $ids)->select('id')),
+            default => $query->whereIn('project_id', $ids),
+        };
+    }
+
+    /**
+     * @param  Closure(Builder): mixed|null  $constrain
+     */
+    private function prune(Project $project, RetentionCategory $category, ?int $days, ?Closure $constrain = null): int
+    {
+        // Forever.
+        if ($days === null) {
+            return 0;
+        }
+
+        $cutoff = now()->subDays($days)->format('Y-m-d H:i:s');
+
+        return $this->deleter->delete($category->table(), function (Builder $q) use ($project, $category, $cutoff, $constrain): void {
+            self::scope($q, $category, $project)->where($category->timeColumn(), '<', $cutoff);
+
+            if ($constrain !== null) {
+                $constrain($q);
+            }
+        });
+    }
+
+    private function longer(?int $a, ?int $b): ?int
+    {
+        return $a === null || $b === null ? null : max($a, $b);
     }
 }

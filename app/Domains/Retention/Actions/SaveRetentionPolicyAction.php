@@ -10,11 +10,12 @@ use App\Domains\Retention\Models\RetentionPolicy;
 class SaveRetentionPolicyAction
 {
     /**
-     * A null number of days removes the setting, so it inherits again.
+     * Null days without forever removes the setting, so it inherits again. Caps are checked
+     * when the request is validated; lower levels are never rewritten here.
      *
-     * @param  array{team_id?: int|null, project_id?: int|null, job_class?: string|null, log_channel_id?: int|null}  $scope
+     * @param  array{team_id?: int|null, project_id?: int|null, job_class?: string|null, log_channel_id?: int|null}  $scope  empty for the application level
      */
-    public function execute(array $scope, RetentionCategory $category, ?int $days): void
+    public function execute(array $scope, RetentionCategory $category, ?int $days, bool $forever = false): void
     {
         $match = [
             'team_id' => $scope['team_id'] ?? null,
@@ -24,12 +25,12 @@ class SaveRetentionPolicyAction
             'category' => $category->value,
         ];
 
-        if ($days === null) {
+        if ($days === null && ! $forever) {
             RetentionPolicy::query()->where($match)->delete();
 
             return;
         }
 
-        RetentionPolicy::query()->updateOrCreate($match, ['days' => $days]);
+        RetentionPolicy::query()->updateOrCreate($match, ['days' => $forever ? null : $days]);
     }
 }
