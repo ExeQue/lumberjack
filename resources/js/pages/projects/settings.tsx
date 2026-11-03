@@ -8,6 +8,7 @@ import type {
     Rule as AlertRule,
 } from '@/components/lj/alerts';
 import { ConfirmButton } from '@/components/lj/confirm-button';
+import { destroy as agentDestroy } from '@/routes/agents';
 import { LABEL_COLORS, LabelChip } from '@/components/lj/labels';
 import type { IssueLabel } from '@/components/lj/labels';
 import { TopBar } from '@/components/lj/top-bar';
@@ -71,6 +72,7 @@ type Settings = {
 };
 
 type Agent = {
+    id: number;
     host: string;
     name: string | null;
     client: string | null;
@@ -769,14 +771,16 @@ function KeysSection({ project, settings }: Props) {
     );
 }
 
-function AgentsSection({ agents }: Props) {
+function AgentsSection({ project, agents }: Props) {
     const t = useT();
 
     return (
         <Section
             id="agents"
             title={t('settings.agents.title')}
-            description={t('settings.agents.description')}
+            description={t('settings.agents.description', {
+                hours: 24,
+            })}
         >
             {agents.length === 0 ? (
                 <EmptyState title={t('settings.agents.empty')} />
@@ -800,6 +804,13 @@ function AgentsSection({ agents }: Props) {
                                 <th className={thClass}>
                                     {t('settings.agents.status')}
                                 </th>
+                                {project.can_administer && (
+                                    <th className={thClass}>
+                                        <span className="sr-only">
+                                            {t('settings.agents.actions')}
+                                        </span>
+                                    </th>
+                                )}
                             </tr>
                         </thead>
                         <tbody>
@@ -847,6 +858,41 @@ function AgentsSection({ agents }: Props) {
                                                 : t('settings.agents.offline')}
                                         </Badge>
                                     </td>
+                                    {project.can_administer && (
+                                        <td
+                                            className={cn(
+                                                tdClass,
+                                                'text-right',
+                                            )}
+                                        >
+                                            <ConfirmButton
+                                                question={t(
+                                                    'settings.agents.remove_question',
+                                                    { host: agent.host },
+                                                )}
+                                                confirmLabel={t(
+                                                    'settings.agents.remove',
+                                                )}
+                                                onConfirm={() =>
+                                                    router.delete(
+                                                        agentDestroy([
+                                                            project.uuid,
+                                                            agent.id,
+                                                        ]).url,
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    )
+                                                }
+                                            >
+                                                {t('settings.agents.remove')}
+                                                <span className="sr-only">
+                                                    {' '}
+                                                    {agent.host}
+                                                </span>
+                                            </ConfirmButton>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>

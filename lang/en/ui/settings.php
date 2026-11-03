@@ -60,7 +60,7 @@ return [
     ],
     'agents' => [
         'title' => 'Agents',
-        'description' => 'Local agents that ship data from the project\'s servers. They check in every minute.',
+        'description' => 'Local agents that ship data from the project\'s servers. They check in every minute; one not seen for :hours hours is removed, as its server or pod is most likely gone.',
         'empty' => 'No agent has reported yet',
         'host' => 'Host',
         'name' => 'Name',
@@ -69,6 +69,10 @@ return [
         'status' => 'Status',
         'online' => 'Online',
         'offline' => 'Offline',
+        'actions' => 'Actions',
+        // Button
+        'remove' => 'Remove',
+        'remove_question' => 'Remove the agent on :host? It comes back if it checks in again.',
     ],
     'alerts' => [
         'title' => 'Alerts',

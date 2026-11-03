@@ -21,6 +21,7 @@ use App\Domains\Overview\Http\Controllers\OverviewController;
 use App\Domains\Performance\Http\Controllers\QueryController;
 use App\Domains\Performance\Http\Controllers\RouteController;
 use App\Domains\Performance\Http\Controllers\TraceController;
+use App\Domains\Projects\Http\Controllers\ProjectAgentController;
 use App\Domains\Projects\Http\Controllers\ProjectController;
 use App\Domains\Projects\Http\Controllers\ProjectSettingsController;
 use App\Domains\Projects\Http\Middleware\FollowProjectTeam;
@@ -77,6 +78,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('settings/public-key', [ProjectSettingsController::class, 'rotatePublicKey'])->name('projects.rotate-public-key');
         Route::post('settings/log-channels', [LogChannelController::class, 'store'])->name('log-channels.store');
         Route::delete('settings/log-channels/{logChannel}', [LogChannelController::class, 'destroy'])->name('log-channels.destroy');
+        Route::delete('settings/agents/{agent}', [ProjectAgentController::class, 'destroy'])->name('agents.destroy');
         Route::put('settings/labels/{label}', [LabelController::class, 'update'])->name('labels.update');
         Route::delete('settings/labels/{label}', [LabelController::class, 'destroy'])->name('labels.destroy');
         Route::put('settings/retention', [RetentionController::class, 'project'])->name('projects.retention');

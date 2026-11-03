@@ -9,4 +9,5 @@ return [
     'saved' => 'Settings saved.',
     'server_token' => 'Server token',
     'public_key_rotated' => 'Public key rotated.',
+    'agent_removed' => 'Agent on :host removed.',
 ];

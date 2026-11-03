@@ -8,8 +8,10 @@ use Carbon\CarbonImmutable;
 use Database\Factories\ProjectAgentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -33,11 +35,18 @@ class ProjectAgent extends Model
 {
     /** @use HasFactory<ProjectAgentFactory> */
     use HasFactory;
+    use Prunable;
 
     /**
      * An agent heartbeats every minute; five missed beats means it is gone.
      */
     public const int OFFLINE_AFTER_MINUTES = 5;
+
+    /**
+     * Gone for a day means the server or pod is gone too: Kubernetes and autoscaling
+     * name every pod for itself, so old names would pile up as offline forever.
+     */
+    public const int FORGET_AFTER_HOURS = 24;
 
     protected function casts(): array
     {
@@ -50,6 +59,12 @@ class ProjectAgent extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /** @return Builder<self> */
+    public function prunable(): Builder
+    {
+        return static::query()->where('last_seen_at', '<', now()->subHours(self::FORGET_AFTER_HOURS));
     }
 
     public function isOnline(): bool
