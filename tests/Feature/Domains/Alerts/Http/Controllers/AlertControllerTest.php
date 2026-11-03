@@ -95,6 +95,19 @@ describe('another team', function () {
 });
 
 describe('sending a test', function () {
+    it('lets one person send only a few tests a minute', function () {
+        Http::fake(['93.184.215.14/*' => Http::response(null, 204)]);
+        ['user' => $admin, 'project' => $project] = $this->memberWithProject(TeamRole::Admin);
+        $channel = app(SaveNotificationChannelAction::class)->execute($project->team, ChannelType::Webhook, 'Deploy hook', ['url' => 'https://93.184.215.14/hook'], project: $project);
+
+        foreach (range(1, 6) as $ignored) {
+            $this->actingAs($admin)->post(route('alerts.channels.test', $channel))->assertRedirect();
+        }
+
+        $this->actingAs($admin)->post(route('alerts.channels.test', $channel))->assertTooManyRequests();
+        Http::assertSentCount(6);
+    });
+
     it('says why a webhook test did not go through', function () {
         Http::fake(['93.184.215.14/*' => Http::response('nope', 405)]);
         ['user' => $admin, 'project' => $project] = $this->memberWithProject(TeamRole::Admin);
