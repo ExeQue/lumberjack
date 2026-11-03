@@ -89,6 +89,14 @@ describe('server ingest', function () {
         expect(Issue::sole()->occurrences()->sole()->context['request']['headers']['Authorization'])->toBe('[filtered]');
     });
 
+    it('masks secrets in stored request URLs', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'request', 'trace_id' => 't1', 'timestamp' => now()->getTimestamp(), 'method' => 'get', 'route' => '/files', 'url' => 'https://x.test/files?signature=abc123&page=2', 'status' => 200, 'duration_ms' => 5],
+        ]), $this->auth)->assertStatus(202);
+
+        expect(RequestRun::sole()->url)->toBe('https://x.test/files?signature=[filtered]&page=2');
+    });
+
     it('accepts a gzip compressed body', function () {
         $body = gzencode(json_encode($this->batch([$this->exceptionEvent()])));
 
