@@ -264,6 +264,7 @@ return [
         'oldest' => 'oldest :age',
         'host_usage' => 'CPU :cpu · memory :memory · disk :disk',
         'offline' => 'Offline',
+        'meter' => ['cpu' => 'CPU', 'memory' => 'Mem', 'disk' => 'Disk'],
         'usage' => ['cpu' => 'CPU :value', 'memory' => 'Memory :value', 'disk' => 'Disk :value'],
         'escalating' => 'Escalating',
         'regressed' => 'Regressed',
