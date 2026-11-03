@@ -44,4 +44,10 @@ class HealthCheckFactory extends Factory
             'ping_token' => $type === HealthCheckType::Heartbeat ? bin2hex(random_bytes(20)) : null,
         ]);
     }
+
+    /** One the app runs itself and reports, such as database:pgsql or a closure check. */
+    public function reported(string $slug, string $environment = 'production'): self
+    {
+        return $this->state(['source' => HealthCheckSource::Reported, 'type' => null, 'slug' => $slug, 'environment' => $environment]);
+    }
 }

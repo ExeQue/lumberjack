@@ -37,4 +37,13 @@ class CommandRunFactory extends Factory
     {
         return $this->state(fn () => ['status' => CommandRunStatus::Failed, 'exit_code' => 1]);
     }
+
+    /**
+     * @param  array<string, mixed>  $arguments
+     * @param  array<string, mixed>  $options
+     */
+    public function command(string $name, array $arguments = [], array $options = []): static
+    {
+        return $this->state(fn () => ['name' => $name, 'arguments' => $arguments ?: null, 'options' => $options ?: null]);
+    }
 }

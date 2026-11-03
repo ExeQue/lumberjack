@@ -41,4 +41,22 @@ class JobRunFactory extends Factory
     {
         return $this->state(fn () => ['status' => JobRunStatus::Failed]);
     }
+
+    /** This job class, on this queue. */
+    public function forQueue(string $queue, string $name, string $connection = 'redis'): static
+    {
+        return $this->state(fn () => ['queue' => $queue, 'name' => $name, 'connection' => $connection]);
+    }
+
+    /** Put back on the queue to try again later. */
+    public function released(): static
+    {
+        return $this->state(fn () => ['status' => JobRunStatus::Released]);
+    }
+
+    /** Started, never finished: the worker died or hangs (see MarkStuckJobsAction). */
+    public function stuck(): static
+    {
+        return $this->state(fn () => ['status' => JobRunStatus::Stuck, 'finished_at' => null, 'duration_us' => null]);
+    }
 }

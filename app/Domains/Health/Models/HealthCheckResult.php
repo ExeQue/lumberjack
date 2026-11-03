@@ -6,7 +6,10 @@ namespace App\Domains\Health\Models;
 
 use App\Domains\Health\Enums\HealthResultStatus;
 use Carbon\CarbonImmutable;
+use Database\Factories\HealthCheckResultFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -23,8 +26,12 @@ use Illuminate\Database\Eloquent\Model;
  * @property CarbonImmutable $checked_at
  */
 #[Fillable(['health_check_id', 'project_id', 'host', 'status', 'message', 'metrics', 'duration_us', 'checked_at'])]
+#[UseFactory(HealthCheckResultFactory::class)]
 class HealthCheckResult extends Model
 {
+    /** @use HasFactory<HealthCheckResultFactory> */
+    use HasFactory;
+
     public $timestamps = false;
 
     protected function casts(): array

@@ -7,8 +7,11 @@ namespace App\Domains\Health\Models;
 use App\Domains\Health\Enums\HealthResultStatus;
 use App\Domains\Health\Enums\HealthStatus;
 use Carbon\CarbonImmutable;
+use Database\Factories\HealthCheckHostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,8 +40,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'health_check_id', 'host', 'status', 'recovering_from', 'ok_streak', 'fail_streak', 'failed_streak', 'last_status', 'last_message',
     'last_duration_us', 'last_metrics', 'last_result_at', 'interval_s', 'interval_minutes',
 ])]
+#[UseFactory(HealthCheckHostFactory::class)]
 class HealthCheckHost extends Model
 {
+    /** @use HasFactory<HealthCheckHostFactory> */
+    use HasFactory;
+
     use Prunable;
 
     /** A host that stopped reporting (a replaced pod, a retired server) is forgotten after a day. */

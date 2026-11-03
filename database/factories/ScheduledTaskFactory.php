@@ -29,4 +29,10 @@ class ScheduledTaskFactory extends Factory
             'last_seen_at' => now()->startOfHour(),
         ];
     }
+
+    /** A task the scheduler runs on this cron expression. */
+    public function cron(string $name, string $expression): static
+    {
+        return $this->state(fn () => ['name' => $name, 'expression' => $expression]);
+    }
 }

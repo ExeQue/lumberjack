@@ -7,9 +7,12 @@ namespace App\Domains\Performance\Models;
 use App\Domains\Performance\Eloquent\Builders\RequestCountBuilder;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
+use Database\Factories\RequestCountFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
+use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Attributes\WithoutTimestamps;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -30,8 +33,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['project_id', 'environment', 'minute', 'method', 'domain', 'route', 'status_code', 'count', 'duration_us'])]
 #[WithoutTimestamps]
 #[UseEloquentBuilder(RequestCountBuilder::class)]
+#[UseFactory(RequestCountFactory::class)]
 class RequestCount extends Model
 {
+    /** @use HasFactory<RequestCountFactory> */
+    use HasFactory;
+
     protected function casts(): array
     {
         return [
