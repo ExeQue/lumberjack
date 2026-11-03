@@ -3,7 +3,8 @@ export type Widget = {
     id: string;
     type: WidgetKind;
     source: string | null;
-    rotate: string[];
+    /** More sources to show in turn: an id, or one with settings of its own. */
+    rotate: (string | RotateItem)[];
     /** 0-based column and row of its top left cell. */
     x: number;
     y: number;
@@ -12,6 +13,17 @@ export type Widget = {
     title: string | null;
     options: Record<string, unknown>;
     scope: WidgetScope;
+};
+
+/** A value of a rotation with its own settings over the widget's; see WidgetSchema::rotation(). */
+export type RotateItem = {
+    source: string;
+    /** How long it shows; absent means the widget's rotate_every. */
+    seconds?: number;
+    title?: string;
+    /** Only fields of the type's first section (itemFieldsOf). */
+    options?: Record<string, unknown>;
+    scope?: { period?: string };
 };
 
 export type WidgetKind =

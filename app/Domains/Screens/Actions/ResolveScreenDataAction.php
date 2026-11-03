@@ -14,8 +14,9 @@ use Throwable;
 /**
  * The data of a screen's widgets in one go, or of one widget when only its settings
  * changed: per widget, per source it shows (the picked one and those it rotates
- * through), what ResolveWidgetDataAction answers. Identical questions are answered from
- * a short cache, so a wall of kiosks asks Postgres once, not once per kiosk.
+ * through, each with its own settings over the widget's, see WidgetSchema::rotation()),
+ * what ResolveWidgetDataAction answers. Identical questions are answered from a short
+ * cache, so a wall of kiosks asks Postgres once, not once per kiosk.
  */
 class ResolveScreenDataAction
 {
@@ -40,10 +41,11 @@ class ResolveScreenDataAction
                 continue;
             }
 
-            $scope = $this->scope($screen, $widget);
-            $options = $this->options($type, (array) ($widget['options'] ?? []));
-
-            foreach (array_unique([(string) $widget['source'], ...($widget['rotate'] ?? [])]) as $source) {
+            // Each value of a rotation with its own options and period over the widget's.
+            foreach (WidgetSchema::rotation($widget) as $item) {
+                $source = $item['source'];
+                $scope = $this->scope($screen, [...$widget, 'scope' => [...(array) ($widget['scope'] ?? []), ...$item['scope']]]);
+                $options = $this->options($type, [...(array) ($widget['options'] ?? []), ...$item['options']]);
                 $key = 'screen-data:'.md5(serialize([$screen->team_id, $type->value, $source, $scope, $options, $aggregatesOnly]));
 
                 $data[$widget['id']][$source] = Cache::remember($key, self::CACHE_SECONDS, function () use ($screen, $type, $source, $scope, $options, $aggregatesOnly): ?array {

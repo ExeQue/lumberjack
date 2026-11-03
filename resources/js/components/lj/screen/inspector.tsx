@@ -2,11 +2,13 @@ import type { ReactNode } from 'react';
 import { Button, Input, Label, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { option } from './lib';
+import { itemFieldsOf, option, rotationOf } from './lib';
 import type {
+    RotateItem,
     Schema,
     SchemaField,
     Screen,
+    Source,
     Sources,
     Widget,
     WidgetScope,
@@ -58,6 +60,18 @@ function Section({
     );
 }
 
+/**
+ * Where a field reads and writes: the widget's own options, or a rotated value's, which
+ * inherit the widget's (shown as "Same as widget").
+ */
+type Target = {
+    values: Record<string, unknown>;
+    set: (key: string, value: unknown) => void;
+    source: Source | undefined;
+    inherited?: Record<string, unknown>;
+    prefix: string;
+};
+
 /** The selected widget's settings, drawn from its type's option schema. */
 export function WidgetInspector({
     widget,
@@ -105,12 +119,66 @@ export function WidgetInspector({
         onChange({ ...widget, scope: scope as WidgetScope });
     };
 
+    const rotated = rotationOf(widget).slice(1);
+    const setRotate = (items: RotateItem[]) =>
+        onChange({
+            ...widget,
+            // A value without settings of its own stays a plain id, as the server stores it.
+            rotate: items.map((item) =>
+                Object.keys(item).length === 1 ? item.source : item,
+            ),
+        });
+    const setItem = (index: number, changes: Partial<RotateItem>) => {
+        const item: Record<string, unknown> = {
+            ...rotated[index],
+            ...changes,
+        };
+
+        for (const key of Object.keys(item)) {
+            const v = item[key];
+
+            if (
+                v === undefined ||
+                v === null ||
+                v === '' ||
+                (typeof v === 'object' && Object.keys(v).length === 0)
+            ) {
+                delete item[key];
+            }
+        }
+
+        setRotate(
+            rotated.map((r, i) => (i === index ? (item as RotateItem) : r)),
+        );
+    };
+    const moveItem = (index: number, by: number) => {
+        const items = [...rotated];
+        const [item] = items.splice(index, 1);
+        items.splice(index + by, 0, item);
+        setRotate(items);
+    };
+    const without = (
+        values: Record<string, unknown> | undefined,
+        key: string,
+        value: unknown,
+    ) => {
+        const next = { ...values };
+
+        if (value === '' || value === null || value === undefined) {
+            delete next[key];
+        } else {
+            next[key] = value;
+        }
+
+        return next;
+    };
+
     const pickSource = (next: string) =>
         onChange({
             ...widget,
             source: next,
             title: null,
-            rotate: widget.rotate.filter((r) => r !== next),
+            rotate: rotated.filter((r) => r.source !== next),
             // The new source's own limits and scale apply.
             options: Object.fromEntries(
                 Object.entries(widget.options).filter(
@@ -123,14 +191,84 @@ export function WidgetInspector({
         });
 
     const fieldLabel = (key: string) => t(`screens.fields.${key}.label`);
+    const same = (value: string) =>
+        t('screens.inspector.same_as_widget', { value });
+    const every = Number(option<string>(schema, widget, 'rotate_every') ?? 10);
+    const hasPeriod = (schema[widget.type] ?? []).some((section) =>
+        section.fields.some((f) => f.key === 'period'),
+    );
+    const widgetPeriod = widget.scope.period
+        ? t(`screens.period_short.${widget.scope.period}`)
+        : t('screens.inspector.period_screen');
 
-    const renderField = (field: SchemaField, scope: boolean): ReactNode => {
+    const own: Target = {
+        values: widget.options,
+        set: setOption,
+        source,
+        prefix: '',
+    };
+
+    const renderField = (
+        field: SchemaField,
+        scope: boolean,
+        target: Target = own,
+    ): ReactNode => {
         const span = field.span === 2 ? 'col-span-2' : '';
+        const id = (key: string) => `w-${widget.id}-${target.prefix}${key}`;
+        const inherited = target.inherited;
         const raw = (
             scope
                 ? (widget.scope as Record<string, unknown>)[field.key]
-                : widget.options[field.key]
+                : target.values[field.key]
         ) as string | number | string[] | undefined;
+        // A rotated value's toggle can also follow the widget's.
+        if (inherited && field.type === 'toggle') {
+            const from =
+                field.key === 'low_is_bad'
+                    ? ((inherited.low_is_bad as boolean | undefined) ??
+                      target.source?.low_is_bad ??
+                      false)
+                    : option<boolean>(schema, widget, field.key) === true;
+
+            return (
+                <div key={field.key} className="flex flex-col gap-1">
+                    <Label
+                        htmlFor={id(field.key)}
+                        className="text-xs text-ink-2"
+                    >
+                        {fieldLabel(field.key)}
+                    </Label>
+                    <Select
+                        id={id(field.key)}
+                        value={raw === undefined ? '' : String(raw)}
+                        onChange={(e) =>
+                            target.set(
+                                field.key,
+                                e.target.value === ''
+                                    ? null
+                                    : e.target.value === 'true',
+                            )
+                        }
+                    >
+                        <option value="">
+                            {same(
+                                t(
+                                    from
+                                        ? 'screens.inspector.on'
+                                        : 'screens.inspector.off',
+                                ),
+                            )}
+                        </option>
+                        <option value="true">
+                            {t('screens.inspector.on')}
+                        </option>
+                        <option value="false">
+                            {t('screens.inspector.off')}
+                        </option>
+                    </Select>
+                </div>
+            );
+        }
 
         switch (field.type) {
             case 'select':
@@ -148,7 +286,10 @@ export function WidgetInspector({
                         <Select
                             id={id(field.key)}
                             value={String(
-                                raw ?? (scope ? '' : (field.default ?? '')),
+                                raw ??
+                                    (scope || inherited
+                                        ? ''
+                                        : (field.default ?? '')),
                             )}
                             onChange={(e) =>
                                 scope
@@ -156,14 +297,26 @@ export function WidgetInspector({
                                           field.key as keyof WidgetScope,
                                           e.target.value,
                                       )
-                                    : setOption(
+                                    : target.set(
                                           field.key,
-                                          e.target.value === field.default
+                                          e.target.value === '' ||
+                                              (!inherited &&
+                                                  e.target.value ===
+                                                      field.default)
                                               ? null
                                               : e.target.value,
                                       )
                             }
                         >
+                            {inherited && (
+                                <option value="">
+                                    {same(
+                                        t(
+                                            `screens.fields.${field.key}.options.${option<string>(schema, widget, field.key)}`,
+                                        ),
+                                    )}
+                                </option>
+                            )}
                             {scope && field.key === 'period' && (
                                 <option value="">
                                     {t('screens.inspector.screen_default')}
@@ -212,10 +365,13 @@ export function WidgetInspector({
                 );
             }
             case 'number': {
-                const fallback =
+                const limit =
                     field.key === 'amber' || field.key === 'red'
-                        ? source?.[field.key]
+                        ? target.source?.[field.key]
                         : null;
+                const fallback = inherited
+                    ? ((inherited[field.key] as number | undefined) ?? limit)
+                    : limit;
 
                 return (
                     <div
@@ -250,7 +406,7 @@ export function WidgetInspector({
                                     : t('screens.inspector.auto')
                             }
                             onChange={(e) =>
-                                setOption(
+                                target.set(
                                     field.key,
                                     e.target.value === ''
                                         ? null
@@ -437,16 +593,21 @@ export function WidgetInspector({
                         <Input
                             id={id(field.key)}
                             value={String(raw ?? '')}
-                            placeholder={t(
-                                `screens.fields.${field.key}.placeholder`,
-                            )}
+                            placeholder={
+                                inherited &&
+                                typeof inherited[field.key] === 'string'
+                                    ? String(inherited[field.key])
+                                    : t(
+                                          `screens.fields.${field.key}.placeholder`,
+                                      )
+                            }
                             onChange={(e) =>
                                 scope
                                     ? setScope(
                                           field.key as keyof WidgetScope,
                                           e.target.value,
                                       )
-                                    : setOption(field.key, e.target.value)
+                                    : target.set(field.key, e.target.value)
                             }
                         />
                     </div>
@@ -521,9 +682,7 @@ export function WidgetInspector({
                 </div>
             )}
 
-            {(schema[widget.type] ?? []).some((section) =>
-                section.fields.some((f) => f.key === 'period'),
-            ) && (
+            {hasPeriod && (
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[13px] font-medium">
                         {t('screens.inspector.period')}
@@ -564,7 +723,9 @@ export function WidgetInspector({
                         {pool
                             .filter((s) => s.id !== widget.source)
                             .map((s) => {
-                                const on = widget.rotate.includes(s.id);
+                                const on = rotated.some(
+                                    (r) => r.source === s.id,
+                                );
 
                                 return (
                                     <button
@@ -573,14 +734,17 @@ export function WidgetInspector({
                                         aria-pressed={on}
                                         className={chip(on)}
                                         onClick={() =>
-                                            onChange({
-                                                ...widget,
-                                                rotate: on
-                                                    ? widget.rotate.filter(
-                                                          (r) => r !== s.id,
+                                            setRotate(
+                                                on
+                                                    ? rotated.filter(
+                                                          (r) =>
+                                                              r.source !== s.id,
                                                       )
-                                                    : [...widget.rotate, s.id],
-                                            })
+                                                    : [
+                                                          ...rotated,
+                                                          { source: s.id },
+                                                      ],
+                                            )
                                         }
                                     >
                                         {s.label}
@@ -589,12 +753,236 @@ export function WidgetInspector({
                             })}
                     </div>
                     <span className="text-xs text-ink-3">
-                        {widget.rotate.length > 0
+                        {rotated.length > 0
                             ? t('screens.inspector.rotate_on', {
-                                  count: widget.rotate.length + 1,
+                                  count: rotated.length + 1,
                               })
                             : t('screens.inspector.rotate_off')}
                     </span>
+                    {rotated.length > 0 && (
+                        <ol className="flex flex-col gap-1">
+                            <li className="flex items-center gap-2 rounded-md border border-line px-2 py-1.5 text-[13px]">
+                                <span className="min-w-0 flex-1 truncate">
+                                    {source?.label}
+                                    <span className="ml-1.5 text-xs text-ink-3">
+                                        {t('screens.inspector.rotate_first')}
+                                    </span>
+                                </span>
+                                <Input
+                                    aria-label={t(
+                                        'screens.fields.source_seconds.label',
+                                    )}
+                                    type="number"
+                                    min={1}
+                                    className="h-7 w-20"
+                                    value={String(
+                                        (widget.options.source_seconds as
+                                            | number
+                                            | undefined) ?? '',
+                                    )}
+                                    placeholder={`${every} s`}
+                                    onChange={(e) =>
+                                        setOption(
+                                            'source_seconds',
+                                            e.target.value === ''
+                                                ? null
+                                                : Number(e.target.value),
+                                        )
+                                    }
+                                />
+                            </li>
+                            {rotated.map((item, i) => {
+                                const itemSource = pool.find(
+                                    (s) => s.id === item.source,
+                                );
+                                const target: Target = {
+                                    values: item.options ?? {},
+                                    set: (key, value) =>
+                                        setItem(i, {
+                                            options: without(
+                                                item.options,
+                                                key,
+                                                value,
+                                            ),
+                                        }),
+                                    source: itemSource,
+                                    inherited: widget.options,
+                                    prefix: `r${i}-`,
+                                };
+                                const rid = (key: string) =>
+                                    `w-${widget.id}-r${i}-${key}`;
+
+                                return (
+                                    <li
+                                        key={item.source}
+                                        className="rounded-md border border-line text-[13px]"
+                                    >
+                                        <details>
+                                            <summary className="flex cursor-pointer items-center gap-1.5 px-2 py-1.5">
+                                                <span className="min-w-0 flex-1 truncate">
+                                                    {item.title ??
+                                                        itemSource?.label ??
+                                                        item.source}
+                                                </span>
+                                                <span className="text-xs text-ink-3">
+                                                    {`${item.seconds ?? every} s`}
+                                                </span>
+                                                {[-1, 1].map((by) => (
+                                                    <button
+                                                        key={by}
+                                                        type="button"
+                                                        disabled={
+                                                            i + by < 0 ||
+                                                            i + by >=
+                                                                rotated.length
+                                                        }
+                                                        aria-label={t(
+                                                            by < 0
+                                                                ? 'screens.inspector.move_up'
+                                                                : 'screens.inspector.move_down',
+                                                        )}
+                                                        className="rounded px-1 text-ink-3 hover:text-ink disabled:opacity-30"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            moveItem(i, by);
+                                                        }}
+                                                    >
+                                                        {by < 0 ? '↑' : '↓'}
+                                                    </button>
+                                                ))}
+                                            </summary>
+                                            <div className="grid grid-cols-2 gap-2.5 border-t border-line p-2">
+                                                <div className="flex flex-col gap-1">
+                                                    <Label
+                                                        htmlFor={rid('seconds')}
+                                                        className="text-xs text-ink-2"
+                                                    >
+                                                        {t(
+                                                            'screens.inspector.rotate_seconds',
+                                                        )}
+                                                    </Label>
+                                                    <Input
+                                                        id={rid('seconds')}
+                                                        type="number"
+                                                        min={1}
+                                                        value={String(
+                                                            item.seconds ?? '',
+                                                        )}
+                                                        placeholder={`${every} s`}
+                                                        onChange={(e) =>
+                                                            setItem(i, {
+                                                                seconds:
+                                                                    e.target
+                                                                        .value ===
+                                                                    ''
+                                                                        ? undefined
+                                                                        : Number(
+                                                                              e
+                                                                                  .target
+                                                                                  .value,
+                                                                          ),
+                                                            })
+                                                        }
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col gap-1">
+                                                    <Label
+                                                        htmlFor={rid('title')}
+                                                        className="text-xs text-ink-2"
+                                                    >
+                                                        {t(
+                                                            'screens.inspector.title',
+                                                        )}
+                                                    </Label>
+                                                    <Input
+                                                        id={rid('title')}
+                                                        value={item.title ?? ''}
+                                                        placeholder={
+                                                            itemSource?.label
+                                                        }
+                                                        onChange={(e) =>
+                                                            setItem(i, {
+                                                                title:
+                                                                    e.target
+                                                                        .value ||
+                                                                    undefined,
+                                                            })
+                                                        }
+                                                    />
+                                                </div>
+                                                {hasPeriod && (
+                                                    <div
+                                                        role="radiogroup"
+                                                        aria-label={t(
+                                                            'screens.inspector.period',
+                                                        )}
+                                                        className="col-span-2 flex flex-wrap gap-1.5"
+                                                    >
+                                                        {[
+                                                            '',
+                                                            ...catalog.periods,
+                                                        ].map((p) => {
+                                                            const on =
+                                                                (item.scope
+                                                                    ?.period ??
+                                                                    '') === p;
+
+                                                            return (
+                                                                <button
+                                                                    key={
+                                                                        p ||
+                                                                        'widget'
+                                                                    }
+                                                                    type="button"
+                                                                    role="radio"
+                                                                    aria-checked={
+                                                                        on
+                                                                    }
+                                                                    className={chip(
+                                                                        on,
+                                                                    )}
+                                                                    onClick={() =>
+                                                                        setItem(
+                                                                            i,
+                                                                            {
+                                                                                scope: p
+                                                                                    ? {
+                                                                                          period: p,
+                                                                                      }
+                                                                                    : undefined,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    {p === ''
+                                                                        ? same(
+                                                                              widgetPeriod,
+                                                                          )
+                                                                        : t(
+                                                                              `screens.period_short.${p}`,
+                                                                          )}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                                {itemFieldsOf(
+                                                    schema,
+                                                    widget.type,
+                                                ).map((field) =>
+                                                    renderField(
+                                                        field,
+                                                        false,
+                                                        target,
+                                                    ),
+                                                )}
+                                            </div>
+                                        </details>
+                                    </li>
+                                );
+                            })}
+                        </ol>
+                    )}
                 </div>
             )}
 
@@ -618,9 +1006,12 @@ export function WidgetInspector({
                     title={t(`screens.sections.${section.id}`)}
                     open={i === 0}
                 >
-                    {section.fields.map((field) =>
-                        renderField(field, section.id === 'scope'),
-                    )}
+                    {section.fields
+                        // Set on the source's row under Rotate through.
+                        .filter((field) => field.key !== 'source_seconds')
+                        .map((field) =>
+                            renderField(field, section.id === 'scope'),
+                        )}
                 </Section>
             ))}
 

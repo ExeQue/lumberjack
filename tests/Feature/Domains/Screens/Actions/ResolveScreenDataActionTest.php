@@ -60,6 +60,29 @@ describe('a screen\'s data', function () {
             ->and($calls[2][2])->toBe(['limit' => 20, 'only_problems' => false, 'sort' => 'newest']);
     });
 
+    it('resolves a rotated value with its own limits and period over the widget\'s', function () {
+        $this->screen->update(['widgets' => [
+            ['id' => 'a', 'type' => 'stat', 'source' => 'requests', 'w' => 1, 'h' => 1, 'title' => null, 'options' => ['compare' => 'none', 'red' => 50.0], 'scope' => ['period' => '1h'], 'rotate' => [
+                ['source' => 'p95', 'seconds' => 30, 'options' => ['red' => 900.0, 'low_is_bad' => true], 'scope' => ['period' => '24h']],
+                'apdex',
+            ]],
+        ]]);
+        $calls = [];
+        $this->mock(ResolveWidgetDataAction::class)->shouldReceive('execute')
+            ->andReturnUsing(function (Team $team, WidgetType $type, string $source, WidgetScope $scope, array $options) use (&$calls): array {
+                $calls[$source] = [$scope->period, $options];
+
+                return [];
+            });
+
+        app(ResolveScreenDataAction::class)->execute($this->screen);
+
+        expect(array_keys($calls))->toBe(['requests', 'p95', 'apdex'])
+            ->and($calls['requests'])->toEqual([Period::Hour, ['compare' => 'none', 'red' => 50.0, 'sparkline' => true]])
+            ->and($calls['p95'])->toEqual([Period::Day, ['compare' => 'none', 'low_is_bad' => true, 'red' => 900.0, 'sparkline' => true]])
+            ->and($calls['apdex'])->toEqual([Period::Hour, ['compare' => 'none', 'red' => 50.0, 'sparkline' => true]]);
+    });
+
     it('answers one widget alone', function () {
         expect(array_keys(app(ResolveScreenDataAction::class)->execute($this->screen, 'b')))->toBe(['b']);
     });

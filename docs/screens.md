@@ -109,9 +109,18 @@ Each widget's settings are grouped in sections that open and close:
   the chart style and how many series, its time axis, value axis and grid lines (each on or off), how many rows a list shows and in which order.
 - **Rotation**: a stat, gauge, chart or list can show several values in turn on one
   tile. Pick them under **Rotate through**; the title follows the value shown. They
-  switch every 5 seconds to a minute, with a fade, a slide or neither, and all tiles of
-  a screen switch together. A value that needs attention (amber or red) holds the tile
-  until it clears. In the designer the selected tile stays on its first value.
+  switch every 5 seconds to a minute, with a fade, a slide or neither, and tiles with
+  the same timing switch together. A value that needs attention (amber or red) holds
+  the tile until it clears. In the designer the selected tile stays on its first value.
+  Each picked value is a row under **Rotate through**: the arrows change the order, and
+  opening a row gives that value settings of its own over the widget's: how many
+  seconds it shows, its title, its period and the type's value settings (limits, low
+  values are bad, compare, decimals, prefix and suffix, a gauge's scale, chart or list
+  options). Left empty, each shows what the widget uses ("Same as widget"). The first
+  value is the widget's own source with the widget's settings; only its seconds are set
+  on its row. As stored in the screen's widgets, a `rotate` entry is a source id or
+  `{"source": "p95", "seconds": 30, "title": "Latency", "options": {"red": 800},
+  "scope": {"period": "24h"}}`.
 - **Scope**: the projects, environment, period and release the widget shows, each the
   screen's default unless set, and a filter on the route, queue, job or host (`*`
   matches anything, so `POST /checkout*` or `payments*`).

@@ -292,6 +292,20 @@ describe('the data endpoint', function () {
             ->and(array_keys($one))->toBe(['list']);
     });
 
+    it('resolves each rotated value over its own period', function () {
+        $this->screen->update(['widgets' => [
+            ($this->widget)(['id' => 'traffic', 'source' => 'requests', 'scope' => ['period' => '1h'], 'rotate' => ['p95', ['source' => 'apdex', 'seconds' => 30, 'scope' => ['period' => '7d'], 'options' => ['amber' => 0.9]]]]),
+        ]]);
+
+        $data = $this->actingAs($this->user)->getJson(route('screens.data', $this->screen))->assertOk()->json('data.traffic');
+
+        expect(array_keys($data))->toBe(['requests', 'p95', 'apdex'])
+            ->and($data['requests']['period'])->toBe('1h')
+            ->and($data['p95']['period'])->toBe('1h')
+            ->and($data['apdex']['period'])->toBe('7d')
+            ->and($data['apdex']['limits']['amber'])->toEqual(0.9);
+    });
+
     it('counts no viewers while broadcasting is off', function () {
         $this->actingAs($this->user)->getJson(route('screens.viewers', $this->screen))->assertExactJson(['count' => null]);
     });
