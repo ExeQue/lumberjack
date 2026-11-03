@@ -216,6 +216,49 @@ const shots = {
     'admin-retention': { path: '/admin/retention', fullPage: true },
     screens: { path: '/screens' },
     'screen-designer': { path: screen },
+    // A widget dragged from the palette over the grid, never dropped: the cells and its footprint.
+    'screen-designer-drop': {
+        path: screen,
+        before: () =>
+            page.evaluate(async () => {
+                const dt = new DataTransfer();
+                const stat = [
+                    ...document.querySelectorAll('aside button[draggable]'),
+                ].find((b) => b.textContent.startsWith('Gauge'));
+                stat.dispatchEvent(
+                    new DragEvent('dragstart', {
+                        bubbles: true,
+                        dataTransfer: dt,
+                    }),
+                );
+                await new Promise((r) => setTimeout(r, 100));
+                const grid = document.querySelector('.lj-grid');
+                // Over the last cell no widget covers, so the footprint shows green.
+                const free = [
+                    ...grid.querySelectorAll(':scope > span.border-dashed'),
+                ]
+                    .map((cell) => cell.getBoundingClientRect())
+                    .filter(
+                        (r) =>
+                            document.elementFromPoint(
+                                r.left + r.width / 2,
+                                r.top + r.height / 2,
+                            ) === grid,
+                    )
+                    .pop();
+                const at = free ?? grid.getBoundingClientRect();
+                grid.dispatchEvent(
+                    new DragEvent('dragover', {
+                        bubbles: true,
+                        cancelable: true,
+                        dataTransfer: dt,
+                        clientX: at.left + at.width / 2,
+                        clientY: at.top + at.height / 2,
+                    }),
+                );
+                await new Promise((r) => setTimeout(r, 100));
+            }),
+    },
     'screen-designer-incident': {
         path: screen,
         before: () => click('::-p-text(Show an incident)'),

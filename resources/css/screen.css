@@ -137,11 +137,6 @@
     outline-offset: 2px;
 }
 
-.lj-tile[data-drop='true'] {
-    border-style: dashed;
-    border-color: var(--s-amber);
-}
-
 .lj-tile:focus-visible {
     outline: 2px solid var(--s-amber);
     outline-offset: 2px;

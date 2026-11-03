@@ -8,7 +8,14 @@ import {
     WidgetInspector,
 } from '@/components/lj/screen/inspector';
 import type { Catalog } from '@/components/lj/screen/inspector';
-import { newWidgetId, placements, themeAt } from '@/components/lj/screen/lib';
+import {
+    canPlace,
+    firstFree,
+    fits,
+    newWidgetId,
+    regrid,
+    themeAt,
+} from '@/components/lj/screen/lib';
 import type {
     Schema,
     Screen,
@@ -86,6 +93,79 @@ const STARTERS: Record<WidgetKind, Pick<Widget, 'source' | 'w' | 'h'>> = {
     empty: { source: null, w: 1, h: 1 },
 };
 
+/** Resize handles, invisible: which edges each moves, where it sits, and its cursor. */
+type Handle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+const HANDLES: { id: Handle; className: string }[] = [
+    {
+        id: 'n',
+        className: 'inset-x-[18px] top-0 h-[8px] cursor-ns-resize',
+    },
+    {
+        id: 's',
+        className: 'inset-x-[18px] bottom-0 h-[8px] cursor-ns-resize',
+    },
+    {
+        id: 'w',
+        className: 'inset-y-[18px] left-0 w-[8px] cursor-ew-resize',
+    },
+    {
+        id: 'e',
+        className: 'inset-y-[18px] right-0 w-[8px] cursor-ew-resize',
+    },
+    {
+        id: 'nw',
+        className: 'top-0 left-0 size-[18px] cursor-nwse-resize',
+    },
+    {
+        id: 'ne',
+        className: 'top-0 right-0 size-[18px] cursor-nesw-resize',
+    },
+    {
+        id: 'sw',
+        className: 'bottom-0 left-0 size-[18px] cursor-nesw-resize',
+    },
+    {
+        id: 'se',
+        className: 'right-0 bottom-0 size-[18px] cursor-nwse-resize',
+    },
+];
+
+/**
+ * The box a handle drags to, moved by whole cells: the right and bottom edges change the
+ * size, the left and top edges move x or y the other way round, never below one cell.
+ */
+function resized(
+    box: { x: number; y: number; w: number; h: number },
+    handle: Handle,
+    dc: number,
+    dr: number,
+) {
+    const next = { ...box };
+
+    if (handle.includes('e')) {
+        next.w = Math.max(1, box.w + dc);
+    }
+
+    if (handle.includes('w')) {
+        const d = Math.min(dc, box.w - 1);
+        next.x = box.x + d;
+        next.w = box.w - d;
+    }
+
+    if (handle.includes('s')) {
+        next.h = Math.max(1, box.h + dr);
+    }
+
+    if (handle.includes('n')) {
+        const d = Math.min(dr, box.h - 1);
+        next.y = box.y + d;
+        next.h = box.h - d;
+    }
+
+    return next;
+}
+
 type Settings = Pick<
     Screen,
     'name' | 'theme' | 'light_from' | 'light_to' | 'timezone' | 'scope'
@@ -122,7 +202,7 @@ async function put(url: string, body: unknown): Promise<void> {
 }
 
 /**
- * Only one widget's settings differ, in the same place and size: that widget alone is
+ * Only one widget's settings differ, on the same cells: that widget alone is
  * saved. Anything else (added, removed, moved, resized, the grid) saves the layout.
  */
 function onlyWidget(before: Screen, after: Screen): Widget | null | undefined {
@@ -149,6 +229,8 @@ function onlyWidget(before: Screen, after: Screen): Widget | null | undefined {
 
     return changed.length === 1 &&
         old.id === changed[0].id &&
+        old.x === changed[0].x &&
+        old.y === changed[0].y &&
         old.w === changed[0].w &&
         old.h === changed[0].h
         ? changed[0]
@@ -173,15 +255,31 @@ export default function EditScreen(props: Props) {
     const [incident, setIncident] = useState(false);
     const [query, setQuery] = useState('');
     const [closed, setClosed] = useState<string[]>([]);
-    const [dropTarget, setDropTarget] = useState<string | null>(null);
     const [dialog, setDialog] = useState<'tv' | 'share' | null>(null);
-    const drag = useRef<{ kind?: WidgetKind; tile?: string } | null>(null);
-    const resizing = useRef<{
-        id: string;
+    // What is dragged: a palette kind or a widget, its size, and which of its cells is held.
+    const drag = useRef<{
+        kind?: WidgetKind;
+        tile?: string;
+        w: number;
+        h: number;
+        dx: number;
+        dy: number;
+    } | null>(null);
+    const [dragging, setDragging] = useState(false);
+    // Where the dragged widget would land, and whether it may.
+    const [hover, setHover] = useState<{
         x: number;
         y: number;
         w: number;
         h: number;
+        ok: boolean;
+    } | null>(null);
+    const resizing = useRef<{
+        id: string;
+        handle: Handle;
+        pointerX: number;
+        pointerY: number;
+        box: { x: number; y: number; w: number; h: number };
         col: number;
         row: number;
     } | null>(null);
@@ -275,48 +373,55 @@ export default function EditScreen(props: Props) {
             widgets.map((w) => (w.id === id ? { ...w, ...fields } : w)),
         );
 
-    const add = (kind: WidgetKind, at?: number) => {
+    const starterSize = (kind: WidgetKind) => ({
+        w: Math.min(STARTERS[kind].w, screen.cols),
+        h: Math.min(STARTERS[kind].h, screen.rows),
+    });
+
+    /** A new widget at the cells given, else in the first free spot (1 x 1 if need be). */
+    const add = (kind: WidgetKind, at?: { x: number; y: number }) => {
         if (screen.widgets.length >= props.limits.max_widgets) {
             toast.error(t('screens.designer.too_many'));
 
             return;
         }
 
-        const starter = STARTERS[kind];
+        let size = starterSize(kind);
+        let spot =
+            at ??
+            firstFree(screen.widgets, screen.cols, screen.rows, size.w, size.h);
+
+        if (!spot) {
+            size = { w: 1, h: 1 };
+            spot = firstFree(screen.widgets, screen.cols, screen.rows, 1, 1);
+        }
+
+        if (!spot) {
+            toast.error(t('screens.designer.no_room'));
+
+            return;
+        }
+
         const widget: Widget = {
             id: newWidgetId(),
             type: kind,
-            source: starter.source,
+            source: STARTERS[kind].source,
             rotate: [],
-            w: Math.min(starter.w, screen.cols),
-            h: Math.min(starter.h, screen.rows),
+            ...spot,
+            ...size,
             title: null,
             options: {},
             scope: {},
         };
-        setWidgets((widgets) => {
-            const next = widgets.slice();
-            next.splice(at ?? next.length, 0, widget);
-
-            return next;
-        });
+        setWidgets((widgets) => [...widgets, widget]);
         setSelected(widget.id);
     };
 
-    const move = (id: string, to: number) =>
-        setWidgets((widgets) => {
-            const from = widgets.findIndex((w) => w.id === id);
-
-            if (from < 0) {
-                return widgets;
-            }
-
-            const next = widgets.slice();
-            const [widget] = next.splice(from, 1);
-            next.splice(Math.max(0, Math.min(to, next.length)), 0, widget);
-
-            return next;
-        });
+    /** Whether the widget may take that box; the screen's other widgets stay put. */
+    const placeable = (
+        id: string | undefined,
+        box: { x: number; y: number; w: number; h: number },
+    ) => canPlace(latest.current.widgets, screen.cols, screen.rows, box, id);
 
     const remove = (id: string) => {
         setWidgets((widgets) => widgets.filter((w) => w.id !== id));
@@ -328,12 +433,7 @@ export default function EditScreen(props: Props) {
             ...s,
             cols,
             rows,
-            // Widgets never get larger than the screen: those that no longer fit shrink.
-            widgets: s.widgets.map((w) => ({
-                ...w,
-                w: Math.min(w.w, cols),
-                h: Math.min(w.h, rows),
-            })),
+            widgets: regrid(s.widgets, cols, rows),
         }));
 
     // Save what is pending before leaving.
@@ -381,7 +481,7 @@ export default function EditScreen(props: Props) {
         }
     });
 
-    const onKeyDown = (widget: Widget, index: number) => (e: KeyboardEvent) => {
+    const onKeyDown = (widget: Widget) => (e: KeyboardEvent) => {
         if (e.target !== e.currentTarget) {
             return;
         }
@@ -407,32 +507,26 @@ export default function EditScreen(props: Props) {
         setSelected(widget.id);
         focusAfter.current = widget.id;
 
-        if (e.shiftKey) {
-            const dw =
-                e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-            const dh = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
-            patch(widget.id, {
-                w: Math.max(1, Math.min(screen.cols, widget.w + dw)),
-                h: Math.max(1, Math.min(screen.rows, widget.h + dh)),
-            });
+        const dx = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        const dy = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+        // Shift and arrows resize, arrows move; either only into free cells.
+        const box = e.shiftKey
+            ? {
+                  x: widget.x,
+                  y: widget.y,
+                  w: Math.max(1, widget.w + dx),
+                  h: Math.max(1, widget.h + dy),
+              }
+            : { x: widget.x + dx, y: widget.y + dy, w: widget.w, h: widget.h };
 
-            return;
-        }
-
-        const step = {
-            ArrowLeft: -1,
-            ArrowRight: 1,
-            ArrowUp: -screen.cols,
-            ArrowDown: screen.cols,
-        }[e.key];
-
-        if (step !== undefined) {
-            move(widget.id, index + step);
+        if (placeable(widget.id, box)) {
+            patch(widget.id, box);
         }
     };
 
     const onResizeStart =
-        (widget: Widget) => (e: PointerEvent<HTMLSpanElement>) => {
+        (widget: Widget, handle: Handle) =>
+        (e: PointerEvent<HTMLSpanElement>) => {
             e.preventDefault();
             e.stopPropagation();
             const rect = grid.current?.getBoundingClientRect();
@@ -446,10 +540,10 @@ export default function EditScreen(props: Props) {
             const pad = 14;
             resizing.current = {
                 id: widget.id,
-                x: e.clientX,
-                y: e.clientY,
-                w: widget.w,
-                h: widget.h,
+                handle,
+                pointerX: e.clientX,
+                pointerY: e.clientY,
+                box: { x: widget.x, y: widget.y, w: widget.w, h: widget.h },
                 col:
                     (rect.width - 2 * pad - (screen.cols - 1) * gap) /
                         screen.cols +
@@ -469,57 +563,124 @@ export default function EditScreen(props: Props) {
             return;
         }
 
-        const w = Math.max(
-            1,
-            Math.min(screen.cols, r.w + Math.round((e.clientX - r.x) / r.col)),
-        );
-        const h = Math.max(
-            1,
-            Math.min(screen.rows, r.h + Math.round((e.clientY - r.y) / r.row)),
-        );
         const current = latest.current.widgets.find((x) => x.id === r.id);
 
-        if (current && (current.w !== w || current.h !== h)) {
-            patch(r.id, { w, h });
+        if (!current) {
+            return;
+        }
+
+        const box = resized(
+            r.box,
+            r.handle,
+            Math.round((e.clientX - r.pointerX) / r.col),
+            Math.round((e.clientY - r.pointerY) / r.row),
+        );
+        const ok = placeable(r.id, box);
+        // The footprint shows what is asked; the tile follows only onto free cells.
+        setHover({ ...box, ok });
+
+        if (
+            ok &&
+            (current.x !== box.x ||
+                current.y !== box.y ||
+                current.w !== box.w ||
+                current.h !== box.h)
+        ) {
+            patch(r.id, box);
         }
     };
 
-    const onDrop = (at?: number) => (e: DragEvent) => {
+    const onResizeEnd = () => {
+        resizing.current = null;
+        setHover(null);
+    };
+
+    /** The grid cell under a point, clamped to the grid. */
+    const cellAt = (clientX: number, clientY: number) => {
+        const rect = grid.current!.getBoundingClientRect();
+        const gap = 10;
+        const pad = 14;
+        const col = (rect.width - 2 * pad + gap) / screen.cols;
+        const row = (rect.height - 2 * pad + gap) / screen.rows;
+
+        return {
+            x: Math.max(
+                0,
+                Math.min(
+                    screen.cols - 1,
+                    Math.floor((clientX - rect.left - pad) / col),
+                ),
+            ),
+            y: Math.max(
+                0,
+                Math.min(
+                    screen.rows - 1,
+                    Math.floor((clientY - rect.top - pad) / row),
+                ),
+            ),
+        };
+    };
+
+    const startDrag = (d: NonNullable<typeof drag.current>) => {
+        drag.current = d;
+        // After the browser has taken its drag image: changing the page right away ends the drag.
+        window.setTimeout(() => setDragging(true));
+    };
+
+    const endDrag = () => {
+        drag.current = null;
+        setDragging(false);
+        setHover(null);
+    };
+
+    const onGridDragOver = (e: DragEvent) => {
         const d = drag.current;
 
         if (!d) {
             return;
         }
 
-        e.preventDefault();
-        e.stopPropagation();
-        drag.current = null;
-        setDropTarget(null);
+        const cell = cellAt(e.clientX, e.clientY);
+        const box = { x: cell.x - d.dx, y: cell.y - d.dy, w: d.w, h: d.h };
+        const ok = placeable(d.tile, box);
 
-        if (d.kind) {
-            add(d.kind, at);
-        } else if (d.tile) {
-            move(d.tile, at ?? screen.widgets.length);
+        if (ok) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = d.kind ? 'copy' : 'move';
+        }
+
+        if (
+            hover?.x !== box.x ||
+            hover?.y !== box.y ||
+            hover?.w !== box.w ||
+            hover?.ok !== ok
+        ) {
+            setHover({ ...box, ok });
         }
     };
 
-    const allowDrop = (target: string) => (e: DragEvent) => {
-        if (!drag.current) {
+    const onGridDrop = (e: DragEvent) => {
+        const d = drag.current;
+        e.preventDefault();
+        endDrag();
+
+        if (!d || !hover?.ok) {
             return;
         }
 
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (dropTarget !== target) {
-            setDropTarget(target);
+        if (d.kind) {
+            add(d.kind, { x: hover.x, y: hover.y });
+        } else if (d.tile) {
+            patch(d.tile, { x: hover.x, y: hover.y });
+            setSelected(d.tile);
         }
     };
 
     const q = query.trim().toLowerCase();
     const groups = [
         { id: 'data', kinds: DATA_KINDS },
-        { id: 'layout', kinds: LAYOUT_KINDS },
+        // An empty cell is not offered any more: a free cell simply stays empty.
+        { id: 'layout', kinds: LAYOUT_KINDS.filter((k) => k !== 'empty') },
     ]
         .map((group) => ({
             ...group,
@@ -542,8 +703,15 @@ export default function EditScreen(props: Props) {
         }))
         .filter((group) => group.items.length > 0);
 
-    const place = placements(screen.widgets, screen.cols, screen.rows);
-    const hiddenCount = place.filter((p) => !p.fits).length;
+    const inGrid = (w: Widget) => w.x < screen.cols && w.y < screen.rows;
+    // Widgets left outside a smaller grid: kept, not on the TV, dragged back from the list.
+    const outside = screen.widgets.filter(
+        (w) => !fits(w, screen.cols, screen.rows),
+    );
+    // Top left to bottom right, so Tab follows the screen.
+    const tiles = screen.widgets
+        .filter(inGrid)
+        .sort((a, b) => a.y - b.y || a.x - b.x);
     const current = screen.widgets.find((w) => w.id === selected) ?? null;
     const theme = themeAt(screen, now);
     const statusText =
@@ -702,12 +870,14 @@ export default function EditScreen(props: Props) {
                                                 );
                                                 e.dataTransfer.effectAllowed =
                                                     'copy';
-                                                drag.current = { kind };
+                                                startDrag({
+                                                    kind,
+                                                    ...starterSize(kind),
+                                                    dx: 0,
+                                                    dy: 0,
+                                                });
                                             }}
-                                            onDragEnd={() => {
-                                                drag.current = null;
-                                                setDropTarget(null);
-                                            }}
+                                            onDragEnd={endDrag}
                                             onClick={() => add(kind)}
                                             className="flex cursor-grab flex-col gap-0.5 rounded-lg border border-line bg-panel px-3 py-2 text-left hover:border-amber"
                                         >
@@ -880,16 +1050,50 @@ export default function EditScreen(props: Props) {
                         </div>
                     </div>
 
-                    {hiddenCount > 0 && (
+                    {outside.length > 0 && (
                         <div
                             role="status"
-                            className="rounded-lg border border-warn-line bg-warn-bg px-3 py-2 text-warn"
+                            className="flex flex-col gap-2 rounded-lg border border-warn-line bg-warn-bg px-3 py-2 text-warn"
                         >
                             {t(
                                 'screens.designer.overflow',
                                 { cols: screen.cols, rows: screen.rows },
-                                hiddenCount,
+                                outside.length,
                             )}
+                            <div className="flex flex-wrap gap-1.5">
+                                {outside.map((widget) => (
+                                    <button
+                                        key={widget.id}
+                                        type="button"
+                                        draggable
+                                        aria-pressed={widget.id === selected}
+                                        onClick={() => setSelected(widget.id)}
+                                        onDragStart={(e) => {
+                                            e.dataTransfer.setData(
+                                                'text/plain',
+                                                widget.id,
+                                            );
+                                            e.dataTransfer.effectAllowed =
+                                                'move';
+                                            startDrag({
+                                                tile: widget.id,
+                                                w: widget.w,
+                                                h: widget.h,
+                                                dx: 0,
+                                                dy: 0,
+                                            });
+                                        }}
+                                        onDragEnd={endDrag}
+                                        className={cn(
+                                            'cursor-grab rounded-md border border-warn-line bg-panel px-2 py-1 text-xs text-ink',
+                                            widget.id === selected &&
+                                                'border-amber',
+                                        )}
+                                    >
+                                        {`${widget.title ?? sources[widget.type]?.find((x) => x.id === widget.source)?.label ?? t(`screens.kinds.${widget.type}`)} · ${widget.w}×${widget.h}`}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
 
@@ -897,8 +1101,17 @@ export default function EditScreen(props: Props) {
                         ref={grid}
                         className="lj-screen lj-grid grid aspect-video gap-[10px] overflow-hidden rounded-[10px] border border-(--s-line) p-[14px]"
                         data-theme={theme}
-                        onDragOver={allowDrop('end')}
-                        onDrop={onDrop()}
+                        onDragOver={onGridDragOver}
+                        onDrop={onGridDrop}
+                        onDragLeave={(e) => {
+                            if (
+                                !e.currentTarget.contains(
+                                    e.relatedTarget as Node | null,
+                                )
+                            ) {
+                                setHover(null);
+                            }
+                        }}
                         onClick={(e) => {
                             if (e.target === e.currentTarget) {
                                 setSelected(null);
@@ -912,7 +1125,24 @@ export default function EditScreen(props: Props) {
                             gridAutoRows: 'minmax(0, 1fr)',
                         }}
                     >
-                        {screen.widgets.length === 0 && (
+                        {/* While dragging, every cell is a drop zone. */}
+                        {dragging &&
+                            Array.from(
+                                { length: screen.cols * screen.rows },
+                                (_, i) => (
+                                    <span
+                                        key={`cell-${i}`}
+                                        aria-hidden="true"
+                                        className="pointer-events-none rounded-[8px] border border-dashed border-(--s-line-strong)"
+                                        style={{
+                                            gridColumn: (i % screen.cols) + 1,
+                                            gridRow:
+                                                Math.floor(i / screen.cols) + 1,
+                                        }}
+                                    />
+                                ),
+                            )}
+                        {screen.widgets.length === 0 && !dragging && (
                             <div
                                 className="flex flex-col items-center justify-center gap-[1em] rounded-[8px] border border-dashed border-(--s-line-strong) p-[2em] text-center"
                                 style={{
@@ -956,7 +1186,7 @@ export default function EditScreen(props: Props) {
                                 </div>
                             </div>
                         )}
-                        {screen.widgets.map((widget, i) => (
+                        {tiles.map((widget) => (
                             <WidgetTile
                                 key={widget.id}
                                 data-widget={widget.id}
@@ -988,14 +1218,26 @@ export default function EditScreen(props: Props) {
                                     },
                                 )}
                                 data-selected={widget.id === selected}
-                                data-drop={dropTarget === widget.id}
                                 draggable
                                 className={cn(
                                     'cursor-move',
-                                    !place[i]?.fits && 'opacity-40',
+                                    (!fits(widget, screen.cols, screen.rows) ||
+                                        (dragging &&
+                                            drag.current?.tile ===
+                                                widget.id)) &&
+                                        'opacity-40',
                                 )}
+                                // A widget partly outside the grid shows the part inside it.
+                                style={
+                                    fits(widget, screen.cols, screen.rows)
+                                        ? undefined
+                                        : {
+                                              gridColumn: `${widget.x + 1} / ${Math.min(widget.x + widget.w, screen.cols) + 1}`,
+                                              gridRow: `${widget.y + 1} / ${Math.min(widget.y + widget.h, screen.rows) + 1}`,
+                                          }
+                                }
                                 onClick={() => setSelected(widget.id)}
-                                onKeyDown={onKeyDown(widget, i)}
+                                onKeyDown={onKeyDown(widget)}
                                 onDragStart={(e) => {
                                     if (resizing.current) {
                                         e.preventDefault();
@@ -1008,14 +1250,29 @@ export default function EditScreen(props: Props) {
                                         widget.id,
                                     );
                                     e.dataTransfer.effectAllowed = 'move';
-                                    drag.current = { tile: widget.id };
+                                    // Held by the cell under the pointer, so it lands where it was dragged.
+                                    const cell = cellAt(e.clientX, e.clientY);
+                                    startDrag({
+                                        tile: widget.id,
+                                        w: widget.w,
+                                        h: widget.h,
+                                        dx: Math.max(
+                                            0,
+                                            Math.min(
+                                                widget.w - 1,
+                                                cell.x - widget.x,
+                                            ),
+                                        ),
+                                        dy: Math.max(
+                                            0,
+                                            Math.min(
+                                                widget.h - 1,
+                                                cell.y - widget.y,
+                                            ),
+                                        ),
+                                    });
                                 }}
-                                onDragEnd={() => {
-                                    drag.current = null;
-                                    setDropTarget(null);
-                                }}
-                                onDragOver={allowDrop(widget.id)}
-                                onDrop={onDrop(i)}
+                                onDragEnd={endDrag}
                                 decoration={
                                     <>
                                         <span
@@ -1024,44 +1281,46 @@ export default function EditScreen(props: Props) {
                                         >
                                             {`${t(`screens.kinds.${widget.type}`)} · ${widget.w}×${widget.h}`}
                                         </span>
-                                        <span
-                                            aria-hidden="true"
-                                            draggable={false}
-                                            onPointerDown={onResizeStart(
-                                                widget,
-                                            )}
-                                            onPointerMove={onResizeMove}
-                                            onPointerUp={() => {
-                                                resizing.current = null;
-                                            }}
-                                            className="absolute right-0 bottom-0 z-10 flex size-[18px] cursor-nwse-resize touch-none items-end justify-end p-[3px]"
-                                        >
+                                        {HANDLES.map((handle) => (
                                             <span
-                                                className="size-[9px] border-r-2 border-b-2"
-                                                style={{
-                                                    borderColor:
-                                                        widget.id === selected
-                                                            ? 'var(--s-amber)'
-                                                            : 'var(--s-ink-4)',
-                                                }}
+                                                key={handle.id}
+                                                aria-hidden="true"
+                                                draggable={false}
+                                                data-handle={handle.id}
+                                                onPointerDown={onResizeStart(
+                                                    widget,
+                                                    handle.id,
+                                                )}
+                                                onPointerMove={onResizeMove}
+                                                onPointerUp={onResizeEnd}
+                                                onPointerCancel={onResizeEnd}
+                                                className={cn(
+                                                    'absolute z-10 touch-none',
+                                                    handle.className,
+                                                )}
                                             />
-                                        </span>
+                                        ))}
                                     </>
                                 }
                             />
                         ))}
-                    </div>
-                    <div
-                        onDragOver={allowDrop('end')}
-                        onDrop={onDrop()}
-                        className={cn(
-                            'flex h-11 items-center justify-center rounded-lg border border-dashed text-ink-3',
-                            dropTarget === 'end'
-                                ? 'border-amber'
-                                : 'border-line-strong',
+                        {hover && (
+                            <span
+                                aria-hidden="true"
+                                data-testid="drop-footprint"
+                                data-ok={hover.ok}
+                                className={cn(
+                                    'pointer-events-none z-20 rounded-[8px] border-2',
+                                    hover.ok
+                                        ? 'border-(--s-green) bg-(--s-green)/20'
+                                        : 'border-(--s-red) bg-(--s-red)/20',
+                                )}
+                                style={{
+                                    gridColumn: `${Math.max(0, hover.x) + 1} / ${Math.min(hover.x + hover.w, screen.cols) + 1}`,
+                                    gridRow: `${Math.max(0, hover.y) + 1} / ${Math.min(hover.y + hover.h, screen.rows) + 1}`,
+                                }}
+                            />
                         )}
-                    >
-                        {t('screens.designer.drop_end')}
                     </div>
                     <p className="text-xs text-ink-3">
                         {t('screens.designer.help')}
@@ -1078,6 +1337,14 @@ export default function EditScreen(props: Props) {
                             widget={current}
                             catalog={catalog}
                             cols={screen.cols}
+                            canResize={(w, h) =>
+                                placeable(current.id, {
+                                    x: current.x,
+                                    y: current.y,
+                                    w,
+                                    h,
+                                })
+                            }
                             onChange={(widget) => patch(widget.id, widget)}
                             onRemove={() => remove(current.id)}
                         />

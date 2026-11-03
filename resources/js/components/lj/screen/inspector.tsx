@@ -65,12 +65,15 @@ export function WidgetInspector({
     onChange,
     onRemove,
     cols,
+    canResize,
 }: {
     widget: Widget;
     catalog: Catalog;
     onChange: (widget: Widget) => void;
     onRemove: () => void;
     cols: number;
+    /** Whether the widget has room for that size where it is. */
+    canResize: (w: number, h: number) => boolean;
 }) {
     const t = useT();
     const { schema, sources } = catalog;
@@ -638,8 +641,9 @@ export function WidgetInspector({
                                 key={`${w}x${h}`}
                                 type="button"
                                 aria-pressed={on}
+                                disabled={!on && !canResize(w, h)}
                                 className={cn(
-                                    'h-8 rounded-md border border-line text-[13px]',
+                                    'h-8 rounded-md border border-line text-[13px] disabled:opacity-40',
                                     on
                                         ? 'bg-amber text-amber-ink'
                                         : 'bg-rail text-ink-2',
