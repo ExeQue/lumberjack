@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
+    Button,
     Card,
     EmptyState,
     Input,
@@ -24,6 +25,8 @@ import { formatNumber, formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useProjectLive } from '@/lib/use-project-live';
 import {
+    bulkAssign,
+    bulkLabels,
     bulkStatus,
     index as issuesIndex,
     show as issueShow,
@@ -57,6 +60,7 @@ type Props = {
     counts: Record<string, number>;
     releases: string[];
     labels: IssueLabel[];
+    members: { id: number; name: string }[];
     issues: Paginated<Row>;
 };
 
@@ -66,10 +70,14 @@ export default function IssuesIndex({
     counts,
     releases,
     labels,
+    members,
     issues,
 }: Props) {
     const t = useT();
-    const { team } = usePage<{ team: TeamShared }>().props;
+    const { team, auth } = usePage<{
+        team: TeamShared;
+        auth: { user: { id: number } | null };
+    }>().props;
     const [selected, setSelected] = useState<string[]>([]);
     const [search, setSearch] = useState(filters.search);
 
@@ -108,12 +116,35 @@ export default function IssuesIndex({
     const allSelected =
         issues.data.length > 0 && selected.length === issues.data.length;
 
-    const bulk = (status: 'resolved' | 'ignored' | 'open') => {
+    const bulkPost = (url: string, data: Record<string, unknown>) =>
         router.post(
-            bulkStatus(project.uuid).url,
-            { status, issues: selected },
+            url,
+            { ...data, issues: selected },
             { preserveScroll: true, onSuccess: () => setSelected([]) },
         );
+
+    const bulk = (status: 'resolved' | 'ignored' | 'open' | 'in_progress') =>
+        bulkPost(bulkStatus(project.uuid).url, { status });
+
+    // "me" and "none" stand for the viewer and nobody in the assign picker.
+    const bulkAssignTo = (value: string) =>
+        bulkPost(bulkAssign(project.uuid).url, {
+            user_id:
+                value === 'none'
+                    ? null
+                    : value === 'me'
+                      ? auth.user?.id
+                      : Number(value),
+        });
+
+    // "add:Name" or "remove:Name" from the label picker.
+    const bulkLabel = (value: string) => {
+        const [mode, ...name] = value.split(':');
+
+        bulkPost(bulkLabels(project.uuid).url, {
+            label: name.join(':'),
+            remove: mode === 'remove',
+        });
     };
 
     return (
@@ -532,6 +563,76 @@ export default function IssuesIndex({
                         })}
                     </span>
                     <div className="flex flex-wrap gap-2">
+                        <label className="sr-only" htmlFor="bulk-assign">
+                            {t('issues.assign_selected')}
+                        </label>
+                        <Select
+                            id="bulk-assign"
+                            value=""
+                            disabled={selected.length === 0}
+                            onChange={(e) =>
+                                e.target.value && bulkAssignTo(e.target.value)
+                            }
+                        >
+                            <option value="">
+                                {t('issues.assign_selected')}
+                            </option>
+                            <option value="me">{t('issues.assign_me')}</option>
+                            <option value="none">{t('issues.unassign')}</option>
+                            {members
+                                .filter((m) => m.id !== auth.user?.id)
+                                .map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                        {member.name}
+                                    </option>
+                                ))}
+                        </Select>
+                        {labels.length > 0 && (
+                            <>
+                                <label className="sr-only" htmlFor="bulk-label">
+                                    {t('issues.label_selected')}
+                                </label>
+                                <Select
+                                    id="bulk-label"
+                                    value=""
+                                    disabled={selected.length === 0}
+                                    onChange={(e) =>
+                                        e.target.value &&
+                                        bulkLabel(e.target.value)
+                                    }
+                                >
+                                    <option value="">
+                                        {t('issues.label_selected')}
+                                    </option>
+                                    <optgroup label={t('issues.label_add')}>
+                                        {labels.map((label) => (
+                                            <option
+                                                key={label.name}
+                                                value={`add:${label.name}`}
+                                            >
+                                                {label.name}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                    <optgroup label={t('issues.label_remove')}>
+                                        {labels.map((label) => (
+                                            <option
+                                                key={label.name}
+                                                value={`remove:${label.name}`}
+                                            >
+                                                {label.name}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                </Select>
+                            </>
+                        )}
+                        <Button
+                            disabled={selected.length === 0}
+                            onClick={() => bulk('in_progress')}
+                        >
+                            {t('issues.start_selected')}
+                        </Button>
                         {filters.status !== 'resolved' && (
                             <ConfirmButton
                                 variant="default"

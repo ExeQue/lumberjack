@@ -38,6 +38,13 @@ return [
     'select_issue' => 'Select :title',
     'trend' => ':count occurrences in the last 24 hours',
     'resolve_selected' => 'Resolve selected',
+    'start_selected' => 'Start working',
+    'assign_selected' => 'Assign selected…',
+    'assign_me' => 'Me',
+    'unassign' => 'Unassign',
+    'label_selected' => 'Label selected…',
+    'label_add' => 'Add',
+    'label_remove' => 'Remove',
     'ignore_selected' => 'Ignore selected',
     'reopen_selected' => 'Re-open selected',
     'bulk_question' => [
