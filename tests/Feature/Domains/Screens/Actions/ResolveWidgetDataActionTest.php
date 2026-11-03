@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Alerts\Models\QueueAlertThreshold;
 use App\Domains\Health\Enums\HealthStatus;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
@@ -227,6 +228,31 @@ describe('the edges of each type', function () {
         expect($rows['web-1'])->toMatchArray(['cpu_load' => 0.25, 'memory_used' => 0.95, 'disk_used' => 0.1, 'state' => 'red'])
             ->and($rows['web-2'])->toMatchArray(['cpu_load' => null, 'state' => 'red'])
             ->and(($this->resolve)(WidgetType::List, 'agents', ['only_problems' => true])['rows'])->toHaveCount(1);
+    });
+
+    it('judges a queue like its backlog alert, and says why', function () {
+        $sample = fn (string $queue, int $size, int $age) => QueueSample::query()->create(['project_id' => $this->project->id, 'host' => 'web-1', 'connection' => 'redis', 'queue' => $queue, 'size' => $size, 'oldest_age_s' => $age, 'sampled_at' => now()->subMinute()]);
+        $sample('big', 1200, 5);
+        $sample('slow', 3, 11 * 60);
+        $sample('half', 600, 0);
+        $sample('calm', 10, 0);
+        $sample('own', 300, 0);
+        $sample('quiet', 5000, 0);
+        QueueAlertThreshold::query()->create(['project_id' => $this->project->id, 'connection' => 'redis', 'queue' => 'own', 'size' => 200]);
+        QueueAlertThreshold::query()->create(['project_id' => $this->project->id, 'connection' => 'redis', 'queue' => 'quiet', 'muted' => true]);
+
+        $rows = collect(($this->resolve)(WidgetType::List, 'queues')['rows'])->keyBy('queue');
+
+        expect($rows['big'])->toMatchArray(['state' => 'red', 'reason' => 'size'])
+            ->and($rows['slow'])->toMatchArray(['state' => 'red', 'reason' => 'age'])
+            ->and($rows['half'])->toMatchArray(['state' => 'amber', 'reason' => 'size'])
+            ->and($rows['calm'])->toMatchArray(['state' => 'ok', 'reason' => null])
+            ->and($rows['own'])->toMatchArray(['state' => 'red'])
+            ->and($rows['quiet'])->toMatchArray(['state' => 'ok']);
+
+        $own = collect(($this->resolve)(WidgetType::List, 'queues', ['amber' => 50, 'red' => 5000])['rows'])->keyBy('queue');
+
+        expect($own['big'])->toMatchArray(['state' => 'amber', 'reason' => 'size']);
     });
 
     it('lists a host once when several agents ran on it, preferring the online one', function () {
