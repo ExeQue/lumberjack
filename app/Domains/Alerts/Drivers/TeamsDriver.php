@@ -34,11 +34,11 @@ class TeamsDriver implements ChannelDriver
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
         $this->post($channel, $this->card([
-            ['type' => 'TextBlock', 'text' => $title, 'weight' => 'Bolder', 'size' => 'Medium', 'wrap' => true, 'color' => $alert->urgency() === 'high' ? 'Attention' : 'Default'],
-            ['type' => 'TextBlock', 'text' => $subject, 'fontType' => 'Monospace', 'wrap' => true],
-            ...array_map(fn (string $line): array => ['type' => 'TextBlock', 'text' => $line, 'wrap' => true, 'isSubtle' => true], $body),
+            ['type' => 'TextBlock', 'text' => self::escape($title), 'weight' => 'Bolder', 'size' => 'Medium', 'wrap' => true, 'color' => $alert->urgency() === 'high' ? 'Attention' : 'Default'],
+            ['type' => 'TextBlock', 'text' => self::escape($subject), 'fontType' => 'Monospace', 'wrap' => true],
+            ...array_map(fn (string $line): array => ['type' => 'TextBlock', 'text' => self::escape($line), 'wrap' => true, 'isSubtle' => true], $body),
             ...($alert->facts() !== [] ? [['type' => 'FactSet', 'facts' => array_map(
-                fn (string $title, string $value): array => ['title' => $title, 'value' => $value],
+                fn (string $title, string $value): array => ['title' => $title, 'value' => self::escape($value)],
                 array_keys($alert->facts()),
                 $alert->facts(),
             )]] : []),
@@ -51,6 +51,15 @@ class TeamsDriver implements ChannelDriver
         $this->post($channel, $this->card([
             ['type' => 'TextBlock', 'text' => __('alerts.test_message', ['channel' => $channel->name]), 'wrap' => true],
         ]));
+    }
+
+    /**
+     * Adaptive Cards render a markdown subset, links included; a zero-width space keeps
+     * [text](url) in an issue's title or message from becoming one.
+     */
+    public static function escape(string $text): string
+    {
+        return str_replace(['](', '**'], [']'."\u{200B}".'(', '*'."\u{200B}".'*'], $text);
     }
 
     /**

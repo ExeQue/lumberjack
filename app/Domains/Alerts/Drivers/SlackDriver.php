@@ -34,7 +34,7 @@ class SlackDriver implements ChannelDriver
         $this->post($channel, [
             'text' => $title.': '.$subject,
             'blocks' => [
-                ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_substr('*<'.$alert->url().'|'.self::escape($title).'>*'."\n`".self::escape($subject).'`', 0, 3000)]],
+                ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_substr('*<'.$alert->url().'|'.self::escape($title).'>*'."\n`".str_replace('`', 'ˋ', self::escape($subject)).'`', 0, 3000)]],
                 ...($body !== [] ? [['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_substr(self::escape(implode("\n", $body)), 0, 3000)]]] : []),
                 ...($alert->facts() !== [] ? [['type' => 'section', 'fields' => array_map(
                     fn (string $label, string $value): array => ['type' => 'mrkdwn', 'text' => '*'.self::escape($label)."*\n".self::escape($value)],

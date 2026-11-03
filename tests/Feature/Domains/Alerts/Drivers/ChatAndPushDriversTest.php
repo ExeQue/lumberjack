@@ -50,6 +50,27 @@ describe('chat messages', function () {
     });
 });
 
+describe('markdown from the app', function () {
+    it('cannot break out of code or plant a link in Discord, Slack or Teams', function () {
+        $this->issue->update(['title' => 'Boom` [Click to fix](https://evil.example) `', 'message' => 'See [the fix](https://evil.example)']);
+        Http::fake(['*' => Http::response(null, 204)]);
+
+        app(DiscordDriver::class)->send(($this->channel)(ChannelType::Discord, ['webhook_url' => 'https://discord.com/api/webhooks/1/x']), ($this->alert)());
+        app(SlackDriver::class)->send(($this->channel)(ChannelType::Slack, ['webhook_url' => 'https://hooks.slack.com/services/T/B/x']), ($this->alert)());
+        app(TeamsDriver::class)->send(($this->channel)(ChannelType::Teams, ['webhook_url' => 'https://93.184.215.14/workflows/x']), ($this->alert)());
+
+        $sent = Http::recorded()->map(fn (array $pair) => $pair[0]);
+        $discord = $sent[0]['embeds'][0]['description'];
+        $slack = $sent[1]['blocks'][0]['text']['text'];
+        $teams = json_encode($sent[2]['attachments'][0]['content']['body']);
+
+        expect($discord)->toContain('`Boomˋ [Click to fix](https://evil.example) ˋ`')
+            ->toContain('See \\[the fix\\](https://evil.example)')
+            ->and($slack)->toContain('Boomˋ [Click to fix](https://evil.example) ˋ`')->not->toContain('Boom`')
+            ->and($teams)->not->toContain('](https');
+    });
+});
+
 describe('Slack', function () {
     it('posts Block Kit with the issue linked and markup escaped', function () {
         Http::fake(['hooks.slack.com/*' => Http::response('ok')]);
