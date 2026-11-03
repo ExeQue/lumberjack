@@ -64,6 +64,23 @@ describe('editing a channel', function () {
     });
 });
 
+describe('another team', function () {
+    it('cannot change, delete or test a channel it does not administer, even as owner of its own team', function () {
+        ['user' => $victim] = $this->memberWithProject(TeamRole::Admin);
+        $channel = NotificationChannel::factory()->for($victim->currentTeam)->create();
+        ['user' => $attacker] = $this->memberWithProject(TeamRole::Owner);
+
+        $this->actingAs($attacker)->put(route('alerts.channels.update', $channel), [
+            'type' => 'mail', 'name' => 'mine', 'config' => ['address' => 'attacker@example.com'],
+        ])->assertForbidden();
+        $this->actingAs($attacker)->delete(route('alerts.channels.destroy', $channel))->assertForbidden();
+        $this->actingAs($attacker)->post(route('alerts.channels.test', $channel))->assertForbidden();
+
+        expect($channel->refresh()->type)->toBe(ChannelType::Discord)
+            ->and($channel->name)->not->toBe('mine');
+    });
+});
+
 describe('sending a test', function () {
     it('says why a webhook test did not go through', function () {
         Http::fake(['93.184.215.14/*' => Http::response('nope', 405)]);

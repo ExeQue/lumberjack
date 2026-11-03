@@ -15,9 +15,13 @@ class SaveNotificationChannelRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $team = $this->user()?->currentTeam;
+        $channel = $this->route('channel');
 
-        if ($team === null) {
+        // Editing is checked against the channel's own team, never the caller's current
+        // one: channel ids are guessable, and anyone can own a team of their own.
+        $team = $channel instanceof NotificationChannel ? $channel->team : $this->user()?->currentTeam;
+
+        if ($team === null || $this->user() === null) {
             return false;
         }
 
