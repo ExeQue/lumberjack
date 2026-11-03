@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Drivers;
 
+use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
-use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
@@ -30,7 +30,7 @@ class TeamsDriver implements ChannelDriver
     }
 
     #[Override]
-    public function send(NotificationChannel $channel, IssueAlert $alert): void
+    public function send(NotificationChannel $channel, Alert $alert): void
     {
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
@@ -43,7 +43,7 @@ class TeamsDriver implements ChannelDriver
                 array_keys($alert->facts()),
                 $alert->facts(),
             )]] : []),
-        ], $alert->url));
+        ], $alert->url()));
     }
 
     #[Override]

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Projects\Http\Controllers;
 
+use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
@@ -90,6 +91,7 @@ class ProjectSettingsController
                     'enabled' => $r->enabled,
                     'channels' => $r->channels->modelKeys(),
                     'environments' => $r->environments ?? [],
+                    'settings' => $r->type === AlertRuleType::QueueBacklog ? $r->queueBacklogSettings()->toArray() : null,
                 ])->all(),
             ],
             // One entry per agent provider; Claude is the first.

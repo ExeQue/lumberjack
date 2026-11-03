@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Data;
 
+use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Issues\Actions\DetectEscalationAction;
 use App\Domains\Issues\Enums\IssueStatus;
@@ -11,7 +12,7 @@ use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\IssueNote;
 use App\Domains\Issues\Support\NoteMentions;
 
-final readonly class IssueAlert
+final readonly class IssueAlert implements Alert
 {
     public function __construct(
         public Issue $issue,
@@ -24,6 +25,11 @@ final readonly class IssueAlert
         public ?IssueStatus $statusChange = null,
         public ?string $actor = null,
     ) {
+    }
+
+    public function url(): string
+    {
+        return $this->url;
     }
 
     /**

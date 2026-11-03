@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Drivers;
 
+use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
-use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Models\NotificationChannel;
 use Illuminate\Http\Client\PendingRequest;
@@ -27,21 +27,21 @@ class SlackDriver implements ChannelDriver
     }
 
     #[Override]
-    public function send(NotificationChannel $channel, IssueAlert $alert): void
+    public function send(NotificationChannel $channel, Alert $alert): void
     {
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
         $this->post($channel, [
             'text' => $title.': '.$subject,
             'blocks' => [
-                ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_substr('*<'.$alert->url.'|'.self::escape($title).'>*'."\n`".self::escape($subject).'`', 0, 3000)]],
+                ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_substr('*<'.$alert->url().'|'.self::escape($title).'>*'."\n`".self::escape($subject).'`', 0, 3000)]],
                 ...($body !== [] ? [['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_substr(self::escape(implode("\n", $body)), 0, 3000)]]] : []),
                 ...($alert->facts() !== [] ? [['type' => 'section', 'fields' => array_map(
                     fn (string $label, string $value): array => ['type' => 'mrkdwn', 'text' => '*'.self::escape($label)."*\n".self::escape($value)],
                     array_keys($alert->facts()),
                     $alert->facts(),
                 )]] : []),
-                ['type' => 'actions', 'elements' => [['type' => 'button', 'text' => ['type' => 'plain_text', 'text' => (string) __('alerts.open_issue')], 'url' => $alert->url]]],
+                ['type' => 'actions', 'elements' => [['type' => 'button', 'text' => ['type' => 'plain_text', 'text' => (string) __('alerts.open_issue')], 'url' => $alert->url()]]],
             ],
         ]);
     }

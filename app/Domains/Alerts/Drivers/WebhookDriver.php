@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Drivers;
 
+use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
 use App\Domains\Alerts\Data\IssueAlert;
+use App\Domains\Alerts\Data\QueueBacklogAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
@@ -34,8 +36,31 @@ class WebhookDriver implements ChannelDriver
     }
 
     #[Override]
-    public function send(NotificationChannel $channel, IssueAlert $alert): void
+    public function send(NotificationChannel $channel, Alert $alert): void
     {
+        if ($alert instanceof QueueBacklogAlert) {
+            $this->post($channel, [
+                'event' => 'queue_backlog',
+                'project' => ['id' => $alert->project->uuid, 'slug' => $alert->project->slug, 'name' => $alert->project->name],
+                'queue' => [
+                    'connection' => $alert->connection,
+                    'name' => $alert->queue,
+                    'state' => $alert->recovered ? 'recovered' : 'started',
+                    'size' => $alert->size,
+                    'oldest_age_s' => $alert->oldestAgeSeconds,
+                    'since' => $alert->since->toIso8601String(),
+                    'url' => $alert->url,
+                ],
+                'thresholds' => $alert->settings->toArray(),
+            ]);
+
+            return;
+        }
+
+        if (! $alert instanceof IssueAlert) {
+            return;
+        }
+
         $issue = $alert->issue;
 
         $this->post($channel, [

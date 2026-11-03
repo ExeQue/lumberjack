@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Models;
 
+use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Projects\Models\Project;
 use Database\Factories\AlertRuleFactory;
@@ -20,8 +21,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property AlertRuleType $type
  * @property bool $enabled
  * @property list<string>|null $environments
+ * @property array<string, mixed>|null $settings
  */
-#[Fillable(['project_id', 'type', 'enabled', 'environments'])]
+#[Fillable(['project_id', 'type', 'enabled', 'environments', 'settings'])]
 #[UseFactory(AlertRuleFactory::class)]
 class AlertRule extends Model
 {
@@ -39,6 +41,7 @@ class AlertRule extends Model
             'type' => AlertRuleType::class,
             'enabled' => 'boolean',
             'environments' => 'array',
+            'settings' => 'array',
         ];
     }
 
@@ -52,6 +55,11 @@ class AlertRule extends Model
     public function channels(): BelongsToMany
     {
         return $this->belongsToMany(NotificationChannel::class);
+    }
+
+    public function queueBacklogSettings(): QueueBacklogSettings
+    {
+        return QueueBacklogSettings::fromArray($this->settings);
     }
 
     public function appliesToEnvironment(?string $environment): bool

@@ -83,7 +83,7 @@ class AlertController
 
     public function updateRule(UpdateAlertRuleRequest $request, AlertRule $rule, UpdateAlertRuleAction $action): RedirectResponse
     {
-        $action->execute($rule, $request->boolean('enabled'), array_values(array_map('intval', (array) $request->input('channels', []))), $request->input('environments'));
+        $action->execute($rule, $request->boolean('enabled'), array_values(array_map('intval', (array) $request->input('channels', []))), $request->input('environments'), $request->settings());
 
         return back();
     }

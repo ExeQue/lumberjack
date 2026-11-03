@@ -46,6 +46,13 @@ export type Rule = {
     enabled: boolean;
     channels: number[];
     environments: string[];
+    /** A queue backlog rule's thresholds; null for other rules. */
+    settings: QueueBacklogSettings | null;
+};
+type QueueBacklogSettings = {
+    size: number | null;
+    age_minutes: number | null;
+    sustain_minutes: number;
 };
 
 const configField: Record<
@@ -554,6 +561,12 @@ function RuleRow({
     const [environments, setEnvironments] = useState(
         rule.environments.join(', '),
     );
+    // Number inputs as typed; empty means the threshold is off.
+    const [thresholds, setThresholds] = useState({
+        size: String(rule.settings?.size ?? ''),
+        age_minutes: String(rule.settings?.age_minutes ?? ''),
+        sustain_minutes: String(rule.settings?.sustain_minutes ?? ''),
+    });
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -569,6 +582,14 @@ function RuleRow({
                 enabled,
                 channels: selected,
                 environments: envs.length > 0 ? envs : null,
+                ...(rule.settings && {
+                    settings: Object.fromEntries(
+                        Object.entries(thresholds).map(([key, value]) => [
+                            key,
+                            value.trim() === '' ? null : Number(value),
+                        ]),
+                    ),
+                }),
             },
             {
                 preserveScroll: true,
@@ -660,25 +681,71 @@ function RuleRow({
                     ))
                 )}
             </fieldset>
-            <Field
-                label={
-                    <span className="text-xs font-normal text-ink-3">
-                        {t('alerts.rules.environments')}
-                    </span>
-                }
-                htmlFor={`rule-env-${rule.id}`}
-                hint={t('alerts.rules.environments_hint')}
-                className="flex-[1_1_180px]"
-            >
-                <Input
-                    id={`rule-env-${rule.id}`}
-                    className="font-mono"
-                    placeholder="production"
-                    value={environments}
+            {rule.settings ? (
+                <fieldset
+                    className="flex flex-[1_1_180px] flex-col gap-2"
                     disabled={disabled}
-                    onChange={(e) => setEnvironments(e.target.value)}
-                />
-            </Field>
+                >
+                    <legend className="mb-1 text-xs text-ink-3">
+                        {t('alerts.rules.thresholds.title')}
+                    </legend>
+                    {(['size', 'age_minutes', 'sustain_minutes'] as const).map(
+                        (key) => (
+                            <Field
+                                key={key}
+                                label={
+                                    <span className="text-xs font-normal text-ink-3">
+                                        {t(`alerts.rules.thresholds.${key}`)}
+                                    </span>
+                                }
+                                htmlFor={`rule-${key}-${rule.id}`}
+                            >
+                                <Input
+                                    id={`rule-${key}-${rule.id}`}
+                                    type="number"
+                                    min={1}
+                                    className="font-mono"
+                                    placeholder={
+                                        key === 'sustain_minutes'
+                                            ? '5'
+                                            : t('alerts.rules.thresholds.off')
+                                    }
+                                    value={thresholds[key]}
+                                    onChange={(e) =>
+                                        setThresholds({
+                                            ...thresholds,
+                                            [key]: e.target.value,
+                                        })
+                                    }
+                                />
+                            </Field>
+                        ),
+                    )}
+                    <p className="text-xs text-ink-3">
+                        {t('alerts.rules.thresholds.hint')}
+                    </p>
+                </fieldset>
+            ) : (
+                <Field
+                    label={
+                        <span className="text-xs font-normal text-ink-3">
+                            {t('alerts.rules.environments')}
+                        </span>
+                    }
+                    htmlFor={`rule-env-${rule.id}`}
+                    hint={t('alerts.rules.environments_hint')}
+                    className="flex-[1_1_180px]"
+                >
+                    <Input
+                        id={`rule-env-${rule.id}`}
+                        className="font-mono"
+                        placeholder="production"
+                        value={environments}
+                        disabled={disabled}
+                        onChange={(e) => setEnvironments(e.target.value)}
+                    />
+                </Field>
+            )}
             {!disabled && (
                 <div className="flex w-full flex-wrap items-center justify-end gap-3">
                     {firstError && (

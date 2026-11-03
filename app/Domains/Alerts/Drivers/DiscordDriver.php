@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Drivers;
 
+use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
 use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
@@ -44,8 +45,14 @@ class DiscordDriver implements ChannelDriver
     }
 
     #[Override]
-    public function send(NotificationChannel $channel, IssueAlert $alert): void
+    public function send(NotificationChannel $channel, Alert $alert): void
     {
+        if (! $alert instanceof IssueAlert) {
+            $this->sendSummary($channel, $alert);
+
+            return;
+        }
+
         $issue = $alert->issue;
 
         if ($alert->statusChange !== null) {
@@ -101,6 +108,34 @@ class DiscordDriver implements ChannelDriver
                     $alert->facts(),
                 ),
                 'timestamp' => $issue->last_seen_at->toIso8601String(),
+            ]],
+        ]);
+    }
+
+    /**
+     * An alert that is not about an issue, e.g. a queue backlog: the same embed, from its parts.
+     */
+    private function sendSummary(NotificationChannel $channel, Alert $alert): void
+    {
+        ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
+
+        $this->post($channel, [
+            ...$this->sender($channel),
+            'embeds' => [[
+                'title' => mb_substr($title, 0, 256),
+                'url' => $alert->url(),
+                'color' => match ($alert->urgency()) {
+                    'high' => self::COLOR_ESCALATION,
+                    'low' => self::COLOR_RESOLVED,
+                    default => self::COLOR_NEW,
+                },
+                'description' => mb_substr(implode("\n", ['`'.$subject.'`', ...$body]), 0, 3900)."\n\n[".__('alerts.open_issue').']('.$alert->url().')',
+                'fields' => array_map(
+                    fn (string $name, string $value): array => ['name' => $name, 'value' => $value, 'inline' => true],
+                    array_keys($alert->facts()),
+                    $alert->facts(),
+                ),
+                'timestamp' => now()->toIso8601String(),
             ]],
         ]);
     }

@@ -50,11 +50,28 @@ you pick, and can be limited to some environments (comma separated, empty means 
 | Escalation          | An open issue escalating (10+ occurrences in 5 minutes, far above usual).              | Yes           |
 | Resolved or ignored | Someone resolving or ignoring an issue, with their comment. Bulk changes are left out. | No            |
 | Note                | Every note on an issue, by a person or an agent.                                       | No            |
+| Queue backlog       | A queue over its thresholds for a while, and again when it is back under.              | Yes           |
 
 At most one message is sent per issue per rule every 30 minutes. Regressions and
 notes are not throttled: a regression only follows someone resolving the issue, so
 each one is news. Ignored issues and browser errors never send. If the issue has a triage
 note, its first line is included in the message.
+
+### Queue backlog
+
+Agents report the size of the app's queues every minute (see the
+[Jobs page](./performance#queues)). The queue backlog rule fires when a queue has more
+than **1,000 jobs** waiting, or its oldest job has waited more than **10 minutes**, for
+**5 minutes**; each of the three can be changed on the rule, and either threshold left
+empty to turn it off. It sends once when the backlog starts and once when the queue is
+back under, and starts again at most once every 30 minutes, so a queue that hovers
+around a threshold does not flood the channel. The rule takes every queue the agents
+report; environments do not apply to it.
+
+This is the alert that catches dead workers: with no worker running, no job starts, so
+no wait time is measured, but the queue size keeps growing. The check runs every minute
+(`php artisan lumberjack:check-queue-backlogs` in the schedule) on the latest sample
+of each queue, from whichever host reported it last.
 
 ## Webhooks
 
@@ -89,6 +106,28 @@ turning a status banner on while an issue escalates.
 
 `event` is the rule (`new_issue`, `regression`, `escalation`, `status_change`, `note`)
 or `test`. `status_change` and `note` are filled in for those events.
+
+A queue backlog has no issue; its body carries the queue and the thresholds instead,
+with `state` either `started` or `recovered`:
+
+```json
+{
+    "version": "1",
+    "sent_at": "2026-11-03T10:12:00+00:00",
+    "event": "queue_backlog",
+    "project": { "id": "...", "slug": "shop", "name": "Shop" },
+    "queue": {
+        "connection": "redis",
+        "name": "default",
+        "state": "started",
+        "size": 1240,
+        "oldest_age_s": 840,
+        "since": "2026-11-03T10:05:00+00:00",
+        "url": "https://lumberjack.example.com/projects/.../jobs"
+    },
+    "thresholds": { "size": 1000, "age_minutes": 10, "sustain_minutes": 5 }
+}
+```
 
 Every request is signed with the channel's secret, shown once when the channel is
 created:

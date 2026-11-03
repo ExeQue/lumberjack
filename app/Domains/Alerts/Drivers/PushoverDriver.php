@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Drivers;
 
+use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
-use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Models\NotificationChannel;
 use Illuminate\Http\Client\PendingRequest;
@@ -31,14 +31,14 @@ class PushoverDriver implements ChannelDriver
     }
 
     #[Override]
-    public function send(NotificationChannel $channel, IssueAlert $alert): void
+    public function send(NotificationChannel $channel, Alert $alert): void
     {
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
         $this->post($channel, [
             'title' => mb_substr($title, 0, 250),
             'message' => mb_substr(implode("\n", [$subject, ...$body]), 0, 1024),
-            'url' => $alert->url,
+            'url' => $alert->url(),
             'url_title' => __('alerts.open_issue'),
             // Pushover's -1 (quiet) to 1 (high, bypasses quiet hours).
             'priority' => match ($alert->urgency()) {

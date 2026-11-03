@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Drivers;
 
+use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
-use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
@@ -32,14 +32,14 @@ class NtfyDriver implements ChannelDriver
     }
 
     #[Override]
-    public function send(NotificationChannel $channel, IssueAlert $alert): void
+    public function send(NotificationChannel $channel, Alert $alert): void
     {
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
         $this->post($channel, [
             'title' => mb_substr($title, 0, 250),
             'message' => mb_substr(implode("\n", [$subject, ...$body]), 0, 4000),
-            'click' => $alert->url,
+            'click' => $alert->url(),
             // ntfy's 1 to 5; 4 sounds through do-not-disturb on most phones.
             'priority' => match ($alert->urgency()) {
                 'high' => 4,

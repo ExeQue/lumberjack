@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Drivers;
 
+use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
-use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Models\NotificationChannel;
 use Illuminate\Http\Client\PendingRequest;
@@ -32,7 +32,7 @@ class TelegramDriver implements ChannelDriver
     }
 
     #[Override]
-    public function send(NotificationChannel $channel, IssueAlert $alert): void
+    public function send(NotificationChannel $channel, Alert $alert): void
     {
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
@@ -41,7 +41,7 @@ class TelegramDriver implements ChannelDriver
             '<code>'.self::escape($subject).'</code>',
             $body !== [] ? self::escape(implode("\n", $body)) : null,
             $alert->facts() !== [] ? implode("\n", array_map(fn (string $label, string $value): string => '<b>'.self::escape($label).':</b> '.self::escape($value), array_keys($alert->facts()), $alert->facts())) : null,
-            '<a href="'.self::escape($alert->url).'">'.self::escape((string) __('alerts.open_issue')).'</a>',
+            '<a href="'.self::escape($alert->url()).'">'.self::escape((string) __('alerts.open_issue')).'</a>',
         ])), 0, 4000), $alert->urgency() === 'low');
     }
 

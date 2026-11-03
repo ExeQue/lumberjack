@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Contracts;
 
-use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Models\NotificationChannel;
 
 /**
@@ -19,7 +18,7 @@ interface ChannelDriver
      */
     public function rules(): array;
 
-    public function send(NotificationChannel $channel, IssueAlert $alert): void;
+    public function send(NotificationChannel $channel, Alert $alert): void;
 
     public function sendTest(NotificationChannel $channel): void;
 }
