@@ -125,7 +125,11 @@ class Project extends Model
         return $this->hasMany(Issue::class);
     }
 
-    /** @return HasMany<AlertRule, $this> */
+    /**
+     * Its own rules, each overriding the team's of that type.
+     *
+     * @return HasMany<AlertRule, $this>
+     */
     public function alertRules(): HasMany
     {
         return $this->hasMany(AlertRule::class);

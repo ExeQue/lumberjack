@@ -7,6 +7,7 @@ namespace App\Domains\Alerts\Jobs;
 use App\Domains\Alerts\Actions\SendProjectAlertAction;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,6 +32,8 @@ class SendQueueBacklogAlert implements ShouldQueue
         public readonly ?int $oldestAgeSeconds,
         public readonly string $since,
         public readonly bool $recovered,
+        // ponytail: nullable only for jobs queued before team rules; drop with the fallback below.
+        public readonly ?Project $project = null,
     ) {
         $this->onQueue(SendIssueAlerts::QUEUE);
     }
@@ -43,7 +46,7 @@ class SendQueueBacklogAlert implements ShouldQueue
 
     public function handle(SendProjectAlertAction $action): void
     {
-        $project = $this->rule->project;
+        $project = $this->project ?? $this->rule->project;
 
         $action->execute($this->rule, new QueueBacklogAlert(
             $project,

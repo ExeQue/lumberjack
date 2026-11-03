@@ -172,9 +172,9 @@ class RecordHealthResultAction
         }
 
         $rule = AlertRule::query()
-            ->where('project_id', $check->project_id)
-            ->where('type', $type->value)
-            ->where('enabled', true)
+            ->whereEffectiveFor($check->project)
+            ->whereType($type)
+            ->whereEnabled()
             ->whereHas('channels')
             ->first();
 

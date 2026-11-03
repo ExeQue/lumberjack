@@ -1,28 +1,30 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ChannelsCard } from '@/components/lj/alerts';
+import { ChannelsCard, RulesCard } from '@/components/lj/alerts';
 import type { Channel } from '@/components/lj/alerts';
 import { TopBar } from '@/components/lj/top-bar';
 import { Card, CardHeader, PageTitle } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
 import { settings as projectSettings } from '@/routes/projects';
-import type { TeamShared } from '@/types/lumberjack';
+import type { AlertRule, TeamShared } from '@/types/lumberjack';
 
 type Props = {
     channels: Channel[];
     types: string[];
     projects: { uuid: string; name: string }[];
+    rules: AlertRule[];
     can_administer: boolean;
 };
 
 /**
- * The team's shared alert channels. Each project sets its rules, and adds channels
- * of its own such as a webhook, in its settings.
+ * The team's shared alert channels and rules. Each project uses the rules unless it
+ * customizes one, and adds channels of its own such as a webhook, in its settings.
  */
 export default function Alerts({
     channels,
     types,
     projects,
+    rules,
     can_administer,
 }: Props) {
     const t = useT();
@@ -40,6 +42,13 @@ export default function Alerts({
                 <ChannelsCard
                     channels={channels}
                     types={types}
+                    canAdminister={can_administer}
+                />
+
+                <RulesCard
+                    scope="team"
+                    rules={rules}
+                    channels={channels}
                     canAdminister={can_administer}
                 />
 

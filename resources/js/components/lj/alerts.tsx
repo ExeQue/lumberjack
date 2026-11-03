@@ -1,5 +1,6 @@
 import { Form, router } from '@inertiajs/react';
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import {
     Badge,
@@ -27,7 +28,12 @@ import {
     test as channelTest,
     update as channelUpdate,
 } from '@/routes/alerts/channels';
-import { update as ruleUpdate } from '@/routes/alerts/rules';
+import {
+    customize as ruleCustomize,
+    reset as ruleReset,
+    update as ruleUpdate,
+} from '@/routes/alerts/rules';
+import type { AlertRule, ProjectAlertRule } from '@/types/lumberjack';
 
 export type Channel = {
     id: number;
@@ -38,22 +44,7 @@ export type Channel = {
     last_delivery_at: string | null;
     settings?: Record<string, string>;
 };
-export type Rule = {
-    id: number;
-    type: string;
-    label: string;
-    description: string;
-    enabled: boolean;
-    channels: number[];
-    environments: string[];
-    /** A queue backlog rule's thresholds; null for other rules. */
-    settings: QueueBacklogSettings | null;
-};
-type QueueBacklogSettings = {
-    size: number | null;
-    age_minutes: number | null;
-    sustain_minutes: number;
-};
+export type Rule = AlertRule;
 
 const configField: Record<
     string,
@@ -490,27 +481,34 @@ function ChannelDialog({
 }
 
 /**
- * A project's alert rules: which kinds of alert go to which channels.
+ * Alert rules: which kinds of alert go to which channels. The team's are edited as
+ * they are; a project's show, per type, the team's (read only, to customize) or the
+ * project's own (editable, to drop again).
  */
-export function RulesCard({
-    rules,
-    channels,
-    canAdminister,
-}: {
-    rules: Rule[];
-    channels: Channel[];
-    canAdminister: boolean;
-}) {
+export function RulesCard(
+    props: {
+        channels: Channel[];
+        canAdminister: boolean;
+    } & (
+        | { scope: 'team'; rules: AlertRule[] }
+        | { scope: 'project'; project: string; rules: ProjectAlertRule[] }
+    ),
+) {
     const t = useT();
+    const { channels, canAdminister } = props;
 
     return (
         <Card aria-labelledby="h-rules">
-            <CardHeader id="h-rules" title={t('alerts.rules.title')} />
+            <CardHeader
+                id="h-rules"
+                title={t('alerts.rules.title')}
+                description={t(`alerts.rules.${props.scope}_description`)}
+            />
             <div className="flex flex-col gap-3 p-4">
-                {rules.length === 0 ? (
+                {props.rules.length === 0 ? (
                     <EmptyState title={t('alerts.rules.empty')} />
-                ) : (
-                    rules.map((rule) => (
+                ) : props.scope === 'team' ? (
+                    props.rules.map((rule) => (
                         <RuleRow
                             key={rule.id}
                             rule={rule}
@@ -518,10 +516,126 @@ export function RulesCard({
                             disabled={!canAdminister}
                         />
                     ))
+                ) : (
+                    props.rules.map(({ project: own, ...row }) =>
+                        own ? (
+                            <RuleRow
+                                key={own.id}
+                                rule={own}
+                                channels={channels}
+                                disabled={!canAdminister}
+                                badge={
+                                    <Badge tone="amber">
+                                        {t('alerts.rules.customized')}
+                                    </Badge>
+                                }
+                                actions={
+                                    canAdminister && (
+                                        <ConfirmButton
+                                            variant="default"
+                                            question={t(
+                                                'alerts.rules.use_team_question',
+                                                { rule: row.label },
+                                            )}
+                                            confirmLabel={t(
+                                                'alerts.rules.use_team',
+                                            )}
+                                            onConfirm={() =>
+                                                router.delete(
+                                                    ruleReset(own.id).url,
+                                                    { preserveScroll: true },
+                                                )
+                                            }
+                                        >
+                                            {t('alerts.rules.use_team')}
+                                            <span className="sr-only">
+                                                {' '}
+                                                {row.label}
+                                            </span>
+                                        </ConfirmButton>
+                                    )
+                                }
+                            />
+                        ) : (
+                            <TeamRuleSummary
+                                key={row.type}
+                                row={row}
+                                project={props.project}
+                                channels={channels}
+                                canAdminister={canAdminister}
+                            />
+                        ),
+                    )
                 )}
                 <p className="text-xs text-ink-3">{t('alerts.rules.hint')}</p>
             </div>
         </Card>
+    );
+}
+
+/** A type the project takes from the team: what the team's rule does, read only. */
+function TeamRuleSummary({
+    row,
+    project,
+    channels,
+    canAdminister,
+}: {
+    row: Omit<ProjectAlertRule, 'project'>;
+    project: string;
+    channels: Channel[];
+    canAdminister: boolean;
+}) {
+    const t = useT();
+    const rule = row.team;
+    const names = channels
+        .filter((channel) => rule?.channels.includes(channel.id))
+        .map((channel) => channel.name);
+
+    return (
+        <div className="flex flex-wrap items-start gap-4 rounded-lg border border-dashed border-line bg-rail p-3.5">
+            <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-1">
+                <span className="flex flex-wrap items-center gap-2 font-semibold">
+                    {row.label}
+                    <span className="text-xs font-normal text-ink-3">
+                        {rule?.enabled
+                            ? t('alerts.rules.on')
+                            : t('alerts.rules.off')}
+                    </span>
+                    <Badge>{t('alerts.rules.team_default')}</Badge>
+                </span>
+                <span className="text-ink-2">{row.description}</span>
+            </div>
+            <div className="flex flex-[1_1_180px] flex-col gap-1 text-xs text-ink-3">
+                <span>
+                    {names.length > 0
+                        ? t('alerts.rules.sends_to', {
+                              channels: names.join(', '),
+                          })
+                        : t('alerts.rules.nowhere')}
+                </span>
+                {rule && rule.environments.length > 0 && (
+                    <span>
+                        {t('alerts.rules.only_in', {
+                            environments: rule.environments.join(', '),
+                        })}
+                    </span>
+                )}
+            </div>
+            {canAdminister && (
+                <Button
+                    onClick={() =>
+                        router.post(
+                            ruleCustomize({ project, type: row.type }).url,
+                            {},
+                            { preserveScroll: true },
+                        )
+                    }
+                >
+                    {t('alerts.rules.customize')}
+                    <span className="sr-only"> {row.label}</span>
+                </Button>
+            )}
+        </div>
     );
 }
 
@@ -550,10 +664,14 @@ function RuleRow({
     rule,
     channels,
     disabled,
+    badge,
+    actions,
 }: {
     rule: Rule;
     channels: Channel[];
     disabled: boolean;
+    badge?: ReactNode;
+    actions?: ReactNode;
 }) {
     const t = useT();
     const [enabled, setEnabled] = useState(rule.enabled);
@@ -634,11 +752,12 @@ function RuleRow({
                 />
             </button>
             <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-1">
-                <span className="font-semibold">
-                    {rule.label}{' '}
+                <span className="flex flex-wrap items-center gap-2 font-semibold">
+                    {rule.label}
                     <span className="text-xs font-normal text-ink-3">
                         {enabled ? t('alerts.rules.on') : t('alerts.rules.off')}
                     </span>
+                    {badge}
                 </span>
                 <span className="text-ink-2">{rule.description}</span>
             </div>
@@ -751,6 +870,7 @@ function RuleRow({
                     {firstError && (
                         <p className="text-xs text-err">{firstError}</p>
                     )}
+                    {actions}
                     <Button
                         type="submit"
                         variant="primary"

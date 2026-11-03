@@ -62,5 +62,7 @@ return [
     'test_message' => 'Test message from Lumberjack to :channel. Alerts will arrive here.',
     'channel_saved' => 'Channel saved.',
     'test_sent' => 'Test message sent.',
+    'rule_customized' => 'The rule is now the project\'s own.',
+    'rule_reset' => 'The project uses the team\'s rule again.',
     'test_failed' => 'The test message could not be delivered.',
 ];

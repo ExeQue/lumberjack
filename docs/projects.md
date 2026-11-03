@@ -38,7 +38,7 @@ Pages that belong to one thing, like a trace, open the other project's overview.
   in use (hover for the bytes), with the highest load and memory per hour over the
   last day. Memory and disk turn amber past 90%, load past the number of cores. In a
   container the container's own limits count. Host samples are kept for 7 days.
-- **Alerts:** the project's [rules and own channels](./alerts).
+- **Alerts:** the project's [own channels, and its rules](./alerts#team-rules-and-project-overrides): the team's by default, or customized for the project.
 - **Labels:** rename, recolor or delete [issue labels](./issues#working-on-an-issue).
 - **Retention:** see below.
 - **Automatic triage:** see [MCP](./mcp#automatic-triage).

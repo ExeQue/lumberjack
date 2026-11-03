@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Projects\Http\Controllers;
 
-use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Enums\ChannelType;
-use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
+use App\Domains\Alerts\Presenters\AlertRulePresenter;
 use App\Domains\Alerts\Presenters\NotificationChannelPresenter;
 use App\Domains\Issues\Models\Label;
 use App\Domains\Logs\Models\LogChannel;
@@ -87,16 +86,7 @@ class ProjectSettingsController
                 'channels' => NotificationChannel::query()->whereForProject($project)->orderBy('name')->get()->map(fn (NotificationChannel $c): array => app(NotificationChannelPresenter::class)->present($c))->all(),
                 'available' => NotificationChannel::query()->whereAvailableTo($project)->orderBy('project_id')->orderBy('name')->get()->map(fn (NotificationChannel $c): array => app(NotificationChannelPresenter::class)->present($c))->all(),
                 'types' => array_map(fn (ChannelType $t): string => $t->value, ChannelType::cases()),
-                'rules' => $project->alertRules()->with('channels:id')->orderBy('id')->get()->map(fn (AlertRule $r): array => [
-                    'id' => $r->id,
-                    'type' => $r->type->value,
-                    'label' => $r->type->label(),
-                    'description' => $r->type->description(),
-                    'enabled' => $r->enabled,
-                    'channels' => $r->channels->modelKeys(),
-                    'environments' => $r->environments ?? [],
-                    'settings' => $r->type === AlertRuleType::QueueBacklog ? $r->queueBacklogSettings()->toArray() : null,
-                ])->all(),
+                'rules' => app(AlertRulePresenter::class)->forProject($project),
             ],
             // One entry per agent provider; Claude is the first.
             'triage' => [app(ClaudeTriageWorkflow::class)->describe($project, url('/'))],

@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Http\Controllers;
 
+use App\Domains\Alerts\Actions\CustomizeAlertRuleAction;
 use App\Domains\Alerts\Actions\SaveNotificationChannelAction;
 use App\Domains\Alerts\Actions\SendTestAlertAction;
 use App\Domains\Alerts\Actions\UpdateAlertRuleAction;
+use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Exceptions\AlertExceptionInterface;
 use App\Domains\Alerts\Http\Requests\SaveNotificationChannelRequest;
 use App\Domains\Alerts\Http\Requests\UpdateAlertRuleRequest;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
+use App\Domains\Alerts\Presenters\AlertRulePresenter;
 use App\Domains\Alerts\Presenters\NotificationChannelPresenter;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Http\RedirectResponse;
@@ -23,7 +26,7 @@ use Inertia\Response;
 
 class AlertController
 {
-    public function index(Request $request, NotificationChannelPresenter $presenter): Response
+    public function index(Request $request, NotificationChannelPresenter $presenter, AlertRulePresenter $rules): Response
     {
         $team = $request->user()->currentTeam;
         abort_if($team === null, 404);
@@ -34,6 +37,7 @@ class AlertController
             // Webhooks belong to one project, so they are added in its settings.
             'types' => collect(ChannelType::cases())->reject(fn (ChannelType $t): bool => $t === ChannelType::Webhook)->map(fn (ChannelType $t): string => $t->value)->values()->all(),
             'projects' => $team->projects()->orderBy('name')->get()->map(fn (Project $p): array => ['uuid' => $p->uuid, 'name' => $p->name])->all(),
+            'rules' => $rules->forTeam($team),
             'can_administer' => $request->user()->canAdministerTeam($team),
         ]);
     }
@@ -86,5 +90,24 @@ class AlertController
         $action->execute($rule, $request->boolean('enabled'), array_values(array_map('intval', (array) $request->input('channels', []))), $request->input('environments'), $request->settings());
 
         return back();
+    }
+
+    /** The project gets a rule of its own for the type, starting as the team's. */
+    public function customizeRule(Project $project, AlertRuleType $type, CustomizeAlertRuleAction $action): RedirectResponse
+    {
+        Gate::authorize('update', $project);
+        $action->execute($project, $type);
+
+        return back()->with('status', __('alerts.rule_customized'));
+    }
+
+    /** The project's own rule goes, so the team's counts again. */
+    public function resetRule(AlertRule $rule): RedirectResponse
+    {
+        abort_if($rule->project === null, 404);
+        Gate::authorize('update', $rule->project);
+        $rule->delete();
+
+        return back()->with('status', __('alerts.rule_reset'));
     }
 }

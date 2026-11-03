@@ -3,10 +3,7 @@ import { ExternalLink, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ChannelsCard, RulesCard } from '@/components/lj/alerts';
-import type {
-    Channel as AlertChannel,
-    Rule as AlertRule,
-} from '@/components/lj/alerts';
+import type { Channel as AlertChannel } from '@/components/lj/alerts';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { CopyButton } from '@/components/lj/copy-text';
 import {
@@ -63,7 +60,11 @@ import {
     test as repositoryTest,
     update as repositoryUpdate,
 } from '@/routes/repository';
-import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
+import type {
+    ProjectAlertRule,
+    ProjectHeader,
+    TeamShared,
+} from '@/types/lumberjack';
 
 type Settings = {
     name: string;
@@ -140,7 +141,7 @@ type Props = {
         channels: AlertChannel[];
         available: AlertChannel[];
         types: string[];
-        rules: AlertRule[];
+        rules: ProjectAlertRule[];
     };
 };
 
@@ -1883,6 +1884,8 @@ function AlertsSection({ project, alerts }: Props) {
                 description={t('settings.alerts.channels_description')}
             />
             <RulesCard
+                scope="project"
+                project={project.uuid}
                 rules={alerts.rules}
                 channels={alerts.available}
                 canAdminister={project.can_administer}

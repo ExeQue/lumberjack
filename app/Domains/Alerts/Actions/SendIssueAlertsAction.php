@@ -58,7 +58,7 @@ class SendIssueAlertsAction
         }
 
         // A comment given on resolving or ignoring goes out with the status-change alert instead.
-        if ($note->status !== null && AlertRule::query()->where('project_id', $issue->project_id)->where('type', AlertRuleType::StatusChange->value)->where('enabled', true)->exists()) {
+        if ($note->status !== null && AlertRule::query()->whereEffectiveFor($issue->project)->whereType(AlertRuleType::StatusChange)->whereEnabled()->exists()) {
             return 0;
         }
 
@@ -87,9 +87,9 @@ class SendIssueAlertsAction
         $sent = 0;
 
         $rules = AlertRule::query()
-            ->where('project_id', $issue->project_id)
-            ->where('type', $type->value)
-            ->where('enabled', true)
+            ->whereEffectiveFor($issue->project)
+            ->whereType($type)
+            ->whereEnabled()
             ->with('channels')
             ->get();
 

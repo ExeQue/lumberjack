@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Domains\Alerts\Actions\CustomizeAlertRuleAction;
 use App\Domains\Alerts\Enums\AlertRuleType;
-use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Enums\TeamRole;
@@ -68,10 +68,8 @@ class DatabaseSeeder extends Seeder
             'allowed_origins' => ['http://localhost:3000', 'https://lumberjack.test', 'https://laravel-lumberjack.test'],
         ]);
 
-        // Every rule type, on or off as a new project gets it.
-        foreach (AlertRuleType::cases() as $type) {
-            AlertRule::factory()->for($project)->create(['type' => $type, 'enabled' => $type->enabledByDefault()]);
-        }
+        // The team has a rule per type (made with the team); Demo customizes one, to show an override.
+        app(CustomizeAlertRuleAction::class)->execute($project, AlertRuleType::Escalation)->update(['environments' => ['production']]);
 
         foreach (self::AGENTS as $agent) {
             McpToken::factory()->for($team)->withToken($agent['token'])

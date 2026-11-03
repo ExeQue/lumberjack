@@ -10,18 +10,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Where one queue stands for one queue backlog rule: over the thresholds since when,
+ * Where one queue of one project stands for a queue backlog rule: over the thresholds since when,
  * and whether the rule has told about it.
  *
  * @property int $id
  * @property int $alert_rule_id
+ * @property int $project_id
  * @property string $connection
  * @property string $queue
  * @property CarbonImmutable|null $breaching_since
  * @property CarbonImmutable|null $fired_at
  * @property CarbonImmutable|null $last_fired_at
  */
-#[Fillable(['alert_rule_id', 'connection', 'queue', 'breaching_since', 'fired_at', 'last_fired_at'])]
+#[Fillable(['alert_rule_id', 'project_id', 'connection', 'queue', 'breaching_since', 'fired_at', 'last_fired_at'])]
 class QueueBacklog extends Model
 {
     protected function casts(): array
