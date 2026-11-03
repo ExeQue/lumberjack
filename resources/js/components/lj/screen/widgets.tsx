@@ -350,6 +350,33 @@ type BodyProps = {
     textSize: string;
 };
 
+/**
+ * A trend is good or bad only for a value with limits: up is bad unless low values are bad.
+ * Without limits (requests, users) it stays neutral. A change under 2% is noise.
+ */
+function trendColor(
+    data: Payload,
+    change: number,
+    colored: boolean,
+): string | undefined {
+    const limits = data.limits as
+        | { amber?: unknown; red?: unknown; low_is_bad?: boolean }
+        | undefined;
+
+    if (
+        !colored ||
+        !limits ||
+        (limits.amber == null && limits.red == null) ||
+        Math.abs(change) < 0.02
+    ) {
+        return undefined;
+    }
+
+    const worse = limits.low_is_bad ? change < 0 : change > 0;
+
+    return worse ? 'var(--s-amber)' : 'var(--s-green)';
+}
+
 const valueColor = (state: unknown, colored: boolean): string =>
     !colored
         ? 'var(--s-ink)'
@@ -395,37 +422,71 @@ function Stat({
                     (opt<string>('suffix') ?? '')}
             </span>
             {compare !== 'none' && change !== null && (
-                <span className="lj-tile-small">
+                <span
+                    className="lj-tile-small"
+                    style={{ color: trendColor(data, change, colored) }}
+                >
                     {(change >= 0 ? '▲ ' : '▼ ') +
                         formatPercent(Math.abs(change), 0) +
                         ' ' +
                         t(`screens.trend.${compare}`)}
                 </span>
             )}
-            {spark && spark.length > 1 && <Spark points={spark} />}
+            {spark && spark.length > 1 && (
+                <Spark
+                    points={spark}
+                    color={
+                        colored &&
+                        (data.state === 'red' || data.state === 'amber')
+                            ? valueColor(data.state, colored)
+                            : 'var(--s-blue)'
+                    }
+                />
+            )}
         </>
     );
 }
 
-function Spark({ points }: { points: { v: number | null }[] }) {
-    const max = Math.max(1e-9, ...points.map((p) => p.v ?? 0));
+/** A soft area line of the recent values, in the stat's own color. */
+function Spark({
+    points,
+    color,
+}: {
+    points: { v: number | null }[];
+    color: string;
+}) {
+    const values = points.map((p) => p.v ?? 0);
+    const max = Math.max(...values);
+    const min = Math.min(...values);
+    const span = max - min || 1;
+    const step = 100 / Math.max(1, values.length - 1);
+    // Keep a little room top and bottom so the line never touches the edges.
+    const y = (v: number) => 27 - ((v - min) / span) * 24;
+    const line = values
+        .map(
+            (v, i) =>
+                `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(2)} ${y(v).toFixed(2)}`,
+        )
+        .join(' ');
 
     return (
-        <div
+        <svg
             aria-hidden="true"
-            className="flex min-h-[8px] w-full flex-1 items-end gap-[2px]"
+            viewBox="0 0 100 30"
+            preserveAspectRatio="none"
+            className="min-h-[10px] w-full flex-1"
         >
-            {points.map((p, i) => (
-                <div
-                    key={i}
-                    className="flex-1 rounded-[2px]"
-                    style={{
-                        height: `${Math.max(2, ((p.v ?? 0) / max) * 100)}%`,
-                        background: 'var(--s-bar)',
-                    }}
-                />
-            ))}
-        </div>
+            <path d={`${line} L100 30 L0 30 Z`} fill={color} opacity={0.14} />
+            <path
+                d={line}
+                fill="none"
+                stroke={color}
+                strokeWidth={1.6}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+            />
+        </svg>
     );
 }
 
