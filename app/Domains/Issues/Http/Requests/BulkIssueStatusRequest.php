@@ -27,4 +27,10 @@ class BulkIssueStatusRequest extends FormRequest
             'issues.*' => ['uuid'],
         ];
     }
+
+    /** @return list<string> */
+    public function issueUuids(): array
+    {
+        return array_values(array_filter($this->array('issues'), is_string(...)));
+    }
 }

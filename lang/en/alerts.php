@@ -11,7 +11,7 @@ return [
         'new_issue' => ['label' => 'New issue', 'description' => 'The first occurrence of a new issue, from server, browser or log.'],
         'regression' => ['label' => 'Regression', 'description' => 'A new occurrence of an issue that was resolved.'],
         'escalation' => ['label' => 'Escalation', 'description' => 'An open issue suddenly happening far more often than usual: at least 10 occurrences in 5 minutes.'],
-        'status_change' => ['label' => 'Resolved or ignored', 'description' => 'Every issue someone resolves or ignores, with who did it and their comment. Bulk changes on the issues list are left out.'],
+        'status_change' => ['label' => 'Resolved or ignored', 'description' => 'Every issue someone resolves or ignores, with who did it and their comment. A bulk change on the issues list sends one summary of the issues instead.'],
         'note' => ['label' => 'Note', 'description' => 'Every note written on an issue, by a person or an agent over MCP. Not throttled.'],
         'health_degraded' => ['label' => 'Health check degraded', 'description' => 'A health check that keeps warning past its threshold, reported by the app or run by Lumberjack. Muted checks send nothing.'],
         'health_down' => ['label' => 'Health check down', 'description' => 'A health check that keeps failing past its threshold, including one that was degraded first. Muted checks send nothing.'],
@@ -32,6 +32,10 @@ return [
         'escalation' => 'Escalating in :project (:environment)',
         'burst' => '{1} :count occurrence in :minutes minutes|[2,*] :count occurrences in :minutes minutes',
         'note_by' => 'Note by :author:',
+        'bulk_status' => [
+            'resolved' => '{1} :actor resolved 1 issue in :project|[2,*] :actor resolved :count issues in :project',
+            'ignored' => '{1} :actor ignored 1 issue in :project|[2,*] :actor ignored :count issues in :project',
+        ],
         'via_mcp' => ':token (MCP)',
         'unknown_author' => 'Someone',
         'queue_backlog' => 'Queue backlog in :project',
@@ -45,6 +49,10 @@ return [
         'states' => ['down' => 'Down', 'degraded' => 'Degraded', 'recovered' => 'Recovered'],
         'types' => ['http' => 'HTTP', 'ssl' => 'SSL certificate', 'tcp' => 'TCP port', 'dns' => 'DNS record', 'heartbeat' => 'Heartbeat'],
         'facts' => ['status' => 'Status', 'check' => 'Check', 'environment' => 'Environment', 'hosts' => 'Hosts'],
+    ],
+    'bulk_status' => [
+        'more' => '+:count more',
+        'facts' => ['status' => 'Status', 'issues' => 'Issues', 'environment' => 'Environment'],
     ],
     'queue_backlog' => [
         'threshold_size' => '{1} more than 1 job|[2,*] more than :size jobs',

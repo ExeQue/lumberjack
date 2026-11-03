@@ -6,6 +6,7 @@ namespace App\Domains\Issues\Http\Controllers;
 
 use App\Domains\Issues\Actions\AddIssueNoteAction;
 use App\Domains\Issues\Actions\AssignIssueAction;
+use App\Domains\Issues\Actions\BulkChangeIssueStatusAction;
 use App\Domains\Issues\Actions\ChangeIssueStatusAction;
 use App\Domains\Issues\Actions\SetIssueLabelsAction;
 use App\Domains\Issues\Data\IgnoreCondition;
@@ -41,12 +42,12 @@ class IssueActionController
         return back();
     }
 
-    public function bulkStatus(BulkIssueStatusRequest $request, Project $project, ChangeIssueStatusAction $action): RedirectResponse
+    public function bulkStatus(BulkIssueStatusRequest $request, Project $project, BulkChangeIssueStatusAction $action): RedirectResponse
     {
-        $status = IssueStatus::from($request->string('status')->toString());
+        /** @var User $user */
+        $user = $request->user();
 
-        Issue::query()->where('project_id', $project->id)->whereIn('uuid', $request->input('issues'))->get()
-            ->each(fn (Issue $issue): Issue => $action->execute($issue, $status, $request->user(), announce: false));
+        $action->execute($project, $request->issueUuids(), IssueStatus::from($request->string('status')->toString()), $user);
 
         return back();
     }

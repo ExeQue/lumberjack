@@ -69,6 +69,19 @@ A new shared channel is added to the team's rules that are on by default. A new 
 channel is added to the rules that count for the project for those types: as an add-on
 where the project uses the team's rule, directly where it has customized one.
 
+### Resolved or ignored
+
+The status change rule sends every issue someone resolves or ignores, with who did it
+(a user, or an MCP token as `name (MCP)`) and the comment they gave. Re-opening and
+taking an issue in progress send nothing.
+
+Resolving or ignoring several issues at once from the issues list sends **one summary**
+instead of a message per issue: who did it, how many, and up to 10 of the issues by
+number and title (`+5 more` for the rest), with a link to the issues list filtered to
+the new status. Selecting a single issue sends the normal message for it. A rule limited
+to some environments summarizes only the issues whose latest occurrence is in one of
+them, the same issues it would have sent one by one.
+
 ### Queue backlog
 
 Agents report the size of the app's queues every minute (see the
@@ -117,8 +130,31 @@ turning a status banner on while an issue escalates.
 ```
 
 `event` is the rule (`new_issue`, `regression`, `escalation`, `status_change`, `note`,
-`queue_backlog`, `health_degraded`, `health_down`, `health_recovered`) or `test`. `status_change` and `note` are filled in
+`bulk_status_change`, `queue_backlog`, `health_degraded`, `health_down`, `health_recovered`) or `test`. `status_change` and `note` are filled in
 for those events.
+
+A bulk status change lists every issue it changed (the chat messages name 10), with the
+new `status` (`resolved` or `ignored`) and who did it:
+
+```json
+{
+    "version": "1",
+    "sent_at": "2026-11-03T10:12:00+00:00",
+    "event": "bulk_status_change",
+    "project": { "id": "...", "slug": "shop", "name": "Shop" },
+    "status": "resolved",
+    "actor": "Morten",
+    "issues": [
+        {
+            "id": "...",
+            "reference": "SHOP-42",
+            "title": "Illuminate\\Database\\QueryException"
+        },
+        { "id": "...", "reference": "SHOP-43", "title": "TypeError" }
+    ],
+    "url": "https://lumberjack.example.com/projects/.../issues?status=resolved"
+}
+```
 
 A queue backlog has no issue; its body carries the queue and the thresholds instead,
 with `state` either `started` or `recovered`:

@@ -6,12 +6,14 @@ namespace App\Domains\Alerts\Drivers;
 
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\BulkStatusChangeAlert;
 use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
+use App\Domains\Issues\Models\Issue;
 use App\Domains\Shared\Rules\PublicUrl;
 use Illuminate\Http\Client\PendingRequest;
 use Override;
@@ -78,6 +80,23 @@ class WebhookDriver implements ChannelDriver
                     'since' => $alert->since->toIso8601String(),
                     'url' => $alert->url,
                 ],
+            ]);
+
+            return;
+        }
+
+        if ($alert instanceof BulkStatusChangeAlert) {
+            $this->post($channel, [
+                'event' => 'bulk_status_change',
+                'project' => ['id' => $alert->project->uuid, 'slug' => $alert->project->slug, 'name' => $alert->project->name],
+                'status' => $alert->status->value,
+                'actor' => $alert->actor,
+                'issues' => array_map(fn (Issue $issue): array => [
+                    'id' => $issue->uuid,
+                    'reference' => $issue->number !== null ? $issue->reference() : null,
+                    'title' => $issue->title,
+                ], $alert->issues),
+                'url' => $alert->url,
             ]);
 
             return;

@@ -28,7 +28,7 @@ class ChangeIssueStatusAction
     /**
      * @param  User|null  $by  who changed it; taking an issue in progress assigns it to them if nobody has it
      * @param  string|null  $comment  saved as a note marked with the new status
-     * @param  bool  $announce  false for bulk changes, so a clean-up does not send one alert per issue
+     * @param  bool  $announce  false for bulk changes, which send one summary instead (BulkChangeIssueStatusAction)
      * @param  IgnoreCondition|null  $until  when an ignored issue comes back on its own; none means when it escalates
      */
     public function execute(Issue $issue, IssueStatus $status, ?User $by = null, ?string $comment = null, ?McpToken $token = null, bool $announce = true, ?IgnoreCondition $until = null): Issue
