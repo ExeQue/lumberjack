@@ -56,6 +56,9 @@ class ResolveWidgetDataAction
 
     public const int LIST_LIMIT = 10;
 
+    /** Requests per minute "now" averages this many minutes. */
+    public const int RATE_WINDOW_MINUTES = 5;
+
     public function __construct(
         private readonly MetricSeriesQuery $metrics,
         private readonly RouteStatisticsQuery $routes,
@@ -115,7 +118,13 @@ class ResolveWidgetDataAction
         $sparkline = null;
         $release = null;
 
-        if ($source->metric !== null) {
+        if ($source->id === 'requests_per_minute') {
+            // The rate now: the last few minutes' requests per minute, against the few before.
+            $filter = $this->filter($source, $projects, $scope);
+            $value = $this->perMinute($filter, self::RATE_WINDOW_MINUTES);
+            $previous = $this->perMinute($filter, self::RATE_WINDOW_MINUTES, self::RATE_WINDOW_MINUTES * 60);
+            $sparkline = ($options['sparkline'] ?? true) ? $this->perMinuteLine($this->metrics->series(Metric::Requests, $filter, $window), $window) : null;
+        } elseif ($source->metric !== null) {
             $filter = $this->filter($source, $projects, $scope);
             $value = $this->metrics->value($source->metric, $filter, $window);
             $compared = match ($options['compare'] ?? 'previous') {
@@ -162,9 +171,11 @@ class ResolveWidgetDataAction
      */
     private function gauge(WidgetSource $source, Collection $projects, WidgetScope $scope, array $options, array $limits): array
     {
-        $value = $source->metric !== null
-            ? $this->metrics->value($source->metric, $this->filter($source, $projects, $scope), MetricWindow::forPeriod($scope->period))
-            : $this->lowestUptime($projects, $scope, $options);
+        $value = match (true) {
+            $source->id === 'requests_per_minute' => $this->perMinute($this->filter($source, $projects, $scope), self::RATE_WINDOW_MINUTES),
+            $source->metric !== null => $this->metrics->value($source->metric, $this->filter($source, $projects, $scope), MetricWindow::forPeriod($scope->period)),
+            default => $this->lowestUptime($projects, $scope, $options),
+        };
         $bounded = in_array($source->unit, ['ratio', 'score'], true);
 
         return [
@@ -210,6 +221,12 @@ class ResolveWidgetDataAction
             if ($series === [] && $metric->isCount()) {
                 $series[$metric->value] = [];
             }
+        }
+
+        // Per minute: each bucket's count over the bucket's minutes.
+        if ($source->id === 'requests_per_minute') {
+            $minutes = $window->bucketSeconds / 60;
+            $series = array_map(fn (array $points): array => array_map(fn (array $p): array => ['t' => $p['t'], 'v' => $p['v'] !== null ? round($p['v'] / $minutes, 2) : null], $points), $series);
         }
 
         if ($source->id === 'requests_errors') {
@@ -529,6 +546,28 @@ class ResolveWidgetDataAction
     private function line(array $points): array
     {
         return array_map(fn (array $p): array => ['t' => $p['t'], 'v' => $p['value']], $points);
+    }
+
+    /**
+     * Requests per minute over the last `$minutes`, ending `$ago` seconds back.
+     */
+    private function perMinute(MetricFilter $filter, int $minutes, int $ago = 0): float
+    {
+        $to = CarbonImmutable::now()->subSeconds($ago);
+        $count = $this->metrics->value(Metric::Requests, $filter, MetricWindow::between($to->subMinutes($minutes), $to)) ?? 0.0;
+
+        return round($count / $minutes, 2);
+    }
+
+    /**
+     * @param  list<array{t: string, series: string, value: float|null}>  $points
+     * @return list<array{t: string, v: float|null}>
+     */
+    private function perMinuteLine(array $points, MetricWindow $window): array
+    {
+        $minutes = $window->bucketSeconds / 60;
+
+        return array_map(fn (array $p): array => ['t' => $p['t'], 'v' => $p['value'] !== null ? round($p['value'] / $minutes, 2) : null], $points);
     }
 
     /**

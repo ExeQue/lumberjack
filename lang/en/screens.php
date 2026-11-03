@@ -38,6 +38,7 @@ return [
     'sources' => [
         'stat' => [
             'requests' => 'Requests',
+            'requests_per_minute' => 'Requests per minute',
             'error_rate' => 'Error rate',
             'p95' => 'p95 response time',
             'apdex' => 'Apdex',
@@ -55,6 +56,7 @@ return [
             'db_connections' => 'Database connections',
         ],
         'gauge' => [
+            'requests_per_minute' => 'Requests per minute',
             'error_rate' => 'Error rate',
             'p95' => 'p95 response time',
             'apdex' => 'Apdex',
@@ -68,6 +70,7 @@ return [
         'chart' => [
             'requests_errors' => 'Requests and errors',
             'requests' => 'Requests',
+            'requests_per_minute' => 'Requests per minute',
             'error_rate' => 'Error rate',
             'p95' => 'p95 response time',
             'apdex' => 'Apdex',
