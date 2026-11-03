@@ -65,6 +65,8 @@ export default defineConfig({
         htmlWhitespaceSensitivity: 'css',
         ignorePatterns: [
             '.github/**',
+            // lerd writes this file itself, in its own indentation.
+            '.lerd.yaml',
             'composer.json',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
