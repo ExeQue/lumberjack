@@ -12,6 +12,8 @@ covers(QueueStatisticsQuery::class);
 
 describe('queue statistics', function () {
     it('takes the latest sample of a queue across hosts, not their sum, with the p95 wait of its runs', function () {
+        // One instant for every timestamp: two now() calls apart by microseconds shift the wait.
+        $this->freezeTime();
         $project = Project::factory()->create();
         $sample = fn (string $host, int $size, int $minutesAgo, string $queue = 'default'): QueueSample => QueueSample::query()->create([
             'project_id' => $project->id, 'host' => $host, 'connection' => 'redis', 'queue' => $queue, 'size' => $size, 'oldest_age_s' => $size * 2, 'sampled_at' => now()->subMinutes($minutesAgo),
