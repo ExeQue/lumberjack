@@ -23,6 +23,8 @@ return [
     'agent_offline' => 'Agent offline',
     'agents_seen' => '{0} No agent has reported yet|[1,*] Agents seen :time',
     'agent_missing' => 'Not seen: :hosts',
+    'agent_on_host' => ':agent on :host',
+    'unnamed_agent_on_host' => 'unnamed agent on :host',
     'empty_title' => 'No projects yet',
     'empty_body' => 'Create a project to get a server token for the agent and a public key for browser errors.',
 ];
