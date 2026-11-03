@@ -120,8 +120,16 @@ export function CommandPalette() {
         };
     }, [searchable, open, term, project?.uuid]);
 
-    const go = (href: string) => {
+    const go = (href: string, external = false) => {
         setOpen(false);
+
+        // A page outside the app (Horizon) is a full load, not an Inertia visit.
+        if (external) {
+            window.location.assign(href);
+
+            return;
+        }
+
         router.visit(href);
     };
 
@@ -209,7 +217,9 @@ export function CommandPalette() {
                                         <Command.Item
                                             key={item.href}
                                             value={`${section.heading} ${item.label}`}
-                                            onSelect={() => go(item.href)}
+                                            onSelect={() =>
+                                                go(item.href, item.external)
+                                            }
                                             className={itemClass}
                                         >
                                             {item.label}

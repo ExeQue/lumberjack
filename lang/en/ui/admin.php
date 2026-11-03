@@ -9,6 +9,7 @@ return [
         'users' => 'All users',
         'audit' => 'Audit log',
         'retention' => 'Retention',
+        'horizon' => 'Horizon',
     ],
     'teams' => [
         'title' => 'All teams',

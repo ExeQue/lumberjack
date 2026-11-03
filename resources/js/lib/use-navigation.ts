@@ -31,6 +31,8 @@ export type NavItem = {
     href: string;
     active: boolean;
     count?: number;
+    /** Not an Inertia page (Horizon's own dashboard): a plain link that leaves the app. */
+    external?: boolean;
 };
 
 /** The pages the sidebar and the command palette offer, in sidebar order. */
@@ -176,6 +178,12 @@ export function useNavigation(
                   label: t('admin.nav.retention'),
                   href: adminRetention().url,
                   active: isAt(adminRetention().url),
+              },
+              {
+                  label: t('admin.nav.horizon'),
+                  href: '/horizon',
+                  active: false,
+                  external: true,
               },
           ]
         : [];
