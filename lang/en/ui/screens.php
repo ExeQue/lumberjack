@@ -52,7 +52,7 @@ return [
         'schedule' => 'Light by day, dark at night',
     ],
 
-    'period_short' => ['1h' => '1 h', '24h' => '24 h', '7d' => '7 d', '30d' => '30 d'],
+    'period_short' => ['now' => 'now', '1h' => '1 h', '24h' => '24 h', '7d' => '7 d', '30d' => '30 d'],
     'periods' => [
         '1h' => 'Last hour',
         '24h' => 'Last 24 hours',

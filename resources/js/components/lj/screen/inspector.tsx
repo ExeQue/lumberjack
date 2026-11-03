@@ -811,50 +811,55 @@ export function WidgetInspector({
                 </div>
             )}
 
-            {hasPeriod && (
-                <div className="flex flex-col gap-1.5">
-                    <span className="text-[13px] font-medium">
-                        {t('screens.inspector.period')}
-                    </span>
-                    <div
-                        role="radiogroup"
-                        aria-label={t('screens.inspector.period')}
-                        className="flex flex-wrap gap-1.5"
-                    >
-                        {['', ...catalog.periods].map((p) => {
-                            const on =
-                                ((first
-                                    ? widget.scope.period
-                                    : item.scope?.period) ?? '') === p;
+            {/* A value that is the latest report has no period to pick. */}
+            {hasPeriod &&
+                !pool.find((s) => s.id === (item?.source ?? widget.source))
+                    ?.snapshot && (
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[13px] font-medium">
+                            {t('screens.inspector.period')}
+                        </span>
+                        <div
+                            role="radiogroup"
+                            aria-label={t('screens.inspector.period')}
+                            className="flex flex-wrap gap-1.5"
+                        >
+                            {['', ...catalog.periods].map((p) => {
+                                const on =
+                                    ((first
+                                        ? widget.scope.period
+                                        : item.scope?.period) ?? '') === p;
 
-                            return (
-                                <button
-                                    key={p || 'default'}
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={on}
-                                    className={chip(on)}
-                                    onClick={() =>
-                                        first
-                                            ? setScope('period', p)
-                                            : setItem(active - 1, {
-                                                  scope: p
-                                                      ? { period: p }
-                                                      : undefined,
-                                              })
-                                    }
-                                >
-                                    {p !== ''
-                                        ? t(`screens.period_short.${p}`)
-                                        : first
-                                          ? t('screens.inspector.period_screen')
-                                          : same(widgetPeriod)}
-                                </button>
-                            );
-                        })}
+                                return (
+                                    <button
+                                        key={p || 'default'}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={on}
+                                        className={chip(on)}
+                                        onClick={() =>
+                                            first
+                                                ? setScope('period', p)
+                                                : setItem(active - 1, {
+                                                      scope: p
+                                                          ? { period: p }
+                                                          : undefined,
+                                                  })
+                                        }
+                                    >
+                                        {p !== ''
+                                            ? t(`screens.period_short.${p}`)
+                                            : first
+                                              ? t(
+                                                    'screens.inspector.period_screen',
+                                                )
+                                              : same(widgetPeriod)}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
             {items.length > 1 && (
                 <div className="flex flex-col gap-1.5">

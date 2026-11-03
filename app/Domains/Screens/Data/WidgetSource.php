@@ -26,6 +26,8 @@ final readonly class WidgetSource
         public bool $lowIsBad = false,
         public ?Metric $metric = null,
         public ?string $filterOn = null,
+        /** The value is the latest report, not a figure over the period. */
+        public bool $snapshot = false,
     ) {
     }
 
@@ -52,6 +54,7 @@ final readonly class WidgetSource
             'low_is_bad' => $this->lowIsBad,
             'metric' => $this->metric?->value,
             'filter_on' => $this->filterOn,
+            'snapshot' => $this->snapshot,
         ];
     }
 }

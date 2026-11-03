@@ -700,7 +700,7 @@ function Gauge({
     return (
         <div className="relative min-h-0 w-full flex-1">
             <svg
-                viewBox="0 0 120 72"
+                viewBox="0 0 120 80"
                 className="absolute inset-0 h-full w-full"
                 role="img"
                 aria-label={t('screens.gauge.label', {
@@ -748,7 +748,7 @@ function Gauge({
                 </text>
                 <text
                     x="10"
-                    y="71"
+                    y="78"
                     textAnchor="middle"
                     fill="var(--s-ink-3)"
                     style={{ fontSize: 7 }}
@@ -757,7 +757,7 @@ function Gauge({
                 </text>
                 <text
                     x="110"
-                    y="71"
+                    y="78"
                     textAnchor="middle"
                     fill="var(--s-ink-3)"
                     style={{ fontSize: 7 }}

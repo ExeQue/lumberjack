@@ -96,7 +96,7 @@ minutes by default), amber past half of them, and says why (**Backlog** or **Wai
 A muted queue stays calm. Limits set on the widget replace that and count on its size.
 A list of hosts shows each host once with CPU, memory and disk meters. Rows that do not fit scroll slowly down and back up, resting at each end; hovering stops it, and **Scroll slowly through rows that do not fit** under Rows turns it off.
 
-Every widget with data names its period in the top right corner (1 h, 24 h, 7 d, 30 d);
+Every widget with data names its period in the top right corner (1 h, 24 h, 7 d, 30 d), or **now** for values that are the latest report (host CPU, memory and disk, queue sizes, agents, open issues, the current release, health), which have no period to pick;
 **Over** in the inspector picks it per widget, or follows the screen. **Show the period
 in the corner** under Display turns the label off.
 
