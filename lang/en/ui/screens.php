@@ -241,7 +241,26 @@ return [
     'list' => [
         'empty' => 'Nothing to show.',
         'oldest' => 'oldest :age',
-        'host' => ':host · CPU :cpu · memory :memory · disk :disk',
+        'host_usage' => 'CPU :cpu · memory :memory · disk :disk',
+        'escalating' => 'Escalating',
+        'regressed' => 'Regressed',
+        'task_status' => [
+            'finished' => 'Ran',
+            'failed' => 'Failed',
+            'missed' => 'Missed',
+            'running' => 'Running',
+            'skipped' => 'Skipped',
+        ],
+        'sort_hint' => [
+            'latest_issues' => ['default' => 'newest first', 'newest' => 'newest first', 'most_frequent' => 'most frequent first'],
+            'alert_feed' => ['default' => 'newest first'],
+            'failed_jobs' => ['default' => 'most failures first'],
+            'scheduled_tasks' => ['default' => 'failed first'],
+            'slowest_routes' => ['default' => 'slowest first'],
+            'queues' => ['default' => ''],
+            'hosts' => ['default' => ''],
+            'agents' => ['default' => ''],
+        ],
         'issue_status' => [
             'open' => 'Open',
             'in_progress' => 'In progress',
