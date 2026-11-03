@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { MessageSquare } from 'lucide-react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
@@ -19,7 +20,7 @@ import {
     thClass,
 } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import { formatNumber, formatRelative, formatDateTime } from '@/lib/format';
+import { formatNumber, formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useProjectLive } from '@/lib/use-project-live';
 import {
@@ -491,9 +492,9 @@ export default function IssuesIndex({
                                                     issue.last_seen_at,
                                                 )}
                                             >
-                                                {formatRelative(
-                                                    issue.last_seen_at,
-                                                )}
+                                                <Relative
+                                                    iso={issue.last_seen_at}
+                                                />
                                             </time>
                                         </td>
                                         <td

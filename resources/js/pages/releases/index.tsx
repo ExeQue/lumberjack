@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
@@ -17,7 +18,6 @@ import {
     formatDuration,
     formatNumber,
     formatPercent,
-    formatRelative,
 } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -180,9 +180,9 @@ export default function ReleasesIndex({
                                                         r.first_seen_at,
                                                     )}
                                                 >
-                                                    {formatRelative(
-                                                        r.first_seen_at,
-                                                    )}
+                                                    <Relative
+                                                        iso={r.first_seen_at}
+                                                    />
                                                 </time>
                                             </td>
                                             <td
@@ -194,9 +194,9 @@ export default function ReleasesIndex({
                                                         r.last_seen_at,
                                                     )}
                                                 >
-                                                    {formatRelative(
-                                                        r.last_seen_at,
-                                                    )}
+                                                    <Relative
+                                                        iso={r.last_seen_at}
+                                                    />
                                                 </time>
                                             </td>
                                             <td

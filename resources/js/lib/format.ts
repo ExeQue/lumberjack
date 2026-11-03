@@ -56,12 +56,15 @@ export function formatDuration(micros: number | null | undefined): string {
     return `${minutes} min ${Math.round(s % 60)} s`;
 }
 
-export function formatRelative(iso: string | null | undefined): string {
+export function formatRelative(
+    iso: string | null | undefined,
+    now: number = Date.now(),
+): string {
     if (!iso) {
         return '-';
     }
 
-    const seconds = Math.round((new Date(iso).getTime() - Date.now()) / 1000);
+    const seconds = Math.round((new Date(iso).getTime() - now) / 1000);
     const rtf = new Intl.RelativeTimeFormat(locale(), { numeric: 'auto' });
     const abs = Math.abs(seconds);
 

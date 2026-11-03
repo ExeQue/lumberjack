@@ -1,3 +1,4 @@
+import { Relative, useNow } from '@/components/lj/relative';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { TriangleAlert } from 'lucide-react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
@@ -559,9 +560,9 @@ export default function JobsIndex({
                                                             r.queued_at,
                                                         )}
                                                     >
-                                                        {formatRelative(
-                                                            r.queued_at,
-                                                        )}
+                                                        <Relative
+                                                            iso={r.queued_at}
+                                                        />
                                                     </time>
                                                 ) : (
                                                     '-'
@@ -632,6 +633,8 @@ export default function JobsIndex({
 const STALE_MS = 5 * 60_000;
 
 function QueuesCard({ stats, period }: { stats: QueueStat[]; period: string }) {
+    // Relative times in the text below stay current.
+    const now = useNow();
     const t = useT();
 
     return (
@@ -694,6 +697,7 @@ function QueuesCard({ stats, period }: { stats: QueueStat[]; period: string }) {
                                                 ? t('jobs.queues.sampled', {
                                                       time: formatRelative(
                                                           q.sampled_at,
+                                                          now,
                                                       ),
                                                   })
                                                 : undefined

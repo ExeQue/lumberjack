@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
@@ -14,12 +15,7 @@ import {
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import {
-    formatDateTime,
-    formatDuration,
-    formatNumber,
-    formatRelative,
-} from '@/lib/format';
+import { formatDateTime, formatDuration, formatNumber } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useProjectLive } from '@/lib/use-project-live';
@@ -288,9 +284,9 @@ export default function CommandsIndex({
                                                             c.last_run_at,
                                                         )}
                                                     >
-                                                        {formatRelative(
-                                                            c.last_run_at,
-                                                        )}
+                                                        <Relative
+                                                            iso={c.last_run_at}
+                                                        />
                                                     </time>
                                                 )}
                                             </td>
@@ -425,9 +421,11 @@ export default function CommandsIndex({
                                                                 run.started_at,
                                                             )}
                                                         >
-                                                            {formatRelative(
-                                                                run.started_at,
-                                                            )}
+                                                            <Relative
+                                                                iso={
+                                                                    run.started_at
+                                                                }
+                                                            />
                                                         </time>
                                                     )}
                                                 </td>

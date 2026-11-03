@@ -1,3 +1,4 @@
+import { useNow } from '@/components/lj/relative';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -52,6 +53,8 @@ export default function ProjectsIndex({
 }: {
     projects: ProjectCard[];
 }) {
+    // Relative times in the text below stay current.
+    const now = useNow();
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const [search, setSearch] = useState('');
@@ -265,6 +268,7 @@ export default function ProjectsIndex({
                                                           {
                                                               time: formatRelative(
                                                                   project.last_agent_seen_at,
+                                                                  now,
                                                               ),
                                                           },
                                                           project.agents,

@@ -1,3 +1,4 @@
+import { Relative, useNow } from '@/components/lj/relative';
 import { Form, Head, router, useForm, usePage } from '@inertiajs/react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { TopBar } from '@/components/lj/top-bar';
@@ -94,6 +95,8 @@ export default function TeamShow({
     retention,
     mcp_url,
 }: Props) {
+    // Relative times in the text below stay current.
+    const now = useNow();
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const admin = team.can_administer;
@@ -341,6 +344,7 @@ export default function TeamShow({
                                                             {
                                                                 time: formatRelative(
                                                                     invitation.expires_at,
+                                                                    now,
                                                                 ),
                                                             },
                                                         )}
@@ -554,13 +558,17 @@ export default function TeamShow({
                                                         'text-ink-2',
                                                     )}
                                                 >
-                                                    {token.last_used_at
-                                                        ? formatRelative(
-                                                              token.last_used_at,
-                                                          )
-                                                        : t(
-                                                              'team.tokens.never_used',
-                                                          )}
+                                                    {token.last_used_at ? (
+                                                        <Relative
+                                                            iso={
+                                                                token.last_used_at
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        t(
+                                                            'team.tokens.never_used',
+                                                        )
+                                                    )}
                                                 </td>
                                                 <td
                                                     className={cn(

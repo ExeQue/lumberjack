@@ -1,3 +1,4 @@
+import { Relative } from '@/components/lj/relative';
 import { Head, router, usePage } from '@inertiajs/react';
 import { TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
@@ -27,7 +28,6 @@ import {
     formatDuration,
     formatNumber,
     formatPercent,
-    formatRelative,
 } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -92,7 +92,7 @@ function When({ iso }: { iso: string | null }) {
 
     return iso ? (
         <time dateTime={iso} title={formatDateTime(iso)}>
-            {formatRelative(iso)}
+            <Relative iso={iso} />
         </time>
     ) : (
         <span className="text-ink-3">{t('health.never')}</span>
