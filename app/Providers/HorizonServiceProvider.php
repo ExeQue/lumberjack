@@ -19,8 +19,9 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
         parent::boot();
 
         // System administrators only, in every environment: Horizon's default lets anyone
-        // in while APP_ENV is local.
-        Horizon::auth(fn (Request $request): bool => $request->user()?->isAdmin() === true);
+        // in while APP_ENV is local. Anyone else gets a 404, so the dashboard is not
+        // even known to be there.
+        Horizon::auth(fn (Request $request): bool => $request->user()?->isAdmin() === true ?: abort(404));
 
         // Horizon::routeSmsNotificationsTo('15556667777');
         // Horizon::routeMailNotificationsTo('example@example.com');
