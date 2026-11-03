@@ -176,13 +176,13 @@ class MetricSeriesQuery
                 ->where('occurred_at', '>=', $window->from)->where('occurred_at', '<', $window->to)
                 ->when($filter->environment !== null)->where('environment', $filter->environment)
                 ->when($filter->release !== null)->where('release', $filter->release)
-                ->selectRaw("COALESCE(environment, '') AS environment, COALESCE(route, url) AS route, release, status_code, occurred_at, {$weight} AS requests");
+                ->selectRaw("COALESCE(environment, '') AS environment, COALESCE(domain, '') AS domain, COALESCE(route, url) AS route, release, status_code, occurred_at, {$weight} AS requests");
             $traffic = DB::query()->fromSub($runs, 'traffic');
         } else {
             $traffic = RequestTraffic::query($filter->projectIds, $window->from, $window->to, $filter->environment);
         }
 
-        return $this->match($traffic, 'route', $filter->route);
+        return $this->match($this->matchRoute($traffic, 'route', $filter, $window), 'domain', $filter->domain);
     }
 
     /**
@@ -190,11 +190,13 @@ class MetricSeriesQuery
      */
     private function sampledRuns(MetricFilter $filter, MetricWindow $window): Builder
     {
-        return $this->match($this->match(DB::table('request_runs')->whereIn('project_id', $filter->projectIds)
+        $runs = DB::table('request_runs')->whereIn('project_id', $filter->projectIds)
             ->where('occurred_at', '>=', $window->from)->where('occurred_at', '<', $window->to)
             ->where('sampled', true)
             ->when($filter->environment !== null)->where('environment', $filter->environment)
-            ->when($filter->release !== null)->where('release', $filter->release), 'COALESCE(route, url)', $filter->route), 'host', $filter->host);
+            ->when($filter->release !== null)->where('release', $filter->release);
+
+        return $this->match($this->match($this->matchRoute($runs, 'COALESCE(route, url)', $filter, $window, named: true), 'host', $filter->host), "COALESCE(domain, '')", $filter->domain);
     }
 
     /**
@@ -205,6 +207,7 @@ class MetricSeriesQuery
         return match ($group) {
             MetricGroup::Environment => "COALESCE(environment, '')",
             MetricGroup::Route => 'COALESCE(route, url)',
+            MetricGroup::Domain => "COALESCE(domain, '')",
             MetricGroup::Host => 'host',
             MetricGroup::Release => 'release',
             default => null,
@@ -477,6 +480,7 @@ class MetricSeriesQuery
         return match ($group) {
             MetricGroup::Environment => $nullableEnvironment ? "COALESCE(environment, '')" : 'environment',
             MetricGroup::Route => 'route',
+            MetricGroup::Domain => 'domain',
             MetricGroup::Host => 'host',
             MetricGroup::Queue => 'queue',
             MetricGroup::Release => 'release',
@@ -491,6 +495,29 @@ class MetricSeriesQuery
             'count', 'bytes' => 0,
             default => 4,
         });
+    }
+
+    /**
+     * Rows of the filter's route, by its URI or its Laravel name. Counts carry no name, so
+     * a name finds its URIs through the window's runs, unless the rows are runs ($named).
+     *
+     * @param  literal-string  $column
+     */
+    private function matchRoute(Builder $query, string $column, MetricFilter $filter, MetricWindow $window, bool $named = false): Builder
+    {
+        $value = $filter->route;
+
+        if ($value === null || $value === '') {
+            return $query;
+        }
+
+        [$operator, $binding] = str_contains($value, '*') ? ['ILIKE', str_replace('*', '%', addcslashes($value, '\\%_'))] : ['=', $value];
+
+        return $query->where(fn (Builder $q) => $q->whereRaw("{$column} {$operator} ?", [$binding])
+            ->when($named)->orWhere('route_name', $operator, $binding)
+            ->when(! $named)->orWhereIn('route', DB::table('request_runs')->whereIn('project_id', $filter->projectIds)
+                ->where('occurred_at', '>=', $window->from)->where('occurred_at', '<', $window->to)
+                ->whereNotNull('route')->where('route_name', $operator, $binding)->distinct()->select('route')));
     }
 
     /**

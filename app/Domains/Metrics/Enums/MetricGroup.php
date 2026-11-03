@@ -8,6 +8,8 @@ enum MetricGroup: string
 {
     case Environment = 'environment';
     case Route = 'route';
+    /** The host a request was made to. */
+    case Domain = 'domain';
     case Host = 'host';
     case Queue = 'queue';
     case Release = 'release';

@@ -203,6 +203,25 @@ describe('the series', function () {
         expect(collect($points)->groupBy('series')->map->sum('value')->all())->toEqual(['/a' => 7, '/b' => 3]);
     });
 
+    it('filters and splits requests by domain, and finds a route by its name', function () {
+        $project = Project::factory()->create();
+        $minute = now()->subMinutes(5)->startOfMinute();
+        $this->createRequestCount($project, 7, route: '/orders', minute: $minute, domain: 'shop.example.com');
+        $this->createRequestCount($project, 3, route: '/orders', minute: $minute, domain: 'api.example.com');
+        $this->createRequestCount($project, 1, route: '/cart', minute: $minute, domain: 'shop.example.com');
+        RequestRun::factory()->for($project)->create(['route' => '/orders', 'route_name' => 'orders.index', 'domain' => 'shop.example.com', 'occurred_at' => now()->subMinutes(5)]);
+        $token = $this->createMetricsToken($project);
+        $sum = fn (string $query): float => (float) collect($this->withToken($token)->getJson("/api/v1/projects/{$project->slug}/series/requests?interval=1h&{$query}")->assertOk()->json('points'))->sum('value');
+
+        $split = $this->withToken($token)->getJson("/api/v1/projects/{$project->slug}/series/requests?group_by=domain&interval=1h")->assertOk()->json('points');
+
+        expect(collect($split)->groupBy('series')->map->sum('value')->all())->toEqual(['shop.example.com' => 8, 'api.example.com' => 3])
+            ->and($sum('domain=api.example.com'))->toEqual(3)
+            ->and($sum('domain=*.example.com&route=/orders'))->toEqual(10)
+            ->and($sum('route=orders.*'))->toEqual(10)
+            ->and($sum('route=orders.*&domain=shop.example.com'))->toEqual(7);
+    });
+
     it('refuses an unknown metric or a split the metric does not have', function () {
         $project = Project::factory()->create();
         $token = $this->createMetricsToken($project);

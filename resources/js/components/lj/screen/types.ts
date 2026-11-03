@@ -42,6 +42,8 @@ export type WidgetScope = {
     period?: string;
     release?: string;
     filter?: string;
+    /** For a source that filters a route: the domain the requests were made to. */
+    domain?: string;
 };
 
 export type ScreenTheme = 'dark' | 'light' | 'schedule';
