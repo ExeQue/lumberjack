@@ -13,7 +13,10 @@ class UpdateAlertRuleRequest extends FormRequest
     {
         $rule = $this->route('rule');
 
-        return $rule instanceof AlertRule && $this->user()?->can('update', $rule->project);
+        // A team rule is the team's to change; a project's own, the project's.
+        return $rule instanceof AlertRule && ($rule->project === null
+            ? $this->user()?->can('administer', $rule->team)
+            : $this->user()?->can('update', $rule->project)) === true;
     }
 
     /** @return array<string, mixed> */
@@ -27,7 +30,7 @@ class UpdateAlertRuleRequest extends FormRequest
             'environments.*' => ['string', 'max:64'],
             // Queue backlog thresholds; at least one of size and age.
             'settings' => ['nullable', 'array:size,age_minutes,sustain_minutes'],
-            'settings.size' => ['nullable', 'integer', 'min:1', 'required_without:settings.age_minutes'],
+            'settings.size' => ['exclude_without:settings', 'nullable', 'integer', 'min:1', 'required_without:settings.age_minutes'],
             'settings.age_minutes' => ['nullable', 'integer', 'min:1', 'max:10080'],
             'settings.sustain_minutes' => ['required_with:settings', 'integer', 'min:1', 'max:1440'],
         ];
