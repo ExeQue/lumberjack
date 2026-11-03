@@ -185,3 +185,29 @@ export type TeamShared = {
     can_administer: boolean;
     projects: { uuid: string; slug: string; name: string }[];
 };
+
+export type WebVitalStat = {
+    route: string;
+    views: number;
+    lcp_us: number | null;
+    inp_us: number | null;
+    cls: number | null;
+};
+
+export type ReleaseStat = {
+    release: string;
+    first_seen_at: string;
+    last_seen_at: string;
+    requests: number;
+    error_rate: number | null;
+    p95: number | null;
+    occurrences: number;
+    new_issues: number;
+    regressions: number;
+    previous: {
+        release: string;
+        error_rate: number | null;
+        p95: number | null;
+    } | null;
+    change: { error_rate: number | null; p95: number | null };
+};

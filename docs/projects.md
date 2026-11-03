@@ -39,6 +39,31 @@ Pages that belong to one thing, like a trace, open the other project's overview.
 - **Retention:** see below.
 - **Automatic triage:** see [MCP](./mcp#automatic-triage).
 
+## Browser script
+
+The project settings show the script tag for browser errors:
+
+```html
+<script
+    src="https://lumberjack.example/sdk/v1.js"
+    data-key="lj_pub_..."
+    data-environment="production"
+    defer
+></script>
+```
+
+| Attribute          | Does                                                            |
+| ------------------ | --------------------------------------------------------------- |
+| `data-key`         | The project's public key. Without it nothing is sent.           |
+| `data-environment` | The environment of the page.                                    |
+| `data-release`     | The release, e.g. a commit hash.                                |
+| `data-user`        | The user's id, for [users affected](./issues#users-affected).   |
+| `data-trace`       | The trace id of the request that rendered the page.             |
+| `data-announce`    | `true` logs a line in the console when the script is active.    |
+| `data-vitals`      | `false` stops measuring [Web Vitals](./performance#web-vitals). |
+
+Crawlers and automated browsers are skipped.
+
 ## Retention
 
 Data is kept for a number of days per category. Empty means inherit; the most specific
@@ -51,7 +76,7 @@ value wins: team, project, job class or log channel.
 | Logs        | 14 days |
 | Performance | 14 days |
 
-Failed job runs always follow error retention.
+Failed job runs always follow error retention. Web vitals count as performance.
 
 ## Repository integration
 

@@ -19,6 +19,24 @@ Apdex scores a route from 0 to 1 by how its requests felt. A request within 500 
 satisfied, within 2 s counts half, and slower or a 5xx counts nothing. Below 0.85 shows
 in amber, below 0.7 in red. Sort by lowest Apdex to find the routes people wait on.
 
+## Web Vitals
+
+The [browser script](./projects#browser-script) measures Core Web Vitals on every page
+view and sends them once, when the page is hidden or left. The Routes page lists each
+browser page (its path, with numeric and UUID segments grouped as `{id}`) with page
+views and the 75th percentile of each vital, colored by Google's thresholds:
+
+| Vital | Good     | Poor     |
+| ----- | -------- | -------- |
+| LCP   | ≤ 2.5 s  | > 4 s    |
+| INP   | ≤ 200 ms | > 500 ms |
+| CLS   | ≤ 0.1    | > 0.25   |
+
+Between good (green) and poor (red) is needs improvement (amber). INP is the slowest
+interaction of the page view. TTFB and FCP are stored as well. Values below zero or
+above a minute are dropped as broken measurements. Web vitals follow the performance
+retention.
+
 ## Traces
 
 Everything recorded during one request, job, command or scheduled task shares a trace

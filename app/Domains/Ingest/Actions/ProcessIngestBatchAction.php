@@ -29,6 +29,11 @@ class ProcessIngestBatchAction
 {
     public const int INSERT_CHUNK = 500;
 
+    /** Anything slower is a broken measurement (a tab left in the background), not a slow page. */
+    public const int MAX_VITAL_MS = 60_000;
+
+    public const int MAX_CLS = 10;
+
     public function __construct(
         private readonly RecordOccurrenceAction $recordOccurrenceAction,
         private readonly RecordJobEventAction $recordJobEventAction,
@@ -52,6 +57,7 @@ class ProcessIngestBatchAction
         $requests = [];
         $queries = [];
         $spans = [];
+        $vitals = [];
         $touched = [];
 
         foreach ($events as $event) {
@@ -61,8 +67,8 @@ class ProcessIngestBatchAction
 
             $type = $event['type'] ?? null;
 
-            // A browser may only report errors; everything else needs the server token.
-            if ($fromBrowser && $type !== 'exception') {
+            // A browser may only report errors and web vitals; everything else needs the server token.
+            if ($fromBrowser && ! in_array($type, ['exception', 'vital'], true)) {
                 continue;
             }
 
@@ -71,6 +77,7 @@ class ProcessIngestBatchAction
                     'request' => $requests[] = $this->requestRow($project, $event, $envelope),
                     'query' => $queries[] = $this->queryRow($project, $event, $envelope),
                     'span' => $spans[] = $this->spanRow($project, $event, $envelope),
+                    'vital' => $vitals[] = $this->vitalRow($project, $event, $envelope),
                     'exception' => $this->recordOccurrenceAction->execute($project, $this->signalFactory->fromException($event, $envelope, $fromBrowser ? IssueSource::Browser : IssueSource::Server, $project->scrub_keys ?? [])),
                     'job' => $this->recordJobEventAction->execute($project, $event, $envelope),
                     'log' => $this->recordLogLineAction->execute($project, $event, $envelope),
@@ -99,7 +106,59 @@ class ProcessIngestBatchAction
             DB::table('span_runs')->insert($chunk);
         }
 
+        foreach (array_chunk($vitals, self::INSERT_CHUNK) as $chunk) {
+            DB::table('web_vitals')->insert($chunk);
+        }
+
         $this->broadcastChanges($project, $touched);
+    }
+
+    /**
+     * One page view's Core Web Vitals. A value out of range is dropped, not clamped:
+     * a negative or minute-long LCP is a broken measurement, not a slow page.
+     *
+     * @param  array<string, mixed>  $event
+     * @return array<string, mixed>
+     */
+    private function vitalRow(Project $project, array $event, Envelope $envelope): array
+    {
+        $micros = fn (string $key): ?int => isset($event[$key]) && is_numeric($event[$key]) && $event[$key] >= 0 && $event[$key] <= self::MAX_VITAL_MS
+            ? Envelope::micros($event[$key])
+            : null;
+        $cls = isset($event['cls']) && is_numeric($event['cls']) && $event['cls'] >= 0 && $event['cls'] <= self::MAX_CLS ? round((float) $event['cls'], 4) : null;
+
+        $row = [
+            'lcp_us' => $micros('lcp_ms'),
+            'inp_us' => $micros('inp_ms'),
+            'ttfb_us' => $micros('ttfb_ms'),
+            'fcp_us' => $micros('fcp_ms'),
+            'cls' => $cls,
+        ];
+
+        if (array_filter($row, fn ($v): bool => $v !== null) === []) {
+            throw new InvalidArgumentException('A vital without any value.');
+        }
+
+        $path = $event['route'] ?? parse_url((string) ($event['url'] ?? ''), PHP_URL_PATH);
+
+        return [
+            'project_id' => $project->id,
+            'environment' => $envelope->environment,
+            'release' => $envelope->release,
+            'route' => mb_substr(self::normalizePath(is_string($path) ? $path : '/'), 0, 255),
+            ...$row,
+            'occurred_at' => Envelope::time($event['timestamp'] ?? null)->format('Y-m-d H:i:s.v'),
+        ];
+    }
+
+    /**
+     * /orders/42/items/0d9c... becomes /orders/{id}/items/{id}, so page views of one page group.
+     */
+    public static function normalizePath(string $path): string
+    {
+        $path = '/'.ltrim((string) preg_replace('~[?#].*~s', '', $path), '/');
+
+        return (string) preg_replace('~(?<=/)(\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?=/|$)~i', '{id}', $path);
     }
 
     /**
@@ -196,7 +255,7 @@ class ProcessIngestBatchAction
             $kinds[] = ChangeKind::Logs;
         }
 
-        if (isset($touched['request']) || isset($touched['query'])) {
+        if (isset($touched['request']) || isset($touched['query']) || isset($touched['vital'])) {
             $kinds[] = ChangeKind::Performance;
         }
 

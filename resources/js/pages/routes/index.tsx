@@ -36,6 +36,7 @@ import type {
     ProjectHeader,
     RouteStat,
     TeamShared,
+    WebVitalStat,
 } from '@/types/lumberjack';
 
 type Filters = DashboardFilters & {
@@ -63,6 +64,7 @@ type Props = {
     project: ProjectHeader;
     filters: Filters;
     routes: RouteStat[];
+    vitals: WebVitalStat[];
     detail: Detail | null;
 };
 
@@ -70,13 +72,18 @@ export default function RoutesIndex({
     project,
     filters,
     routes,
+    vitals,
     detail,
 }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const [search, setSearch] = useState(filters.search);
 
-    useProjectLive(project.uuid, ['performance.changed'], ['routes', 'detail']);
+    useProjectLive(
+        project.uuid,
+        ['performance.changed'],
+        ['routes', 'vitals', 'detail'],
+    );
 
     const apply = (changes: Partial<Filters>, only?: string[]) => {
         const query = Object.fromEntries(
@@ -450,8 +457,114 @@ export default function RoutesIndex({
                         </div>
                     </Card>
                 )}
+
+                {vitals.length > 0 && <WebVitals vitals={vitals} />}
             </PageBody>
         </>
+    );
+}
+
+/** Google's good / poor thresholds: LCP and INP in µs, CLS unitless. */
+const VITAL_THRESHOLDS = {
+    lcp: [2_500_000, 4_000_000],
+    inp: [200_000, 500_000],
+    cls: [0.1, 0.25],
+} as const;
+
+function vitalClass(
+    value: number | null,
+    [good, poor]: readonly [number, number],
+): string {
+    if (value === null) {
+        return 'text-ink-3';
+    }
+
+    return value <= good ? 'text-ok' : value <= poor ? 'text-warn' : 'text-err';
+}
+
+function WebVitals({ vitals }: { vitals: WebVitalStat[] }) {
+    const t = useT();
+
+    return (
+        <Card className="overflow-x-auto" aria-labelledby="web-vitals">
+            <CardHeader
+                id="web-vitals"
+                title={t('routes.vitals.title')}
+                description={t('routes.vitals.description')}
+            />
+            <table className={tableClass}>
+                <thead>
+                    <tr>
+                        <th className={thClass}>{t('routes.vitals.page')}</th>
+                        <th className={`${thClass} text-right`}>
+                            {t('routes.vitals.views')}
+                        </th>
+                        <th
+                            className={`${thClass} text-right`}
+                            title={t('routes.vitals.lcp_help')}
+                        >
+                            {t('routes.vitals.lcp')}
+                        </th>
+                        <th
+                            className={`${thClass} text-right`}
+                            title={t('routes.vitals.inp_help')}
+                        >
+                            {t('routes.vitals.inp')}
+                        </th>
+                        <th
+                            className={`${thClass} text-right`}
+                            title={t('routes.vitals.cls_help')}
+                        >
+                            {t('routes.vitals.cls')}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {vitals.map((v) => (
+                        <tr
+                            key={v.route}
+                            className="lj-row hover:bg-panel-2/60"
+                        >
+                            <td
+                                className={`${tdClass} min-w-[280px] font-mono text-xs`}
+                            >
+                                {v.route}
+                            </td>
+                            <td className={`${tdClass} ${numClass}`}>
+                                {formatNumber(v.views)}
+                            </td>
+                            <td
+                                className={cn(
+                                    tdClass,
+                                    numClass,
+                                    vitalClass(v.lcp_us, VITAL_THRESHOLDS.lcp),
+                                )}
+                            >
+                                {formatDuration(v.lcp_us)}
+                            </td>
+                            <td
+                                className={cn(
+                                    tdClass,
+                                    numClass,
+                                    vitalClass(v.inp_us, VITAL_THRESHOLDS.inp),
+                                )}
+                            >
+                                {formatDuration(v.inp_us)}
+                            </td>
+                            <td
+                                className={cn(
+                                    tdClass,
+                                    numClass,
+                                    vitalClass(v.cls, VITAL_THRESHOLDS.cls),
+                                )}
+                            >
+                                {v.cls === null ? '-' : v.cls.toFixed(2)}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </Card>
     );
 }
 

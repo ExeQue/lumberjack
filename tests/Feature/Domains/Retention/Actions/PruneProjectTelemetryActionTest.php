@@ -12,6 +12,7 @@ use App\Domains\Retention\Actions\PruneProjectTelemetryAction;
 use App\Domains\Retention\Actions\ResolveRetentionDaysAction;
 use App\Domains\Retention\Enums\RetentionCategory;
 use App\Domains\Retention\Models\RetentionPolicy;
+use Illuminate\Support\Facades\DB;
 
 covers(PruneProjectTelemetryAction::class, ResolveRetentionDaysAction::class);
 
@@ -48,6 +49,15 @@ describe('pruning', function () {
             ->and(Occurrence::count())->toBe(0)
             ->and(LogEntry::count())->toBe(0)
             ->and($issue->fresh())->not->toBeNull();
+    });
+
+    it('prunes web vitals with performance data', function () {
+        $row = ['project_id' => $this->project->id, 'route' => '/', 'lcp_us' => 1_000_000];
+        DB::table('web_vitals')->insert([[...$row, 'occurred_at' => now()->subDays(20)], [...$row, 'occurred_at' => now()->subDays(2)]]);
+
+        app(PruneProjectTelemetryAction::class)->execute($this->project);
+
+        expect(DB::table('web_vitals')->count())->toBe(1);
     });
 
     it('keeps a failed job run as long as errors are kept', function () {

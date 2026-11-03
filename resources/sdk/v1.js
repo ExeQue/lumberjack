@@ -1,4 +1,4 @@
-/*! Lumberjack browser SDK v1. Catches uncaught errors and unhandled rejections and sends them to Lumberjack. */
+/*! Lumberjack browser SDK v1. Catches uncaught errors and unhandled rejections and measures Core Web Vitals, and sends them to Lumberjack. */
 (function () {
     'use strict';
 
@@ -36,6 +36,7 @@
         user: data.user || null,
         trace: data.trace || null,
         announce: data.announce === 'true',
+        vitals: data.vitals !== 'false',
         ignore: [],
     };
     var isBot = !!navigator.webdriver || BOTS.test(navigator.userAgent || '');
@@ -209,6 +210,133 @@
     window.addEventListener('unhandledrejection', function (event) {
         capture(event.reason, { unhandled_rejection: true });
     });
+
+    // Core Web Vitals, one event per page view, sent when the page is hidden or left.
+    var vitals = { lcp: null, inp: null, cls: null, fcp: null, ttfb: null };
+    var vitalsSent = false;
+
+    function observe(type, handle, options) {
+        var supported = PerformanceObserver.supportedEntryTypes || [];
+
+        // An unsupported type is ignored without an error, so ask first.
+        if (supported.indexOf(type) === -1) {
+            return false;
+        }
+
+        try {
+            new PerformanceObserver(function (list) {
+                list.getEntries().forEach(handle);
+            }).observe(Object.assign({ type: type, buffered: true }, options));
+
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    function sendVitals() {
+        if (
+            vitalsSent ||
+            isBot ||
+            !config.vitals ||
+            !config.key ||
+            !config.endpoint
+        ) {
+            return;
+        }
+
+        var any = Object.keys(vitals).some(function (name) {
+            return vitals[name] !== null;
+        });
+
+        if (!any) {
+            return;
+        }
+
+        vitalsSent = true;
+        queue.push({
+            type: 'vital',
+            route: location.pathname,
+            url: location.href,
+            lcp_ms: vitals.lcp,
+            inp_ms: vitals.inp,
+            cls: vitals.cls,
+            ttfb_ms: vitals.ttfb,
+            fcp_ms: vitals.fcp,
+            timestamp: Date.now() / 1000,
+        });
+        flush();
+    }
+
+    if (config.vitals && !isBot && typeof PerformanceObserver === 'function') {
+        // The browser stops reporting LCP candidates after the first input.
+        observe('largest-contentful-paint', function (entry) {
+            vitals.lcp = entry.startTime;
+        });
+
+        observe('paint', function (entry) {
+            if (entry.name === 'first-contentful-paint') {
+                vitals.fcp = entry.startTime;
+            }
+        });
+
+        // INP, approximated as the slowest interaction of the page view. The first input
+        // is observed too, so a page with only fast interactions still reports one.
+        var interaction = function (entry) {
+            if (
+                (entry.interactionId || entry.entryType === 'first-input') &&
+                (vitals.inp === null || entry.duration > vitals.inp)
+            ) {
+                vitals.inp = entry.duration;
+            }
+        };
+        observe('event', interaction, { durationThreshold: 40 });
+        observe('first-input', interaction);
+
+        // CLS: the largest session window of shifts (at most 1 s apart, 5 s long),
+        // leaving out shifts right after an input.
+        var session = 0;
+        var sessionStart = 0;
+        var sessionLast = 0;
+        var shifts = observe('layout-shift', function (entry) {
+            if (entry.hadRecentInput) {
+                return;
+            }
+
+            if (
+                session > 0 &&
+                entry.startTime - sessionLast < 1000 &&
+                entry.startTime - sessionStart < 5000
+            ) {
+                session += entry.value;
+            } else {
+                session = entry.value;
+                sessionStart = entry.startTime;
+            }
+
+            sessionLast = entry.startTime;
+            vitals.cls = Math.max(vitals.cls || 0, session);
+        });
+
+        if (shifts && vitals.cls === null) {
+            vitals.cls = 0;
+        }
+
+        var navigation =
+            performance.getEntriesByType &&
+            performance.getEntriesByType('navigation')[0];
+
+        if (navigation && navigation.responseStart > 0) {
+            vitals.ttfb = navigation.responseStart;
+        }
+
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden') {
+                sendVitals();
+            }
+        });
+        window.addEventListener('pagehide', sendVitals);
+    }
 
     window.addEventListener('pagehide', flush);
 

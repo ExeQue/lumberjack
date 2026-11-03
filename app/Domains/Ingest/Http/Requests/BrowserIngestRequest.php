@@ -34,7 +34,7 @@ class BrowserIngestRequest extends FormRequest
             'environment' => ['nullable', 'string', 'max:64'],
             'release' => ['nullable', 'string', 'max:64'],
             'events' => ['required', 'array', 'max:'.self::MAX_EVENTS],
-            'events.*.type' => ['required', 'string', 'in:exception'],
+            'events.*.type' => ['required', 'string', 'in:exception,vital'],
         ];
     }
 

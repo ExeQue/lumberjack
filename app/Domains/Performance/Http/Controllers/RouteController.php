@@ -6,6 +6,7 @@ namespace App\Domains\Performance\Http\Controllers;
 
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Performance\Queries\RouteStatisticsQuery;
+use App\Domains\Performance\Queries\WebVitalsQuery;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Shared\Enums\Period;
@@ -21,7 +22,7 @@ class RouteController
 {
     use ReadsDashboardFilters;
 
-    public function __invoke(Request $request, Project $project, RouteStatisticsQuery $query, ProjectPresenter $presenter): Response
+    public function __invoke(Request $request, Project $project, RouteStatisticsQuery $query, WebVitalsQuery $vitals, ProjectPresenter $presenter): Response
     {
         Gate::authorize('view', $project);
 
@@ -36,6 +37,7 @@ class RouteController
             'project' => $presenter->header($project, $request->user()),
             'filters' => [...$this->filters($request), 'sort' => $sort, 'search' => $search, 'route' => $selected, 'method' => $method],
             'routes' => fn (): array => $this->withSeries($project, $period, $environment, $query->get($project->id, $period, $environment, $sort, $search)),
+            'vitals' => fn (): array => $vitals->get($project->id, $period, $environment),
             'detail' => fn (): ?array => $selected === '' ? null : $this->detail($project, $period, $environment, $method, $selected),
         ]);
     }
