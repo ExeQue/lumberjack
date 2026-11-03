@@ -72,12 +72,22 @@ account.
 
 ## Command line
 
-| Command                                              | What it does                                                                                                                                                                                   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `php artisan lumberjack:create-user --admin`         | Creates a user; `--admin` makes them an administrator (the first user created always is one), `--team="Name"` makes them the owner of a new team. Otherwise they are in no team until invited. |
-| `php artisan lumberjack:make-admin {email}`          | Makes an existing user an administrator.                                                                                                                                                       |
-| `php artisan lumberjack:make-admin {email} --revoke` | Takes administration away, unless they are the last active administrator.                                                                                                                      |
-| `php artisan setup:clear`                            | Deletes the setup flag.                                                                                                                                                                        |
+| Command                                              | What it does                                                                                                                                                                                                                                                   |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `php artisan lumberjack:create-user --admin`         | Creates a user (`--name`, `--email` and `--password`, asked for when left out); `--admin` makes them an administrator (the first user created always is one), `--team="Name"` makes them the owner of a new team. Otherwise they are in no team until invited. |
+| `php artisan lumberjack:make-admin {email}`          | Makes an existing user an administrator.                                                                                                                                                                                                                       |
+| `php artisan lumberjack:make-admin {email} --revoke` | Takes administration away, unless they are the last active administrator.                                                                                                                                                                                      |
+| `php artisan setup:clear`                            | Deletes the setup flag.                                                                                                                                                                                                                                        |
+| `php artisan lumberjack:prune`                       | Deletes data older than its [retention](./projects#retention). Runs by itself every day.                                                                                                                                                                       |
+
+The scheduler runs the rest by itself; there is no need to call them:
+
+| Every     | Command                                                                                                                                                                                              |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Minute    | `lumberjack:mark-stuck-jobs`, `lumberjack:mark-missed-tasks`, `lumberjack:return-ignored-issues`, `lumberjack:send-watch-digests`, `lumberjack:check-queue-backlogs`, `lumberjack:run-health-checks` |
+| 5 minutes | `horizon:snapshot`                                                                                                                                                                                   |
+| Hour      | `model:prune`: agents and health check hosts not seen for 24 hours                                                                                                                                   |
+| Day       | `lumberjack:archive-silent-health-checks`, and `lumberjack:prune` at 03:15 Europe/Copenhagen                                                                                                         |
 
 ## Mail
 
@@ -132,12 +142,18 @@ do there is written to the audit log.
   one. The owner can be an existing user, or the email of someone without an
   account: the team then waits without members, and that person is invited to own
   it.
-- **All users:** search, invite someone to a team, send a password reset link,
-  require a new password, make or revoke administrators, suspend or reinstate.
-  Administrators cannot do any of that to their own account.
-- **Audit log:** who did what, and when.
+- **All users:** 50 a page, **Search by name or email**, with badges for
+  **Administrator**, **Suspended** and **Must change password**. Invite someone to a
+  team as admin or member, send a password reset link, require a new password, make or
+  revoke administrators, suspend or reinstate. Administrators cannot do any of that to
+  their own account.
+- **Audit log:** who did what, and when, 50 a page: teams created, deleted or opened,
+  users invited, suspended or reinstated, administration granted or revoked, password
+  resets sent and new passwords required.
 - **Retention:** how long this Lumberjack keeps each kind of data, as the default
   and the maximum for every team. See [Retention](./projects#retention).
+
+![Administration > Retention: the default and maximum for every kind of data](./screenshots/admin-retention.png)
 
 Administrators can see every team and project, whether or not they are members.
 
@@ -147,7 +163,8 @@ There are no personal teams: someone belongs to the teams they were invited to, 
 account in no team sees a page saying so until an invitation arrives.
 
 There is no public registration. Accounts come from first-run setup, an
-invitation, or the command line.
+invitation, or the command line. Teams, invitations and your own account are on
+[Teams and accounts](./teams).
 
 ### Who may create teams
 
@@ -158,7 +175,9 @@ create teams for others under **All teams**.
 ### Suspending a user
 
 A suspended user is signed out at once (database sessions end immediately, others
-on their next request), cannot sign in, and their MCP tokens stop working.
+on their next request), cannot sign in, and their MCP tokens stop working. Signing in
+answers as it does for a wrong password, so the page never confirms a suspended account's
+password; a session that was already open is told the account is suspended.
 
 ### Requiring a new password
 
