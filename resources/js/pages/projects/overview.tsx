@@ -735,7 +735,7 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                             <ul>
                                 {overview.slowest_routes.map((route) => (
                                     <li
-                                        key={`${route.method} ${route.route}`}
+                                        key={`${route.method} ${route.domain ?? ''} ${route.route}`}
                                         className={itemClass}
                                     >
                                         <Link
@@ -744,6 +744,12 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                                                     query: {
                                                         route: route.route,
                                                         method: route.method,
+                                                        ...(route.domain
+                                                            ? {
+                                                                  route_domain:
+                                                                      route.domain,
+                                                              }
+                                                            : {}),
                                                         period: filters.period,
                                                     },
                                                 }).url
@@ -755,6 +761,11 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                                                     {route.method}
                                                 </span>{' '}
                                                 {route.route}
+                                                {route.domain && (
+                                                    <span className="ml-2 text-ink-3">
+                                                        {route.domain}
+                                                    </span>
+                                                )}
                                             </span>
                                             <span
                                                 className={`shrink-0 font-mono text-xs ${(route.p95 ?? 0) >= 1_000_000 ? 'text-err' : (route.p95 ?? 0) >= 500_000 ? 'text-warn' : ''}`}

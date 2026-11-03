@@ -30,7 +30,15 @@ rate and how many are stuck; the p95 shows the p50 and p99 under it.
 ![The Routes page with the routes table and Web Vitals below](./screenshots/routes.png)
 
 Sort by highest p95 (the default), most requests, highest error rate, most total time
-or lowest [Apdex](#apdex). **Search routes** uses the [search syntax](./finding-things#search-syntax).
+or lowest [Apdex](#apdex). **Search routes or names** uses the [search syntax](./finding-things#search-syntax)
+and matches a route's URI or its Laravel name (`orders.show`), which shows muted next to
+the URI.
+
+When requests came in on more than one domain in the period (`shop.example.com` and
+`api.example.com`), a **Domain** picker appears next to the search. With **All domains**
+the same route on two domains is two rows, each with its domain in a **Domain** column;
+picking a domain narrows the table, the detail and the sparklines to it. Requests an
+older SDK counted without a domain show as _unknown_.
 
 ## Queries
 

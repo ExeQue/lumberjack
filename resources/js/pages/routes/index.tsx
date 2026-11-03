@@ -45,15 +45,20 @@ type Filters = DashboardFilters & {
     search: string;
     route: string;
     method: string;
+    domain: string | null;
+    route_domain: string | null;
 };
 
 type Detail = {
     method: string;
     route: string;
+    domain: string | null;
+    route_name: string | null;
     hourly: { t: string; p50: number | null; p95: number | null }[];
     slowest: {
         at: string;
         host: string | null;
+        domain: string | null;
         status: number | null;
         duration_us: number;
         trace_id: string | null;
@@ -65,6 +70,8 @@ type Props = {
     project: ProjectHeader;
     filters: Filters;
     routes: RouteStat[];
+    /** The domains requests came in on in the period. */
+    domains: string[];
     vitals: WebVitalStat[];
     detail: Detail | null;
     /** The lowest sample rate of the period's requests; null when none was sampled. */
@@ -75,6 +82,7 @@ export default function RoutesIndex({
     project,
     filters,
     routes,
+    domains,
     vitals,
     detail,
     sample_rate,
@@ -86,7 +94,7 @@ export default function RoutesIndex({
     useProjectLive(
         project.uuid,
         ['performance.changed'],
-        ['routes', 'vitals', 'detail', 'sample_rate'],
+        ['routes', 'domains', 'vitals', 'detail', 'sample_rate'],
     );
 
     const apply = (changes: Partial<Filters>, only?: string[]) => {
@@ -114,15 +122,22 @@ export default function RoutesIndex({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
+    // Split by domain, a route is told apart by its domain too.
+    const split = routes.some((r) => r.domain !== null);
     const isSelected = (r: RouteStat) =>
-        r.route === filters.route && r.method === filters.method;
+        r.route === filters.route &&
+        r.method === filters.method &&
+        (r.domain === null || r.domain === (filters.route_domain ?? ''));
     const pick = (r: RouteStat) =>
         isSelected(r)
-            ? apply({ route: '', method: '' }, ['detail', 'filters'])
-            : apply({ route: r.route, method: r.method }, [
+            ? apply({ route: '', method: '', route_domain: null }, [
                   'detail',
                   'filters',
-              ]);
+              ])
+            : apply(
+                  { route: r.route, method: r.method, route_domain: r.domain },
+                  ['detail', 'filters'],
+              );
     const selected = routes.find(isSelected);
     const totalRequests = routes.reduce((sum, r) => sum + r.requests, 0);
 
@@ -171,6 +186,37 @@ export default function RoutesIndex({
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="w-56 max-w-full"
                             />
+                            {(domains.length > 1 || filters.domain) && (
+                                <>
+                                    <label
+                                        className="sr-only"
+                                        htmlFor="route-domain"
+                                    >
+                                        {t('routes.domain.label')}
+                                    </label>
+                                    <Select
+                                        id="route-domain"
+                                        value={filters.domain ?? ''}
+                                        onChange={(e) =>
+                                            apply({
+                                                domain: e.target.value,
+                                                route: '',
+                                                method: '',
+                                                route_domain: null,
+                                            })
+                                        }
+                                    >
+                                        <option value="">
+                                            {t('routes.domain.all')}
+                                        </option>
+                                        {domains.map((d) => (
+                                            <option key={d} value={d}>
+                                                {d}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </>
+                            )}
                             <label className="sr-only" htmlFor="route-sort">
                                 {t('routes.sort.label')}
                             </label>
@@ -213,6 +259,11 @@ export default function RoutesIndex({
                                     <th className={thClass}>
                                         {t('routes.columns.route')}
                                     </th>
+                                    {split && (
+                                        <th className={thClass}>
+                                            {t('routes.columns.domain')}
+                                        </th>
+                                    )}
                                     <th className={`${thClass} text-right`}>
                                         {t('routes.columns.requests')}
                                     </th>
@@ -255,7 +306,7 @@ export default function RoutesIndex({
 
                                     return (
                                         <tr
-                                            key={`${r.method} ${r.route}`}
+                                            key={`${r.method} ${r.domain ?? ''} ${r.route}`}
                                             className={cn(
                                                 'lj-row hover:bg-panel-2/60',
                                                 active && 'bg-panel-2',
@@ -279,8 +330,29 @@ export default function RoutesIndex({
                                                         {r.method}
                                                     </span>{' '}
                                                     {r.route}
+                                                    {r.route_name && (
+                                                        <span className="ml-2 text-ink-3">
+                                                            {r.route_name}
+                                                        </span>
+                                                    )}
                                                 </button>
                                             </td>
+                                            {split && (
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'font-mono text-xs',
+                                                        r.domain
+                                                            ? 'text-ink-2'
+                                                            : 'text-ink-3',
+                                                    )}
+                                                >
+                                                    {r.domain ||
+                                                        t(
+                                                            'routes.domain.unknown',
+                                                        )}
+                                                </td>
+                                            )}
                                             <td
                                                 className={`${tdClass} ${numClass}`}
                                             >
@@ -370,6 +442,16 @@ export default function RoutesIndex({
                                         {detail.method}
                                     </span>{' '}
                                     {detail.route}
+                                    {detail.route_name && (
+                                        <span className="ml-2 text-sm text-ink-3">
+                                            {detail.route_name}
+                                        </span>
+                                    )}
+                                    {detail.domain && (
+                                        <span className="ml-2 text-sm text-ink-3">
+                                            {detail.domain}
+                                        </span>
+                                    )}
                                 </span>
                             }
                             aside={
@@ -419,6 +501,9 @@ export default function RoutesIndex({
                                                     <time dateTime={s.at}>
                                                         {formatTime(s.at)}
                                                     </time>
+                                                    {s.domain &&
+                                                        !detail.domain &&
+                                                        ` · ${s.domain}`}
                                                     {s.host && ` · ${s.host}`}
                                                     {s.queries !== null &&
                                                         ` · ${t('routes.detail.queries', {}, s.queries)}`}

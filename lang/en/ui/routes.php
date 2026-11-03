@@ -5,7 +5,12 @@ declare(strict_types=1);
 return [
     'title' => 'Routes',
     'description' => '{1} 1 route, :requests requests. Select a route for details.|[2,*] :count routes, :requests requests. Select a route for details.',
-    'search' => 'Search routes',
+    'search' => 'Search routes or names',
+    'domain' => [
+        'label' => 'Domain',
+        'all' => 'All domains',
+        'unknown' => 'unknown',
+    ],
     'sort' => [
         'label' => 'Sort',
         'p95' => 'Highest p95',
@@ -17,6 +22,7 @@ return [
     'columns' => [
         'trend' => 'Requests over time',
         'route' => 'Route',
+        'domain' => 'Domain',
         'requests' => 'Requests',
         'error_rate' => 'Error rate',
         'total' => 'Total time',
