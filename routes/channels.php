@@ -32,6 +32,9 @@ Broadcast::channel('team.{teamUuid}', function (User $user, string $teamUuid): b
 });
 
 Broadcast::channel('team.{teamUuid}.displays', TeamDisplaysChannel::class);
+// The administration pages: system administrators only.
+Broadcast::channel('admin', fn (User $user): bool => $user->isAdmin());
+
 Broadcast::channel('screen.{screen}', ScreenChannel::class, ['guards' => ['web', 'tv']]);
 Broadcast::channel('display.{display}', DisplayChannel::class, ['guards' => ['tv']]);
 Broadcast::channel('tv-pairing.{uuid}', TvPairingChannel::class, ['guards' => ['tv']]);

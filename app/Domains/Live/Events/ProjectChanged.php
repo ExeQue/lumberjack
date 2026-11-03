@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Live\Events;
 
 use App\Domains\Live\Enums\ChangeKind;
+use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -16,6 +17,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 class ProjectChanged implements ShouldBroadcastNow
 {
     use Dispatchable;
+    use InteractsWithSockets;
 
     public function __construct(
         private readonly string $projectUuid,

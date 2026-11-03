@@ -14,9 +14,9 @@ covers(BroadcastProjectChangeAction::class, BroadcastTrailingProjectChange::clas
 
 describe('live broadcasts', function () {
     it('sends the first change at once and one more after a burst, so the last change is seen', function () {
+        $project = Project::factory()->create();
         Event::fake([ProjectChanged::class]);
         Queue::fake();
-        $project = Project::factory()->create();
         $action = app(BroadcastProjectChangeAction::class);
 
         foreach (range(1, 5) as $_) {
@@ -32,10 +32,11 @@ describe('live broadcasts', function () {
     });
 
     it('sends no trailing broadcast for a lone change', function () {
+        $project = Project::factory()->create();
         Event::fake([ProjectChanged::class]);
         Queue::fake();
 
-        app(BroadcastProjectChangeAction::class)->execute(Project::factory()->create()->id, ChangeKind::Issues);
+        app(BroadcastProjectChangeAction::class)->execute($project->id, ChangeKind::Issues);
 
         Event::assertDispatchedTimes(ProjectChanged::class, 1);
         Queue::assertNothingPushed();
@@ -45,9 +46,9 @@ describe('live broadcasts', function () {
         expect(BroadcastProjectChangeAction::window(ChangeKind::Performance))->toBe(10)
             ->and(BroadcastProjectChangeAction::window(ChangeKind::Issues))->toBe(1);
 
+        $project = Project::factory()->create();
         Event::fake([ProjectChanged::class]);
         Queue::fake();
-        $project = Project::factory()->create();
         $action = app(BroadcastProjectChangeAction::class);
 
         $action->execute($project->id, ChangeKind::Performance, $project->uuid);
@@ -59,9 +60,9 @@ describe('live broadcasts', function () {
     });
 
     it('throttles the occurrences of one issue apart from the rest of the project', function () {
+        $project = Project::factory()->create();
         Event::fake([ProjectChanged::class]);
         Queue::fake();
-        $project = Project::factory()->create();
         $action = app(BroadcastProjectChangeAction::class);
 
         $action->execute($project->id, ChangeKind::Issues);

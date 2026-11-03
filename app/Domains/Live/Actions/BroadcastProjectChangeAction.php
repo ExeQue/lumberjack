@@ -116,7 +116,8 @@ class BroadcastProjectChangeAction
             $uuid = $this->uuids[$projectId];
 
             if ($uuid !== null) {
-                broadcast(new ProjectChanged($uuid, $kind, $issueUuid));
+                // The tab whose request made the change already shows it.
+                broadcast(new ProjectChanged($uuid, $kind, $issueUuid))->toOthers();
             }
         } catch (Throwable $e) {
             report($e);

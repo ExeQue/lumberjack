@@ -32,3 +32,28 @@ describe('the project channel', function () {
             ->and($this->guards)->toBe(['guards' => ['web', 'tv']]);
     });
 });
+
+describe('the team channel', function () {
+    it('lets the team\'s members listen and no one else', function () {
+        /** @var Broadcaster $broadcaster */
+        $broadcaster = Broadcast::driver();
+        $join = (fn (): array => $this->channels)->call($broadcaster)['team.{teamUuid}'];
+        $member = User::factory()->inTeam(role: TeamRole::Member)->create();
+
+        expect($join($member, $member->currentTeam->uuid))->toBeTrue()
+            ->and($join(User::factory()->inTeam()->create(), $member->currentTeam->uuid))->toBeFalse()
+            ->and($join($member, (string) Str::uuid()))->toBeFalse();
+    });
+});
+
+describe('the admin channel', function () {
+    it('lets system administrators listen, and not a suspended one', function () {
+        /** @var Broadcaster $broadcaster */
+        $broadcaster = Broadcast::driver();
+        $join = (fn (): array => $this->channels)->call($broadcaster)['admin'];
+
+        expect($join(User::factory()->create(['is_admin' => true])))->toBeTrue()
+            ->and($join(User::factory()->inTeam()->create()))->toBeFalse()
+            ->and($join(User::factory()->create(['is_admin' => true, 'suspended_at' => now()])))->toBeFalse();
+    });
+});

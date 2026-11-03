@@ -8,9 +8,16 @@ use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
+use App\Domains\Live\Actions\BroadcastTeamChangeAction;
+use App\Domains\Live\Enums\TeamChangeKind;
 
 class UpdateAlertRuleAction
 {
+    public function __construct(
+        private readonly BroadcastTeamChangeAction $broadcast,
+    ) {
+    }
+
     /**
      * @param  list<int>  $channelIds  the team's shared channels, and for a project's rule its own
      * @param  list<string>|null  $environments  null means every environment
@@ -32,7 +39,14 @@ class UpdateAlertRuleAction
             ->when($rule->project === null)->whereTeamWide()
             ->when($rule->project !== null)->whereAvailableTo($rule->project)
             ->whereIn('id', $channelIds)->pluck('id');
-        $rule->channels()->sync($allowed);
+        $changes = $rule->channels()->sync($allowed);
+
+        // A pivot row has no model events for the live observer to hear; the rule's own columns do.
+        $teamId = $rule->team_id ?? $rule->project?->team_id;
+
+        if (array_filter($changes) !== [] && $teamId !== null) {
+            $this->broadcast->execute($teamId, TeamChangeKind::Alerts);
+        }
 
         return $rule;
     }
