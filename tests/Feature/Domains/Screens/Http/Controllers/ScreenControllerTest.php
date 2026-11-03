@@ -171,6 +171,8 @@ describe('the pages', function () {
             ->component('screens/edit')
             ->has('schema.health')
             ->has('sources.stat', 14)
+            ->has('filters.queue')
+            ->has('filters.host')
             ->has('environments')
             ->has('checks')
             ->where('limits.max_cols', Screen::MAX_COLS));

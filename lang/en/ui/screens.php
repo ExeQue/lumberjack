@@ -52,7 +52,7 @@ return [
         'schedule' => 'Light by day, dark at night',
     ],
 
-    'period_short' => ['now' => 'now', '1h' => '1 h', '24h' => '24 h', '7d' => '7 d', '30d' => '30 d'],
+    'period_short' => ['ago' => ':age ago', 'now' => 'now', '1h' => '1 h', '24h' => '24 h', '7d' => '7 d', '30d' => '30 d'],
     'periods' => [
         '1h' => 'Last hour',
         '24h' => 'Last 24 hours',
@@ -238,7 +238,12 @@ return [
         'period' => ['label' => 'Period'],
         'show_period' => ['label' => 'Show the period in the corner'],
         'release' => ['label' => 'Release', 'options' => ['all' => 'All', 'current' => 'Current only', 'previous' => 'Previous']],
-        'filter' => ['label' => 'Filter', 'placeholder' => 'route, queue, job or host; * matches anything'],
+        'filter' => [
+            'label' => 'Filter',
+            'placeholder' => 'route, queue, job or host; * matches anything',
+            'on' => ['queue' => 'Queue', 'host' => 'Host', 'job' => 'Job', 'route' => 'Route'],
+            'all' => ['queue' => 'All queues; pick one, or use * as a wildcard', 'host' => 'All hosts; pick one, or use * as a wildcard', 'job' => 'All jobs; * matches anything', 'route' => 'All routes, such as /checkout*'],
+        ],
         'show_title' => ['label' => 'Show title'],
         'status_colors' => ['label' => 'Color the tile by status'],
         'text_size' => ['label' => 'Text size', 'options' => ['auto' => 'Fit to tile', 's' => 'Small', 'm' => 'Medium', 'l' => 'Large', 'xl' => 'Huge']],

@@ -22,6 +22,8 @@ export type Catalog = {
     environments: string[];
     checks: { uuid: string; name: string; project: string | null }[];
     periods: string[];
+    /** Known names per filter kind (queue, host), offered while typing a filter. */
+    filters?: Record<string, string[]>;
 };
 
 const ALL = '*';
@@ -163,6 +165,10 @@ export function WidgetInspector({
     const active = Math.min(tab, Math.max(0, items.length - 1));
     const first = active === 0;
     const item = items[active];
+    // What the active value's filter narrows: a queue, host, job or route.
+    const filterOn =
+        pool.find((s) => s.id === (item?.source ?? widget.source))?.filter_on ??
+        null;
 
     const setRotate = (entries: RotateItem[]) =>
         onChange({ ...widget, rotate: entries.map(compact) });
@@ -691,18 +697,29 @@ export function WidgetInspector({
                             htmlFor={id(field.key)}
                             className="text-xs text-ink-2"
                         >
-                            {fieldLabel(field.key)}
+                            {field.key === 'filter' && filterOn
+                                ? t(`screens.fields.filter.on.${filterOn}`)
+                                : fieldLabel(field.key)}
                         </Label>
                         <Input
                             id={id(field.key)}
                             value={String(raw ?? '')}
+                            list={
+                                field.key === 'filter' && filterOn
+                                    ? id(`filter-${filterOn}`)
+                                    : undefined
+                            }
                             placeholder={
                                 inherited &&
                                 typeof inherited[field.key] === 'string'
                                     ? String(inherited[field.key])
-                                    : t(
-                                          `screens.fields.${field.key}.placeholder`,
-                                      )
+                                    : field.key === 'filter' && filterOn
+                                      ? t(
+                                            `screens.fields.filter.all.${filterOn}`,
+                                        )
+                                      : t(
+                                            `screens.fields.${field.key}.placeholder`,
+                                        )
                             }
                             onChange={(e) =>
                                 scope
@@ -713,6 +730,15 @@ export function WidgetInspector({
                                     : target.set(field.key, e.target.value)
                             }
                         />
+                        {field.key === 'filter' && filterOn && (
+                            <datalist id={id(`filter-${filterOn}`)}>
+                                {(catalog.filters?.[filterOn] ?? []).map(
+                                    (name) => (
+                                        <option key={name} value={name} />
+                                    ),
+                                )}
+                            </datalist>
+                        )}
                     </div>
                 );
         }

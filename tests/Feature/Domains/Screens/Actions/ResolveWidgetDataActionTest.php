@@ -248,6 +248,12 @@ describe('the edges of each type', function () {
             ->and(($this->resolve)(WidgetType::Health, 'checks')['period'])->toBe('now')
             ->and(($this->resolve)(WidgetType::Gauge, 'host_cpu', scope: new WidgetScope(period: Period::Week))['period'])->toBe('now')
             ->and(($this->resolve)(WidgetType::List, 'queues')['period'])->toBe('now');
+
+        QueueSample::query()->create(['project_id' => $this->project->id, 'host' => 'web-1', 'connection' => 'redis', 'queue' => 'mail', 'size' => 3, 'sampled_at' => now()->subMinutes(2)]);
+
+        expect(($this->resolve)(WidgetType::Stat, 'queue_size')['as_of'])->toBe(now()->subMinutes(2)->toIso8601String())
+            ->and(($this->resolve)(WidgetType::Stat, 'requests')['as_of'])->toBeNull()
+            ->and(($this->resolve)(WidgetType::Stat, 'open_issues')['as_of'])->toBeNull();
     });
 
     it('judges a queue like its backlog alert, and says why', function () {
