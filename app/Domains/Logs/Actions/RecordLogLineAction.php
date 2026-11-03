@@ -91,27 +91,25 @@ class RecordLogLineAction
         $this->flush();
         $entry = LogEntry::create($attributes);
 
-        if ($level->createsIssue()) {
-            $signal = $exception !== null
-                ? $this->signalFactory->fromException([...$exception, 'trace_id' => $event['trace_id'] ?? null, 'timestamp' => $event['timestamp'] ?? null], $envelope, IssueSource::Server, $project->scrub_keys ?? [])
-                : new IssueSignal(
-                    source: IssueSource::Log,
-                    title: $channel->name.': '.mb_substr($entry->message, 0, 200),
-                    message: $entry->message,
-                    file: null,
-                    line: null,
-                    stacktrace: [],
-                    context: ['log' => array_filter(['channel' => $channel->name, 'sent_channel' => $entry->sent_channel, 'level' => $level->key(), 'entry_id' => $entry->id], fn ($value): bool => $value !== null), 'context' => $entry->context],
-                    occurredAt: $entry->occurred_at->toImmutable(),
-                    traceId: $entry->trace_id,
-                    environment: $envelope->environment,
-                    release: $envelope->release,
-                    host: $envelope->host,
-                    logChannel: $channel->name,
-                );
+        $signal = $exception !== null
+            ? $this->signalFactory->fromException([...$exception, 'trace_id' => $event['trace_id'] ?? null, 'timestamp' => $event['timestamp'] ?? null], $envelope, IssueSource::Server, $project->scrub_keys ?? [])
+            : new IssueSignal(
+                source: IssueSource::Log,
+                title: $channel->name.': '.mb_substr($entry->message, 0, 200),
+                message: $entry->message,
+                file: null,
+                line: null,
+                stacktrace: [],
+                context: ['log' => array_filter(['channel' => $channel->name, 'sent_channel' => $entry->sent_channel, 'level' => $level->key(), 'entry_id' => $entry->id], fn ($value): bool => $value !== null), 'context' => $entry->context],
+                occurredAt: $entry->occurred_at->toImmutable(),
+                traceId: $entry->trace_id,
+                environment: $envelope->environment,
+                release: $envelope->release,
+                host: $envelope->host,
+                logChannel: $channel->name,
+            );
 
-            $this->recordOccurrenceAction->execute($project, $signal);
-        }
+        $this->recordOccurrenceAction->execute($project, $signal);
 
         return $entry;
     }
