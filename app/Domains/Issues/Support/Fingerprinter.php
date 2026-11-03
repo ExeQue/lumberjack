@@ -15,7 +15,9 @@ class Fingerprinter
     public function fingerprint(IssueSignal $signal): string
     {
         if ($signal->customFingerprint !== null && $signal->customFingerprint !== '') {
-            return hash('sha256', 'custom|'.$signal->customFingerprint);
+            // Anyone with the public browser key can send one, so a browser's never meets
+            // the server's own (schedule-failed:..., command-failed:...).
+            return hash('sha256', ($signal->source === IssueSource::Browser ? 'browser|' : '').'custom|'.$signal->customFingerprint);
         }
 
         $parts = match ($signal->source) {

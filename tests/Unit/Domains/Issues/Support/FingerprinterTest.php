@@ -46,7 +46,13 @@ test('log lines group per channel', function () {
 
 test('a custom fingerprint wins over everything else', function () {
     expect($this->fingerprinter->fingerprint(($this->signal)(IssueSource::Server, 'a', custom: 'same')))
-        ->toBe($this->fingerprinter->fingerprint(($this->signal)(IssueSource::Browser, 'b', custom: 'same')));
+        ->toBe($this->fingerprinter->fingerprint(($this->signal)(IssueSource::Server, 'b', [['file' => 'app/B.php', 'line' => 2, 'in_app' => true]], custom: 'same')))
+        ->toBe(hash('sha256', 'custom|same'));
+});
+
+test('a browser cannot pick the custom fingerprint of a server issue', function () {
+    expect($this->fingerprinter->fingerprint(($this->signal)(IssueSource::Browser, 'b', custom: 'schedule-failed:production:backup')))
+        ->not->toBe($this->fingerprinter->fingerprint(($this->signal)(IssueSource::Server, 'a', custom: 'schedule-failed:production:backup')));
 });
 
 test('messages are normalized', function (string $message, string $expected) {
