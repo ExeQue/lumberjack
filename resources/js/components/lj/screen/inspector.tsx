@@ -248,15 +248,20 @@ export function WidgetInspector({
             rotate: rest
                 .map((r) => ({
                     ...r,
-                    // ponytail: "the screen's period", an automatic scale and a source
+                    // ponytail: "the screen's default", an automatic scale and a source
                     // without a default limit have no stored form, so a value that
                     // followed them follows the new first one instead.
-                    scope:
-                        r.scope?.period || !lead.scope?.period
-                            ? r.scope
-                            : widget.scope.period
-                              ? { period: widget.scope.period }
-                              : undefined,
+                    scope: {
+                        ...Object.fromEntries(
+                            Object.keys(lead.scope ?? {})
+                                .map((key) => [
+                                    key,
+                                    widget.scope[key as keyof WidgetScope],
+                                ])
+                                .filter(([, v]) => v !== undefined),
+                        ),
+                        ...r.scope,
+                    },
                     options: {
                         ...Object.fromEntries(
                             Object.keys(lead.options ?? {})
@@ -365,8 +370,8 @@ export function WidgetInspector({
         const raw = (
             scope
                 ? // Own keys only: an empty scope that arrived as [] has a filter() method.
-                  Object.hasOwn(widget.scope ?? {}, field.key)
-                    ? (widget.scope as Record<string, unknown>)[field.key]
+                  Object.hasOwn(scopeTarget.values ?? {}, field.key)
+                    ? (scopeTarget.values as Record<string, unknown>)[field.key]
                     : undefined
                 : target.values[field.key]
         ) as string | number | string[] | undefined;
@@ -442,7 +447,7 @@ export function WidgetInspector({
                             )}
                             onChange={(e) =>
                                 scope
-                                    ? setScope(
+                                    ? scopeTarget.set(
                                           field.key as keyof WidgetScope,
                                           e.target.value,
                                       )
@@ -462,6 +467,15 @@ export function WidgetInspector({
                                     {same(
                                         t(
                                             `screens.fields.${field.key}.options.${option<string>(schema, widget, field.key)}`,
+                                        ),
+                                    )}
+                                </option>
+                            )}
+                            {scope && scopeTarget.inherited && (
+                                <option value="">
+                                    {same(
+                                        t(
+                                            `screens.fields.${field.key}.options.${scopeTarget.inherited[field.key as 'release'] ?? field.default}`,
                                         ),
                                     )}
                                 </option>
@@ -639,7 +653,7 @@ export function WidgetInspector({
                             id={id(field.key)}
                             value={value}
                             onChange={(e) =>
-                                setScope(
+                                scopeTarget.set(
                                     'projects',
                                     e.target.value === ''
                                         ? null
@@ -650,7 +664,13 @@ export function WidgetInspector({
                             }
                         >
                             <option value="">
-                                {t('screens.inspector.screen_default')}
+                                {scopeTarget.inherited
+                                    ? same(
+                                          projectsLabel(
+                                              scopeTarget.inherited.projects,
+                                          ),
+                                      )
+                                    : t('screens.inspector.screen_default')}
                             </option>
                             <option value={ALL}>
                                 {t('screens.inspector.all_projects')}
@@ -680,11 +700,17 @@ export function WidgetInspector({
                             id={id(field.key)}
                             value={String(raw ?? '')}
                             onChange={(e) =>
-                                setScope('environment', e.target.value)
+                                scopeTarget.set('environment', e.target.value)
                             }
                         >
                             <option value="">
-                                {t('screens.inspector.screen_default')}
+                                {scopeTarget.inherited
+                                    ? same(
+                                          environmentLabel(
+                                              scopeTarget.inherited.environment,
+                                          ),
+                                      )
+                                    : t('screens.inspector.screen_default')}
                             </option>
                             <option value={ALL}>
                                 {t('screens.inspector.all_environments')}
@@ -750,20 +776,22 @@ export function WidgetInspector({
                                     : undefined
                             }
                             placeholder={
-                                inherited &&
-                                typeof inherited[field.key] === 'string'
-                                    ? String(inherited[field.key])
-                                    : field.key === 'filter' && filterOn
-                                      ? t(
-                                            `screens.fields.filter.all.${filterOn}`,
-                                        )
-                                      : t(
-                                            `screens.fields.${field.key}.placeholder`,
-                                        )
+                                scope && scopeTarget.inherited?.filter
+                                    ? scopeTarget.inherited.filter
+                                    : inherited &&
+                                        typeof inherited[field.key] === 'string'
+                                      ? String(inherited[field.key])
+                                      : field.key === 'filter' && filterOn
+                                        ? t(
+                                              `screens.fields.filter.all.${filterOn}`,
+                                          )
+                                        : t(
+                                              `screens.fields.${field.key}.placeholder`,
+                                          )
                             }
                             onChange={(e) =>
                                 scope
-                                    ? setScope(
+                                    ? scopeTarget.set(
                                           field.key as keyof WidgetScope,
                                           e.target.value,
                                       )
@@ -800,6 +828,39 @@ export function WidgetInspector({
               inherited: widget.options,
               prefix: `r${active}-`,
           };
+    // The open value's scope: the widget's on the first tab, else its entry's over it.
+    const scopeTarget: {
+        values: WidgetScope;
+        set: (key: keyof WidgetScope, value: unknown) => void;
+        inherited?: WidgetScope;
+    } = first
+        ? { values: widget.scope, set: setScope }
+        : {
+              values: item.scope ?? {},
+              set: (key, value) =>
+                  setItem(active - 1, {
+                      scope: without(item.scope, key, value),
+                  }),
+              // A filter names a route, queue, job or host: only a value that filters
+              // the same kind follows the widget's (as the server does).
+              inherited:
+                  filterOn === source?.filter_on
+                      ? widget.scope
+                      : { ...widget.scope, filter: undefined },
+          };
+    const projectsLabel = (value: string[] | undefined) =>
+        value === undefined
+            ? t('screens.inspector.screen_default')
+            : value.length === 0
+              ? t('screens.inspector.all_projects')
+              : (catalog.projects.find((p) => p.uuid === value[0])?.name ??
+                value[0]);
+    const environmentLabel = (value: string | undefined) =>
+        !value
+            ? t('screens.inspector.screen_default')
+            : value === ALL
+              ? t('screens.inspector.all_environments')
+              : value;
     const vid = (key: string) => id(`${target.prefix}${key}`);
     const lowIsBad =
         (target.values.low_is_bad as boolean | undefined) ??
@@ -825,9 +886,14 @@ export function WidgetInspector({
     const sections = schema[widget.type] ?? [];
     const [valueSection, ...rest] = sections;
     // Display lives behind the gear on the tile.
+    // Scope is per value, on its tab; Display lives behind the gear on the tile.
     const whole = rest.filter(
-        (s) => s.id !== 'display' && (s.id !== 'rotation' || items.length > 1),
+        (s) =>
+            s.id !== 'display' &&
+            s.id !== 'scope' &&
+            (s.id !== 'rotation' || items.length > 1),
     );
+    const scopeSection = rest.find((s) => s.id === 'scope');
 
     if (part === 'display') {
         return (
@@ -1007,6 +1073,23 @@ export function WidgetInspector({
                     {valueSection.fields.map((field) =>
                         renderField(field, valueSection.id === 'scope', target),
                     )}
+                </Section>
+            )}
+
+            {scopeSection && (
+                <Section
+                    key={scopeSection.id}
+                    title={t(`screens.sections.${scopeSection.id}`)}
+                    open={false}
+                >
+                    {scopeSection.fields
+                        // The period is Over above; a value with nothing to filter has no filter.
+                        .filter(
+                            (field) =>
+                                field.key !== 'period' &&
+                                (field.key !== 'filter' || filterOn),
+                        )
+                        .map((field) => renderField(field, true))}
                 </Section>
             )}
         </>

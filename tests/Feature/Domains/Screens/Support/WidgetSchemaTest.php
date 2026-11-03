@@ -72,6 +72,8 @@ describe('validating a widget', function () {
         'a rotated value without a source' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['seconds' => 5]], 'w' => 1, 'h' => 1], 'w.rotate.0'],
         'a rotated value shown for no time' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'seconds' => 0]], 'w' => 1, 'h' => 1], 'w.rotate.0.seconds'],
         'a rotated value with a limit that is no number' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'options' => ['red' => 'high']]], 'w' => 1, 'h' => 1], 'w.rotate.0.options.red'],
+        'a rotated value of a project outside the team' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'scope' => ['projects' => ['p2']]]], 'w' => 1, 'h' => 1], 'w.rotate.0.scope.projects.0'],
+        'a rotated value of an unknown release' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'scope' => ['release' => 'someday']]], 'w' => 1, 'h' => 1], 'w.rotate.0.scope.release'],
         'a rotated value over an unknown period' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'scope' => ['period' => '2y']]], 'w' => 1, 'h' => 1], 'w.rotate.0.scope.period'],
         'a rotated health value with a check that is no uuid' => [['id' => 'e', 'type' => 'health', 'source' => 'checks', 'rotate' => [['source' => 'checks', 'options' => ['checks' => ['x']]]], 'w' => 1, 'h' => 1], 'w.rotate.0.options.checks.0'],
     ]);
@@ -80,6 +82,7 @@ describe('validating a widget', function () {
         expect($validate(['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'w' => 1, 'h' => 1, 'options' => ['source_seconds' => 20], 'rotate' => [
             'apdex',
             ['source' => 'requests', 'seconds' => 30, 'title' => 'Traffic', 'options' => ['amber' => 100, 'red' => 200, 'low_is_bad' => true, 'suffix' => ' rpm'], 'scope' => ['period' => '24h']],
+            ['source' => 'queue_size', 'scope' => ['projects' => ['p1'], 'environment' => '*', 'release' => 'current', 'filter' => 'bulk']],
         ]]))->toBe([]);
     });
 
@@ -112,7 +115,7 @@ describe('storing a widget', function () {
             'id' => 'a', 'type' => 'stat', 'source' => 'p95', 'w' => 1, 'h' => 1, 'options' => ['source_seconds' => '20'],
             'rotate' => [
                 'apdex',
-                ['source' => 'requests', 'seconds' => '30', 'title' => ' Traffic ', 'options' => ['red' => '200', 'show_title' => false, 'rotate_every' => '5'], 'scope' => ['period' => '24h', 'projects' => ['x']], 'extra' => 1],
+                ['source' => 'requests', 'seconds' => '30', 'title' => ' Traffic ', 'options' => ['red' => '200', 'show_title' => false, 'rotate_every' => '5'], 'scope' => ['period' => '24h', 'projects' => ['x'], 'filter' => 'GET /*', 'environment' => '', 'nonsense' => 1], 'extra' => 1],
                 ['source' => 'users_affected', 'seconds' => '', 'title' => '', 'options' => [], 'scope' => []],
                 ['source' => 'apdex', 'seconds' => 5],
                 ['source' => 'p95', 'seconds' => 5],
@@ -121,13 +124,13 @@ describe('storing a widget', function () {
 
         expect($clean['rotate'])->toBe([
             'apdex',
-            ['source' => 'requests', 'seconds' => 30, 'title' => 'Traffic', 'options' => ['red' => 200.0], 'scope' => ['period' => '24h']],
+            ['source' => 'requests', 'seconds' => 30, 'title' => 'Traffic', 'options' => ['red' => 200.0], 'scope' => ['projects' => ['x'], 'period' => '24h', 'filter' => 'GET /*']],
             'users_affected',
         ])->and($clean['options'])->toBe(['source_seconds' => 20.0])
             ->and(WidgetSchema::rotation($clean))->toBe([
                 ['source' => 'p95', 'seconds' => 20, 'title' => null, 'options' => [], 'scope' => []],
                 ['source' => 'apdex', 'seconds' => null, 'title' => null, 'options' => [], 'scope' => []],
-                ['source' => 'requests', 'seconds' => 30, 'title' => 'Traffic', 'options' => ['red' => 200.0], 'scope' => ['period' => '24h']],
+                ['source' => 'requests', 'seconds' => 30, 'title' => 'Traffic', 'options' => ['red' => 200.0], 'scope' => ['projects' => ['x'], 'period' => '24h', 'filter' => 'GET /*']],
                 ['source' => 'users_affected', 'seconds' => null, 'title' => null, 'options' => [], 'scope' => []],
             ]);
     });

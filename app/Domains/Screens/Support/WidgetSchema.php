@@ -26,8 +26,8 @@ use Illuminate\Validation\Rule;
  *
  * A rotating widget's rotate entries are source ids, or {source, seconds, title, options,
  * scope} where a value of the rotation has settings of its own: options only from the
- * type's first section (ITEM_SECTION: value, scale, chart, rows or checks) and only the
- * period in scope, each over the widget's. The widget's source is the rotation's first value; its
+ * type's first section (ITEM_SECTION: value, scale, chart, rows or checks) and the whole
+ * scope (projects, environment, period, release, filter), each over the widget's. The widget's source is the rotation's first value; its
  * own time on screen is the source_seconds option. Health has the one source, so its
  * values repeat it and differ by their checks (REPEATING_TYPES), which a value picks for
  * itself: none picked shows every check, never the widget's.
@@ -197,7 +197,12 @@ final class WidgetSchema
             "{$prefix}.rotate.*.title" => ['nullable', 'string', 'max:100'],
             "{$prefix}.rotate.*.options" => ['nullable', 'array'],
             "{$prefix}.rotate.*.scope" => ['nullable', 'array'],
+            "{$prefix}.rotate.*.scope.projects" => ['nullable', 'array'],
+            "{$prefix}.rotate.*.scope.projects.*" => ['string', Rule::in($projects)],
+            "{$prefix}.rotate.*.scope.environment" => ['nullable', 'string', 'max:64'],
             "{$prefix}.rotate.*.scope.period" => ['nullable', Rule::enum(Period::class)],
+            "{$prefix}.rotate.*.scope.release" => ['nullable', Rule::enum(ReleaseScope::class)],
+            "{$prefix}.rotate.*.scope.filter" => ['nullable', 'string', 'max:200'],
             // Without a position (an older designer) it flows like before; see ScreenLayout.
             "{$prefix}.x" => ['nullable', 'integer', 'min:0', 'max:'.(Screen::MAX_COLS - 1)],
             "{$prefix}.y" => ['nullable', 'integer', 'min:0', 'max:'.ScreenLayout::MAX_Y],
@@ -263,7 +268,7 @@ final class WidgetSchema
                 'seconds' => isset($entry['seconds']) && $entry['seconds'] !== '' ? max(1, min(self::MAX_ROTATE_SECONDS, (int) $entry['seconds'])) : null,
                 'title' => is_string($entry['title'] ?? null) && trim($entry['title']) !== '' ? trim($entry['title']) : null,
                 'options' => self::cleanOptions(self::itemFields($type), (array) ($entry['options'] ?? [])),
-                'scope' => isset($entry['scope']['period']) && $entry['scope']['period'] !== '' ? ['period' => (string) $entry['scope']['period']] : null,
+                'scope' => self::cleanScope($type, (array) ($entry['scope'] ?? [])),
             ], fn (mixed $v): bool => $v !== null && $v !== []);
 
             // ponytail: a value without settings of its own stays a plain id, as before.
@@ -272,19 +277,7 @@ final class WidgetSchema
 
         $options = self::cleanOptions(self::fields($type), (array) ($widget['options'] ?? []));
 
-        $scope = [];
-
-        if (self::isDataType($type)) {
-            $given = (array) ($widget['scope'] ?? []);
-
-            $section = collect(self::sections($type))->firstWhere('id', 'scope');
-
-            foreach (array_column($section['fields'] ?? [], 'key') as $key) {
-                if (isset($given[$key]) && $given[$key] !== '') {
-                    $scope[$key] = $key === 'projects' ? array_values(array_map('strval', (array) $given[$key])) : (string) $given[$key];
-                }
-            }
-        }
+        $scope = self::isDataType($type) ? self::cleanScope($type, (array) ($widget['scope'] ?? [])) : [];
 
         $title = is_string($widget['title'] ?? null) ? trim($widget['title']) : '';
 
@@ -301,6 +294,27 @@ final class WidgetSchema
             'options' => $options,
             'scope' => $scope,
         ];
+    }
+
+    /**
+     * A scope as stored, the widget's or a rotated value's: the keys its type takes, empty
+     * values left out so the next level's (the widget's, then the screen's) apply.
+     *
+     * @param  array<mixed>  $given
+     * @return array<string, mixed>
+     */
+    private static function cleanScope(string $type, array $given): array
+    {
+        $scope = [];
+        $section = collect(self::sections($type))->firstWhere('id', 'scope');
+
+        foreach (array_column($section['fields'] ?? [], 'key') as $key) {
+            if (isset($given[$key]) && $given[$key] !== '') {
+                $scope[$key] = $key === 'projects' ? array_values(array_map('strval', (array) $given[$key])) : (string) $given[$key];
+            }
+        }
+
+        return $scope;
     }
 
     /**
