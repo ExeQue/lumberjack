@@ -307,15 +307,26 @@ export function WidgetTile({
                     <span className="lj-tile-title min-w-0 truncate">
                         {title}
                     </span>
-                    {widget.type === 'list' && sourceId && (
-                        <span className="lj-tile-small whitespace-nowrap">
-                            {orKey(
-                                t,
-                                `screens.list.sort_hint.${sourceId}.${opt<string>('sort') ?? 'default'}`,
-                                t(`screens.list.sort_hint.${sourceId}.default`),
-                            )}
-                        </span>
-                    )}
+                    <span className="lj-tile-small flex-none whitespace-nowrap">
+                        {[
+                            widget.type === 'list' && sourceId
+                                ? orKey(
+                                      t,
+                                      `screens.list.sort_hint.${sourceId}.${opt<string>('sort') ?? 'default'}`,
+                                      t(
+                                          `screens.list.sort_hint.${sourceId}.default`,
+                                      ),
+                                  )
+                                : '',
+                            // What time it covers, so a 1 h tile next to a 24 h one is not misread.
+                            opt<boolean>('show_period') !== false &&
+                            typeof payload?.period === 'string'
+                                ? t(`screens.period_short.${payload.period}`)
+                                : '',
+                        ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                    </span>
                 </div>
             )}
             <div
@@ -1149,7 +1160,13 @@ function List({ widget, schema, data, now, t }: BodyProps) {
                     >
                         {text.key && (
                             <span
-                                className="w-[6.5em] flex-none truncate font-mono text-(--s-ink-2)"
+                                className={cn(
+                                    'truncate font-mono text-(--s-ink-2)',
+                                    // Narrow: the key gives way before a short value does.
+                                    narrow
+                                        ? 'min-w-0 flex-1'
+                                        : 'w-[6.5em] flex-none',
+                                )}
                                 // A symbol always shows its state; a name only when it needs attention.
                                 style={{
                                     color:
@@ -1166,7 +1183,9 @@ function List({ widget, schema, data, now, t }: BodyProps) {
                         )}
                         <span
                             className={cn(
-                                'min-w-0 flex-1',
+                                narrow && text.key && text.main.length <= 8
+                                    ? 'flex-none'
+                                    : 'min-w-0 flex-1',
                                 !wrap && 'truncate',
                             )}
                         >

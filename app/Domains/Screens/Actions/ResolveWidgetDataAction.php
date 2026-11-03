@@ -86,7 +86,10 @@ class ResolveWidgetDataAction
             WidgetType::Health => $this->checks($projects, $scope, $options),
         };
 
-        return ['type' => $type->value, 'source' => $source->id, 'unit' => $source->unit, ...$data];
+        // The period it covers, for the tile's corner label; health is always now.
+        $period = $type === WidgetType::Health ? null : $scope->period->value;
+
+        return ['type' => $type->value, 'source' => $source->id, 'unit' => $source->unit, 'period' => $period, ...$data];
     }
 
     /**

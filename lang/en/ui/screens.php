@@ -52,6 +52,7 @@ return [
         'schedule' => 'Light by day, dark at night',
     ],
 
+    'period_short' => ['1h' => '1 h', '24h' => '24 h', '7d' => '7 d', '30d' => '30 d'],
     'periods' => [
         '1h' => 'Last hour',
         '24h' => 'Last 24 hours',
@@ -126,6 +127,8 @@ return [
 
     'inspector' => [
         'label' => 'Settings',
+        'period' => 'Over',
+        'period_screen' => 'Screen default',
         // Button.
         'remove' => 'Remove',
         'title' => 'Title',
@@ -219,6 +222,7 @@ return [
         'projects' => ['label' => 'Projects'],
         'environment' => ['label' => 'Environment'],
         'period' => ['label' => 'Period'],
+        'show_period' => ['label' => 'Show the period in the corner'],
         'release' => ['label' => 'Release', 'options' => ['all' => 'All', 'current' => 'Current only', 'previous' => 'Previous']],
         'filter' => ['label' => 'Filter', 'placeholder' => 'route, queue, job or host; * matches anything'],
         'show_title' => ['label' => 'Show title'],
@@ -455,5 +459,6 @@ return [
     'validation' => [
         'source' => 'This widget cannot show that.',
         'duplicate_id' => 'Two widgets have the same id.',
+        'overlap' => 'This widget covers a cell another widget already uses.',
     ],
 ];

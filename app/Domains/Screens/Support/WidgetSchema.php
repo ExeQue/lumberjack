@@ -6,6 +6,7 @@ namespace App\Domains\Screens\Support;
 
 use App\Domains\Screens\Enums\ReleaseScope;
 use App\Domains\Screens\Enums\WidgetType;
+use App\Domains\Screens\Models\Screen;
 use App\Domains\Shared\Enums\Period;
 use Closure;
 use Illuminate\Validation\Rule;
@@ -15,7 +16,8 @@ use Illuminate\Validation\Rule;
  * the designer renders (it gets all() as a prop), the server validates against (rules())
  * and stores through (clean()), so client and server agree.
  *
- * A widget is {id, type, source, rotate, w, h, title, options, scope}. Data types are the
+ * A widget is {id, type, source, rotate, x, y, w, h, title, options, scope}, x and y its
+ * 0-based column and row (see ScreenLayout). Data types are the
  * WidgetType cases and show a source of WidgetSources; clock and empty need none. Options
  * live in sections of fields: select (one of its values), toggle, text, number, checks
  * (health check uuids). A field marked data is read by ResolveWidgetDataAction, so a
@@ -128,6 +130,9 @@ final class WidgetSchema
             "{$prefix}.source" => $data !== null ? ['required', 'string', $source] : ['nullable'],
             "{$prefix}.rotate" => ['nullable', 'array', 'max:'.self::MAX_ROTATE],
             "{$prefix}.rotate.*" => ['string', $source],
+            // Without a position (an older designer) it flows like before; see ScreenLayout.
+            "{$prefix}.x" => ['nullable', 'integer', 'min:0', 'max:'.(Screen::MAX_COLS - 1)],
+            "{$prefix}.y" => ['nullable', 'integer', 'min:0', 'max:'.ScreenLayout::MAX_Y],
             "{$prefix}.w" => ['required', 'integer', 'min:1', 'max:'.$cols],
             "{$prefix}.h" => ['required', 'integer', 'min:1', 'max:'.$rows],
             "{$prefix}.title" => ['nullable', 'string', 'max:100'],
@@ -165,8 +170,8 @@ final class WidgetSchema
      * A validated widget as it is stored: known keys only, options and scope trimmed to
      * what its type takes, empty values left out so the defaults apply.
      *
-     * @param  array<string, mixed>  $widget
-     * @return array{id: string, type: string, source: string|null, rotate: list<string>, w: int, h: int, title: string|null, options: array<string, mixed>, scope: array<string, mixed>}
+     * @param  array<string, mixed>  $widget  positioned (ScreenLayout::positioned())
+     * @return array{id: string, type: string, source: string|null, rotate: list<string>, x: int, y: int, w: int, h: int, title: string|null, options: array<string, mixed>, scope: array<string, mixed>}
      */
     public static function clean(array $widget, int $cols, int $rows): array
     {
@@ -214,6 +219,8 @@ final class WidgetSchema
             'type' => $type,
             'source' => $source,
             'rotate' => array_slice($rotate, 0, self::MAX_ROTATE),
+            'x' => max(0, (int) $widget['x']),
+            'y' => max(0, (int) $widget['y']),
             'w' => max(1, min($cols, (int) $widget['w'])),
             'h' => max(1, min($rows, (int) $widget['h'])),
             'title' => $title !== '' ? $title : null,
@@ -252,6 +259,7 @@ final class WidgetSchema
         ])));
         $display = fn (bool $data): array => $section('display', array_values(array_filter([
             $toggle('show_title', true),
+            $data ? $toggle('show_period', true) : null,
             $data ? $toggle('status_colors', true) : null,
             $select('text_size', ['auto', 's', 'm', 'l', 'xl'], 'auto'),
             $select('align', ['left', 'center'], 'left'),

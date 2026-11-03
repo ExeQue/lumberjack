@@ -87,6 +87,10 @@ minutes by default), amber past half of them, and says why (**Backlog** or **Wai
 A muted queue stays calm. Limits set on the widget replace that and count on its size.
 A list of hosts shows each host once with CPU, memory and disk meters.
 
+Every widget with data names its period in the top right corner (1 h, 24 h, 7 d, 30 d);
+**Over** in the inspector picks it per widget, or follows the screen. **Show the period
+in the corner** under Display turns the label off.
+
 Each widget's settings are grouped in sections that open and close:
 
 - **Value**, **Scale**, **Chart**, **Rows**, **Checks** or **Clock**: what the type
