@@ -1,6 +1,6 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
-import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
+import { Head, Link, router, usePage } from "@inertiajs/react";
+import { useEffect, useState } from "react";
+import { DashboardFilterControls, TopBar } from "@/components/lj/top-bar";
 import {
     bucketLabel,
     Badge,
@@ -17,26 +17,26 @@ import {
     thClass,
     Sparkline,
     spreadTips,
-} from '@/components/lj/ui';
-import { PageBody } from '@/layouts/lumberjack-layout';
+} from "@/components/lj/ui";
+import { PageBody } from "@/layouts/lumberjack-layout";
 import {
     formatDuration,
     formatNumber,
     formatPercent,
     formatTime,
-} from '@/lib/format';
-import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
-import { useProjectLive } from '@/lib/use-project-live';
-import { show as projectShow } from '@/routes/projects';
-import { index as routesIndex } from '@/routes/routes';
-import { show as traceShow } from '@/routes/traces';
+} from "@/lib/format";
+import { useT } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { useProjectLive } from "@/lib/use-project-live";
+import { show as projectShow } from "@/routes/projects";
+import { index as routesIndex } from "@/routes/routes";
+import { show as traceShow } from "@/routes/traces";
 import type {
     DashboardFilters,
     ProjectHeader,
     RouteStat,
     TeamShared,
-} from '@/types/lumberjack';
+} from "@/types/lumberjack";
 
 type Filters = DashboardFilters & {
     sort: string;
@@ -76,12 +76,12 @@ export default function RoutesIndex({
     const { team } = usePage<{ team: TeamShared }>().props;
     const [search, setSearch] = useState(filters.search);
 
-    useProjectLive(project.uuid, ['performance.changed'], ['routes', 'detail']);
+    useProjectLive(project.uuid, ["performance.changed"], ["routes", "detail"]);
 
     const apply = (changes: Partial<Filters>, only?: string[]) => {
         const query = Object.fromEntries(
             Object.entries({ ...filters, ...changes }).filter(
-                ([, v]) => v !== null && v !== '',
+                ([, v]) => v !== null && v !== "",
             ),
         ) as Record<string, string>;
 
@@ -107,17 +107,17 @@ export default function RoutesIndex({
         r.route === filters.route && r.method === filters.method;
     const pick = (r: RouteStat) =>
         isSelected(r)
-            ? apply({ route: '', method: '' }, ['detail', 'filters'])
+            ? apply({ route: "", method: "" }, ["detail", "filters"])
             : apply({ route: r.route, method: r.method }, [
-                  'detail',
-                  'filters',
+                  "detail",
+                  "filters",
               ]);
     const selected = routes.find(isSelected);
     const totalRequests = routes.reduce((sum, r) => sum + r.requests, 0);
 
     return (
         <>
-            <Head title={`${t('routes.title')} · ${project.name}`} />
+            <Head title={`${t("routes.title")} · ${project.name}`} />
             <TopBar
                 crumbs={[
                     { label: team.name },
@@ -126,7 +126,7 @@ export default function RoutesIndex({
                         href: projectShow(project.uuid).url,
                         mono: true,
                     },
-                    { label: t('routes.title') },
+                    { label: t("routes.title") },
                 ]}
             >
                 <DashboardFilterControls
@@ -136,27 +136,27 @@ export default function RoutesIndex({
             </TopBar>
             <PageBody wide>
                 <PageTitle
-                    title={t('routes.title')}
+                    title={t("routes.title")}
                     description={t(
-                        'routes.description',
+                        "routes.description",
                         { requests: formatNumber(totalRequests) },
                         routes.length,
                     )}
                     actions={
                         <>
                             <label className="sr-only" htmlFor="route-search">
-                                {t('routes.search')}
+                                {t("routes.search")}
                             </label>
                             <Input
                                 id="route-search"
                                 type="search"
-                                placeholder={t('routes.search')}
+                                placeholder={t("routes.search")}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="w-56 max-w-full"
                             />
                             <label className="sr-only" htmlFor="route-sort">
-                                {t('routes.sort.label')}
+                                {t("routes.sort.label")}
                             </label>
                             <Select
                                 id="route-sort"
@@ -166,16 +166,19 @@ export default function RoutesIndex({
                                 }
                             >
                                 <option value="p95">
-                                    {t('routes.sort.p95')}
+                                    {t("routes.sort.p95")}
                                 </option>
                                 <option value="count">
-                                    {t('routes.sort.count')}
+                                    {t("routes.sort.count")}
                                 </option>
                                 <option value="errors">
-                                    {t('routes.sort.errors')}
+                                    {t("routes.sort.errors")}
                                 </option>
                                 <option value="total">
-                                    {t('routes.sort.total')}
+                                    {t("routes.sort.total")}
+                                </option>
+                                <option value="apdex">
+                                    {t("routes.sort.apdex")}
                                 </option>
                             </Select>
                         </>
@@ -184,18 +187,18 @@ export default function RoutesIndex({
 
                 <Card className="overflow-x-auto">
                     {routes.length === 0 ? (
-                        <EmptyState title={t('routes.empty_title')}>
-                            {t('routes.empty_body')}
+                        <EmptyState title={t("routes.empty_title")}>
+                            {t("routes.empty_body")}
                         </EmptyState>
                     ) : (
                         <table className={tableClass}>
                             <thead>
                                 <tr>
                                     <th className={thClass}>
-                                        {t('routes.columns.route')}
+                                        {t("routes.columns.route")}
                                     </th>
                                     <th className={`${thClass} text-right`}>
-                                        {t('routes.columns.requests')}
+                                        {t("routes.columns.requests")}
                                     </th>
                                     <th className={`${thClass} text-right`}>
                                         p50
@@ -207,13 +210,26 @@ export default function RoutesIndex({
                                         p99
                                     </th>
                                     <th className={`${thClass} text-right`}>
-                                        {t('routes.columns.error_rate')}
+                                        {t("routes.columns.error_rate")}
                                     </th>
                                     <th className={`${thClass} text-right`}>
-                                        {t('routes.columns.total')}
+                                        {t("routes.columns.total")}
+                                    </th>
+                                    <th
+                                        className={`${thClass} text-right`}
+                                        title={t("routes.columns.apdex_help", {
+                                            target: formatDuration(
+                                                APDEX_TARGET_US,
+                                            ),
+                                            tolerated: formatDuration(
+                                                4 * APDEX_TARGET_US,
+                                            ),
+                                        })}
+                                    >
+                                        {t("routes.columns.apdex")}
                                     </th>
                                     <th className={thClass}>
-                                        {t('routes.columns.trend')}
+                                        {t("routes.columns.trend")}
                                     </th>
                                 </tr>
                             </thead>
@@ -225,16 +241,16 @@ export default function RoutesIndex({
                                         <tr
                                             key={`${r.method} ${r.route}`}
                                             className={cn(
-                                                'lj-row hover:bg-panel-2/60',
-                                                active && 'bg-panel-2',
+                                                "lj-row hover:bg-panel-2/60",
+                                                active && "bg-panel-2",
                                             )}
                                         >
                                             <td
                                                 className={cn(
                                                     tdClass,
-                                                    'min-w-[280px]',
+                                                    "min-w-[280px]",
                                                     active &&
-                                                        'shadow-[inset_2px_0_0_var(--lj-amber)]',
+                                                        "shadow-[inset_2px_0_0_var(--lj-amber)]",
                                                 )}
                                             >
                                                 <button
@@ -245,7 +261,7 @@ export default function RoutesIndex({
                                                 >
                                                     <span className="text-ink-3">
                                                         {r.method}
-                                                    </span>{' '}
+                                                    </span>{" "}
                                                     {r.route}
                                                 </button>
                                             </td>
@@ -274,9 +290,9 @@ export default function RoutesIndex({
                                                     tdClass,
                                                     numClass,
                                                     r.error_rate > 0.01
-                                                        ? 'text-err'
+                                                        ? "text-err"
                                                         : r.error_rate === 0 &&
-                                                              'text-ink-3',
+                                                              "text-ink-3",
                                                 )}
                                             >
                                                 {formatPercent(r.error_rate, 2)}
@@ -285,6 +301,18 @@ export default function RoutesIndex({
                                                 className={`${tdClass} ${numClass} text-ink-2`}
                                             >
                                                 {formatDuration(r.total_us)}
+                                            </td>
+                                            <td
+                                                className={cn(
+                                                    tdClass,
+                                                    numClass,
+                                                    r.apdex < 0.7
+                                                        ? "text-err"
+                                                        : r.apdex < 0.85 &&
+                                                              "text-warn",
+                                                )}
+                                            >
+                                                {r.apdex.toFixed(2)}
                                             </td>
                                             <td className={tdClass}>
                                                 <Sparkline
@@ -296,7 +324,7 @@ export default function RoutesIndex({
                                                     )}
                                                     color="var(--lj-info)"
                                                     label={t(
-                                                        'routes.trend_label',
+                                                        "routes.trend_label",
                                                         {
                                                             count: formatNumber(
                                                                 r.requests,
@@ -321,14 +349,14 @@ export default function RoutesIndex({
                                 <span className="font-mono">
                                     <span className="text-ink-3">
                                         {detail.method}
-                                    </span>{' '}
+                                    </span>{" "}
                                     {detail.route}
                                 </span>
                             }
                             aside={
                                 selected && (
                                     <span className="text-xs text-ink-3">
-                                        {t('routes.detail.summary', {
+                                        {t("routes.detail.summary", {
                                             requests: formatNumber(
                                                 selected.requests,
                                             ),
@@ -344,19 +372,22 @@ export default function RoutesIndex({
                         />
                         <div className="flex flex-wrap">
                             <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-2 p-4">
-                                <Eyebrow>{t('routes.detail.hourly')}</Eyebrow>
+                                <Eyebrow>{t("routes.detail.hourly")}</Eyebrow>
                                 <HourlyChart
                                     hourly={detail.hourly}
                                     period={filters.period}
                                 />
+                                {selected && (
+                                    <StatusBar statuses={selected.statuses} />
+                                )}
                             </div>
                             <div className="flex min-w-0 flex-[1_1_420px] flex-col border-line md:border-l">
                                 <Eyebrow className="px-4 pt-4 pb-2">
-                                    {t('routes.detail.slowest')}
+                                    {t("routes.detail.slowest")}
                                 </Eyebrow>
                                 {detail.slowest.length === 0 ? (
                                     <p className="px-4 pb-4 text-ink-3">
-                                        {t('routes.detail.no_requests')}
+                                        {t("routes.detail.no_requests")}
                                     </p>
                                 ) : (
                                     <ul>
@@ -371,10 +402,10 @@ export default function RoutesIndex({
                                                     </time>
                                                     {s.host && ` · ${s.host}`}
                                                     {s.queries !== null &&
-                                                        ` · ${t('routes.detail.queries', {}, s.queries)}`}
+                                                        ` · ${t("routes.detail.queries", {}, s.queries)}`}
                                                     {s.trace_id && (
                                                         <>
-                                                            {' · '}
+                                                            {" · "}
                                                             <Link
                                                                 href={
                                                                     traceShow([
@@ -383,7 +414,7 @@ export default function RoutesIndex({
                                                                     ]).url
                                                                 }
                                                                 title={t(
-                                                                    'traces.open',
+                                                                    "traces.open",
                                                                 )}
                                                                 className="hover:text-amber hover:underline"
                                                             >
@@ -400,11 +431,11 @@ export default function RoutesIndex({
                                                         <Badge
                                                             tone={
                                                                 s.status >= 500
-                                                                    ? 'err'
+                                                                    ? "err"
                                                                     : s.status >=
                                                                         400
-                                                                      ? 'warn'
-                                                                      : 'neutral'
+                                                                      ? "warn"
+                                                                      : "neutral"
                                                             }
                                                         >
                                                             {s.status}
@@ -424,16 +455,80 @@ export default function RoutesIndex({
     );
 }
 
+/** Same target as RouteStatisticsQuery::APDEX_TARGET_US. */
+const APDEX_TARGET_US = 500_000;
+
+const STATUS_TONES: [keyof RouteStat["statuses"], string][] = [
+    ["2xx", "bg-ok"],
+    ["3xx", "bg-info"],
+    ["4xx", "bg-warn"],
+    ["5xx", "bg-err"],
+];
+
+function StatusBar({ statuses }: { statuses: RouteStat["statuses"] }) {
+    const t = useT();
+    const total = Math.max(
+        1,
+        Object.values(statuses).reduce((sum, n) => sum + n, 0),
+    );
+
+    return (
+        <div className="mt-2 flex flex-col gap-2">
+            <Eyebrow>{t("routes.detail.statuses")}</Eyebrow>
+            <div
+                role="img"
+                aria-label={t("routes.detail.statuses_label", {
+                    ok: formatNumber(statuses["2xx"]),
+                    redirect: formatNumber(statuses["3xx"]),
+                    client: formatNumber(statuses["4xx"]),
+                    server: formatNumber(statuses["5xx"]),
+                })}
+                className="flex h-2 overflow-hidden rounded-full bg-line"
+            >
+                {STATUS_TONES.map(([key, tone]) =>
+                    statuses[key] > 0 ? (
+                        <div
+                            key={key}
+                            className={tone}
+                            style={{
+                                width: `${(statuses[key] / total) * 100}%`,
+                            }}
+                            title={`${key} · ${formatNumber(statuses[key])}`}
+                        />
+                    ) : null,
+                )}
+            </div>
+            <div className="flex flex-wrap gap-4 text-xs text-ink-2">
+                {STATUS_TONES.map(([key, tone]) => (
+                    <span
+                        key={key}
+                        className="inline-flex items-center gap-1.5"
+                    >
+                        <span
+                            aria-hidden="true"
+                            className={`size-2.5 rounded-sm ${tone}`}
+                        />
+                        {key}
+                        <span className="font-mono text-ink-3">
+                            {formatNumber(statuses[key])}
+                        </span>
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 function HourlyChart({
     hourly,
     period,
 }: {
-    hourly: Detail['hourly'];
+    hourly: Detail["hourly"];
     period: string;
 }) {
     const t = useT();
     const max = Math.max(1, ...hourly.map((h) => h.p95 ?? 0));
-    const peak = hourly.reduce<Detail['hourly'][number] | null>(
+    const peak = hourly.reduce<Detail["hourly"][number] | null>(
         (best, h) =>
             h.p95 !== null && (best === null || h.p95 > (best.p95 ?? 0))
                 ? h
@@ -441,11 +536,11 @@ function HourlyChart({
         null,
     );
     const label = peak
-        ? t('routes.detail.chart_label', {
+        ? t("routes.detail.chart_label", {
               p95: formatDuration(peak.p95),
               time: formatTime(peak.t),
           })
-        : t('routes.detail.no_requests');
+        : t("routes.detail.no_requests");
 
     const ticks =
         hourly.length > 1
@@ -453,7 +548,7 @@ function HourlyChart({
                   (f) => hourly[Math.round(f * (hourly.length - 1))],
               )
             : hourly;
-    const tip = (h: Detail['hourly'][number]) =>
+    const tip = (h: Detail["hourly"][number]) =>
         h.p95 === null
             ? `${bucketLabel(h.t, period)} · -`
             : `${bucketLabel(h.t, period)} · p95 ${formatDuration(h.p95)} · p50 ${formatDuration(h.p50)}`;

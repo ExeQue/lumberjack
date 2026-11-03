@@ -12,6 +12,7 @@ return [
         'count' => 'Most requests',
         'errors' => 'Highest error rate',
         'total' => 'Most total time',
+        'apdex' => 'Lowest Apdex',
     ],
     'columns' => [
         'trend' => 'Requests over time',
@@ -19,6 +20,8 @@ return [
         'requests' => 'Requests',
         'error_rate' => 'Error rate',
         'total' => 'Total time',
+        'apdex' => 'Apdex',
+        'apdex_help' => 'Share of satisfied requests: within :target is satisfied, within :tolerated counts half, slower or a 5xx counts nothing.',
     ],
     'empty_title' => 'No requests yet',
     'empty_body' => 'Nothing matches the filters in this period.',
@@ -29,6 +32,8 @@ return [
         'slowest' => 'Slowest requests',
         'queries' => '{1} 1 query|[2,*] :count queries',
         'no_requests' => 'No requests in this period.',
+        'statuses' => 'Status codes',
+        'statuses_label' => ':ok 2xx, :redirect 3xx, :client 4xx, :server 5xx',
     ],
     'trend_label' => ':count requests in the period',
 ];

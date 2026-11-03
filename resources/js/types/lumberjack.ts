@@ -86,6 +86,8 @@ export type RouteStat = {
     p99: number;
     error_rate: number;
     total_us: number;
+    apdex: number;
+    statuses: Record<'2xx' | '3xx' | '4xx' | '5xx', number>;
     series?: number[];
 };
 
