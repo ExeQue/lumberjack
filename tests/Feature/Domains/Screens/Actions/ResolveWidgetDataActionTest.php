@@ -94,6 +94,10 @@ describe('a stat', function () {
         RequestRun::factory()->for($this->project)->count(2)->create(['release' => 'v1', 'occurred_at' => now()->subHours(3)]);
         RequestRun::factory()->for($this->project)->count(5)->create(['release' => 'v2', 'occurred_at' => now()->subHour()]);
 
+        $release = ($this->resolve)(WidgetType::Stat, 'current_release');
+        expect($release['release'])->toHaveKeys(['since', 'previous', 'error_rate', 'error_rate_change'])
+            ->and($release['release']['previous'])->toBe('v1');
+
         expect(($this->resolve)(WidgetType::Stat, 'current_release')['value'])->toBe('v2')
             ->and(($this->resolve)(WidgetType::Stat, 'requests', scope: new WidgetScope(release: ReleaseScope::Current))['value'])->toEqual(5)
             ->and(($this->resolve)(WidgetType::Stat, 'requests', scope: new WidgetScope(release: ReleaseScope::Previous))['value'])->toEqual(2);
@@ -188,7 +192,7 @@ describe('the edges of each type', function () {
     it('has no value for a source it cannot read, and no release without projects', function () {
         $empty = app(ResolveWidgetDataAction::class)->execute(Team::factory()->create(), WidgetType::Stat, 'current_release', new WidgetScope());
 
-        expect($empty['value'])->toBeNull()->and($empty['state'])->toBeNull();
+        expect($empty['value'])->toBeNull()->and($empty['state'])->toBeNull()->and($empty)->not->toHaveKey('release');
     });
 
     it('overlays the previous period on a chart, moved onto its own times', function () {

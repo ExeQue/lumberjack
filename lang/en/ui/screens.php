@@ -247,6 +247,11 @@ return [
         ],
     ],
 
+    'release' => [
+        'since' => 'out for :age',
+        'previous' => 'after :release',
+        'errors' => '5xx :rate',
+    ],
     'list' => [
         'empty' => 'Nothing to show.',
         'oldest' => 'oldest :age',
