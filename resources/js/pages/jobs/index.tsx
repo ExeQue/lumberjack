@@ -1,5 +1,6 @@
 import { Relative, useNow } from '@/components/lj/relative';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import { TriangleAlert } from 'lucide-react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
@@ -8,6 +9,8 @@ import {
     Card,
     CardHeader,
     EmptyState,
+    Field,
+    Input,
     PageTitle,
     Select,
     Sparkline,
@@ -32,6 +35,15 @@ import { useProjectLive } from '@/lib/use-project-live';
 import { show as issueShow } from '@/routes/issues';
 import { show as traceShow } from '@/routes/traces';
 import { index as jobsIndex } from '@/routes/jobs';
+import { alert as queueAlert } from '@/routes/queues';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { show as projectShow } from '@/routes/projects';
 import type {
     DashboardFilters,
@@ -53,7 +65,27 @@ type QueueStat = {
     series: { t: string; v: number }[];
 };
 
+type QueueThreshold = {
+    connection: string;
+    queue: string;
+    size: number | null;
+    oldest_minutes: number | null;
+    sustained_minutes: number | null;
+    muted: boolean;
+};
+
+type QueueAlerts = {
+    rule: {
+        size: number | null;
+        age_minutes: number | null;
+        sustain_minutes: number;
+    } | null;
+    own: QueueThreshold[];
+    can_update: boolean;
+};
+
 type Props = {
+    queue_alerts: QueueAlerts;
     project: ProjectHeader;
     filters: Filters;
     queues: string[];
@@ -107,6 +139,7 @@ export default function JobsIndex({
     filters,
     queues,
     queue_stats,
+    queue_alerts,
     stuck,
     stuck_names,
     jobs,
@@ -244,7 +277,12 @@ export default function JobsIndex({
                 )}
 
                 {queue_stats.length > 0 && (
-                    <QueuesCard stats={queue_stats} period={filters.period} />
+                    <QueuesCard
+                        stats={queue_stats}
+                        period={filters.period}
+                        alerts={queue_alerts}
+                        project={project.uuid}
+                    />
                 )}
 
                 <Card className="overflow-x-auto">
@@ -632,10 +670,169 @@ export default function JobsIndex({
 /** A sample older than this means its agent stopped reporting. */
 const STALE_MS = 5 * 60_000;
 
-function QueuesCard({ stats, period }: { stats: QueueStat[]; period: string }) {
+/**
+ * One queue's own backlog thresholds: an empty field uses the rule's, muted never alerts.
+ */
+function QueueAlertDialog({
+    project,
+    queue,
+    own,
+    rule,
+    onClose,
+}: {
+    project: string;
+    queue: { connection: string; queue: string };
+    own: QueueThreshold | undefined;
+    rule: QueueAlerts['rule'];
+    onClose: () => void;
+}) {
+    const t = useT();
+    const form = useForm({
+        connection: queue.connection,
+        queue: queue.queue,
+        size: own?.size?.toString() ?? '',
+        oldest_minutes: own?.oldest_minutes?.toString() ?? '',
+        sustained_minutes: own?.sustained_minutes?.toString() ?? '',
+        muted: own?.muted ?? false,
+    });
+    const placeholder = (value: number | null | undefined) =>
+        value === null || value === undefined
+            ? t('jobs.queues.alert.off')
+            : t('jobs.queues.alert.rule_value', { value: String(value) });
+
+    return (
+        <Dialog open onOpenChange={(open) => !open && onClose()}>
+            <DialogContent>
+                <form
+                    className="flex flex-col gap-4"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        form.transform((data) => ({
+                            ...data,
+                            size: data.size === '' ? null : Number(data.size),
+                            oldest_minutes:
+                                data.oldest_minutes === ''
+                                    ? null
+                                    : Number(data.oldest_minutes),
+                            sustained_minutes:
+                                data.sustained_minutes === ''
+                                    ? null
+                                    : Number(data.sustained_minutes),
+                        }));
+                        form.put(queueAlert(project).url, {
+                            preserveScroll: true,
+                            onSuccess: onClose,
+                        });
+                    }}
+                >
+                    <DialogHeader>
+                        <DialogTitle>
+                            {t('jobs.queues.alert.title', {
+                                queue: `${queue.connection}:${queue.queue}`,
+                            })}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {t('jobs.queues.alert.description')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Field
+                        label={t('jobs.queues.alert.size')}
+                        htmlFor="queue-alert-size"
+                        error={form.errors.size}
+                    >
+                        <Input
+                            id="queue-alert-size"
+                            type="number"
+                            min={1}
+                            value={form.data.size}
+                            placeholder={placeholder(rule?.size)}
+                            onChange={(e) =>
+                                form.setData('size', e.target.value)
+                            }
+                        />
+                    </Field>
+                    <Field
+                        label={t('jobs.queues.alert.oldest')}
+                        htmlFor="queue-alert-oldest"
+                        error={form.errors.oldest_minutes}
+                    >
+                        <Input
+                            id="queue-alert-oldest"
+                            type="number"
+                            min={1}
+                            value={form.data.oldest_minutes}
+                            placeholder={placeholder(rule?.age_minutes)}
+                            onChange={(e) =>
+                                form.setData('oldest_minutes', e.target.value)
+                            }
+                        />
+                    </Field>
+                    <Field
+                        label={t('jobs.queues.alert.sustained')}
+                        htmlFor="queue-alert-sustained"
+                        error={form.errors.sustained_minutes}
+                    >
+                        <Input
+                            id="queue-alert-sustained"
+                            type="number"
+                            min={1}
+                            value={form.data.sustained_minutes}
+                            placeholder={placeholder(rule?.sustain_minutes)}
+                            onChange={(e) =>
+                                form.setData(
+                                    'sustained_minutes',
+                                    e.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            checked={form.data.muted}
+                            onChange={(e) =>
+                                form.setData('muted', e.target.checked)
+                            }
+                        />
+                        {t('jobs.queues.alert.muted')}
+                    </label>
+                    <DialogFooter>
+                        <Button type="button" onClick={onClose}>
+                            {t('jobs.queues.alert.cancel')}
+                        </Button>
+                        <Button
+                            variant="default"
+                            type="submit"
+                            disabled={form.processing}
+                        >
+                            {t('jobs.queues.alert.save')}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function QueuesCard({
+    stats,
+    period,
+    alerts,
+    project,
+}: {
+    stats: QueueStat[];
+    period: string;
+    alerts: QueueAlerts;
+    project: string;
+}) {
     // Relative times in the text below stay current.
     const now = useNow();
     const t = useT();
+    const [editing, setEditing] = useState<QueueStat | null>(null);
+    const ownOf = (q: { connection: string; queue: string }) =>
+        alerts.own.find(
+            (o) => o.connection === q.connection && o.queue === q.queue,
+        );
 
     return (
         <Card aria-labelledby="queues-title">
@@ -662,6 +859,11 @@ function QueuesCard({ stats, period }: { stats: QueueStat[]; period: string }) {
                             </th>
                             <th className={thClass}>
                                 {t('jobs.queues.columns.trend')}
+                            </th>
+                            <th className={thClass}>
+                                <span className="sr-only">
+                                    {t('jobs.queues.columns.alert')}
+                                </span>
                             </th>
                         </tr>
                     </thead>
@@ -753,12 +955,59 @@ function QueuesCard({ stats, period }: { stats: QueueStat[]; period: string }) {
                                             </div>
                                         )}
                                     </td>
+                                    <td
+                                        className={`${tdClass} whitespace-nowrap`}
+                                    >
+                                        <span className="flex items-center justify-end gap-2">
+                                            {ownOf(q) && (
+                                                <Badge
+                                                    tone={
+                                                        ownOf(q)?.muted
+                                                            ? 'neutral'
+                                                            : 'info'
+                                                    }
+                                                >
+                                                    {ownOf(q)?.muted
+                                                        ? t(
+                                                              'jobs.queues.alert.muted_badge',
+                                                          )
+                                                        : t(
+                                                              'jobs.queues.alert.custom',
+                                                          )}
+                                                </Badge>
+                                            )}
+                                            {alerts.can_update && (
+                                                <Button
+                                                    onClick={() =>
+                                                        setEditing(q)
+                                                    }
+                                                    aria-label={t(
+                                                        'jobs.queues.alert.edit',
+                                                        { queue: q.queue },
+                                                    )}
+                                                >
+                                                    {t(
+                                                        'jobs.queues.alert.button',
+                                                    )}
+                                                </Button>
+                                            )}
+                                        </span>
+                                    </td>
                                 </tr>
                             );
                         })}
                     </tbody>
                 </table>
             </div>
+            {editing && (
+                <QueueAlertDialog
+                    project={project}
+                    queue={editing}
+                    own={ownOf(editing)}
+                    rule={alerts.rule}
+                    onClose={() => setEditing(null)}
+                />
+            )}
         </Card>
     );
 }

@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Data;
 
+use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\Alerts\Models\QueueAlertThreshold;
+use App\Domains\Projects\Models\Project;
+
 /**
  * When a queue backlog rule fires: more than this many jobs waiting and/or the oldest
- * waiting longer than this, for this long. A null threshold is not checked.
+ * waiting longer than this, for this long. A null threshold is not checked. $custom is
+ * set when a queue's own thresholds replaced some of the rule's; $muted when that queue
+ * never alerts.
  */
 final readonly class QueueBacklogSettings
 {
@@ -20,7 +26,32 @@ final readonly class QueueBacklogSettings
         public ?int $size = self::DEFAULT_SIZE,
         public ?int $ageMinutes = self::DEFAULT_AGE_MINUTES,
         public int $sustainMinutes = self::DEFAULT_SUSTAIN_MINUTES,
+        public bool $custom = false,
+        public bool $muted = false,
     ) {
+    }
+
+    /**
+     * The thresholds that count for one queue: the project's own for it where it set one,
+     * the rule's otherwise. The one place the check and the alert both read them from.
+     */
+    public static function forQueue(AlertRule $rule, Project $project, string $connection, string $queue): self
+    {
+        $settings = $rule->queueBacklogSettings();
+        $own = QueueAlertThreshold::query()->where('project_id', $project->id)->where('connection', $connection)->where('queue', $queue)->first();
+
+        return $own === null ? $settings : $settings->overriddenBy($own);
+    }
+
+    public function overriddenBy(QueueAlertThreshold $own): self
+    {
+        return new self(
+            $own->size ?? $this->size,
+            $own->oldest_minutes ?? $this->ageMinutes,
+            $own->sustained_minutes ?? $this->sustainMinutes,
+            $own->size !== null || $own->oldest_minutes !== null || $own->sustained_minutes !== null,
+            $own->muted,
+        );
     }
 
     /**
@@ -65,6 +96,6 @@ final readonly class QueueBacklogSettings
             $this->ageMinutes !== null ? trans_choice('alerts.queue_backlog.threshold_age', $this->ageMinutes) : null,
         ]);
 
-        return __('alerts.queue_backlog.threshold', ['what' => implode(' '.__('alerts.queue_backlog.or').' ', $parts), 'minutes' => $this->sustainMinutes]);
+        return __($this->custom ? 'alerts.queue_backlog.threshold_custom' : 'alerts.queue_backlog.threshold', ['what' => implode(' '.__('alerts.queue_backlog.or').' ', $parts), 'minutes' => $this->sustainMinutes]);
     }
 }

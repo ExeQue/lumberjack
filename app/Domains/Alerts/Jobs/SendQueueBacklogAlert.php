@@ -6,6 +6,7 @@ namespace App\Domains\Alerts\Jobs;
 
 use App\Domains\Alerts\Actions\SendProjectAlertAction;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
+use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
@@ -54,7 +55,7 @@ class SendQueueBacklogAlert implements ShouldQueue
             $this->queueName,
             $this->size,
             $this->oldestAgeSeconds,
-            $this->rule->queueBacklogSettings(),
+            QueueBacklogSettings::forQueue($this->rule, $project, $this->connectionName, $this->queueName),
             CarbonImmutable::parse($this->since),
             $this->recovered,
             route('jobs.index', $project),

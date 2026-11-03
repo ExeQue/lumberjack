@@ -93,6 +93,15 @@ back under, and starts again at most once every 30 minutes, so a queue that hove
 around a threshold does not flood the channel. The rule takes every queue the agents
 report; environments do not apply to it.
 
+A queue can have its own thresholds: **Alert** next to it in the Jobs page's
+[Queues card](./performance#queues) sets the jobs waiting, the oldest wait and how long,
+for that queue only, or mutes it so it never alerts. A field left empty keeps the rule's,
+so a queue that only needs more patience can set just the minutes. They belong to the
+project and apply whichever rule counts for it, the team's or its own; the project's
+Alerts settings list them under the rules. The alert names the thresholds it used, with
+"(this queue)" when they are the queue's own. Setting them needs the right to change
+the project.
+
 This is the alert that catches dead workers: with no worker running, no job starts, so
 no wait time is measured, but the queue size keeps growing. The check runs every minute
 (`php artisan lumberjack:check-queue-backlogs` in the schedule) on the latest sample

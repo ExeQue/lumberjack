@@ -9,6 +9,7 @@ use App\Domains\Administration\Http\Controllers\SetupController;
 use App\Domains\Administration\Http\Middleware\EnsureSetupIsOpen;
 use App\Domains\Administration\Http\Middleware\EnsureUserIsAdmin;
 use App\Domains\Alerts\Http\Controllers\AlertController;
+use App\Domains\Alerts\Http\Controllers\QueueAlertThresholdController;
 use App\Domains\Commands\Http\Controllers\CommandController;
 use App\Domains\Health\Http\Controllers\HealthController;
 use App\Domains\Issues\Http\Controllers\IssueActionController;
@@ -81,6 +82,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('releases', ReleaseController::class)->name('releases.index');
         Route::get('traces/{trace}', TraceController::class)->where('trace', '[A-Za-z0-9._:-]{1,64}')->name('traces.show');
         Route::get('jobs', JobController::class)->name('jobs.index');
+        Route::put('jobs/queue-alert', [QueueAlertThresholdController::class, 'update'])->name('queues.alert');
         Route::get('schedule', [ScheduleController::class, 'index'])->name('schedule.index');
         Route::get('commands', CommandController::class)->name('commands.index');
         Route::delete('schedule/{scheduledTask}', [ScheduleController::class, 'destroy'])->name('schedule.destroy');
@@ -122,6 +124,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('users/{user}/password-change', [AdminUserController::class, 'requirePasswordChange'])->name('admin.users.password-change');
         Route::post('users/{user}/password-reset', [AdminUserController::class, 'sendReset'])->name('admin.users.reset');
         Route::get('audit', AdminAuditController::class)->name('admin.audit');
+        Route::get('retention', [RetentionController::class, 'show'])->name('admin.retention');
+        Route::put('retention', [RetentionController::class, 'application'])->name('admin.retention.update');
     });
 
     Route::get('team', [TeamController::class, 'show'])->name('team.show');

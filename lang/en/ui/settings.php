@@ -96,6 +96,15 @@ return [
     ],
     'alerts' => [
         'title' => 'Alerts',
+        'queues' => [
+            'title' => 'Queue thresholds',
+            'description' => 'Queues with their own backlog thresholds; everything not set uses the queue backlog rule above.',
+            'size' => 'over :size jobs',
+            'oldest' => 'oldest over :minutes min',
+            'sustained' => 'for :minutes min',
+            'muted' => 'muted, never alerts',
+            'change' => 'Change them on the Jobs page',
+        ],
         'channels_description' => 'Channels only this project uses, such as a webhook to the app itself. The team\'s shared channels are on the team\'s Alerts page and can be picked in the rules below too.',
     ],
     'triage' => [
