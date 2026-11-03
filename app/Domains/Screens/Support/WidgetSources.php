@@ -66,7 +66,9 @@ final class WidgetSources
             new WidgetSource($stat, 'failed_jobs', 'count', 1, 10, metric: Metric::JobFailures, filterOn: 'job'),
             new WidgetSource($stat, 'queue_size', 'count', 100, 1000, metric: Metric::QueueSize, filterOn: 'queue'),
             new WidgetSource($stat, 'agents_online', 'count', red: 0, lowIsBad: true, filterOn: 'host'),
+            new WidgetSource($stat, 'host_cpu', 'ratio', 0.7, 0.9, metric: Metric::CpuLoad, filterOn: 'host'),
             new WidgetSource($stat, 'host_memory', 'ratio', 0.8, 0.9, metric: Metric::MemoryUsed, filterOn: 'host'),
+            new WidgetSource($stat, 'host_disk', 'ratio', 0.8, 0.9, metric: Metric::DiskUsed, filterOn: 'host'),
             new WidgetSource($stat, 'current_release', 'text'),
             new WidgetSource($stat, 'lcp_p75', 'ms', 2500, 4000, metric: Metric::LcpP75, filterOn: 'route'),
 
@@ -92,6 +94,7 @@ final class WidgetSources
             new WidgetSource($chart, 'failed_jobs', 'count', metric: Metric::JobFailures, filterOn: 'job'),
             new WidgetSource($chart, 'host_cpu', 'ratio', red: 0.9, metric: Metric::CpuLoad, filterOn: 'host'),
             new WidgetSource($chart, 'host_memory', 'ratio', red: 0.9, metric: Metric::MemoryUsed, filterOn: 'host'),
+            new WidgetSource($chart, 'host_disk', 'ratio', red: 0.9, metric: Metric::DiskUsed, filterOn: 'host'),
             new WidgetSource($chart, 'lcp_p75', 'ms', red: 4000, metric: Metric::LcpP75, filterOn: 'route'),
 
             // List: rows, worst or newest first.

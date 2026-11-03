@@ -38,7 +38,9 @@ return [
             'failed_jobs' => 'Failed jobs',
             'queue_size' => 'Queue size',
             'agents_online' => 'Agents online',
+            'host_cpu' => 'Highest host CPU',
             'host_memory' => 'Highest host memory',
+            'host_disk' => 'Highest host disk',
             'current_release' => 'Current release',
             'lcp_p75' => 'LCP p75',
         ],
@@ -64,6 +66,7 @@ return [
             'failed_jobs' => 'Failed jobs',
             'host_cpu' => 'Host CPU',
             'host_memory' => 'Host memory',
+            'host_disk' => 'Host disk',
             'lcp_p75' => 'LCP p75',
         ],
         'list' => [

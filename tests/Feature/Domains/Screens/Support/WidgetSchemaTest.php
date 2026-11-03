@@ -66,9 +66,9 @@ describe('validating a widget', function () {
     })->with([
         'a check that is no uuid' => [['id' => 'e', 'type' => 'health', 'source' => 'checks', 'w' => 1, 'h' => 1, 'options' => ['checks' => ['x']]], 'w.options.checks.0'],
         'an unknown time zone' => [['id' => 'f', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['timezone' => 'Nowhere']], 'w.options.timezone'],
-        'a gauge source on a stat' => [['id' => 'a', 'type' => 'stat', 'source' => 'host_disk', 'w' => 1, 'h' => 1], 'w.source'],
+        'a gauge source on a stat' => [['id' => 'a', 'type' => 'stat', 'source' => 'health_uptime', 'w' => 1, 'h' => 1], 'w.source'],
         'a widget that is no object' => [[], 'w'],
-        'a rotated value of another type' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'host_disk']], 'w' => 1, 'h' => 1], 'w.rotate.0'],
+        'a rotated value of another type' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'health_uptime']], 'w' => 1, 'h' => 1], 'w.rotate.0'],
         'a rotated value without a source' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['seconds' => 5]], 'w' => 1, 'h' => 1], 'w.rotate.0'],
         'a rotated value shown for no time' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'seconds' => 0]], 'w' => 1, 'h' => 1], 'w.rotate.0.seconds'],
         'a rotated value with a limit that is no number' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'options' => ['red' => 'high']]], 'w' => 1, 'h' => 1], 'w.rotate.0.options.red'],
