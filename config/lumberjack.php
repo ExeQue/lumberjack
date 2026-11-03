@@ -18,12 +18,12 @@ return [
 
     'mail' => [
         'alerts_from' => [
-            'address' => env('MAIL_ALERTS_FROM_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
-            'name' => env('MAIL_ALERTS_FROM_NAME', 'Lumberjack'),
+            'address' => env('MAIL_ALERTS_FROM_ADDRESS') ?: env('MAIL_FROM_ADDRESS', 'hello@example.com'),
+            'name' => env('MAIL_ALERTS_FROM_NAME') ?: 'Lumberjack',
         ],
         'notifications_from' => [
-            'address' => env('MAIL_NOTIFICATIONS_FROM_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
-            'name' => env('MAIL_NOTIFICATIONS_FROM_NAME', 'Lumberjack'),
+            'address' => env('MAIL_NOTIFICATIONS_FROM_ADDRESS') ?: env('MAIL_FROM_ADDRESS', 'hello@example.com'),
+            'name' => env('MAIL_NOTIFICATIONS_FROM_NAME') ?: 'Lumberjack',
         ],
     ],
 

@@ -32,6 +32,7 @@ use App\Domains\Repositories\Http\Controllers\RepositoryController;
 use App\Domains\Retention\Http\Controllers\RetentionController;
 use App\Domains\Schedule\Http\Controllers\ScheduleController;
 use App\Domains\Search\Http\Controllers\SearchController;
+use App\Domains\Shared\Http\Controllers\MailPreviewController;
 use App\Domains\Teams\Http\Controllers\InvitationController;
 use App\Domains\Teams\Http\Controllers\MemberController;
 use App\Domains\Teams\Http\Controllers\TeamController;
@@ -146,3 +147,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
+
+// Every mail with sample data, light and dark; local development only. See docs/administration.md.
+if (app()->environment('local')) {
+    Route::middleware('auth')->prefix('dev/mail')->group(function () {
+        Route::get('/', [MailPreviewController::class, 'index'])->name('dev.mail.index');
+        Route::get('{name}', [MailPreviewController::class, 'show'])->name('dev.mail.show');
+        Route::get('{name}/{scheme}', [MailPreviewController::class, 'frame'])->whereIn('scheme', ['light', 'dark'])->name('dev.mail.frame');
+    });
+}

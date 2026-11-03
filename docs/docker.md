@@ -56,6 +56,8 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
                 MAIL_PASSWORD: ${MAIL_PASSWORD:-}
                 MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-lumberjack@example.com}
                 MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Lumberjack}
+                MAIL_ALERTS_FROM_ADDRESS: ${MAIL_ALERTS_FROM_ADDRESS:-}
+                MAIL_NOTIFICATIONS_FROM_ADDRESS: ${MAIL_NOTIFICATIONS_FROM_ADDRESS:-}
             volumes:
                 - lumberjack-storage:/app/storage
             # Lets DB_HOST / REDIS_HOST=host.docker.internal reach services on this server.
@@ -188,7 +190,7 @@ Everything is set through environment variables in `.env.docker`.
 | `LUMBERJACK_PORT`              | `8080`         | Port on the host                                                                                                                  |
 | `HORIZON_INGEST_PROCESSES`     | `2`            | Most workers for incoming telemetry                                                                                               |
 | `HORIZON_BACKGROUND_PROCESSES` | `2`            | Most workers for everything else (alerts, pruning)                                                                                |
-| `MAIL_*`                       |                | SMTP for invitations, password resets and e-mail alerts                                                                           |
+| `MAIL_*`                       |                | SMTP for invitations, password resets and e-mail alerts; see [Mail](./administration#mail) for the two sender addresses           |
 | `TRUSTED_PROXIES`              | private ranges | Proxies whose `X-Forwarded-*` headers are believed; `*` for any                                                                   |
 | `LUMBERJACK_MIGRATE`           | `true`         | Run database migrations on start                                                                                                  |
 
