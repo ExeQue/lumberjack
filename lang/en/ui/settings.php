@@ -116,7 +116,7 @@ return [
         'step_workflow' => 'Commit this workflow as',
         'local_title' => 'Or triage now, in a local session',
         'local_hint' => 'Set :secret to an MCP token in your shell first, e.g. export :secret=lj_mcp_...; Claude Code then has Lumberjack\'s tools for this session.',
-        'hint' => 'CLAUDE_CODE_OAUTH_TOKEN runs on a Claude subscription; create it with claude setup-token. To pay per use instead, use ANTHROPIC_API_KEY as the workflow describes. GitHub has to reach this Lumberjack, so it must be on a public URL. The agent reads the code but never changes it, and never resolves an issue.',
+        'hint' => 'CLAUDE_CODE_OAUTH_TOKEN runs on a Claude subscription; create it with claude setup-token. To pay per use instead, use ANTHROPIC_API_KEY as the workflow describes. GitHub has to reach this Lumberjack, so it must be on a public URL. The agent never resolves an issue. When it is sure of a small fix, it opens a draft pull request on a lumberjack/<issue> branch; it never pushes to the default branch or merges.',
     ],
     'labels' => [
         'title' => 'Labels',
