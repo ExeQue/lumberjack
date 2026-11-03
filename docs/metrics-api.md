@@ -58,7 +58,7 @@ seconds, not once per panel and refresh. Data past a project's
 `{p}` is a project's slug or uuid. The summary and tables cover a `period` ending now:
 `1h`, `24h` (default), `7d` or `30d`, as on the project pages, with an optional
 `environment`; the tables take a `limit` (100 by default, 50 for releases, at most 500).
-Durations are in milliseconds, rates and shares are fractions from 0 to 1.
+Durations are in milliseconds, rates and shares are fractions from 0 to 1, sizes in bytes.
 
 Tables come as typed columns and rows:
 
@@ -92,6 +92,9 @@ Tables come as typed columns and rows:
 | `cpu_load`, `memory_used`, `disk_used` | ratio | host                              |
 | `lcp_p75`, `inp_p75`                   | ms    | environment, route, release       |
 | `cls_p75`                              | score | environment, route, release       |
+| `db_size`                              | bytes | environment, check                |
+| `db_connections`                       | count | environment, check                |
+| `db_connections_used`                  | ratio | environment, check                |
 
 Query parameters, named so Grafana's macros drop straight in:
 
@@ -101,10 +104,11 @@ Query parameters, named so Grafana's macros drop straight in:
   `auto` (the default) for about 300 points. At least a minute, rounded up to whole
   minutes, and raised so a series has at most 2000 points; the answer's `interval` says
   what was used.
-- `environment`, `route`, `queue`, `job`, `host`, `release`: filters. `route`, `queue`,
-  `job` and `host` take `*` as a wildcard (`/api/*`). A filter a metric's data does not
+- `environment`, `route`, `queue`, `job`, `host`, `release`, `check`: filters. `route`,
+  `queue`, `job`, `host` and `check` (a health check's slug, such as `database:pgsql`)
+  take `*` as a wildcard (`/api/*`). A filter a metric's data does not
   carry, such as a route for a queue's size, is ignored.
-- `group_by`: one series per environment, route, host, queue or release, the busiest
+- `group_by`: one series per environment, route, host, queue, release or check, the busiest
   `top` (10 by default, at most 50) of them.
 
 ```json
@@ -133,25 +137,33 @@ How the numbers are counted:
 - `cpu_load` is the 1 minute load per core (1 is every core busy); memory and disk are
   the share in use. A host metric is the highest over the hosts, a queue's size the
   largest it reported in a bucket, added up over the queues.
+- The database metrics read what [database health checks](./health#database-metrics)
+  report: a check's largest figure in a bucket (several servers reporting one database
+  count once), added up over the checks; `db_connections_used` is `connections` over
+  `max_connections`, the highest over the checks.
 
 ### Prometheus
 
 `GET /metrics` serves gauges for every project the token reads (or the public stats
-project), labelled with the project's slug. Counts and rates cover the last hour.
+project), labelled with the project's slug. Counts and rates cover the last hour; the
+database gauges are each database check's latest report.
 
-| Gauge                                     | Labels                           |
-| ----------------------------------------- | -------------------------------- |
-| `lumberjack_requests`                     | `project`                        |
-| `lumberjack_error_rate`                   | `project`                        |
-| `lumberjack_request_duration_p95_seconds` | `project`                        |
-| `lumberjack_apdex`                        | `project`                        |
-| `lumberjack_open_issues`                  | `project`                        |
-| `lumberjack_users_affected`               | `project`                        |
-| `lumberjack_failed_jobs`                  | `project`                        |
-| `lumberjack_health_checks`                | `project`, `state`               |
-| `lumberjack_queue_size`                   | `project`, `connection`, `queue` |
-| `lumberjack_queue_oldest_age_seconds`     | `project`, `connection`, `queue` |
-| `lumberjack_agents_online`                | `project`                        |
+| Gauge                                     | Labels                            |
+| ----------------------------------------- | --------------------------------- |
+| `lumberjack_requests`                     | `project`                         |
+| `lumberjack_error_rate`                   | `project`                         |
+| `lumberjack_request_duration_p95_seconds` | `project`                         |
+| `lumberjack_apdex`                        | `project`                         |
+| `lumberjack_open_issues`                  | `project`                         |
+| `lumberjack_users_affected`               | `project`                         |
+| `lumberjack_failed_jobs`                  | `project`                         |
+| `lumberjack_health_checks`                | `project`, `state`                |
+| `lumberjack_queue_size`                   | `project`, `connection`, `queue`  |
+| `lumberjack_queue_oldest_age_seconds`     | `project`, `connection`, `queue`  |
+| `lumberjack_agents_online`                | `project`                         |
+| `lumberjack_database_size_bytes`          | `project`, `environment`, `check` |
+| `lumberjack_database_connections`         | `project`, `environment`, `check` |
+| `lumberjack_database_max_connections`     | `project`, `environment`, `check` |
 
 ```yaml
 scrape_configs:

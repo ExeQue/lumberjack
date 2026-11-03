@@ -1,4 +1,9 @@
-import { formatCompact, formatNumber, formatPercent } from '@/lib/format';
+import {
+    formatBytes,
+    formatCompact,
+    formatNumber,
+    formatPercent,
+} from '@/lib/format';
 import type {
     RotateItem,
     Schema,
@@ -238,7 +243,7 @@ export function rotationIndex(
     return 0;
 }
 
-/** A value in its unit: counts compact, shares as percent, durations in ms or s. */
+/** A value in its unit: counts compact, shares as percent, durations in ms or s, sizes in B to TB. */
 export function formatValue(
     value: unknown,
     unit: string,
@@ -264,6 +269,8 @@ export function formatValue(
                 : `${formatNumber(n, fixed ?? 0)} ms`;
         case 'score':
             return formatNumber(n, fixed ?? 2);
+        case 'bytes':
+            return formatBytes(n, fixed);
         default:
             return fixed !== undefined
                 ? formatNumber(n, fixed)

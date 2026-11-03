@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Metrics\Support;
 
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Jobs\Queries\QueueStatisticsQuery;
 use App\Domains\Metrics\Queries\ProjectSummaryQuery;
 use App\Domains\Projects\Models\Project;
@@ -48,6 +49,13 @@ class PrometheusExporter
         $queueSize = $gauge('queue_size', 'Jobs waiting, as the agent reported last.', ['connection', 'queue']);
         $queueAge = $gauge('queue_oldest_age_seconds', 'Age of the oldest waiting job.', ['connection', 'queue']);
         $agents = $gauge('agents_online', 'Agents that checked in within the last five minutes.');
+        $database = [
+            'size_bytes' => $gauge('database_size_bytes', 'Database size, as its health check reported last.', ['environment', 'check']),
+            'connections' => $gauge('database_connections', 'Open database connections, as its health check reported last.', ['environment', 'check']),
+            'max_connections' => $gauge('database_max_connections', 'Connections the database allows, as its health check reported last.', ['environment', 'check']),
+        ];
+        $databaseChecks = HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->whereReportsDatabase()
+            ->with('hosts')->get()->groupBy('project_id');
 
         $online = ProjectAgent::query()->whereIn('project_id', $projects->modelKeys())
             ->where('last_seen_at', '>', now()->subMinutes(ProjectAgent::OFFLINE_AFTER_MINUTES))
@@ -68,6 +76,16 @@ class PrometheusExporter
 
             foreach (['ok', 'degraded', 'down', 'recovering', 'stale', 'pending'] as $state) {
                 $health->set((int) ($summary['health'][$state] ?? 0), [...$label, $state]);
+            }
+
+            foreach ($databaseChecks->get($project->id, []) as $check) {
+                $metrics = $check->hosts->sortByDesc('last_result_at')->first()->last_metrics ?? [];
+
+                foreach ($database as $name => $figure) {
+                    if (isset($metrics[$name])) {
+                        $figure->set($metrics[$name], [...$label, $check->environment, (string) $check->slug]);
+                    }
+                }
             }
 
             foreach ($this->queues->get($project->id, Period::Hour) as $queue) {

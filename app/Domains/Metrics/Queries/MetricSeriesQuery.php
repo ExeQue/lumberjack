@@ -24,7 +24,9 @@ use LogicException;
  * Apdex split only from the runs the SDK picked. Filtering or splitting requests by
  * release reads the runs weighed by their sample rate, as the counts carry no release.
  * Queue size and host use are gauges: their value is the latest sample in the window,
- * summed over queues and the highest over hosts.
+ * summed over queues and the highest over hosts. The database metrics read the results
+ * of reported health checks: a check's largest figure per bucket (several hosts report
+ * the same database), summed over checks, and the highest share of connections in use.
  */
 class MetricSeriesQuery
 {
@@ -44,6 +46,7 @@ class MetricSeriesQuery
         $rows = match ($metric) {
             Metric::Apdex => $this->apdex($filter, $window, $group),
             Metric::QueueSize => $this->queueSizeSeries($filter, $window, $group),
+            Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed => $this->databaseSeries($metric, $filter, $window, $group),
             default => $this->bucketed($metric, $filter, $window, $group),
         };
 
@@ -56,6 +59,7 @@ class MetricSeriesQuery
             Metric::Apdex => $this->apdex($filter, $window, null, bucketed: false)[0]['value'] ?? null,
             Metric::QueueSize => $this->queueSizeNow($filter, $window),
             Metric::CpuLoad, Metric::MemoryUsed, Metric::DiskUsed => $this->hostNow($metric, $filter, $window),
+            Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed => $this->databaseNow($metric, $filter, $window),
             default => (function () use ($metric, $filter, $window): mixed {
                 [$query, , $aggregate] = $this->source($metric, $filter, $window, null);
 
@@ -156,7 +160,7 @@ class MetricSeriesQuery
                 },
                 $this->column($group, nullableEnvironment: true),
             ],
-            Metric::Apdex, Metric::QueueSize => throw new LogicException("{$metric->value} has its own query."),
+            Metric::Apdex, Metric::QueueSize, Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed => throw new LogicException("{$metric->value} has its own query."),
         };
     }
 
@@ -294,6 +298,77 @@ class MetricSeriesQuery
             ->where('sampled_at', '>=', $window->from)->where('sampled_at', '<', $window->to), 'queue', $filter->queue), 'host', $filter->host);
     }
 
+    /**
+     * Each check's largest figure per bucket, added up over the checks (the highest for
+     * the share of connections in use).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function databaseSeries(Metric $metric, MetricFilter $filter, MetricWindow $window, ?MetricGroup $group): array
+    {
+        $size = $window->bucketSeconds;
+        $by = match ($group) {
+            MetricGroup::Environment => 'c.environment',
+            MetricGroup::Check => 'c.slug',
+            default => 'NULL',
+        };
+        $perCheck = $this->databaseResults($metric, $filter, $window)
+            ->selectRaw("FLOOR(EXTRACT(EPOCH FROM r.checked_at) / ?) * ? AS bucket, {$by} AS series, r.health_check_id, MAX({$this->databaseValue($metric)}) AS value", [$size, $size])
+            ->groupByRaw('1, 2, r.health_check_id');
+
+        return array_values(DB::query()->fromSub($perCheck, 'd')
+            ->selectRaw('bucket, series, '.$this->databaseCombine($metric).'(value) AS value')
+            ->groupBy('bucket', 'series')
+            ->get()
+            ->map(fn (object $row): array => ['bucket' => (int) $row->bucket, 'series' => $row->series !== null ? (string) $row->series : null, 'value' => $row->value !== null ? (float) $row->value : null])
+            ->all());
+    }
+
+    private function databaseNow(Metric $metric, MetricFilter $filter, MetricWindow $window): mixed
+    {
+        $latest = $this->databaseResults($metric, $filter, $window)
+            ->selectRaw("DISTINCT ON (r.health_check_id) {$this->databaseValue($metric)} AS value")
+            ->orderBy('r.health_check_id')->orderByDesc('r.checked_at');
+
+        return DB::query()->fromSub($latest, 'd')->selectRaw($this->databaseCombine($metric).'(value) AS value')->value('value');
+    }
+
+    /**
+     * Results of the window that carry the metric's figures.
+     */
+    private function databaseResults(Metric $metric, MetricFilter $filter, MetricWindow $window): Builder
+    {
+        $key = $metric === Metric::DbSize ? 'size_bytes' : 'connections';
+
+        return $this->match(DB::table('health_check_results as r')
+            ->join('health_checks as c', 'c.id', '=', 'r.health_check_id')
+            ->whereIn('r.project_id', $filter->projectIds)
+            ->where('r.checked_at', '>=', $window->from)->where('r.checked_at', '<', $window->to)
+            ->whereRaw("(r.metrics->>'{$key}') IS NOT NULL")
+            ->when($metric === Metric::DbConnectionsUsed)->whereRaw("(r.metrics->>'max_connections') IS NOT NULL")
+            ->when($filter->environment !== null)->where('c.environment', $filter->environment), 'c.slug', $filter->check);
+    }
+
+    /**
+     * @return literal-string
+     */
+    private function databaseValue(Metric $metric): string
+    {
+        return match ($metric) {
+            Metric::DbSize => "(r.metrics->>'size_bytes')::float",
+            Metric::DbConnections => "(r.metrics->>'connections')::float",
+            default => "(r.metrics->>'connections')::float / NULLIF((r.metrics->>'max_connections')::float, 0)",
+        };
+    }
+
+    /**
+     * @return literal-string
+     */
+    private function databaseCombine(Metric $metric): string
+    {
+        return $metric === Metric::DbConnectionsUsed ? 'MAX' : 'SUM';
+    }
+
     private function hostNow(Metric $metric, MetricFilter $filter, MetricWindow $window): mixed
     {
         $latest = $this->hostSamples($filter, $window)
@@ -405,7 +480,7 @@ class MetricSeriesQuery
             MetricGroup::Host => 'host',
             MetricGroup::Queue => 'queue',
             MetricGroup::Release => 'release',
-            null => null,
+            MetricGroup::Check, null => null,
         };
     }
 
@@ -413,7 +488,7 @@ class MetricSeriesQuery
     {
         return round($value, match ($metric->unit()) {
             'ms' => 1,
-            'count' => 0,
+            'count', 'bytes' => 0,
             default => 4,
         });
     }

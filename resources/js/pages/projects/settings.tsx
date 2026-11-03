@@ -41,7 +41,7 @@ import {
     numClass,
 } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import { formatNumber, formatPercent } from '@/lib/format';
+import { formatBytes, formatNumber, formatPercent } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -887,16 +887,6 @@ function PublicStatsField({
 
 /** Past this share of memory or disk in use, the value shows as a warning. */
 const HOST_WARN = 0.9;
-
-function formatBytes(bytes: number): string {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.min(
-        units.length - 1,
-        Math.floor(Math.log(Math.max(1, bytes)) / Math.log(1024)),
-    );
-
-    return `${formatNumber(bytes / 1024 ** i, i > 2 ? 1 : 0)} ${units[i]}`;
-}
 
 function HostCells({ metrics }: { metrics: HostMetrics | null }) {
     const t = useT();

@@ -43,6 +43,8 @@ return [
             'host_disk' => 'Highest host disk',
             'current_release' => 'Current release',
             'lcp_p75' => 'LCP p75',
+            'db_size' => 'Database size',
+            'db_connections' => 'Database connections',
         ],
         'gauge' => [
             'error_rate' => 'Error rate',
@@ -52,6 +54,7 @@ return [
             'host_memory' => 'Host memory',
             'host_disk' => 'Host disk',
             'queue_size' => 'Queue size',
+            'db_connections' => 'Database connections in use',
             'health_uptime' => 'Health uptime',
         ],
         'chart' => [
@@ -68,6 +71,8 @@ return [
             'host_memory' => 'Host memory',
             'host_disk' => 'Host disk',
             'lcp_p75' => 'LCP p75',
+            'db_size' => 'Database size',
+            'db_connections' => 'Database connections',
         ],
         'list' => [
             'latest_issues' => 'Latest issues',

@@ -11,8 +11,11 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\Health\CreatesDatabaseHealthResults;
 
 covers(HealthController::class, SaveHealthCheckRequest::class, HealthCheckPolicy::class);
+
+uses(CreatesDatabaseHealthResults::class);
 
 beforeEach(function () {
     $this->project = Project::factory()->create();
@@ -23,6 +26,17 @@ beforeEach(function () {
 });
 
 describe('the health page', function () {
+    it('passes a database check\'s size and connections with its latest result', function () {
+        $this->createDatabaseResult($this->reported, ['latency_ms' => 1.5, 'size_bytes' => 14_470_000, 'connections' => 4, 'max_connections' => 100]);
+
+        $this->actingAs($this->member)
+            ->get(route('health.index', ['project' => $this->project, 'check' => $this->reported->uuid]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('checks.1.metrics', ['latency_ms' => 1.5, 'size_bytes' => 14_470_000, 'connections' => 4, 'max_connections' => 100])
+                ->where('checks.1.hosts.0.metrics.size_bytes', 14_470_000)
+                ->where('detail.results.0.metrics.connections', 4));
+    });
+
     it('lists the checks with their state, and the selected one in detail', function () {
         $this->actingAs($this->member)
             ->get(route('health.index', ['project' => $this->project, 'check' => $this->reported->uuid]))

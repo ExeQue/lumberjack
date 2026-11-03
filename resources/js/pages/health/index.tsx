@@ -24,6 +24,7 @@ import {
 import type { Tone } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import {
+    formatBytes,
     formatDateTime,
     formatDuration,
     formatNumber,
@@ -86,6 +87,39 @@ function latency(metrics: Record<string, number>, durationUs: number | null) {
     return metrics.latency_ms !== undefined
         ? `${formatNumber(metrics.latency_ms, metrics.latency_ms < 10 ? 1 : 0)} ms`
         : formatDuration(durationUs);
+}
+
+/** A database check's size and connections, such as "13.8 MB · 4 of 100 connections". */
+function DatabaseFigures({ metrics }: { metrics: Record<string, number> }) {
+    const t = useT();
+    const parts = [
+        metrics.size_bytes !== undefined
+            ? formatBytes(metrics.size_bytes)
+            : null,
+        metrics.connections === undefined
+            ? null
+            : metrics.max_connections !== undefined
+              ? t('health.connections_of', {
+                    used: formatNumber(metrics.connections),
+                    max: formatNumber(metrics.max_connections),
+                })
+              : t('health.connections', {
+                    count: formatNumber(metrics.connections),
+                }),
+    ].filter((part) => part !== null);
+
+    return parts.length > 0 ? (
+        <span className="block text-xs whitespace-nowrap text-ink-3">
+            {parts.join(' · ')}
+        </span>
+    ) : null;
+}
+
+/** A metric as sent, sizes in B to TB. */
+function formatMetric(name: string, value: number): string {
+    return name.endsWith('_bytes')
+        ? formatBytes(value)
+        : formatNumber(value, Number.isInteger(value) ? 0 : 1);
 }
 
 /**
@@ -295,6 +329,7 @@ function ChecksTable({
                                 {check.last_result_at
                                     ? latency(check.metrics, check.duration_us)
                                     : '-'}
+                                <DatabaseFigures metrics={check.metrics} />
                             </td>
                             <td className={cn(tdClass, numClass)}>
                                 <LiveUptime check={check} />
@@ -715,6 +750,9 @@ function CheckDetail({
                                                     host.metrics,
                                                     host.duration_us,
                                                 )}
+                                                <DatabaseFigures
+                                                    metrics={host.metrics}
+                                                />
                                             </td>
                                         </tr>
                                     ))}
@@ -911,7 +949,7 @@ function CheckDetail({
                                                 {Object.entries(result.metrics)
                                                     .map(
                                                         ([name, value]) =>
-                                                            `${name} ${formatNumber(value, Number.isInteger(value) ? 0 : 1)}`,
+                                                            `${name} ${formatMetric(name, value)}`,
                                                     )
                                                     .join(', ') || '-'}
                                             </td>

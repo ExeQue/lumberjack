@@ -6,7 +6,9 @@ namespace App\Domains\Metrics\Enums;
 
 /**
  * Every time series the metrics API serves. Durations are in milliseconds, shares
- * (error rate, host use) are fractions from 0 to 1.
+ * (error rate, host use) are fractions from 0 to 1, sizes in bytes. The database
+ * metrics read what reported health checks send as size_bytes, connections and
+ * max_connections.
  */
 enum Metric: string
 {
@@ -30,12 +32,16 @@ enum Metric: string
     case LcpP75 = 'lcp_p75';
     case InpP75 = 'inp_p75';
     case ClsP75 = 'cls_p75';
+    case DbSize = 'db_size';
+    case DbConnections = 'db_connections';
+    case DbConnectionsUsed = 'db_connections_used';
 
     public function unit(): string
     {
         return match ($this) {
             self::P50, self::P95, self::P99, self::QueueWait, self::LcpP75, self::InpP75 => 'ms',
-            self::ErrorRate, self::CpuLoad, self::MemoryUsed, self::DiskUsed => 'ratio',
+            self::ErrorRate, self::CpuLoad, self::MemoryUsed, self::DiskUsed, self::DbConnectionsUsed => 'ratio',
+            self::DbSize => 'bytes',
             self::Apdex, self::ClsP75 => 'score',
             default => 'count',
         };
@@ -46,7 +52,7 @@ enum Metric: string
      */
     public function isCount(): bool
     {
-        return $this->unit() === 'count' && $this !== self::QueueSize;
+        return $this->unit() === 'count' && ! in_array($this, [self::QueueSize, self::DbConnections], true);
     }
 
     /**
@@ -64,6 +70,7 @@ enum Metric: string
             self::JobRuns, self::JobFailures, self::QueueWait => [MetricGroup::Environment, MetricGroup::Queue, MetricGroup::Host],
             self::QueueSize => [MetricGroup::Queue, MetricGroup::Host],
             self::CpuLoad, self::MemoryUsed, self::DiskUsed => [MetricGroup::Host],
+            self::DbSize, self::DbConnections, self::DbConnectionsUsed => [MetricGroup::Environment, MetricGroup::Check],
         };
     }
 }

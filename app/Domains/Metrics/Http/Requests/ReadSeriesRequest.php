@@ -63,6 +63,7 @@ class ReadSeriesRequest extends FormRequest
             'job' => ['sometimes', 'nullable', 'string', 'max:255'],
             'host' => ['sometimes', 'nullable', 'string', 'max:255'],
             'release' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'check' => ['sometimes', 'nullable', 'string', 'max:100'],
             'group_by' => ['sometimes', 'nullable', Rule::enum(MetricGroup::class)],
             'top' => ['sometimes', 'integer', 'min:1', 'max:50'],
         ];
@@ -120,6 +121,7 @@ class ReadSeriesRequest extends FormRequest
             host: $value('host'),
             release: $value('release'),
             groupBy: MetricGroup::tryFrom($this->string('group_by')->toString()),
+            check: $value('check'),
         );
     }
 

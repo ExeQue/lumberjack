@@ -23,11 +23,12 @@ use App\Domains\Screens\Exceptions\UnknownWidgetSourceException;
 use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Models\Team;
+use Tests\Support\Health\CreatesDatabaseHealthResults;
 use Tests\Support\Performance\CreatesRequestCounts;
 
 covers(ResolveWidgetDataAction::class, WidgetSources::class, WidgetScope::class, WidgetSource::class);
 
-uses(CreatesRequestCounts::class);
+uses(CreatesRequestCounts::class, CreatesDatabaseHealthResults::class);
 
 beforeEach(function () {
     $this->travelTo(now()->setTime(12, 0, 30));
@@ -334,5 +335,39 @@ describe('health', function () {
         ($this->check)('cache:redis', HealthStatus::Ok)->forceFill(['created_at' => now()->subDays(2)])->save();
 
         expect(($this->resolve)(WidgetType::Gauge, 'health_uptime'))->toMatchArray(['value' => 1.0, 'max' => 1.0, 'state' => 'ok']);
+    });
+});
+
+describe('database checks', function () {
+    beforeEach(function () {
+        $this->pgsql = HealthCheck::factory()->for($this->project)->create(['slug' => 'database:pgsql']);
+        $this->mysql = HealthCheck::factory()->for($this->project)->create(['slug' => 'database:mysql']);
+        // Two hosts report the same database: it counts once, at its latest figures.
+        $this->createDatabaseResult($this->pgsql, ['size_bytes' => 1000, 'connections' => 10, 'max_connections' => 100], now()->subHours(2)->toImmutable());
+        $this->createDatabaseResult($this->pgsql, ['size_bytes' => 1200, 'connections' => 20, 'max_connections' => 100], now()->subMinutes(5)->toImmutable(), 'web-2');
+        $this->createDatabaseResult($this->mysql, ['size_bytes' => 300, 'connections' => 45, 'max_connections' => 50], now()->subMinutes(3)->toImmutable());
+    });
+
+    it('adds up the latest size of every database, or shows one check', function () {
+        $data = ($this->resolve)(WidgetType::Stat, 'db_size');
+
+        expect($data)->toMatchArray(['value' => 1500.0, 'unit' => 'bytes', 'period' => 'now', 'as_of' => now()->subMinutes(3)->toIso8601String()])
+            ->and($data['sparkline'])->not->toBeEmpty()
+            ->and(($this->resolve)(WidgetType::Stat, 'db_size', scope: new WidgetScope(filter: 'database:pgsql'))['value'])->toBe(1200.0)
+            ->and(($this->resolve)(WidgetType::Stat, 'db_size', scope: new WidgetScope(filter: '*mysql'))['value'])->toBe(300.0)
+            ->and(($this->resolve)(WidgetType::Stat, 'db_connections')['value'])->toBe(65.0);
+    });
+
+    it('gauges the database with the largest share of its connections in use', function () {
+        expect(($this->resolve)(WidgetType::Gauge, 'db_connections'))->toMatchArray(['value' => 0.9, 'max' => 1.0, 'state' => 'red'])
+            ->and(($this->resolve)(WidgetType::Gauge, 'db_connections', scope: new WidgetScope(filter: 'database:pgsql'))['value'])->toBe(0.2);
+    });
+
+    it('charts the size per bucket, one series per check when split', function () {
+        $series = fn (array $options = []): array => collect(($this->resolve)(WidgetType::Chart, 'db_size', $options)['series'])
+            ->mapWithKeys(fn (array $s): array => [$s['name'] => array_column($s['points'], 'v')])->all();
+
+        expect($series())->toBe(['db_size' => [1000.0, 1500.0]])
+            ->and($series(['split_by' => 'check']))->toBe(['database:pgsql' => [1000.0, 1200.0], 'database:mysql' => [300.0]]);
     });
 });

@@ -929,6 +929,8 @@ export function WidgetInspector({
                         ' ' + t('screens.inspector.ratio_hint')}
                     {valueSource?.unit === 'ms' &&
                         ' ' + t('screens.inspector.ms_hint')}
+                    {valueSource?.unit === 'bytes' &&
+                        ' ' + t('screens.inspector.bytes_hint')}
                 </p>
             )}
 
