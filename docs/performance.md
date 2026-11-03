@@ -1,22 +1,66 @@
 # Performance and traces
 
-Pick a period (1 h, 24 h, 7 d, 30 d) and an environment at the top of each page. Hover
-a chart to see the value of each bucket.
+Pick a period (1 h, 24 h, 7 d, 30 d) and an environment at the top of each page. The
+period starts at 24 h, except on Logs, where it starts at 1 h. Hover a chart to see the
+value of each bucket.
 
-| Page     | Shows                                                                                                                                                  |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Overview | Requests, error rate, p95, failed jobs and open issues, with the change from the period before, and the latest issues, slowest routes and failed jobs. |
-| Routes   | Requests, p50/p95/p99, 5xx rate and Apdex per route. Click a route for its hourly chart, status codes and slowest requests.                            |
-| Queries  | Queries grouped by normalized SQL, highlighted (as in traces): calls, total time, share of database time, p95 and max. N+1 patterns are flagged.       |
-| Jobs     | Runs, failure rate, stuck and retried jobs, duration and wait time per job class. Click a job for its runs.                                            |
-| Schedule | Scheduled tasks per environment with their last and next run. A task that does not run when expected is marked missed and becomes an issue.            |
-| Commands | Artisan commands with runs, failures and duration. Click a command for its runs.                                                                       |
-| Logs     | Log lines by channel and level, with full-text search.                                                                                                 |
+The pages update live: the overview, issues, routes, queries, releases, jobs,
+schedule, commands, logs, health and agents reload in place as data arrives, at most
+once a second.
+
+![The overview of a project](./screenshots/overview.png)
+
+| Page     | Shows                                                                                                                                                                                                                |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview | Requests, error rate, p95, failed jobs, open issues and health checks, with the change from the period before; charts of requests, exceptions and response times; the latest issues, slowest routes and failed jobs. |
+| Routes   | Requests, p50/p95/p99, 5xx rate and Apdex per route. Click a route for its p50 and p95 over the period, its status codes (2xx to 5xx) and its 10 slowest requests with their query counts.                           |
+| Queries  | Queries grouped by normalized SQL, highlighted (as in traces): calls, total time, share of database time, p95 and max. N+1 patterns are flagged.                                                                     |
+| Jobs     | Runs, failure rate, stuck and retried jobs, duration and wait time per job class. Click a job for its runs.                                                                                                          |
+| Schedule | Scheduled tasks per environment with their last and next run. A task that does not run when expected is marked missed and becomes an issue.                                                                          |
+| Commands | Artisan commands with runs, failures and duration. Click a command for its runs.                                                                                                                                     |
+| Logs     | Log lines by channel and level, with full-text search.                                                                                                                                                               |
+
+## Overview
+
+Open issues count every environment, whatever the period. Failed jobs show the failure
+rate and how many are stuck; the p95 shows the p50 and p99 under it.
+
+## Routes
+
+![The Routes page with the routes table and Web Vitals below](./screenshots/routes.png)
+
+Sort by highest p95 (the default), most requests, highest error rate, most total time
+or lowest [Apdex](#apdex). **Search routes** uses the [search syntax](./finding-things#search-syntax).
+
+## Queries
+
+![The Queries page: queries grouped by SQL with the share of database time](./screenshots/queries.png)
+
+The top shows the number of queries, the total database time and the slowest single
+query. Filter by connection, search the SQL, and sort by most total time, highest p95 or
+most calls. **Most from** is the line in the app that ran the query most often.
+With 7 or 30 days selected, Most from and the N+1 flag look at the last 24 hours only.
+
+A query is flagged **N+1** when the same query runs 5 times or more in one request or
+job; the badge says how many times per request.
+
+## Jobs
+
+![The Jobs page with the Queues card, the job classes and the latest failed runs](./screenshots/jobs.png)
+
+Filter by queue and sort by highest failure rate, most runs, highest p95 duration or
+highest p95 wait. Below the job classes are the **latest failed, stuck and released
+runs**, with their parameters, an **Open trace** and the issue they became.
+
+A run is **Queued**, **Processing**, **Processed**, **Released** (put back on the
+queue), **Failed** or **Stuck**. It is stuck when it has been processing for longer than
+its timeout plus 2 minutes (a job that sends no timeout counts as 10 minutes), checked
+every minute. A banner says how many are stuck and links to them.
 
 ## Queues
 
-The Jobs page shows a **Queues** card once agents report queue sizes (the package's
-`queues` config). Per connection and queue:
+The Jobs page shows a **Queues** card once agents report queue sizes (the queues the SDK
+is set to watch). Per connection and queue:
 
 - **Waiting:** jobs on the queue now, from the latest heartbeat. Several agents report
   the same queue, so this is the latest sample, not their sum. Gray when no agent has
@@ -29,8 +73,42 @@ The Jobs page shows a **Queues** card once agents report queue sizes (the packag
   whoever may change the project. **custom** marks a queue that has some, **muted** one
   that never alerts.
 
+The card lists at most 20 queues.
+
 Queue size keeps growing when every worker is dead, while no job starts and so no wait
 is measured. A [queue backlog alert](./alerts) fires on it.
+
+## Schedule
+
+![The Schedule page with each task's cron, status and its recent runs](./screenshots/schedule.png)
+
+Each task shows its cron, its latest status (**Running**, **Finished**, **Failed**,
+**Skipped** or **Missed**), the last and next run and a strip of its last 20 runs; click
+it for the runs with their exit code and host. A run is late after a minute, and
+**missed** when it has not started 5 minutes after its time; a missed run becomes an
+issue. A task that has not been reported for 24 hours is no longer flagged. **Forget
+task** (owners and admins) deletes a task that is gone from the app, with its runs; it
+comes back if the app still runs it.
+
+## Commands
+
+![The Commands page with runs, failures and duration per command](./screenshots/commands.png)
+
+Each command shows its runs, failures, average and longest duration, last run and
+status; the latest runs below show their arguments and options, exit code and host.
+Queue workers (`queue:work`, `horizon`) are left out: they run until they are stopped.
+
+## Logs
+
+![The Logs page with the channel list, the levels and the latest lines](./screenshots/logs.png)
+
+Filter by channel, minimum level (debug to emergency) and release, and search the
+messages. The page shows the newest 200 lines; narrow the filters to see older ones.
+The search is a full-text search on words, not the `*` syntax of the other search
+fields. **Manage channels** opens the project's [log channels](./projects#settings).
+
+New lines appear by themselves while you are at the top. When you have scrolled down
+or selected text, the page holds them back and offers **Show new lines** instead.
 
 ## Apdex
 
@@ -67,7 +145,11 @@ id. **Open trace** (on a request, a run or an occurrence) shows it on one time a
   notifications and Redis commands,
 - log lines and exceptions.
 
-Each step is a bar placed where it started, as long as it took. Which spans are
-recorded is set in the package's `spans` config.
+Each step is a bar placed where it started, as long as it took. Above the timeline a
+summary counts the queries, outgoing calls, cache operations and misses, mails,
+notifications, Redis commands, log lines and exceptions. A trace shows at most 500
+steps. Which spans are recorded is up to the SDK.
+
+![A trace of a failed job: its queries, a log line and the exception, on one time axis](./screenshots/trace.png)
 
 Paste a trace id in the [command palette](./finding-things) to open it.

@@ -51,7 +51,7 @@ check that will not report again, for example after renaming a slug.
 
 **Add check** offers five types. Each runs every 1, 5, 15 or 60 minutes, can carry an
 environment label, and runs on the low-priority `health` queue of the background
-workers.
+workers. Only team owners and admins add, edit, archive and delete checks.
 
 | Type      | Checks                                                                                                                                                           |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -61,8 +61,19 @@ workers.
 | DNS       | A name has records of a type (A, AAAA, CNAME, MX, TXT), optionally one with the value you expect.                                                                |
 | Heartbeat | A dead man's switch: your cron job or backup calls a secret URL when it is done; the check fails when no call came within its interval plus a grace (5 minutes). |
 
+| Type      | Fields (default)                                                                                                                            |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP      | URL, method (GET, HEAD or POST; GET), expected status (200), body contains, warn when slower than (1 to 60,000 ms), timeout (1 to 30 s; 10) |
+| SSL       | Host, port (443), warn days before expiry (14), fail days before expiry (3)                                                                 |
+| TCP       | Host, port, timeout (1 to 30 s; 5)                                                                                                          |
+| DNS       | Name, record type (A), expected value                                                                                                       |
+| Heartbeat | Grace (0 to 1,440 minutes; 5)                                                                                                               |
+
+Every check also has a name, a description and the thresholds described under
+[Status](#status), each from 1 to 100.
+
 A heartbeat check shows its ping URL and a `curl` line to copy. The URL takes `GET`
-or `POST` without a body:
+or `POST` without a body, at most 60 times a minute:
 
 ```bash
 php artisan backup:run && curl -fsS -m 10 https://lumberjack.example.com/api/health/ping/...
@@ -124,10 +135,12 @@ a slug (leave all three empty to go back to the app's). The details also hold a 
 name and description, and **mute**, which keeps showing the check but sends no
 alerts.
 
+![The Health page with the reported checks and the details of one open](./screenshots/health.png)
+
 Each time a check becomes degraded or down an **outage** starts, with the first
-message; it ends when the check is ok again, so it stays open while recovering. The details list the outages with their duration and the worst
-status they reached, next to the recent results and a chart of how long the check
-took.
+message; it ends when the check is ok again, so it stays open while recovering. The details list the last 20 outages with their duration and the worst
+status they reached, next to the last 50 results and a chart of how long the check
+took. An archived check can be restored from the **Archived** list.
 
 **Uptime** is the share of the period (top of the page) the check was not down, counted
 from when the check was added. Degraded time counts as up, as on a status page;
@@ -145,13 +158,13 @@ sidebar counts the checks that are degraded or down; recovering ones are left ou
 ## Alerts
 
 Three alert rules, all on by default, each with its own channels and environments:
-**Health degraded** when a check keeps warning or starts failing, **Health down** when
-it keeps failing (also when a degraded check goes down), and **Health recovered** when
+**Health check degraded** when a check keeps warning or starts failing, **Health check down** when
+it keeps failing (also when a degraded check goes down), and **Health check recovered** when
 it is ok again. Recovering sends nothing, and going back from recovering to degraded or
 down is not a new alert.
 So a check going down can page someone while a degraded one only posts to a channel,
 or recoveries can be left out. A check that is degraded or down is still followed while
-its rule is off: turning **Health degraded** off does not stop the later down or
+its rule is off: turning **Health check degraded** off does not stop the later down or
 recovered message.
 Every step for the worse is sent at once: ok to degraded, and degraded to down, also
 when the check recovered a minute ago. There is no time window that holds alerts back;

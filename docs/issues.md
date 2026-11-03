@@ -1,8 +1,45 @@
 # Issues
 
-Every exception, failed job, failed or missed scheduled task, failed command and error
-log line becomes an issue. Occurrences with the same fingerprint are grouped under
-one issue.
+Every exception, browser error, failed job, failed or missed scheduled task, failed
+command and error log line becomes an issue. Occurrences with the same fingerprint are
+grouped under one issue.
+
+## Grouping
+
+The fingerprint depends on where the error came from:
+
+| Source  | Grouped by                                                   |
+| ------- | ------------------------------------------------------------ |
+| Server  | The exception class (or title) and the first in-app frame.   |
+| Browser | The error's title, its normalized message and the top frame. |
+| Log     | The log channel and the normalized message.                  |
+
+Normalizing replaces UUIDs with `{uuid}`, hex strings of 16 characters or more (and
+`0x...`) with `{hex}` and numbers with `{n}`, so `Order 4711 not found` and `Order 4712
+not found` are one issue. A fingerprint the SDK sends itself wins over all of this.
+
+Only log lines of level **error** and above (error, critical, alert, emergency) become
+issues. A line whose context carries an exception becomes a Server issue; one without
+becomes a Log issue titled `<channel>: <message>` (the first 200 characters).
+
+## The issues list
+
+![The issues list with three issues selected and the selection bar at the bottom](./screenshots/issues.png)
+
+| Filter   | Choices                                                                               |
+| -------- | ------------------------------------------------------------------------------------- |
+| Status   | Open (the default, in progress included), In progress, Resolved, Ignored, with counts |
+| Source   | All, Server, Browser, Log                                                             |
+| Release  | The 20 newest releases; matches the release of the issue's latest occurrence          |
+| Label    | One of the project's labels                                                           |
+| Assigned | Everyone, Assigned to me, Unassigned                                                  |
+| Watching | Only the issues you [watch](#watching)                                                |
+| Search   | Message, class or [number](#issue-numbers)                                            |
+
+Sort by **Last seen** (the default), **Most occurrences**, **Most users** or **First
+seen**. The list shows 25 issues a page, each with its occurrences of the last 24 hours
+as a small chart, its notes count, and flags: **New**, **Regression**, **Escalating**
+and **Came back**.
 
 ## Issue numbers
 
@@ -14,6 +51,15 @@ and repository issues that mention the old number keep it.
 Click the copy icon next to the number on the issue page to copy it. The number works
 in the [command palette](./finding-things), in the issues search (`DEMO-42`, `#42` or
 `42`) and in every MCP tool that takes an issue.
+
+## The issue page
+
+![An issue page with its occurrence chart, stacktrace and request context](./screenshots/issue.png)
+
+The top shows the occurrences, users affected, first and last seen, the releases it
+happened on and the hosts. Below the chart are four tabs: **Stacktrace**,
+**Occurrences** (each with its request, user, environment, release, host and a link to
+its trace), **Notes** and **History**.
 
 ## The stacktrace
 
@@ -37,8 +83,9 @@ rows, such as the request's headers, starts folded; click its title to open it.
 
 ## The chart
 
-The issue page charts its occurrences over 1 hour, 24 hours (the default), 7 days or
-30 days. Pick the period above the chart; it stays in the URL, so a link shows the same.
+The issue page charts its occurrences over 1 hour (per 2 minutes), 24 hours (per hour,
+the default), 7 days (per 6 hours) or 30 days (per day). Pick the period above the
+chart; it stays in the URL, so a link shows the same.
 
 ## Statuses
 
@@ -49,18 +96,29 @@ The issue page charts its occurrences over 1 hour, 24 hours (the default), 7 day
 | Resolved    | Fixed. A new occurrence re-opens it as a **regression**. |
 | Ignored     | Does not matter, for good or until a condition is met.   |
 
-When resolving or ignoring you can add a comment; it is saved as a note. An ignored
-issue can come back:
+When resolving or ignoring you can add a comment; it is saved as a note, and `@` tags
+work in it as in notes. Ignoring asks when the issue may come back:
 
-- after a time (1 hour, 24 hours, 7 days),
+- **When it escalates** (the default),
+- in 1 hour, 24 hours or 7 days,
 - after 10, 100 or 1,000 more occurrences,
-- when it escalates.
+- never: ignore it for good.
+
+Ignoring several issues from the list always uses the default: they stay ignored until
+they escalate.
+
+When an ignored issue comes back it is open again, flagged **Came back**, and its
+history says why (the time is over, it happened as many times again, or the burst that
+made it escalate). It counts as a regression and sends the **Regression** alert. The
+time condition is checked every minute.
 
 ## Escalation
 
-An open issue escalates when it suddenly happens far more often than usual: at least
-10 occurrences in 5 minutes. The issue is flagged, its history records the burst and
-the **Escalation** alert rule fires.
+An open or in-progress issue escalates when it suddenly happens far more often than
+usual: at least 10 occurrences in 5 minutes, and at least 5 times its usual rate for 5
+minutes over the day before. The issue is flagged **Escalating** for an hour, its
+history records the burst and the **Escalation** alert rule fires. An ignored issue
+that was set to come back when it escalates comes back instead.
 
 ## Working on an issue
 
@@ -72,17 +130,26 @@ the **Escalation** alert rule fires.
   assignee, in the history like any unassign; the assignee is told unless they resolved
   it themselves. Ignoring keeps the assignee, and a regression comes back unassigned.
   A bulk action sends each person one message for all the issues it touched.
-- **Labels:** type a new name on the issue to create a label. Rename, recolor or
-  delete labels in the project settings.
-- **Notes:** free text for the team. Type `@` to tag a team member or an MCP agent.
-  Agents write notes too, for example their triage result.
+- **Labels:** type a new name on the issue to create a label (at most 32 characters,
+  10 labels an issue). New labels take the next color; rename, recolor (gray, red,
+  orange, yellow, green, teal, blue or purple) or delete them in the project settings.
+- **Notes:** free text for the team, up to 20,000 characters. Type `@` to tag a team
+  member or an MCP agent, `Ctrl+Enter` saves. Agents write notes too, for example
+  their triage result.
 - **GitHub issue:** with a [linked repository](./projects#repository-integration),
   **Create GitHub issue** opens one with the stacktrace, environment, occurrence count
   and a link back.
-- **History:** every status change, assignment, label change, regression and
-  escalation, with who did it.
+- **History:** when it was first seen, every status change (with its note),
+  assignment, label change, regression, escalation, return of an ignored issue and
+  GitHub issue, with who did it.
 
-Select issues on the list to change several at once:
+![The Notes tab of an issue with a triage note an agent wrote over MCP](./screenshots/issue-notes.png)
+
+Every member of the team can work on issues: change their status, assign them, label
+them, write notes and create GitHub issues. **Start working** sets an issue in progress
+and assigns you; **Stop working** sets it back to open.
+
+Select issues on the list (up to 100 at a time) to change several at once:
 
 - **Resolve**, **Ignore** or **Re-open** them, after a confirmation. Resolving or
   ignoring sends one [status change alert](./alerts#resolved-or-ignored) for all of them.

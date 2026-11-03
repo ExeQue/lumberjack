@@ -46,6 +46,8 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
                 REDIS_HOST: ${REDIS_HOST:-redis}
                 REDIS_PORT: ${REDIS_PORT:-6379}
                 REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+                # The reverse proxy in front: a proxy on this server or in a Docker network connects from 172.16.0.0/12.
+                TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,172.16.0.0/12}
                 # Queue workers: ingest handles incoming telemetry, background the rest.
                 HORIZON_INGEST_PROCESSES: ${HORIZON_INGEST_PROCESSES:-2}
                 HORIZON_BACKGROUND_PROCESSES: ${HORIZON_BACKGROUND_PROCESSES:-2}
@@ -181,18 +183,23 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-s
 
 Everything is set through environment variables in `.env.docker`.
 
-| Variable                       | Default       |                                                                                                                                   |
-| ------------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `APP_URL`                      | (required)    | The public address, e.g. `https://lumberjack.example.com`                                                                         |
-| `APP_KEY`                      | (required)    | Encryption key. Keep it: changing it signs everyone out and breaks stored secrets                                                 |
-| `DB_PASSWORD`                  | (required)    | Password of the bundled Postgres                                                                                                  |
-| `LUMBERJACK_SETUP_TOKEN`       | generated     | Locks first-run setup. Without one, a token is generated on first start, printed in the log and kept in `storage/app/setup/token` |
-| `LUMBERJACK_PORT`              | `8080`        | Port on the host                                                                                                                  |
-| `HORIZON_INGEST_PROCESSES`     | `2`           | Most workers for incoming telemetry                                                                                               |
-| `HORIZON_BACKGROUND_PROCESSES` | `2`           | Most workers for everything else (alerts, pruning)                                                                                |
-| `MAIL_*`                       |               | SMTP for invitations, password resets and e-mail alerts; see [Mail](./administration#mail) for the two sender addresses           |
-| `TRUSTED_PROXIES`              | Docker ranges | Proxies whose `X-Forwarded-*` headers are believed: `127.0.0.1,172.16.0.0/12`. Comma separated; `*` for any (not recommended)     |
-| `LUMBERJACK_MIGRATE`           | `true`        | Run database migrations on start                                                                                                  |
+| Variable                                 | Default        |                                                                                                                                   |
+| ---------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_URL`                                | (required)     | The public address, e.g. `https://lumberjack.example.com`                                                                         |
+| `APP_KEY`                                | (required)     | Encryption key. Keep it: changing it signs everyone out and breaks stored secrets                                                 |
+| `DB_PASSWORD`                            | (required)     | Password of the bundled Postgres                                                                                                  |
+| `LUMBERJACK_SETUP_TOKEN`                 | generated      | Locks first-run setup. Without one, a token is generated on first start, printed in the log and kept in `storage/app/setup/token` |
+| `LUMBERJACK_PORT`                        | `8080`         | Port on the host                                                                                                                  |
+| `HORIZON_INGEST_PROCESSES`               | `2`            | Most workers for incoming telemetry                                                                                               |
+| `HORIZON_BACKGROUND_PROCESSES`           | `2`            | Most workers for everything else (alerts, pruning)                                                                                |
+| `MAIL_*`                                 |                | SMTP for invitations, password resets and e-mail alerts; see [Mail](./administration#mail) for the two sender addresses           |
+| `TRUSTED_PROXIES`                        | Docker ranges  | Proxies whose `X-Forwarded-*` headers are believed: `127.0.0.1,172.16.0.0/12`. Comma separated; `*` for any (not recommended)     |
+| `LUMBERJACK_MIGRATE`                     | `true`         | Run database migrations on start                                                                                                  |
+| `LOG_LEVEL`                              | `info`         | How much Lumberjack itself logs, to the container's output                                                                        |
+| `SESSION_SECURE_COOKIE`                  | from `APP_URL` | `true` when `APP_URL` starts with `https://`: the session cookie is then only sent over HTTPS                                     |
+| `ALERTS_WEBHOOKS_ALLOW_PRIVATE`          | `false`        | Allow alert channels to [private addresses](./alerts#channels)                                                                    |
+| `LUMBERJACK_HEALTH_ALLOW_PRIVATE`        | `false`        | Allow health checks of [private addresses](./health#private-networks)                                                             |
+| `REVERB_CLIENT_HOST`, `_PORT`, `_SCHEME` | from `APP_URL` | Where browsers open the live-update WebSocket, when it is not `APP_URL`                                                           |
 
 ### Your own Postgres or Redis
 
@@ -259,7 +266,7 @@ and alerts always use `APP_URL`, whatever host a request names.
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `postgres-data`      | Everything Lumberjack records. Back this up: `docker compose exec postgres pg_dump -U lumberjack lumberjack > backup.sql` |
 | `redis-data`         | Queues and cache; Lumberjack recovers without it                                                                          |
-| `lumberjack-storage` | The setup flag and token, uploaded files                                                                                  |
+| `lumberjack-storage` | The setup flag and the generated setup token                                                                              |
 
 ## Updating
 
@@ -293,5 +300,10 @@ the container's output (`docker compose logs lumberjack`).
 | horizon   | Queue workers                                           |
 | scheduler | `schedule:work`                                         |
 
+Horizon runs two groups of workers: the ingest workers take the `ingest` queue
+(`HORIZON_INGEST_PROCESSES`), the background workers take `alerts`, `default` and
+`health`, in that order (`HORIZON_BACKGROUND_PROCESSES`). So a flood of telemetry never
+holds back an alert, and health checks wait behind both.
+
 Reverb's credentials are derived from `APP_KEY`, so there is nothing to set for
-them. Its HTTP API is not reachable from outside the container.
+them (`REVERB_APP_ID`, `REVERB_APP_KEY` and `REVERB_APP_SECRET` override them). Its HTTP API is not reachable from outside the container.
