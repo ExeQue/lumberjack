@@ -33,7 +33,7 @@ A check that watches a database may send these metrics with each result:
 | `connections`     | Connections open right now             |
 | `max_connections` | Connections the database server allows |
 
-The Health page shows them next to the latency (**13.8 MB · 4 of 100 connections**), and
+The Health page shows them next to the latency (**13.8 MB · 4 of 100 conns**), and
 they feed the database widgets of [status screens](./screens#widgets) and the `db_size`,
 `db_connections` and `db_connections_used` series of the [metrics API](./metrics-api#series).
 Any reported check that sends them counts, whatever its slug.
