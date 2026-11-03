@@ -63,7 +63,7 @@ class Screen extends Model
 
     public const int MIN_ROWS = 2;
 
-    public const int MAX_ROWS = 6;
+    public const int MAX_ROWS = 12;
 
     /** @var array<string, mixed> */
     protected $attributes = [

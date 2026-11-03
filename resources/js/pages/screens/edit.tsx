@@ -32,6 +32,7 @@ import {
     newWidgetId,
     regrid,
     themeAt,
+    transposed,
 } from '@/components/lj/screen/lib';
 import type {
     Schema,
@@ -877,6 +878,8 @@ export default function EditScreen(props: Props) {
     const theme = themeAt(screen, now);
     const [aw, ah] = screen.aspect.split(':').map(Number);
     const ratio = screen.orientation === 'portrait' ? [ah, aw] : [aw, ah];
+    // Columns and rows swapped with the widgets, when everything still fits.
+    const flipped = transposed(screen, props.limits);
     const turn = ([w, h]: number[]) =>
         screen.orientation === 'portrait' ? [h, w] : [w, h];
     const presets = (PRESETS[screen.aspect] ?? []).map(turn);
@@ -1410,6 +1413,25 @@ export default function EditScreen(props: Props) {
                                     ),
                                 )}
                             </div>
+                            <Button
+                                variant="ghost"
+                                className="h-8 px-2 text-xs"
+                                disabled={!flipped}
+                                title={t(
+                                    flipped
+                                        ? 'screens.designer.swap_hint'
+                                        : 'screens.designer.swap_refused',
+                                )}
+                                onClick={() =>
+                                    flipped &&
+                                    change((s) => ({
+                                        ...s,
+                                        ...transposed(s, props.limits),
+                                    }))
+                                }
+                            >
+                                {t('screens.designer.swap')}
+                            </Button>
                             <label className="flex items-center gap-1.5">
                                 {t('screens.designer.preview_at')}
                                 <Select
