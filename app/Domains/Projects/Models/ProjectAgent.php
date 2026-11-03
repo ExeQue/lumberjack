@@ -61,7 +61,7 @@ class ProjectAgent extends Model
         return $this->belongsTo(Project::class);
     }
 
-    /** @return Builder<self> */
+    /** @return Builder<static> */
     public function prunable(): Builder
     {
         return static::query()->where('last_seen_at', '<', now()->subHours(self::FORGET_AFTER_HOURS));
