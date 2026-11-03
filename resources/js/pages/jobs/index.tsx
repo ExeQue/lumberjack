@@ -9,7 +9,9 @@ import {
     EmptyState,
     PageTitle,
     Select,
+    Sparkline,
     numClass,
+    spreadTips,
     tableClass,
     tdClass,
     thClass,
@@ -40,10 +42,21 @@ import type {
 
 type Filters = DashboardFilters & { sort: string; queue: string; job: string };
 
+type QueueStat = {
+    connection: string;
+    queue: string;
+    size: number | null;
+    oldest_age_s: number | null;
+    sampled_at: string | null;
+    p95_wait: number | null;
+    series: { t: string; v: number }[];
+};
+
 type Props = {
     project: ProjectHeader;
     filters: Filters;
     queues: string[];
+    queue_stats: QueueStat[];
     stuck: number;
     stuck_names: string[];
     jobs: JobStat[];
@@ -92,6 +105,7 @@ export default function JobsIndex({
     project,
     filters,
     queues,
+    queue_stats,
     stuck,
     stuck_names,
     jobs,
@@ -105,6 +119,8 @@ export default function JobsIndex({
         ['jobs.changed'],
         ['jobs', 'runs', 'stuck', 'stuck_names'],
     );
+    // Queue sizes come with each agent's heartbeat.
+    useProjectLive(project.uuid, ['agents.changed'], ['queue_stats']);
 
     const apply = (changes: Partial<Filters>) => {
         const query = Object.fromEntries(
@@ -224,6 +240,10 @@ export default function JobsIndex({
                             {t('jobs.stuck.link')}
                         </a>
                     </div>
+                )}
+
+                {queue_stats.length > 0 && (
+                    <QueuesCard stats={queue_stats} period={filters.period} />
                 )}
 
                 <Card className="overflow-x-auto">
@@ -605,5 +625,136 @@ export default function JobsIndex({
                 </Card>
             </PageBody>
         </>
+    );
+}
+
+/** A sample older than this means its agent stopped reporting. */
+const STALE_MS = 5 * 60_000;
+
+function QueuesCard({ stats, period }: { stats: QueueStat[]; period: string }) {
+    const t = useT();
+
+    return (
+        <Card aria-labelledby="queues-title">
+            <CardHeader
+                id="queues-title"
+                title={t('jobs.queues.title')}
+                description={t('jobs.queues.description')}
+            />
+            <div className="overflow-x-auto">
+                <table className={tableClass}>
+                    <thead>
+                        <tr>
+                            <th className={thClass}>
+                                {t('jobs.queues.columns.queue')}
+                            </th>
+                            <th className={`${thClass} text-right`}>
+                                {t('jobs.queues.columns.size')}
+                            </th>
+                            <th className={`${thClass} text-right`}>
+                                {t('jobs.queues.columns.oldest')}
+                            </th>
+                            <th className={`${thClass} text-right`}>
+                                {t('jobs.queues.columns.p95_wait')}
+                            </th>
+                            <th className={thClass}>
+                                {t('jobs.queues.columns.trend')}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {stats.map((q) => {
+                            const values = q.series.map((p) => p.v);
+                            const stale =
+                                q.sampled_at !== null &&
+                                Date.now() - new Date(q.sampled_at).getTime() >
+                                    STALE_MS;
+
+                            return (
+                                <tr
+                                    key={`${q.connection}:${q.queue}`}
+                                    className="hover:bg-panel-2/60"
+                                >
+                                    <td className={tdClass}>
+                                        <span className="flex items-center gap-2">
+                                            <Badge>{q.connection}</Badge>
+                                            <span className="font-mono text-xs">
+                                                {q.queue}
+                                            </span>
+                                        </span>
+                                    </td>
+                                    <td
+                                        className={cn(
+                                            tdClass,
+                                            numClass,
+                                            stale && 'text-ink-3',
+                                        )}
+                                        title={
+                                            q.sampled_at
+                                                ? t('jobs.queues.sampled', {
+                                                      time: formatRelative(
+                                                          q.sampled_at,
+                                                      ),
+                                                  })
+                                                : undefined
+                                        }
+                                    >
+                                        {q.size === null
+                                            ? '-'
+                                            : formatNumber(q.size)}
+                                    </td>
+                                    <td className={`${tdClass} ${numClass}`}>
+                                        {formatDuration(
+                                            q.oldest_age_s === null
+                                                ? null
+                                                : q.oldest_age_s * 1_000_000,
+                                        )}
+                                    </td>
+                                    <td className={`${tdClass} ${numClass}`}>
+                                        {formatDuration(q.p95_wait)}
+                                    </td>
+                                    <td className={`${tdClass} min-w-48`}>
+                                        {values.length > 0 && (
+                                            <div className="flex items-center gap-2">
+                                                <div
+                                                    className="flex h-7 flex-col justify-between text-right font-mono text-[10px] leading-none text-ink-3"
+                                                    aria-hidden="true"
+                                                >
+                                                    <span>
+                                                        {formatNumber(
+                                                            Math.max(
+                                                                1,
+                                                                ...values,
+                                                            ),
+                                                        )}
+                                                    </span>
+                                                    <span>0</span>
+                                                </div>
+                                                <Sparkline
+                                                    values={values}
+                                                    width={160}
+                                                    color="var(--lj-info)"
+                                                    tips={spreadTips(
+                                                        values,
+                                                        period,
+                                                        formatNumber,
+                                                    )}
+                                                    label={t(
+                                                        'jobs.queues.trend_label',
+                                                        {
+                                                            queue: q.queue,
+                                                        },
+                                                    )}
+                                                />
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </Card>
     );
 }

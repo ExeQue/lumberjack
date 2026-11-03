@@ -7,6 +7,7 @@ namespace App\Domains\Jobs\Http\Controllers;
 use App\Domains\Jobs\Enums\JobRunStatus;
 use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Jobs\Queries\JobStatisticsQuery;
+use App\Domains\Jobs\Queries\QueueStatisticsQuery;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Shared\Http\Concerns\ReadsDashboardFilters;
@@ -19,7 +20,7 @@ class JobController
 {
     use ReadsDashboardFilters;
 
-    public function __invoke(Request $request, Project $project, JobStatisticsQuery $query, ProjectPresenter $presenter): Response
+    public function __invoke(Request $request, Project $project, JobStatisticsQuery $query, QueueStatisticsQuery $queueStats, ProjectPresenter $presenter): Response
     {
         Gate::authorize('view', $project);
 
@@ -48,6 +49,7 @@ class JobController
             'stuck_names' => JobRun::query()->where('project_id', $project->id)->whereStatus(JobRunStatus::Stuck)->where('updated_at', '>=', now()->subDay())
                 ->distinct()->limit(5)->pluck('name')->map(fn (string $name): string => class_basename($name))->values(),
             'jobs' => fn (): array => $query->get($project->id, $period, $environment, $sort, $queue),
+            'queue_stats' => fn (): array => $queueStats->get($project->id, $period, $environment),
             'runs' => $runs->map(fn (JobRun $r): array => [
                 'id' => $r->id,
                 'uuid' => $r->job_uuid,

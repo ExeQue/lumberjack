@@ -13,6 +13,22 @@ a chart to see the value of each bucket.
 | Commands | Artisan commands with runs, failures and duration. Click a command for its runs.                                                                       |
 | Logs     | Log lines by channel and level, with full-text search.                                                                                                 |
 
+## Queues
+
+The Jobs page shows a **Queues** card once agents report queue sizes (the package's
+`queues` config). Per connection and queue:
+
+- **Waiting:** jobs on the queue now, from the latest heartbeat. Several agents report
+  the same queue, so this is the latest sample, not their sum. Gray when no agent has
+  reported it for 5 minutes.
+- **Oldest pending:** how long the oldest waiting job has waited, where the queue driver
+  can tell (Redis, database).
+- **p95 wait:** time from queued to started of the jobs that ran in the period.
+- **Size:** the highest size per bucket over the period; hover for each bucket.
+
+Queue size keeps growing when every worker is dead, while no job starts and so no wait
+is measured. A [queue backlog alert](./alerts) fires on it.
+
 ## Apdex
 
 Apdex scores a route from 0 to 1 by how its requests felt. A request within 500 ms is
