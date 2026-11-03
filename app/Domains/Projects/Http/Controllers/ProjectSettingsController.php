@@ -20,6 +20,7 @@ use App\Domains\Projects\Http\Requests\UpdateProjectRequest;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Projects\Presenters\ProjectPresenter;
+use App\Domains\Projects\Queries\AgentMetricsQuery;
 use App\Domains\Retention\Actions\ResolveRetentionDaysAction;
 use App\Domains\Retention\Enums\RetentionCategory;
 use App\Domains\Retention\Models\RetentionPolicy;
@@ -33,7 +34,7 @@ use Inertia\Response;
 
 class ProjectSettingsController
 {
-    public function edit(Request $request, Project $project, ProjectPresenter $presenter, ResolveRetentionDaysAction $retention): Response
+    public function edit(Request $request, Project $project, ProjectPresenter $presenter, ResolveRetentionDaysAction $retention, AgentMetricsQuery $agentMetrics): Response
     {
         Gate::authorize('update', $project);
 
@@ -41,6 +42,8 @@ class ProjectSettingsController
         $channelCounts = DB::table('log_entries')->where('project_id', $project->id)->where('occurred_at', '>=', now()->subDay())
             ->selectRaw('log_channel_id, COUNT(*) AS c')->groupBy('log_channel_id')->pluck('c', 'log_channel_id');
         $repository = $project->repository;
+        $agents = $project->agents()->orderBy('host')->get();
+        $metrics = $agentMetrics->get($agents);
 
         return Inertia::render('projects/settings', [
             'project' => $presenter->header($project, $request->user()),
@@ -58,8 +61,9 @@ class ProjectSettingsController
                 'server_url' => url('/'),
             ],
             'labels' => $project->labels()->withCount('issues')->get()->map(fn (Label $l): array => [...$l->toSummary(), 'issues' => (int) $l->issues_count])->all(),
-            'agents' => $project->agents()->orderBy('host')->get()->map(fn (ProjectAgent $a): array => [
+            'agents' => $agents->map(fn (ProjectAgent $a): array => [
                 'id' => $a->id, 'host' => $a->host, 'name' => $a->name !== '' ? $a->name : null, 'client' => AgentClient::fromAgent($a)->label(), 'client_parts' => AgentClient::fromAgent($a)->parts(), 'last_seen_at' => $a->last_seen_at->toIso8601String(), 'online' => $a->isOnline(),
+                'metrics' => $metrics[$a->id] ?? null,
             ])->all(),
             'channels' => $project->logChannels()->orderByRaw('name = ? DESC', [LogChannel::DEFAULT])->orderBy('name')->get()->map(fn (LogChannel $c): array => [
                 'id' => $c->id,

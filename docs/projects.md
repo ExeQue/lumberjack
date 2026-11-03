@@ -33,7 +33,11 @@ Pages that belong to one thing, like a trace, open the other project's overview.
   since its server or pod is most likely gone (Kubernetes names every pod for
   itself). **Remove** forgets one right away; it comes back if it checks in again.
   The heartbeat also reports the size of the app's queues (the package's `queues`
-  config), kept for 30 days for the [Jobs page](./performance#queues).
+  config), kept for 30 days for the [Jobs page](./performance#queues), and how busy
+  its host is: the table shows the 1 minute load against the cores, memory and disk
+  in use (hover for the bytes), with the highest load and memory per hour over the
+  last day. Memory and disk turn amber past 90%, load past the number of cores. In a
+  container the container's own limits count. Host samples are kept for 7 days.
 - **Alerts:** the project's [rules and own channels](./alerts).
 - **Labels:** rename, recolor or delete [issue labels](./issues#working-on-an-issue).
 - **Retention:** see below.

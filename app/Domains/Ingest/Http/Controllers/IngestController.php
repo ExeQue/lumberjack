@@ -12,6 +12,7 @@ use App\Domains\Jobs\Actions\RecordQueueSamplesAction;
 use App\Domains\Live\Actions\BroadcastProjectChangeAction;
 use App\Domains\Live\Enums\ChangeKind;
 use App\Domains\Projects\Actions\RecordAgentHeartbeatAction;
+use App\Domains\Projects\Actions\RecordHostSampleAction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -45,11 +46,12 @@ class IngestController
         return response()->noContent()->withHeaders($this->corsHeaders((string) $request->header('Origin')));
     }
 
-    public function heartbeat(HeartbeatRequest $request, RecordAgentHeartbeatAction $action, RecordQueueSamplesAction $queues, BroadcastProjectChangeAction $broadcast): JsonResponse
+    public function heartbeat(HeartbeatRequest $request, RecordAgentHeartbeatAction $action, RecordQueueSamplesAction $queues, RecordHostSampleAction $hostSample, BroadcastProjectChangeAction $broadcast): JsonResponse
     {
         $project = $request->project();
         $host = $request->string('host')->toString();
-        $action->execute($project, $host, $request->client(), $request->input('name'));
+        $agent = $action->execute($project, $host, $request->client(), $request->input('name'));
+        $hostSample->execute($agent, $request->metrics());
         $queues->execute($project, $host, $request->queues());
         $broadcast->execute($project->id, ChangeKind::Agents);
 

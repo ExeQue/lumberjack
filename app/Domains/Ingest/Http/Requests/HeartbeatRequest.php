@@ -34,6 +34,14 @@ class HeartbeatRequest extends FormRequest
             'queues.*.queue' => ['required', 'string', 'max:255'],
             'queues.*.size' => ['required', 'integer', 'min:0'],
             'queues.*.oldest_age_s' => ['nullable', 'integer', 'min:0'],
+            'metrics' => ['nullable', 'array'],
+            'metrics.cpu_load_1m' => ['nullable', 'numeric', 'min:0'],
+            'metrics.cpu_cores' => ['nullable', 'numeric', 'min:0'],
+            'metrics.memory_used_bytes' => ['nullable', 'integer', 'min:0'],
+            'metrics.memory_total_bytes' => ['nullable', 'integer', 'min:0'],
+            'metrics.disk_used_bytes' => ['nullable', 'integer', 'min:0'],
+            'metrics.disk_total_bytes' => ['nullable', 'integer', 'min:0'],
+            'metrics.php_memory_peak_bytes' => ['nullable', 'integer', 'min:0'],
         ];
     }
 
@@ -55,6 +63,16 @@ class HeartbeatRequest extends FormRequest
             'size' => (int) $q['size'],
             'oldest_age_s' => isset($q['oldest_age_s']) ? (int) $q['oldest_age_s'] : null,
         ], (array) $this->validated('queues', [])));
+    }
+
+    /**
+     * @return array<string, int|float|null>
+     */
+    public function metrics(): array
+    {
+        $metrics = $this->validated('metrics');
+
+        return is_array($metrics) ? array_map(fn ($v): int|float|null => is_numeric($v) ? $v + 0 : null, $metrics) : [];
     }
 
     public function project(): Project

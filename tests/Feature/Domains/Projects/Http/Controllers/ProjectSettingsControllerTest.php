@@ -5,8 +5,11 @@ declare(strict_types=1);
 use App\Domains\Logs\Models\LogChannel;
 use App\Domains\Projects\Actions\CreateProjectAction;
 use App\Domains\Projects\Http\Controllers\ProjectSettingsController;
+use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Teams\Enums\TeamRole;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Teams\CreatesTeamMembers;
 
 covers(ProjectSettingsController::class);
@@ -96,5 +99,22 @@ describe('log channels', function () {
         $this->actingAs($user)->delete(route('log-channels.destroy', [$project, $default]))->assertSessionHasErrors('channel');
 
         expect($default->fresh())->not->toBeNull();
+    });
+});
+
+describe('agents', function () {
+    it('shows what each agent\'s host reported last, with its memory over the day', function () {
+        ['user' => $user, 'project' => $project] = $this->memberWithProject(TeamRole::Owner);
+        $agent = ProjectAgent::factory()->for($project)->create();
+        HostSample::query()->create(['project_agent_id' => $agent->id, 'memory_used_bytes' => 50, 'memory_total_bytes' => 100, 'cpu_load_1m' => 3.0, 'sampled_at' => now()->subHours(2)]);
+        HostSample::query()->create(['project_agent_id' => $agent->id, 'memory_used_bytes' => 95, 'memory_total_bytes' => 100, 'cpu_load_1m' => 0.5, 'disk_used_bytes' => 1, 'disk_total_bytes' => 4, 'sampled_at' => now()]);
+
+        $this->actingAs($user)->get(route('projects.settings', $project))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('agents.0.metrics.memory_used_bytes', 95)
+                ->where('agents.0.metrics.disk_total_bytes', 4)
+                ->where('agents.0.metrics.cpu_load_1m', 0.5)
+                ->where('agents.0.metrics.memory_series', fn ($series) => max($series->all()) === 0.95 && in_array(0.5, $series->all(), true))
+                ->where('agents.0.metrics.load_series', fn ($series) => max($series->all()) == 3));
     });
 });

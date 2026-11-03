@@ -30,13 +30,15 @@ import {
     Label,
     PageTitle,
     Select,
+    Sparkline,
+    spreadTips,
     tableClass,
     tdClass,
     thClass,
     numClass,
 } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import { formatNumber, formatRelative } from '@/lib/format';
+import { formatNumber, formatPercent, formatRelative } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -85,6 +87,21 @@ type Agent = {
     client_parts: { part: string; name: string; version: string | null }[];
     last_seen_at: string;
     online: boolean;
+    metrics: HostMetrics | null;
+};
+type HostMetrics = {
+    sampled_at: string;
+    cpu_load_1m: number | null;
+    cpu_cores: number | null;
+    memory_used_bytes: number | null;
+    memory_total_bytes: number | null;
+    disk_used_bytes: number | null;
+    disk_total_bytes: number | null;
+    php_memory_peak_bytes: number | null;
+    /** Highest share of memory in use per hour over the last day. */
+    memory_series: number[];
+    /** Highest 1 minute load per hour over the last day. */
+    load_series: number[];
 };
 type Channel = {
     id: number;
@@ -764,6 +781,129 @@ function KeysSection({ project, settings }: Props) {
     );
 }
 
+/** Past this share of memory or disk in use, the value shows as a warning. */
+const HOST_WARN = 0.9;
+
+function formatBytes(bytes: number): string {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.min(
+        units.length - 1,
+        Math.floor(Math.log(Math.max(1, bytes)) / Math.log(1024)),
+    );
+
+    return `${formatNumber(bytes / 1024 ** i, i > 2 ? 1 : 0)} ${units[i]}`;
+}
+
+function HostCells({ metrics }: { metrics: HostMetrics | null }) {
+    const t = useT();
+    const share = (used: number | null, total: number | null) =>
+        used !== null && total ? used / total : null;
+    const memory = share(
+        metrics?.memory_used_bytes ?? null,
+        metrics?.memory_total_bytes ?? null,
+    );
+    const disk = share(
+        metrics?.disk_used_bytes ?? null,
+        metrics?.disk_total_bytes ?? null,
+    );
+    const load = metrics?.cpu_load_1m ?? null;
+    const cores = metrics?.cpu_cores ?? null;
+    const of = (used: number | null, total: number | null) =>
+        used !== null && total !== null
+            ? t('settings.agents.of', {
+                  used: formatBytes(used),
+                  total: formatBytes(total),
+              })
+            : undefined;
+    const trend = (
+        values: number[],
+        label: string,
+        format: (v: number) => string,
+    ) =>
+        values.some((v) => v > 0) && (
+            <Sparkline
+                values={values}
+                width={64}
+                height={18}
+                color="var(--lj-info)"
+                tips={spreadTips(values, '24h', format)}
+                label={label}
+            />
+        );
+
+    return (
+        <>
+            <td className={tdClass}>
+                <span className="flex items-center gap-2">
+                    <span
+                        className={cn(
+                            'font-mono text-xs',
+                            load !== null &&
+                                cores !== null &&
+                                load > cores &&
+                                'text-warn',
+                        )}
+                        title={t('settings.agents.load_hint')}
+                    >
+                        {load === null
+                            ? '-'
+                            : cores === null
+                              ? formatNumber(load, 2)
+                              : t('settings.agents.load', {
+                                    load: formatNumber(load, 2),
+                                    cores: formatNumber(
+                                        cores,
+                                        cores % 1 ? 1 : 0,
+                                    ),
+                                })}
+                    </span>
+                    {trend(
+                        metrics?.load_series ?? [],
+                        t('settings.agents.load_trend'),
+                        (v) => formatNumber(v, 2),
+                    )}
+                </span>
+            </td>
+            <td className={tdClass}>
+                <span className="flex items-center gap-2">
+                    <span
+                        className={cn(
+                            'font-mono text-xs',
+                            memory !== null &&
+                                memory > HOST_WARN &&
+                                'text-warn',
+                        )}
+                        title={of(
+                            metrics?.memory_used_bytes ?? null,
+                            metrics?.memory_total_bytes ?? null,
+                        )}
+                    >
+                        {memory === null ? '-' : formatPercent(memory, 0)}
+                    </span>
+                    {trend(
+                        metrics?.memory_series ?? [],
+                        t('settings.agents.memory_trend'),
+                        (v) => formatPercent(v, 0),
+                    )}
+                </span>
+            </td>
+            <td
+                className={cn(
+                    tdClass,
+                    'font-mono text-xs',
+                    disk !== null && disk > HOST_WARN && 'text-warn',
+                )}
+                title={of(
+                    metrics?.disk_used_bytes ?? null,
+                    metrics?.disk_total_bytes ?? null,
+                )}
+            >
+                {disk === null ? '-' : formatPercent(disk, 0)}
+            </td>
+        </>
+    );
+}
+
 function AgentsSection({ project, agents }: Props) {
     const t = useT();
 
@@ -790,6 +930,15 @@ function AgentsSection({ project, agents }: Props) {
                                 </th>
                                 <th className={thClass}>
                                     {t('settings.agents.client')}
+                                </th>
+                                <th className={thClass}>
+                                    {t('settings.agents.cpu')}
+                                </th>
+                                <th className={thClass}>
+                                    {t('settings.agents.memory')}
+                                </th>
+                                <th className={thClass}>
+                                    {t('settings.agents.disk')}
                                 </th>
                                 <th className={thClass}>
                                     {t('settings.agents.last_seen')}
@@ -865,6 +1014,7 @@ function AgentsSection({ project, agents }: Props) {
                                             (agent.client ?? '-')
                                         )}
                                     </td>
+                                    <HostCells metrics={agent.metrics} />
                                     <td className={tdClass}>
                                         {formatRelative(agent.last_seen_at)}
                                     </td>

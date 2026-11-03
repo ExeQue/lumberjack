@@ -15,6 +15,7 @@ use App\Domains\Logs\Models\LogEntry;
 use App\Domains\Performance\Models\QueryRun;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Data\AgentClient;
+use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Schedule\Enums\ScheduledRunStatus;
 use App\Domains\Schedule\Models\ScheduledTask;
@@ -136,6 +137,15 @@ describe('server ingest', function () {
             ['host' => 'web-2', 'connection' => 'redis', 'queue' => 'default', 'size' => 12, 'oldest_age_s' => 40],
             ['host' => 'web-2', 'connection' => 'redis', 'queue' => 'emails', 'size' => 0, 'oldest_age_s' => null],
         ]);
+    });
+
+    it('stores how busy the agent\'s host is, and nothing when it tells nothing', function () {
+        $metrics = ['cpu_load_1m' => 0.42, 'cpu_cores' => 1.5, 'memory_used_bytes' => 268435456, 'memory_total_bytes' => 536870912, 'disk_used_bytes' => 10, 'disk_total_bytes' => 100, 'php_memory_peak_bytes' => 2097152];
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'metrics' => $metrics], $this->auth)->assertOk();
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'metrics' => ['cpu_load_1m' => null]], $this->auth)->assertOk();
+
+        expect(HostSample::query()->sole()->only(array_keys($metrics)))->toBe($metrics)
+            ->and(HostSample::query()->sole()->project_agent_id)->toBe($this->project->agents()->sole()->id);
     });
 
     it('refuses a queue size that is no count', function () {
