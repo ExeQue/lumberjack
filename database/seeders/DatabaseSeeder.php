@@ -68,11 +68,10 @@ class DatabaseSeeder extends Seeder
             'allowed_origins' => ['http://localhost:3000', 'https://lumberjack.test', 'https://laravel-lumberjack.test'],
         ]);
 
-        AlertRule::factory()->for($project)->create();
-        AlertRule::factory()->for($project)->regression()->create();
-        AlertRule::factory()->for($project)->create(['type' => AlertRuleType::Escalation]);
-        AlertRule::factory()->for($project)->create(['type' => AlertRuleType::Note, 'enabled' => false]);
-        AlertRule::factory()->for($project)->create(['type' => AlertRuleType::StatusChange, 'enabled' => false]);
+        // Every rule type, on or off as a new project gets it.
+        foreach (AlertRuleType::cases() as $type) {
+            AlertRule::factory()->for($project)->create(['type' => $type, 'enabled' => $type->enabledByDefault()]);
+        }
 
         foreach (self::AGENTS as $agent) {
             McpToken::factory()->for($team)->withToken($agent['token'])
