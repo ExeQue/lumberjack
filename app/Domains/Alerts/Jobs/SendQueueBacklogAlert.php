@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Jobs;
 
-use App\Domains\Alerts\Actions\SendQueueBacklogAlertAction;
+use App\Domains\Alerts\Actions\SendProjectAlertAction;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
 use App\Domains\Alerts\Models\AlertRule;
 use Carbon\CarbonImmutable;
@@ -41,7 +41,7 @@ class SendQueueBacklogAlert implements ShouldQueue
         return [10, 60, 300];
     }
 
-    public function handle(SendQueueBacklogAlertAction $action): void
+    public function handle(SendProjectAlertAction $action): void
     {
         $project = $this->rule->project;
 

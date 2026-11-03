@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Alerts\Actions\CheckQueueBacklogsAction;
-use App\Domains\Alerts\Actions\SendQueueBacklogAlertAction;
+use App\Domains\Alerts\Actions\SendProjectAlertAction;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Models\AlertRule;
@@ -15,7 +15,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\Teams\CreatesTeamMembers;
 
-covers(CheckQueueBacklogsAction::class, SendQueueBacklogAlertAction::class);
+covers(CheckQueueBacklogsAction::class, SendProjectAlertAction::class);
 
 uses(CreatesTeamMembers::class);
 

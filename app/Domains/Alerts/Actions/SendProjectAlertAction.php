@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Actions;
 
-use App\Domains\Alerts\Data\QueueBacklogAlert;
+use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Support\ChannelDriverRegistry;
 use Throwable;
 
-class SendQueueBacklogAlertAction
+/**
+ * An alert about the project rather than one issue (a queue backlog, a health check),
+ * to every channel of its rule.
+ */
+class SendProjectAlertAction
 {
     public function __construct(
         private readonly ChannelDriverRegistry $drivers,
@@ -19,7 +23,7 @@ class SendQueueBacklogAlertAction
     /**
      * @return int channels it reached
      */
-    public function execute(AlertRule $rule, QueueBacklogAlert $alert): int
+    public function execute(AlertRule $rule, Alert $alert): int
     {
         $sent = 0;
 
