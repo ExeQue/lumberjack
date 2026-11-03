@@ -27,8 +27,9 @@ Pages that belong to one thing, like a trace, open the other project's overview.
   context. A plain word masks every key containing it (`cpr`), `*` is a wildcard on the
   key name (`card_*`), and a dotted pattern matches the full path
   (`session.checkout.*`).
-- **Agents:** each server's agent checks in every minute; one that stops is shown as
-  offline.
+- **Agents:** each server's agent checks in every minute with what it runs (SDK and
+  runtime, e.g. "Laravel 0.1.0 · PHP 8.5.1"; hover for the agent and framework). One
+  that stops is shown as offline.
 - **Alerts:** the project's [rules and own channels](./alerts).
 - **Labels:** rename, recolor or delete [issue labels](./issues#working-on-an-issue).
 - **Retention:** see below.
