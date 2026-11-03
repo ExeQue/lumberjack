@@ -13,8 +13,11 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Rules\PublicUrl;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Tests\Support\Health\FakesHealthProbes;
 
 covers(WebhookDriver::class, PublicUrl::class);
+
+uses(FakesHealthProbes::class);
 
 describe('the webhook channel', function () {
     it('posts the alert as JSON, signed with the channel\'s own secret', function () {
@@ -41,6 +44,9 @@ describe('the webhook channel', function () {
             ->and(PublicUrl::allows('http://10.0.0.5/hook'))->toBeFalse()
             ->and(PublicUrl::allows('http://[::1]/hook'))->toBeFalse()
             ->and(PublicUrl::allows('ftp://example.com/hook'))->toBeFalse()
+            ->and(PublicUrl::allows('http://100.64.0.1/hook'))->toBeFalse()
+            ->and(PublicUrl::allows('http://[64:ff9b::a9fe:a9fe]/hook'))->toBeFalse()
+            ->and(PublicUrl::allows('http://[2002:7f00:1::1]/hook'))->toBeFalse()
             ->and(PublicUrl::allows('https://93.184.215.14/hook'))->toBeTrue();
 
         config()->set('alerts.webhooks.allow_private', true);
@@ -54,4 +60,32 @@ describe('the webhook channel', function () {
 
         app(WebhookDriver::class)->sendTest($channel);
     })->throws(AlertDeliveryFailedException::class);
+
+    it('connects to the address it checked when sending', function () {
+        $this->fakeDns(['93.184.215.14']);
+        $options = null;
+        Http::fake(function ($request, array $sent) use (&$options) {
+            $options = $sent;
+
+            return Http::response(null, 204);
+        });
+        $project = Project::factory()->create();
+        $channel = app(SaveNotificationChannelAction::class)->execute($project->team, ChannelType::Webhook, 'App', ['url' => 'https://hooks.example.com/lumberjack'], project: $project);
+
+        app(WebhookDriver::class)->sendTest($channel);
+
+        expect($options['curl'][CURLOPT_RESOLVE] ?? null)->toBe(['hooks.example.com:443:93.184.215.14'])
+            ->and($options['allow_redirects'] ?? null)->toBeFalse();
+    });
+
+    it('will not send once the host name has been rebound to an inside address', function () {
+        Http::fake();
+        $project = Project::factory()->create();
+        $this->fakeDns(['93.184.215.14']);
+        $channel = app(SaveNotificationChannelAction::class)->execute($project->team, ChannelType::Webhook, 'App', ['url' => 'https://hooks.example.com/lumberjack'], project: $project);
+        $this->fakeDns(['127.0.0.1']);
+
+        expect(fn () => app(WebhookDriver::class)->sendTest($channel))->toThrow(AlertDeliveryFailedException::class);
+        Http::assertNothingSent();
+    });
 });

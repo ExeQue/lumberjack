@@ -7,7 +7,6 @@ namespace App\Domains\Alerts\Drivers;
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
-use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Shared\Rules\PublicUrl;
 use Illuminate\Http\Client\PendingRequest;
@@ -82,11 +81,7 @@ class TeamsDriver implements ChannelDriver
     {
         $url = (string) ($channel->config['webhook_url'] ?? '');
 
-        // Checked again on every send: the host may resolve somewhere else by now.
-        if (! PublicUrl::allows($url)) {
-            throw AlertDeliveryFailedException::notPublic($channel->name);
-        }
-
-        $this->deliver($channel, fn (PendingRequest $http) => $http->withoutRedirecting()->post($url, $payload));
+        // Checked again on every send, and pinned: the host may resolve somewhere else by now.
+        $this->deliver($channel, fn (PendingRequest $http) => $http->post($url, $payload), pinTo: $url);
     }
 }

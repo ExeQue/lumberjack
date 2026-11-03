@@ -36,8 +36,12 @@ such as a removed webhook, fails at once and shows on the channel.
 when it last delivered or failed.
 
 Webhook, Teams and ntfy URLs may not point at private or reserved addresses (this
-server, the network behind it). Set `ALERTS_WEBHOOKS_ALLOW_PRIVATE=true` to allow that,
-for example in local development.
+server, the network behind it, carrier-grade NAT, NAT64 and 6to4 forms of those). The
+host is checked when the channel is saved and again on every send, and the delivery
+connects to the address that was checked, so a host whose DNS answer changes cannot be
+turned inward. Redirects are not followed. Set `ALERTS_WEBHOOKS_ALLOW_PRIVATE=true` to
+allow private addresses, for example in local development. It is separate from
+`LUMBERJACK_HEALTH_ALLOW_PRIVATE`, which only opens health checks.
 
 ## Rules
 

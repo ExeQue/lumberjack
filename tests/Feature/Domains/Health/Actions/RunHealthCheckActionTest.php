@@ -88,7 +88,24 @@ describe('the private address guard', function () {
         'IPv4-mapped IPv6' => ['https://example.com/', ['::ffff:127.0.0.1']],
         'IPv6 unique local' => ['https://example.com/', ['fd00::1']],
         'carrier-grade NAT' => ['https://example.com/', ['100.64.1.1']],
+        'NAT64 of loopback' => ['https://example.com/', ['64:ff9b::7f00:1']],
+        'local-use NAT64' => ['https://example.com/', ['64:ff9b:1::5db8:d70e']],
+        '6to4 of a private network' => ['https://example.com/', ['2002:a00:5::1']],
+        'Teredo' => ['https://example.com/', ['2001:0:4136:e378::1']],
     ]);
+
+    it('connects to the address it checked, not to a second lookup', function () {
+        $options = null;
+        Http::fake(function ($request, array $sent) use (&$options) {
+            $options = $sent;
+
+            return Http::response('ok');
+        });
+
+        ($this->run)(HealthCheckType::Http, ['url' => 'https://example.com:8443/up']);
+
+        expect($options['curl'][CURLOPT_RESOLVE] ?? null)->toBe(['example.com:8443:93.184.215.14']);
+    });
 
     it('checks a redirect target again', function () {
         Http::fake(['https://example.com/up' => Http::response('', 302, ['Location' => 'http://127.0.0.1/admin'])]);

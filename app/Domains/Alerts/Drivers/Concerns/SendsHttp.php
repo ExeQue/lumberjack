@@ -6,6 +6,8 @@ namespace App\Domains\Alerts\Drivers\Concerns;
 
 use App\Domains\Alerts\Exceptions\AlertDeliveryFailedException;
 use App\Domains\Alerts\Models\NotificationChannel;
+use App\Domains\Health\Exceptions\HealthExceptionInterface;
+use App\Domains\Health\Support\NetworkGuard;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
@@ -47,12 +49,27 @@ trait SendsHttp
     }
 
     /**
+     * Sends the request. With $pinTo, a URL anyone on the team may set, it must resolve
+     * to public addresses only (unless alerts.webhooks.allow_private) and the request
+     * connects to the address that was checked, so a rebinding DNS answer cannot turn it
+     * inward; redirects are not followed.
+     *
      * @param  callable(PendingRequest): Response  $request
      */
-    protected function deliver(NotificationChannel $channel, callable $request): void
+    protected function deliver(NotificationChannel $channel, callable $request, ?string $pinTo = null): void
     {
+        $http = $this->http();
+
+        if ($pinTo !== null) {
+            try {
+                $http = $http->withoutRedirecting()->withOptions(app(NetworkGuard::class)->pin($pinTo, (bool) config('alerts.webhooks.allow_private', false)));
+            } catch (HealthExceptionInterface) {
+                throw AlertDeliveryFailedException::notPublic($channel->name);
+            }
+        }
+
         try {
-            $response = $request($this->http());
+            $response = $request($http);
         } catch (ConnectionException) {
             throw AlertDeliveryFailedException::unreachable($channel->name);
         }

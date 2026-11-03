@@ -8,7 +8,6 @@ use App\Domains\Health\Data\HealthResultData;
 use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Enums\HealthResultStatus;
 use App\Domains\Health\Exceptions\HealthExceptionInterface;
-use App\Domains\Health\Exceptions\ProbeFailedException;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Support\DnsResolver;
 use App\Domains\Health\Support\NetworkGuard;
@@ -98,23 +97,12 @@ class RunHealthCheckAction
 
     private function request(string $method, string $url, int $timeout): Response
     {
-        $parts = parse_url($url);
-        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
-        $host = trim((string) ($parts['host'] ?? ''), '[]');
-
-        if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
-            throw new ProbeFailedException(__('health.results.bad_url'));
-        }
-
-        $address = $this->guard->resolve($host);
-        $port = (int) ($parts['port'] ?? ($scheme === 'https' ? 443 : 80));
-
         return Http::withoutRedirecting()
             ->timeout($timeout)
             ->connectTimeout(min(5, $timeout))
             ->withUserAgent('Lumberjack-Health/1')
             // Connect to the address the guard checked, not whatever a second lookup says.
-            ->withOptions(['curl' => [CURLOPT_RESOLVE => [$host.':'.$port.':'.(str_contains($address, ':') ? '['.$address.']' : $address)]]])
+            ->withOptions($this->guard->pin($url))
             ->send($method, $url);
     }
 
