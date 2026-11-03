@@ -91,6 +91,7 @@ type Props = {
     /** Deferred: counted after the page shows. */
     retention_stats?: RetentionStats;
     mcp_url: string;
+    can_create_team: boolean;
 };
 
 export default function TeamShow({
@@ -101,6 +102,7 @@ export default function TeamShow({
     retention,
     retention_stats,
     mcp_url,
+    can_create_team,
 }: Props) {
     // Relative times in the text below stay current.
     const now = useNow();
@@ -819,43 +821,45 @@ export default function TeamShow({
                     admin={admin}
                 />
 
-                <Card aria-labelledby="h-new-team">
-                    <CardHeader
-                        id="h-new-team"
-                        title={t('team.create.title')}
-                        description={t('team.create.description')}
-                    />
-                    <Form
-                        {...teamStore.form()}
-                        className="flex flex-wrap items-start gap-3 p-4"
-                    >
-                        {({ errors, processing }) => (
-                            <>
-                                <Field
-                                    label={t('team.create.name')}
-                                    htmlFor="team-name"
-                                    error={errors.name}
-                                    className="min-w-0 flex-[1_1_240px]"
-                                >
-                                    <Input
-                                        id="team-name"
-                                        name="name"
-                                        required
-                                        maxLength={100}
-                                        autoComplete="off"
-                                    />
-                                </Field>
-                                <Button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="mt-6"
-                                >
-                                    {t('team.create.submit')}
-                                </Button>
-                            </>
-                        )}
-                    </Form>
-                </Card>
+                {can_create_team && (
+                    <Card aria-labelledby="h-new-team">
+                        <CardHeader
+                            id="h-new-team"
+                            title={t('team.create.title')}
+                            description={t('team.create.description')}
+                        />
+                        <Form
+                            {...teamStore.form()}
+                            className="flex flex-wrap items-start gap-3 p-4"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <Field
+                                        label={t('team.create.name')}
+                                        htmlFor="team-name"
+                                        error={errors.name}
+                                        className="min-w-0 flex-[1_1_240px]"
+                                    >
+                                        <Input
+                                            id="team-name"
+                                            name="name"
+                                            required
+                                            maxLength={100}
+                                            autoComplete="off"
+                                        />
+                                    </Field>
+                                    <Button
+                                        type="submit"
+                                        disabled={processing}
+                                        className="mt-6"
+                                    >
+                                        {t('team.create.submit')}
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
+                    </Card>
+                )}
             </PageBody>
         </>
     );

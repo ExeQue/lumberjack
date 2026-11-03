@@ -27,4 +27,18 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Teams
+    |--------------------------------------------------------------------------
+    |
+    | Who may create a team from the team page: "everyone" (any signed-in user,
+    | who becomes its owner) or "admins" (system administrators only).
+    |
+    */
+
+    'teams' => [
+        'allow_creation' => env('LUMBERJACK_TEAM_CREATION', 'everyone'),
+    ],
+
 ];

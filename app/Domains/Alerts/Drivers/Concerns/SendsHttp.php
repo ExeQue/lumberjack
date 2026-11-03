@@ -26,7 +26,8 @@ trait SendsHttp
 
     protected function http(): PendingRequest
     {
-        return Http::timeout(10)->retry(
+        // Bounded: at most four attempts of 5 seconds each plus the waits, about 28 seconds.
+        return Http::timeout(5)->connectTimeout(3)->retry(
             times: self::BACKOFF_MS,
             when: fn (Throwable $e): bool => self::worthRetrying($e),
             throw: false,

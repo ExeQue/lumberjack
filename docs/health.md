@@ -75,7 +75,11 @@ has is private, loopback, link-local, carrier-grade NAT or otherwise reserved (I
 IPv6, including NAT64 and 6to4 forms of those), so a check
 cannot be used to reach this server or the network behind it. The check then connects
 to the address it checked. Redirects are followed by hand, at most three, each checked
-the same way. Timeouts are short (10 seconds for HTTP unless set lower).
+the same way. Timeouts are short (10 seconds for HTTP unless set otherwise, 15 at most),
+and an HTTP check reads at most the first megabyte of a body to look for its text.
+
+A project can have at most 50 checks that Lumberjack runs; set
+`LUMBERJACK_HEALTH_MAX_CHECKS` to change that.
 
 Self-hosters who want to watch internal services can turn this off:
 

@@ -29,7 +29,8 @@ number and title, the message, the location, release and occurrence count, and a
 to the issue.
 
 A delivery that meets a dropped connection, a rate limit (429) or a server error (5xx)
-is tried again up to three times within about 8 seconds. One the other side refuses,
+is tried again up to three times within about 8 seconds. Each attempt waits at most 5
+seconds for an answer, so one delivery takes half a minute at the very most. One the other side refuses,
 such as a removed webhook, fails at once and shows on the channel.
 
 **Send test** delivers a test message so you can check the setup. Each channel shows
