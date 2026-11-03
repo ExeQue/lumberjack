@@ -6,7 +6,8 @@ namespace App\Domains\Screens\Enums;
 
 /**
  * Ready layouts a new screen can start from, so a useful wall is one click away. Each
- * fills its grid exactly; widgets are stored like any other and can be changed after.
+ * fills its grid exactly, every widget on its own cells; widgets are stored like any
+ * other and can be changed after.
  */
 enum ScreenTemplate: string
 {
@@ -27,70 +28,72 @@ enum ScreenTemplate: string
     }
 
     /**
-     * @return list<array{id: string, type: string, source: string|null, rotate: list<string>, w: int, h: int, title: null, options: array<string, mixed>, scope: array<string, mixed>}>
+     * @return list<array{id: string, type: string, source: string|null, rotate: list<string>, x: int, y: int, w: int, h: int, title: null, options: array<string, mixed>, scope: array<string, mixed>}>
      */
     public function widgets(): array
     {
         $rows = match ($this) {
             self::Blank => [],
             self::Overview => [
-                ['stat', 'requests', 1, 1, ['rotate' => ['users_affected', 'apdex']]],
-                ['stat', 'error_rate', 1, 1],
-                ['stat', 'p95', 1, 1],
-                ['stat', 'open_issues', 1, 1],
-                ['chart', 'requests_errors', 2, 2],
-                ['list', 'latest_issues', 2, 2],
-                ['health', 'checks', 2, 2],
-                ['list', 'queues', 1, 1],
-                ['list', 'hosts', 1, 1],
-                ['stat', 'current_release', 1, 1, ['options' => ['compare' => 'none', 'sparkline' => false]]],
-                ['gauge', 'host_memory', 1, 1],
+                ['stat', 'requests', 0, 0, 1, 1, ['rotate' => ['users_affected', 'apdex']]],
+                ['stat', 'error_rate', 1, 0, 1, 1],
+                ['stat', 'p95', 2, 0, 1, 1],
+                ['stat', 'open_issues', 3, 0, 1, 1],
+                ['chart', 'requests_errors', 0, 1, 2, 2],
+                ['list', 'latest_issues', 2, 1, 2, 2],
+                ['health', 'checks', 0, 3, 2, 2],
+                ['list', 'queues', 2, 3, 1, 1],
+                ['list', 'hosts', 3, 3, 1, 1],
+                ['stat', 'current_release', 2, 4, 1, 1, ['options' => ['compare' => 'none', 'sparkline' => false]]],
+                ['gauge', 'host_memory', 3, 4, 1, 1],
             ],
             self::OnCall => [
-                ['stat', 'error_rate', 1, 1],
-                ['stat', 'open_issues', 1, 1],
-                ['gauge', 'p95', 1, 1],
-                ['stat', 'users_affected', 1, 1],
-                ['list', 'latest_issues', 2, 3, ['options' => ['sort' => 'newest']]],
-                ['health', 'checks', 2, 2, ['options' => ['only_problems' => true]]],
-                ['list', 'alert_feed', 2, 1],
+                ['stat', 'error_rate', 0, 0, 1, 1],
+                ['stat', 'open_issues', 1, 0, 1, 1],
+                ['gauge', 'p95', 2, 0, 1, 1],
+                ['stat', 'users_affected', 3, 0, 1, 1],
+                ['list', 'latest_issues', 0, 1, 2, 3, ['options' => ['sort' => 'newest']]],
+                ['health', 'checks', 2, 1, 2, 2, ['options' => ['only_problems' => true]]],
+                ['list', 'alert_feed', 2, 3, 2, 1],
             ],
             self::Infrastructure => [
-                ['gauge', 'host_cpu', 1, 1],
-                ['gauge', 'host_memory', 1, 1],
-                ['gauge', 'host_disk', 1, 1],
-                ['stat', 'agents_online', 1, 1],
-                ['chart', 'host_cpu', 2, 2],
-                ['list', 'hosts', 2, 1],
-                ['list', 'agents', 2, 1],
-                ['health', 'checks', 4, 1],
+                ['gauge', 'host_cpu', 0, 0, 1, 1],
+                ['gauge', 'host_memory', 1, 0, 1, 1],
+                ['gauge', 'host_disk', 2, 0, 1, 1],
+                ['stat', 'agents_online', 3, 0, 1, 1],
+                ['chart', 'host_cpu', 0, 1, 2, 2],
+                ['list', 'hosts', 2, 1, 2, 1],
+                ['list', 'agents', 2, 2, 2, 1],
+                ['health', 'checks', 0, 3, 4, 1],
             ],
             self::Background => [
-                ['stat', 'failed_jobs', 1, 1],
-                ['stat', 'queue_size', 1, 1],
-                ['gauge', 'queue_size', 1, 1],
-                ['stat', 'current_release', 1, 1, ['options' => ['compare' => 'none', 'sparkline' => false]]],
-                ['chart', 'queue_size', 2, 2],
-                ['list', 'failed_jobs', 2, 2],
-                ['list', 'scheduled_tasks', 2, 1],
-                ['list', 'queues', 2, 1],
+                ['stat', 'failed_jobs', 0, 0, 1, 1],
+                ['stat', 'queue_size', 1, 0, 1, 1],
+                ['gauge', 'queue_size', 2, 0, 1, 1],
+                ['stat', 'current_release', 3, 0, 1, 1, ['options' => ['compare' => 'none', 'sparkline' => false]]],
+                ['chart', 'queue_size', 0, 1, 2, 2],
+                ['list', 'failed_jobs', 2, 1, 2, 2],
+                ['list', 'scheduled_tasks', 0, 3, 2, 1],
+                ['list', 'queues', 2, 3, 2, 1],
             ],
         };
 
         $widgets = [];
 
-        foreach ($rows as $i => [$type, $source, $w, $h]) {
+        foreach ($rows as $i => [$type, $source, $x, $y, $w, $h]) {
             $widgets[] = [
                 'id' => $this->value.'-'.($i + 1),
                 'type' => $type,
                 'source' => $source,
                 'rotate' => [],
+                'x' => $x,
+                'y' => $y,
                 'w' => $w,
                 'h' => $h,
                 'title' => null,
                 'options' => [],
                 'scope' => [],
-                ...($rows[$i][4] ?? []),
+                ...($rows[$i][6] ?? []),
             ];
         }
 
@@ -120,7 +123,7 @@ enum ScreenTemplate: string
         ));
     }
 
-    /** @return array{id: string, label: string, description: string, cols: int, rows: int, widgets: list<array{type: string, w: int, h: int}>} */
+    /** @return array{id: string, label: string, description: string, cols: int, rows: int, widgets: list<array{type: string, x: int, y: int, w: int, h: int}>} */
     public function toArray(): array
     {
         [$cols, $rows] = $this->grid();
@@ -131,7 +134,7 @@ enum ScreenTemplate: string
             'description' => $this->description(),
             'cols' => $cols,
             'rows' => $rows,
-            'widgets' => array_map(fn (array $w): array => ['type' => $w['type'], 'w' => $w['w'], 'h' => $w['h']], $this->widgets()),
+            'widgets' => array_map(fn (array $w): array => ['type' => $w['type'], 'x' => $w['x'], 'y' => $w['y'], 'w' => $w['w'], 'h' => $w['h']], $this->widgets()),
         ];
     }
 }

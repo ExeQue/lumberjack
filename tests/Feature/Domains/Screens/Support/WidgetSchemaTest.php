@@ -74,14 +74,14 @@ describe('validating a widget', function () {
 describe('storing a widget', function () {
     it('keeps only what its type takes, typed, and leaves empty values to the defaults', function () {
         $clean = WidgetSchema::clean([
-            'id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => ['p95', 'apdex', 'apdex'], 'w' => 9, 'h' => 0, 'title' => '  ',
+            'id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => ['p95', 'apdex', 'apdex'], 'x' => '2', 'y' => -1, 'w' => 9, 'h' => 0, 'title' => '  ',
             'options' => ['amber' => '400', 'sparkline' => 0, 'prefix' => '', 'style' => 'bars', 'decimals' => 1],
             'scope' => ['projects' => [], 'environment' => '', 'period' => '7d', 'nonsense' => 1],
             'extra' => 'dropped',
         ], 4, 3);
 
         expect($clean)->toBe([
-            'id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => ['apdex'], 'w' => 4, 'h' => 1, 'title' => null,
+            'id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => ['apdex'], 'x' => 2, 'y' => 0, 'w' => 4, 'h' => 1, 'title' => null,
             'options' => ['amber' => 400.0, 'decimals' => '1', 'sparkline' => false],
             'scope' => ['projects' => [], 'period' => '7d'],
         ]);

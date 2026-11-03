@@ -25,9 +25,9 @@ class ScreenFactory extends Factory
             'timezone' => 'Europe/Copenhagen',
             'scope' => ['projects' => [], 'environment' => null, 'period' => '24h'],
             'widgets' => [
-                ['id' => 'requests', 'type' => 'stat', 'source' => 'requests', 'rotate' => [], 'w' => 1, 'h' => 1, 'title' => null, 'options' => [], 'scope' => []],
-                ['id' => 'traffic', 'type' => 'chart', 'source' => 'requests_errors', 'rotate' => [], 'w' => 2, 'h' => 2, 'title' => null, 'options' => [], 'scope' => []],
-                ['id' => 'clock', 'type' => 'clock', 'source' => null, 'rotate' => [], 'w' => 1, 'h' => 1, 'title' => null, 'options' => [], 'scope' => []],
+                ['id' => 'requests', 'type' => 'stat', 'source' => 'requests', 'rotate' => [], 'x' => 0, 'y' => 0, 'w' => 1, 'h' => 1, 'title' => null, 'options' => [], 'scope' => []],
+                ['id' => 'traffic', 'type' => 'chart', 'source' => 'requests_errors', 'rotate' => [], 'x' => 1, 'y' => 0, 'w' => 2, 'h' => 2, 'title' => null, 'options' => [], 'scope' => []],
+                ['id' => 'clock', 'type' => 'clock', 'source' => null, 'rotate' => [], 'x' => 3, 'y' => 0, 'w' => 1, 'h' => 1, 'title' => null, 'options' => [], 'scope' => []],
             ],
         ];
     }

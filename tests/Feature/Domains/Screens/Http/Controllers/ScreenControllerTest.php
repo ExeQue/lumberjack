@@ -15,6 +15,7 @@ use App\Domains\Screens\Enums\ScreenTemplate;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Events\ScreenChanged;
+use App\Domains\Screens\Exceptions\OverlappingWidgetsException;
 use App\Domains\Screens\Http\Controllers\ScreenController;
 use App\Domains\Screens\Http\Requests\StoreScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenLayoutRequest;
@@ -23,6 +24,7 @@ use App\Domains\Screens\Http\Requests\UpdateScreenWidgetRequest;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Policies\ScreenPolicy;
 use App\Domains\Screens\Presenters\ScreenPresenter;
+use App\Domains\Screens\Support\ScreenLayout;
 use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
@@ -47,6 +49,8 @@ covers(
     UpdateScreenWidgetRequest::class,
     StoreScreenRequest::class,
     ScreenTemplate::class,
+    ScreenLayout::class,
+    OverlappingWidgetsException::class,
 );
 
 uses(CreatesTeamMembers::class);
@@ -300,5 +304,100 @@ describe('the designer\'s other projects', function () {
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
             ->has('projects', 1)
             ->where('projects.0.name', $this->project->name));
+    });
+});
+
+describe('placing widgets on cells', function () {
+    beforeEach(fn () => Event::fake([ScreenChanged::class]));
+
+    it('saves each widget on its cells and leaves the cells between empty', function () {
+        $this->actingAs($this->user)->putJson(route('screens.layout', $this->screen), [
+            'cols' => 4, 'rows' => 4, 'widgets' => [
+                ($this->widget)(['id' => 'middle', 'x' => 1, 'y' => 1, 'w' => 2, 'h' => 2]),
+                ($this->widget)(['id' => 'corner', 'x' => 3, 'y' => 3]),
+            ],
+        ])->assertOk();
+
+        expect(array_map(fn (array $w): array => [$w['id'], $w['x'], $w['y'], $w['w'], $w['h']], $this->screen->refresh()->widgets))
+            ->toBe([['middle', 1, 1, 2, 2], ['corner', 3, 3, 1, 1]]);
+    });
+
+    it('saves a widget resized from its left or top edge, moved and larger at once', function () {
+        $this->actingAs($this->user)->putJson(route('screens.layout', $this->screen), [
+            'cols' => 4, 'rows' => 4, 'widgets' => [
+                ($this->widget)(['id' => 'a', 'x' => 0, 'y' => 0]),
+                ($this->widget)(['id' => 'b', 'x' => 1, 'y' => 0, 'w' => 3, 'h' => 2]),
+            ],
+        ])->assertOk();
+
+        expect($this->screen->refresh()->widgets[1])->toMatchArray(['x' => 1, 'y' => 0, 'w' => 3, 'h' => 2]);
+    });
+
+    it('refuses two widgets on one cell', function () {
+        $this->actingAs($this->user)->putJson(route('screens.layout', $this->screen), [
+            'cols' => 4, 'rows' => 4, 'widgets' => [
+                ($this->widget)(['id' => 'a', 'x' => 0, 'y' => 0, 'w' => 2, 'h' => 2]),
+                ($this->widget)(['id' => 'b', 'x' => 1, 'y' => 1]),
+            ],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['widgets.1.x']);
+    });
+
+    it('never stores an overlap, however the action is called', function () {
+        $widgets = [($this->widget)(['id' => 'a', 'x' => 0, 'y' => 0, 'w' => 2]), ($this->widget)(['id' => 'b', 'x' => 1, 'y' => 0])];
+
+        expect(fn () => app(UpdateScreenLayoutAction::class)->execute($this->screen, 4, 4, $widgets))->toThrow(OverlappingWidgetsException::class)
+            ->and($this->screen->refresh()->widgets[0]['id'])->toBe('requests');
+    });
+
+    it('refuses a position off the scale', function (array $at, string $error) {
+        $this->actingAs($this->user)->putJson(route('screens.layout', $this->screen), [
+            'cols' => 4, 'rows' => 4, 'widgets' => [($this->widget)($at)],
+        ])->assertUnprocessable()->assertJsonValidationErrors($error);
+    })->with([
+        'a negative column' => [['x' => -1, 'y' => 0], 'widgets.0.x'],
+        'past the widest grid' => [['x' => 12, 'y' => 0], 'widgets.0.x'],
+        'not a number' => [['x' => 0, 'y' => 'top'], 'widgets.0.y'],
+    ]);
+
+    it('keeps a widget that no longer fits a smaller grid, for the designer to place again', function () {
+        $this->actingAs($this->user)->putJson(route('screens.layout', $this->screen), [
+            'cols' => 4, 'rows' => 2, 'widgets' => [($this->widget)(['x' => 0, 'y' => 2])],
+        ])->assertOk();
+
+        expect($this->screen->refresh()->widgets[0])->toMatchArray(['x' => 0, 'y' => 2]);
+    });
+
+    it('flows widgets from an older designer, without positions, like before', function () {
+        $this->actingAs($this->user)->putJson(route('screens.layout', $this->screen), [
+            'cols' => 3, 'rows' => 3, 'widgets' => [
+                ($this->widget)(['id' => 'a', 'w' => 2]),
+                ($this->widget)(['id' => 'b', 'w' => 2]),
+            ],
+        ])->assertOk();
+
+        expect(array_map(fn (array $w): array => [$w['x'], $w['y']], $this->screen->refresh()->widgets))->toBe([[0, 0], [0, 1]]);
+    });
+
+    it('keeps a widget on its cells when only its settings are saved', function () {
+        $this->actingAs($this->user)->putJson(route('screens.widget', [$this->screen, 'traffic']), [
+            'widget' => ($this->widget)(['type' => 'chart', 'source' => 'p95', 'x' => 0, 'y' => 3, 'w' => 4, 'h' => 1]),
+        ])->assertOk();
+
+        expect($this->screen->refresh()->widgets[1])->toMatchArray(['source' => 'p95', 'x' => 1, 'y' => 0, 'w' => 2, 'h' => 2]);
+    });
+
+    it('positions an old screen for the designer and kiosk without storing anything', function () {
+        $this->screen->update(['widgets' => array_map(fn (array $w): array => array_diff_key($w, ['x' => 0, 'y' => 0]), $this->screen->widgets)]);
+
+        $this->actingAs($this->user)->get(route('screens.show', $this->screen))->assertInertia(fn (Assert $page) => $page
+            ->where('screen.widgets.1.x', 1)
+            ->where('screen.widgets.2.x', 3)
+            ->where('screen.widgets.2.y', 0));
+    });
+
+    it('copies the positions when duplicating', function () {
+        app(DuplicateScreenAction::class)->execute($this->screen);
+
+        expect(Screen::query()->where('name', 'Ops (copy)')->sole()->widgets)->toBe($this->screen->widgets);
     });
 });
