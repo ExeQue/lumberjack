@@ -1389,30 +1389,62 @@ export function DisplayGear({
     const t = useT();
     const gear = useRef<HTMLButtonElement>(null);
     const panel = useRef<HTMLDivElement>(null);
-    // Under the gear, or above it when there is more room there; never off screen, and
-    // scrolling inside when neither side has room for all of it. Written to the element
-    // right after it opens, before the browser paints it, so it never shows elsewhere.
+    // Beside the tile, so it stays in view while its settings change: right of it, else
+    // left, else below or above it, whichever has more room, scrolling inside when it
+    // does not fit. Written to the element right after it opens, before the browser
+    // paints it, and again on every scroll or resize while open, so it stays with the
+    // tile.
     const place = () => {
-        const r = gear.current?.getBoundingClientRect();
+        const tile = gear.current?.closest('.lj-tile')?.getBoundingClientRect();
         const el = panel.current;
 
-        if (!r || !el) {
+        if (!tile || !el) {
             return;
         }
 
-        const gap = 4;
+        const gap = 6;
         const pad = 10;
-        const below = window.innerHeight - r.bottom - gap - pad;
-        const above = r.top - gap - pad;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
         el.style.maxHeight = '';
-        const down = el.scrollHeight <= below || below >= above;
+        const height = el.scrollHeight;
+        const right = tile.right + gap + GEAR_WIDTH <= vw - pad;
+        const left = tile.left - gap - GEAR_WIDTH >= pad;
 
-        el.style.top = down ? `${r.bottom + gap}px` : 'auto';
-        el.style.bottom = down
-            ? 'auto'
-            : `${window.innerHeight - r.top + gap}px`;
-        el.style.left = `${Math.max(pad, Math.min(r.right - GEAR_WIDTH, window.innerWidth - GEAR_WIDTH - pad))}px`;
-        el.style.maxHeight = `${down ? below : above}px`;
+        if (right || left) {
+            el.style.left = `${right ? tile.right + gap : tile.left - gap - GEAR_WIDTH}px`;
+            el.style.top = `${Math.max(pad, Math.min(tile.top, vh - pad - height))}px`;
+            el.style.bottom = 'auto';
+            el.style.maxHeight = `${vh - 2 * pad}px`;
+
+            return;
+        }
+
+        const below = vh - tile.bottom - gap - pad;
+        const above = tile.top - gap - pad;
+        const down = height <= below || below >= above;
+
+        el.style.left = `${Math.max(pad, Math.min(tile.right - GEAR_WIDTH, vw - GEAR_WIDTH - pad))}px`;
+        el.style.top = down ? `${tile.bottom + gap}px` : 'auto';
+        el.style.bottom = down ? 'auto' : `${vh - tile.top + gap}px`;
+        el.style.maxHeight = `${Math.max(120, down ? below : above)}px`;
+    };
+    // While open it follows the tile through any scrolling container and resizes.
+    const listener = useRef<((e?: Event) => void) | null>(null);
+    const follow = (open: boolean) => {
+        if (listener.current) {
+            window.removeEventListener('scroll', listener.current, true);
+            window.removeEventListener('resize', listener.current);
+            listener.current = null;
+        }
+
+        if (open) {
+            // Scrolling the panel itself does not move it.
+            listener.current = (e?: Event) =>
+                panel.current?.contains(e?.target as Node) || place();
+            window.addEventListener('scroll', listener.current, true);
+            window.addEventListener('resize', listener.current);
+        }
     };
     const popover = `display-${widget.id}`;
     // Keeps the designer's tile handlers (select, drag, keys) out of the popover.
@@ -1443,6 +1475,7 @@ export function DisplayGear({
 
                     panel.current?.showPopover();
                     place();
+                    follow(true);
                     onOpen();
                 }}
             >
@@ -1463,6 +1496,7 @@ export function DisplayGear({
                     overflowY: 'auto',
                     width: GEAR_WIDTH,
                 }}
+                onToggle={(e) => e.newState === 'closed' && follow(false)}
                 onClick={stop}
                 onPointerDown={stop}
                 onKeyDown={stop}

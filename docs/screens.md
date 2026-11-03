@@ -162,8 +162,9 @@ Each widget's settings are grouped in sections that open and close:
   the tile, or small to huge), alignment (left or centered, top or vertically centered),
   and whether to hide it while all is ok or while it has nothing to show. How often it
   updates (live, every minute, every 5 minutes) is about its data, so it stays in the
-  inspector. The panel opens under the gear, or above it when there is more room there,
-  and scrolls when neither side fits it.
+  inspector. The panel opens beside the tile (right of it, else left, else below or
+  above), so the tile stays in view while it changes, follows it when the page scrolls,
+  and scrolls itself when it does not fit.
 
     ![A widget's display settings behind its gear](./screenshots/screen-designer-display.png)
 
