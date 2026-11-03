@@ -36,6 +36,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $line
  * @property string|null $log_channel
  * @property string|null $last_release
+ * @property string|null $first_release
+ * @property string|null $first_environment
  * @property string|null $external_issue_provider
  * @property string|null $external_issue_url
  * @property int $occurrences_count
@@ -59,7 +61,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Fillable([
     'project_id', 'number', 'fingerprint', 'source', 'status', 'title', 'message', 'file', 'line', 'log_channel',
-    'last_release', 'external_issue_provider', 'external_issue_url', 'occurrences_count', 'users_count', 'assigned_user_id', 'first_seen_at', 'last_seen_at', 'surfaced_at',
+    'last_release', 'first_release', 'first_environment', 'external_issue_provider', 'external_issue_url', 'occurrences_count', 'users_count', 'assigned_user_id', 'first_seen_at', 'last_seen_at', 'surfaced_at',
     'regressed_at', 'in_progress_at', 'escalated_at', 'ignore_until_at', 'ignore_until_count', 'ignore_until_escalation', 'returned_at', 'resolved_at', 'ignored_at',
 ])]
 #[UseEloquentBuilder(IssueBuilder::class)]

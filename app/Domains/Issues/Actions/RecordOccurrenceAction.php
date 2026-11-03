@@ -79,6 +79,9 @@ class RecordOccurrenceAction
                     'line' => $signal->line,
                     'log_channel' => $signal->logChannel,
                     'last_release' => $signal->release,
+                    // The releases page credits a new issue to the release it first came in with.
+                    'first_release' => $signal->release,
+                    'first_environment' => $signal->environment,
                     'occurrences_count' => 1,
                     'users_count' => 0,
                     'first_seen_at' => $at,

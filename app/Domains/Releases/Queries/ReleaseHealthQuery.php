@@ -117,22 +117,31 @@ class ReleaseHealthQuery
     }
 
     /**
-     * The earliest occurrence of every issue first seen in the period, with its release.
+     * Every issue first seen in the period, with the release its earliest occurrence carried.
      *
      * An issue is new in the release its earliest occurrence carried, not in whatever
      * release was deployed around issues.first_seen_at: releases overlap during rolling
      * deploys and across environments, so a time window would hand an issue to the wrong
-     * one. With an environment filter it is the earliest occurrence in that environment.
+     * one. The issue keeps that release from its creation; with an environment filter it
+     * is the earliest occurrence in that environment, one index probe per new issue.
      */
     private function firstOccurrences(int $projectId, Period $period, ?string $environment): Builder
     {
-        return DB::table('occurrences')
-            ->join('issues', 'issues.id', '=', 'occurrences.issue_id')
+        $issues = DB::table('issues')
             ->where('issues.project_id', $projectId)
-            ->where('issues.first_seen_at', '>=', $period->since())
-            ->when($environment !== null)->where('occurrences.environment', $environment)
-            ->selectRaw('DISTINCT ON (occurrences.issue_id) occurrences.issue_id, occurrences.release')
-            ->orderBy('occurrences.issue_id')->orderBy('occurrences.occurred_at')->orderBy('occurrences.id');
+            ->where('issues.first_seen_at', '>=', $period->since());
+
+        if ($environment === null) {
+            return $issues->select(['issues.id as issue_id', 'issues.first_release as release']);
+        }
+
+        return $issues
+            ->joinLateral(
+                DB::table('occurrences')->whereColumn('occurrences.issue_id', 'issues.id')->where('occurrences.environment', $environment)
+                    ->orderBy('occurrences.occurred_at')->orderBy('occurrences.id')->limit(1)->select('occurrences.release'),
+                'first',
+            )
+            ->select(['issues.id as issue_id', 'first.release']);
     }
 
     /**
