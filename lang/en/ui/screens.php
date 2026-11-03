@@ -310,6 +310,118 @@ return [
         'offline_title' => 'Lumberjack cannot be reached',
         'offline_body' => 'The numbers below are from :time and are not current. Trying again every 30 seconds.',
         'deleted' => 'This screen was deleted.',
+        'unshared' => 'This screen was unshared.',
+        'unshared_body' => 'The link no longer works. Ask the team for a new one.',
+        'no_screen' => ':name shows no screen yet.',
+        'no_screen_body' => 'Pick one for it under Team settings > Displays; it shows here right away.',
+    ],
+
+    // How a display draws its screen, on Team settings > Displays.
+    'display_theme' => [
+        'default' => 'Screen default',
+        'dark' => 'Dark',
+        'light' => 'Light',
+        'schedule' => 'By time of day',
+    ],
+
+    // The TV's start page, /tv, while it waits to be paired. Read from across the room.
+    'tv' => [
+        'title' => 'Show a status screen on this TV',
+        'step_scan' => 'Scan the code with your phone, or open :url',
+        'step_code' => 'Enter this code if asked',
+        'step_confirm' => 'Pick the screen and confirm',
+        'code_label' => 'Pairing code :code',
+        'qr_label' => 'QR code for :url',
+        'waiting' => 'Waiting for confirmation',
+        'new_code_in' => 'new code in :time',
+        'paired' => 'Paired. Opening the screen...',
+        'start_page' => 'Opened this page by hand? Make :url the start page of the TV browser, and it will show its screen after every restart.',
+    ],
+
+    // /pair, on the phone or laptop confirming a TV's code.
+    'pair' => [
+        'title' => 'Show a screen on a TV',
+        'question' => 'Show a screen on this TV?',
+        'enter' => 'Enter the code the TV shows',
+        'code' => 'Code',
+        // Button.
+        'find' => 'Continue',
+        'unknown' => 'No TV waits for the code :code. Codes last 10 minutes; check the TV for its current one.',
+        'device' => ':device · code made :age',
+        'unknown_device' => 'Unknown browser',
+        'check' => 'Check that the TV shows the same code.',
+        'screen' => 'Screen',
+        'screen_option' => ':screen (:team)',
+        'name' => 'Name this TV',
+        'name_default' => 'Office TV',
+        // Button.
+        'confirm' => 'Show on the TV',
+        'expires' => 'Not your TV? Close this page; the code expires :time.',
+        'no_screens' => 'Only team admins pair TVs, and you administer no team with a screen. Ask a team admin, or make a screen first.',
+        'done' => ':display shows :screen',
+        'done_body' => 'Change what it shows, or remove it, under Team settings > Displays. No need to touch the TV again.',
+        // Buttons.
+        'another' => 'Pair another TV',
+        'displays' => 'Go to Displays',
+    ],
+
+    // How to put a screen on a TV, in the designer and on Displays.
+    'open_tv' => [
+        // Button in the designer's top bar.
+        'button' => 'Open on a TV',
+        'title' => 'Open on a TV',
+        'step_open' => 'On the TV, open :url. It shows a code.',
+        'step_scan' => 'Scan that code with your phone, or enter it at :url.',
+        'step_pick' => 'Pick the screen and confirm. The TV shows it within a second.',
+        'qr_hint' => 'This code opens :url, for a TV stick or kiosk browser with a camera, or to cast the tab from a laptop.',
+        'code' => 'Code on the TV',
+        // Button.
+        'continue' => 'Continue',
+    ],
+
+    // The share link panel of the designer.
+    'share' => [
+        // Button in the designer's top bar.
+        'button' => 'Share',
+        'title' => 'Share link',
+        'hint' => 'A link that shows this screen without signing in, for signage systems and pages that embed a URL. Prefer pairing a TV: it needs no link at all.',
+        // Button.
+        'enable' => 'Share with a link',
+        'url' => 'Share link',
+        'titles' => 'Show issue titles and names, not only counts',
+        // Buttons.
+        'rotate' => 'New link',
+        'revoke' => 'Stop sharing',
+        'rotate_question' => 'Make a new link? The current one stops working at once, on every screen that shows it.',
+        'revoke_question' => 'Stop sharing? The link stops working at once, on every screen that shows it.',
+        'download' => 'Download QR for printing',
+        'qr_label' => 'QR code for the share link',
+        'admins_only' => 'Only team admins share screens.',
+        'off' => 'Not shared.',
+    ],
+
+    // Team settings > Displays.
+    'displays' => [
+        'title' => 'Displays',
+        'description' => 'TVs that show a status screen. Open :url on a TV and confirm its code to add one. Changing the screen here switches the TV right away.',
+        // Button.
+        'pair' => 'Pair a TV',
+        'empty_title' => 'No TVs yet',
+        'empty_body' => 'Open :url on a TV and confirm the code it shows; it appears here.',
+        'name' => 'Name',
+        'shows' => 'Shows',
+        'theme' => 'Theme',
+        'device' => 'Device',
+        'status' => 'Status',
+        'actions' => 'Actions',
+        'no_screen' => 'No screen',
+        'online' => 'Online',
+        'last_seen' => 'Last seen :time',
+        'never_seen' => 'Never connected',
+        // Button.
+        'remove' => 'Remove',
+        'remove_question' => 'Remove :name? The TV goes back to showing a pairing code.',
+        'read_only' => 'Only team admins change displays.',
     ],
 
     'validation' => [

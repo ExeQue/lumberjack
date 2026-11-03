@@ -32,7 +32,12 @@ use App\Domains\Releases\Http\Controllers\ReleaseController;
 use App\Domains\Repositories\Http\Controllers\RepositoryController;
 use App\Domains\Retention\Http\Controllers\RetentionController;
 use App\Domains\Schedule\Http\Controllers\ScheduleController;
+use App\Domains\Screens\Http\Controllers\DisplayController;
+use App\Domains\Screens\Http\Controllers\PairController;
 use App\Domains\Screens\Http\Controllers\ScreenController;
+use App\Domains\Screens\Http\Controllers\ScreenShareController;
+use App\Domains\Screens\Http\Controllers\SharedScreenController;
+use App\Domains\Screens\Http\Controllers\TvController;
 use App\Domains\Search\Http\Controllers\SearchController;
 use App\Domains\Shared\Http\Controllers\MailPreviewController;
 use App\Domains\Teams\Http\Controllers\InvitationController;
@@ -54,6 +59,16 @@ Route::get('invitations/{token}', [InvitationController::class, 'show'])->name('
 Route::get('watch/{issue}/stop', [WatchingController::class, 'confirm'])->middleware(['signed', 'throttle:30,1'])->name('watching.stop');
 Route::post('watch/{issue}/stop', [WatchingController::class, 'stop'])->middleware(['signed', 'throttle:30,1'])->withoutMiddleware(ValidateCsrfToken::class)->name('watching.stop.confirm');
 Route::post('invitations/{token}', [InvitationController::class, 'accept'])->middleware('throttle:10,1')->name('invitations.accept');
+
+// A TV's start page and what it asks without a session, by its httpOnly cookies; and a
+// screen by its share link. See docs/screens.md.
+Route::get('tv', [TvController::class, 'show'])->middleware('throttle:30,1')->name('tv');
+Route::post('tv/pairing', [TvController::class, 'pairing'])->middleware('throttle:screen-viewer')->name('tv.pairing');
+Route::post('tv/restore', [TvController::class, 'restore'])->middleware('throttle:10,1')->name('tv.restore');
+Route::get('tv/data', [TvController::class, 'data'])->middleware('throttle:screen-viewer')->name('tv.data');
+Route::get('tv/heartbeat', [TvController::class, 'heartbeat'])->middleware('throttle:screen-viewer')->name('tv.heartbeat');
+Route::get('s/{key}', [SharedScreenController::class, 'show'])->where('key', 'ls_[a-z0-9]{40}')->middleware('throttle:screen-viewer')->name('screens.shared');
+Route::get('s/{key}/data', [SharedScreenController::class, 'data'])->where('key', 'ls_[a-z0-9]{40}')->middleware('throttle:screen-viewer')->name('screens.shared.data');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', fn () => redirect()->route('projects.index'))->name('dashboard');
@@ -157,6 +172,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('screens/{screen:uuid}/widgets/{widget}', [ScreenController::class, 'widget'])->where('widget', '[A-Za-z0-9_-]{1,40}')->name('screens.widget');
     Route::post('screens/{screen:uuid}/duplicate', [ScreenController::class, 'duplicate'])->name('screens.duplicate');
     Route::delete('screens/{screen:uuid}', [ScreenController::class, 'destroy'])->name('screens.destroy');
+    Route::put('screens/{screen:uuid}/share', [ScreenShareController::class, 'update'])->name('screens.share');
+    Route::post('screens/{screen:uuid}/share/rotate', [ScreenShareController::class, 'rotate'])->name('screens.share.rotate');
+    Route::get('screens/{screen:uuid}/share/qr', [ScreenShareController::class, 'qr'])->name('screens.share.qr');
+
+    // Pairing a TV by the code it shows, and the team's paired TVs.
+    Route::get('pair', [PairController::class, 'index'])->name('pair');
+    Route::get('pair/{code}', [PairController::class, 'show'])->where('code', '[A-Za-z0-9-]{1,12}')->middleware('throttle:tv-pair')->name('pair.show');
+    Route::post('pair/{code}', [PairController::class, 'confirm'])->where('code', '[A-Za-z0-9-]{1,12}')->middleware('throttle:tv-pair')->name('pair.confirm');
+    Route::get('team/displays', [DisplayController::class, 'index'])->name('team.displays');
+    Route::put('team/displays/{display:uuid}', [DisplayController::class, 'update'])->name('displays.update');
+    Route::delete('team/displays/{display:uuid}', [DisplayController::class, 'destroy'])->name('displays.destroy');
 
     Route::get('team/alerts', [AlertController::class, 'index'])->name('alerts.index');
     Route::post('team/alerts/channels', [AlertController::class, 'storeChannel'])->name('alerts.channels.store');

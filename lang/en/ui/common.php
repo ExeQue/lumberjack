@@ -39,6 +39,7 @@ return [
         'alerts' => 'Alerts',
         'retention' => 'Retention',
         'screens' => 'Screens',
+        'displays' => 'Displays',
     ],
     'breadcrumb' => 'Breadcrumb',
     'teams' => 'Teams',

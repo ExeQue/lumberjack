@@ -23,6 +23,15 @@ const PROJECT_EVENTS = [
     '.issue.updated',
 ];
 
+class HttpError extends Error {
+    constructor(public status: number) {
+        super(`HTTP ${status}`);
+    }
+}
+
+/** Answers that mean the screen is not there for this viewer any more, not that the server is down. */
+const GONE = [401, 403, 404, 410];
+
 async function load(url: string, widget?: string): Promise<ScreenData> {
     const target = widget ? `${url}?widget=${encodeURIComponent(widget)}` : url;
     const response = await fetch(target, {
@@ -31,7 +40,7 @@ async function load(url: string, widget?: string): Promise<ScreenData> {
     });
 
     if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new HttpError(response.status);
     }
 
     return ((await response.json()) as { data: ScreenData }).data;
@@ -48,6 +57,12 @@ export function useScreenData(
     screen: Pick<Screen, 'widgets' | 'scope'>,
     schema: Schema,
     teamProjects: string[],
+    options: {
+        /** Refetch sooner when a project broadcasts; off for viewers without a session. */
+        liveProjects?: boolean;
+        /** The data URL answered that the screen is gone (unshared, display removed). */
+        onGone?: () => void;
+    } = {},
 ): { data: ScreenData; offlineSince: number | null; updatedAt: number | null } {
     const [data, setData] = useState<ScreenData>({});
     const [offlineSince, setOfflineSince] = useState<number | null>(null);
@@ -66,6 +81,11 @@ export function useScreenData(
     });
 
     const run = useRef<(ids?: string[]) => void>(() => {});
+    const onGone = useRef(options.onGone);
+
+    useEffect(() => {
+        onGone.current = options.onGone;
+    });
 
     useEffect(() => {
         run.current = (ids?: string[]) => {
@@ -100,7 +120,19 @@ export function useScreenData(
                     setOfflineSince(null);
                     setUpdatedAt(Date.now());
                 })
-                .catch(() => setOfflineSince((since) => since ?? Date.now()));
+                .catch((error: unknown) => {
+                    if (
+                        error instanceof HttpError &&
+                        GONE.includes(error.status) &&
+                        onGone.current
+                    ) {
+                        onGone.current();
+
+                        return;
+                    }
+
+                    setOfflineSince((since) => since ?? Date.now());
+                });
         };
     }, [url, schema]);
 
@@ -154,19 +186,27 @@ export function useScreenData(
     }, [offlineSince, schema]);
 
     // Live: the projects the screen shows broadcast when something changes.
-    const watched = [
-        ...new Set(
-            dataWidgets
-                .filter((w) => option<string>(schema, w, 'refresh') === 'live')
-                .flatMap((w) => {
-                    const own = w.scope.projects ?? screen.scope.projects;
+    const watched =
+        options.liveProjects === false
+            ? ''
+            : [
+                  ...new Set(
+                      dataWidgets
+                          .filter(
+                              (w) =>
+                                  option<string>(schema, w, 'refresh') ===
+                                  'live',
+                          )
+                          .flatMap((w) => {
+                              const own =
+                                  w.scope.projects ?? screen.scope.projects;
 
-                    return own.length > 0 ? own : teamProjects;
-                }),
-        ),
-    ]
-        .sort()
-        .join(',');
+                              return own.length > 0 ? own : teamProjects;
+                          }),
+                  ),
+              ]
+                  .sort()
+                  .join(',');
 
     useEffect(() => {
         if (watched === '') {

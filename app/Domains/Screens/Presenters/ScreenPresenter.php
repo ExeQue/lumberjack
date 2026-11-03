@@ -7,10 +7,13 @@ namespace App\Domains\Screens\Presenters;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Queries\ProjectEnvironmentsQuery;
+use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Screens\Support\ScreenQr;
 use App\Domains\Screens\Support\WidgetSchema;
 use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Teams\Models\Team;
+use App\Models\User;
 
 class ScreenPresenter
 {
@@ -44,6 +47,61 @@ class ScreenPresenter
             'widgets' => $screen->widgets,
             'updated_at' => $screen->updated_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Everything the kiosk draws from: the screen, its team's projects, the widget
+     * catalog, and where it reads data and hears about changes, which differ for a
+     * signed-in kiosk, a paired display and a share link. A theme forces the display's.
+     *
+     * @param  array{data_url: string, channel: string, share?: bool}  $source
+     * @return array<string, mixed>
+     */
+    public function kiosk(Screen $screen, array $source, ?ScreenTheme $theme = null): array
+    {
+        $shown = $screen;
+
+        if ($theme !== null) {
+            $shown = clone $screen;
+            $shown->theme = $theme;
+        }
+
+        return [
+            'screen' => $this->present($shown),
+            'team' => ['name' => $screen->team->name],
+            'projects' => $this->projects($screen->team),
+            ...$this->catalog(),
+            'data_url' => $source['data_url'],
+            'channel' => $source['channel'],
+            'share' => $source['share'] ?? false,
+        ];
+    }
+
+    /**
+     * The share link panel of the designer.
+     *
+     * @return array{url: string|null, include_titles: bool, qr: string|null, can_manage: bool}
+     */
+    public function sharing(Screen $screen, User $user): array
+    {
+        $url = $screen->shareUrl();
+
+        return [
+            'url' => $url,
+            'include_titles' => $screen->share_titles,
+            'qr' => $url !== null ? ScreenQr::svg($url) : null,
+            'can_manage' => $user->can('share', $screen),
+        ];
+    }
+
+    /**
+     * How to put a screen on a TV: the address to open on it, and where to confirm its code.
+     *
+     * @return array{url: string, pair_url: string, qr: string}
+     */
+    public function tvInstructions(): array
+    {
+        return ['url' => route('tv'), 'pair_url' => route('pair'), 'qr' => ScreenQr::svg(route('tv'))];
     }
 
     /**

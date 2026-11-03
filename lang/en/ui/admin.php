@@ -92,6 +92,12 @@ return [
             'public_stats_rotated' => 'Rotated public stats key',
             'public_stats_changed' => 'Changed public stats',
             'public_stats_disabled' => 'Turned off public stats',
+            'screen_shared' => 'Shared a status screen',
+            'screen_share_changed' => 'Changed a share link',
+            'screen_share_rotated' => 'Rotated a share link',
+            'screen_unshared' => 'Stopped sharing a status screen',
+            'display_paired' => 'Paired a TV',
+            'display_removed' => 'Removed a TV',
         ],
     ],
     'retention' => [

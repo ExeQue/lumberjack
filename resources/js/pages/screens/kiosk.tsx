@@ -23,6 +23,10 @@ type Props = {
     /** Where this kiosk reads data and hears about changes; a paired display gets its own. */
     data_url: string;
     channel: string;
+    /** Shown by a share link: a public channel, no project channels, "unshared" when it stops. */
+    share?: boolean;
+    /** The data URL says the screen is gone for this viewer (a paired TV: display removed). */
+    onGone?: () => void;
 };
 
 /** Pixel offsets the whole screen cycles through against burn-in. */
@@ -50,10 +54,12 @@ export default function Kiosk({
     sources,
     data_url,
     channel,
+    share = false,
+    onGone,
 }: Props) {
     const t = useT();
     const now = useNow();
-    const [deleted, setDeleted] = useState(false);
+    const [gone, setGone] = useState<'deleted' | 'unshared' | null>(null);
     const [idle, setIdle] = useState(false);
     const [statuses, setStatuses] = useState<Record<string, Status>>({});
     const [flashing, setFlashing] = useState<Record<string, boolean>>({});
@@ -63,13 +69,27 @@ export default function Kiosk({
         screen,
         schema,
         projects.map((p) => p.uuid),
+        {
+            liveProjects: !share,
+            onGone: onGone ?? (share ? () => setGone('unshared') : undefined),
+        },
     );
 
     // The designer saved: the screen's definition reloads in place, data already shown stays.
-    useEcho(channel, '.screen.changed', () =>
-        router.reload({ only: ['screen'] }),
+    useEcho(
+        channel,
+        '.screen.changed',
+        () => router.reload({ only: ['screen'] }),
+        [],
+        share ? 'public' : 'private',
     );
-    useEcho(channel, '.screen.deleted', () => setDeleted(true));
+    useEcho(
+        channel,
+        ['.screen.deleted', '.screen.unshared'],
+        (_payload: unknown) => setGone(share ? 'unshared' : 'deleted'),
+        [],
+        share ? 'public' : 'private',
+    );
 
     // The cursor hides after a few seconds without moving.
     useEffect(() => {
@@ -208,9 +228,17 @@ export default function Kiosk({
                     </div>
                 )}
 
-                {deleted ? (
-                    <div className="m-auto text-center text-[1.6vw] text-(--s-ink-2)">
-                        {t('screens.kiosk.deleted')}
+                {gone !== null ? (
+                    <div
+                        role="status"
+                        className="m-auto flex flex-col gap-[0.6vw] text-center text-[1.6vw] text-(--s-ink-2)"
+                    >
+                        <span>{t(`screens.kiosk.${gone}`)}</span>
+                        {gone === 'unshared' && (
+                            <span className="text-[1vw]">
+                                {t('screens.kiosk.unshared_body')}
+                            </span>
+                        )}
                     </div>
                 ) : (
                     <main
