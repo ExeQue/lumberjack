@@ -10,6 +10,7 @@ use App\Domains\Administration\Actions\SetSuspendedAction;
 use App\Domains\Administration\Enums\AdminAction;
 use App\Domains\Administration\Exceptions\AdministrationExceptionInterface;
 use App\Domains\Administration\Http\Requests\InviteUserRequest;
+use App\Domains\Shared\Support\LikePattern;
 use App\Domains\Teams\Actions\InviteMemberAction;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Domains\Teams\Exceptions\TeamExceptionInterface;
@@ -30,7 +31,7 @@ class AdminUserController
         $search = trim((string) $request->query('search', ''));
 
         $users = User::query()
-            ->when($search !== '')->where(fn ($q) => $q->where('name', 'ilike', '%'.$search.'%')->orWhere('email', 'ilike', '%'.$search.'%'))
+            ->when($search !== '')->where(fn ($q) => $q->where('name', 'ilike', LikePattern::contains($search))->orWhere('email', 'ilike', LikePattern::contains($search)))
             ->with('teams:id,name')
             ->orderBy('name')
             ->paginate(self::PER_PAGE)

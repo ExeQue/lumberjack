@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Performance\Queries;
 
 use App\Domains\Shared\Enums\Period;
+use App\Domains\Shared\Support\LikePattern;
 use App\Domains\Shared\Support\Percentiles;
 use Illuminate\Support\Facades\DB;
 
@@ -39,7 +40,7 @@ class QueryStatisticsQuery
 
         if ($search !== null && $search !== '') {
             $where .= ' AND sql ILIKE ?';
-            $bindings[] = '%'.$search.'%';
+            $bindings[] = LikePattern::contains($search);
         }
 
         $order = self::SORTS[$sort] ?? 'total_us';

@@ -6,6 +6,7 @@ namespace App\Domains\Search\Queries;
 
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Shared\Support\LikePattern;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,7 +22,7 @@ class ProjectSearchQuery
      */
     public function get(Project $project, string $term): array
     {
-        $like = '%'.addcslashes($term, '\\%_').'%';
+        $like = LikePattern::contains($term);
         // ponytail: scans the last week of runs by name; a names table if this gets slow.
         $since = now()->subDays(7);
         $results = [];

@@ -31,6 +31,18 @@ describe('the command palette search', function () {
             ->assertJsonPath('results.0.href', route('traces.show', [$project, 'checkout-trace-1']));
     });
 
+    it('reads * as anything and % and _ as themselves', function () {
+        ['user' => $user, 'project' => $project] = $this->memberWithProject();
+        RequestRun::factory()->for($project)->create(['method' => 'POST', 'route' => '/api/orders/{order}/refund', 'occurred_at' => now()]);
+        Issue::factory()->for($project)->create(['title' => 'demo:broken']);
+
+        $search = fn (string $q) => collect($this->actingAs($user)->getJson(route('projects.search', [$project, 'q' => $q]))->json('results'))->pluck('label')->all();
+
+        expect($search('/api/*/refund'))->toBe(['/api/orders/{order}/refund'])
+            ->and($search('demo_broken'))->toBe([])
+            ->and($search('demo*broken'))->toBe(['demo:broken']);
+    });
+
     it('leaves other projects out', function () {
         ['user' => $user, 'project' => $project] = $this->memberWithProject();
         ['project' => $other] = $this->memberWithProject();

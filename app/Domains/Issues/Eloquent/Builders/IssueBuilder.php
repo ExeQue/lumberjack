@@ -8,6 +8,7 @@ use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Mcp\Models\McpToken;
+use App\Domains\Shared\Support\LikePattern;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -67,8 +68,8 @@ class IssueBuilder extends Builder
         $number = preg_match('/^(?:[a-z0-9]+-|#)?(\d+)$/i', trim($term), $m) === 1 ? (int) $m[1] : null;
 
         return $this->where(fn (self $query) => $query
-            ->where('title', 'ilike', '%'.$term.'%')
-            ->orWhere('message', 'ilike', '%'.$term.'%')
+            ->where('title', 'ilike', LikePattern::contains($term))
+            ->orWhere('message', 'ilike', LikePattern::contains($term))
             ->when($number !== null)->orWhere('number', $number));
     }
 
