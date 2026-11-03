@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Projects\Models\Project;
 use App\Models\User;
@@ -20,7 +21,7 @@ describe('the local seed', function () {
             ->and($admin->currentTeam?->is($project->team))->toBeTrue()
             ->and($project->public_key)->toBe(DatabaseSeeder::PUBLIC_KEY)
             ->and($project->logChannels()->pluck('name')->all())->toBe(['default'])
-            ->and($project->alertRules()->count())->toBe(5);
+            ->and($project->alertRules()->count())->toBe(count(AlertRuleType::cases()));
 
         $this->withToken(DatabaseSeeder::TOKEN)
             ->postJson('/api/ingest/heartbeat', ['host' => 'web-1'])
