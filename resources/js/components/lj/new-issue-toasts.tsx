@@ -25,6 +25,13 @@ type Mentioned = {
     excerpt: string;
 };
 
+type AssignmentChanged = {
+    project_name: string;
+    headline: string;
+    count: number;
+    url: string;
+};
+
 function MentionListener({ userUuid }: { userUuid: string }) {
     const t = useT();
     const [sound] = useSoundSetting();
@@ -51,6 +58,21 @@ function MentionListener({ userUuid }: { userUuid: string }) {
             playChime();
         }
     });
+
+    const assignment = (event: AssignmentChanged) =>
+        toast.info(event.headline, {
+            description: event.project_name,
+            action: {
+                label: t('common.toasts.view'),
+                onClick: () => router.visit(event.url),
+            },
+        });
+
+    useEcho<AssignmentChanged>(
+        `user.${userUuid}`,
+        ['.issue.assigned', '.issue.unassigned'],
+        assignment,
+    );
 
     return null;
 }
@@ -86,7 +108,7 @@ function Listener({ team }: { team: TeamShared }) {
 
 /**
  * A toast, and a chime unless turned off, when a new error or a regression comes in on
- * the team, or when a note tags you.
+ * the team, when a note tags you, or when someone assigns you or takes you off issues.
  */
 export function NewIssueToasts() {
     const { team, auth } = usePage<{
