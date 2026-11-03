@@ -15,10 +15,13 @@ use App\Domains\Schedule\Models\ScheduledTask;
 use App\Domains\Shared\Support\Translations;
 use App\Domains\Teams\Models\Team;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    public const int SIDEBAR_COUNTS_SECONDS = 30;
+
     /**
      * The root template that's loaded on the first page visit.
      *
@@ -79,6 +82,11 @@ class HandleInertiaRequests extends Middleware
         ];
     }
 
+    public static function sidebarCountsKey(int $projectId): string
+    {
+        return 'sidebar:'.$projectId.':counts';
+    }
+
     /**
      * The project the sidebar keeps showing on pages that are not about one
      * project: the one being viewed, else the last one visited, else the first.
@@ -107,7 +115,8 @@ class HandleInertiaRequests extends Middleware
             'uuid' => $project->uuid,
             'name' => $project->name,
             'can_administer' => $user->can('update', $project),
-            'counts' => [
+            // Reused for half a minute, and forgotten when a live broadcast says they changed.
+            'counts' => Cache::remember(self::sidebarCountsKey($project->id), self::SIDEBAR_COUNTS_SECONDS, fn (): array => [
                 'issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->count(),
                 // Runs that need a look: failed or stuck in the last day.
                 'jobs' => JobRun::query()->where('project_id', $project->id)->where('created_at', '>=', now()->subDay())
@@ -116,7 +125,7 @@ class HandleInertiaRequests extends Middleware
                 'health' => HealthCheck::query()->where('project_id', $project->id)->whereNotArchived()->whereUnhealthy()->count(),
                 'commands' => CommandRun::query()->where('project_id', $project->id)->where('created_at', '>=', now()->subDay())
                     ->where('status', CommandRunStatus::Failed->value)->count(),
-            ],
+            ]),
         ];
     }
 }

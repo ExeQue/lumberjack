@@ -8,6 +8,7 @@ use App\Domains\Live\Enums\ChangeKind;
 use App\Domains\Live\Events\ProjectChanged;
 use App\Domains\Live\Jobs\BroadcastTrailingProjectChange;
 use App\Domains\Projects\Models\Project;
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -102,6 +103,11 @@ class BroadcastProjectChangeAction
     private function sendNow(int $projectId, ChangeKind $kind, ?string $issueUuid): void
     {
         try {
+            // The page reloading on this must not get the sidebar's old badge counts.
+            if (in_array($kind, [ChangeKind::Issues, ChangeKind::Jobs, ChangeKind::Schedule, ChangeKind::Health, ChangeKind::Commands], true)) {
+                Cache::forget(HandleInertiaRequests::sidebarCountsKey($projectId));
+            }
+
             if (! array_key_exists($projectId, $this->uuids)) {
                 $uuid = Project::query()->whereKey($projectId)->value('uuid');
                 $this->uuids[$projectId] = is_string($uuid) ? $uuid : null;

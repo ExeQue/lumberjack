@@ -135,8 +135,10 @@ return [
     |
     */
 
+    // High volume and routine: kept out of the completed list (failures still show).
     'silenced' => [
-        // App\Jobs\ExampleJob::class,
+        App\Domains\Ingest\Jobs\ProcessIngestBatch::class,
+        App\Domains\Live\Jobs\BroadcastTrailingProjectChange::class,
     ],
 
     'silenced_tags' => [

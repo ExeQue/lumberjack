@@ -48,3 +48,17 @@ export function Relative({ iso }: { iso: string | null | undefined }) {
     // the same iso if the time it depends on were not an argument.
     return formatRelative(iso, useNow());
 }
+
+/**
+ * Text built around "3 minutes ago", kept current by this leaf alone, so the page around
+ * it does not re-render every tick.
+ */
+export function WithRelative({
+    iso,
+    children,
+}: {
+    iso: string | null | undefined;
+    children: (time: string) => string;
+}) {
+    return children(formatRelative(iso, useNow()));
+}
