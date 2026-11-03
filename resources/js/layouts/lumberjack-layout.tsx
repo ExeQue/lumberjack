@@ -2,6 +2,7 @@ import { usePage } from '@inertiajs/react';
 import { Menu } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { CommandPalette } from '@/components/lj/command-palette';
 import { FlashMessages } from '@/components/lj/flash';
 import { LogMark } from '@/components/lj/logo';
 import { NewIssueToasts } from '@/components/lj/new-issue-toasts';
@@ -46,6 +47,7 @@ export default function LumberjackLayout({
                     </span>
                 </span>
             </header>
+            <CommandPalette />
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                 <SheetContent
                     side="left"

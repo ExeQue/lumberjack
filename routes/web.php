@@ -27,6 +27,7 @@ use App\Domains\Projects\Http\Middleware\FollowProjectTeam;
 use App\Domains\Repositories\Http\Controllers\RepositoryController;
 use App\Domains\Retention\Http\Controllers\RetentionController;
 use App\Domains\Schedule\Http\Controllers\ScheduleController;
+use App\Domains\Search\Http\Controllers\SearchController;
 use App\Domains\Teams\Http\Controllers\InvitationController;
 use App\Domains\Teams\Http\Controllers\MemberController;
 use App\Domains\Teams\Http\Controllers\TeamController;
@@ -68,6 +69,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('commands', CommandController::class)->name('commands.index');
         Route::delete('schedule/{scheduledTask}', [ScheduleController::class, 'destroy'])->name('schedule.destroy');
         Route::get('logs', LogController::class)->name('logs.index');
+        Route::get('search', SearchController::class)->middleware('throttle:120,1')->name('projects.search');
 
         Route::get('settings', [ProjectSettingsController::class, 'edit'])->name('projects.settings');
         Route::put('settings', [ProjectSettingsController::class, 'update'])->name('projects.settings.update');

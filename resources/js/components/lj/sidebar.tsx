@@ -1,5 +1,16 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Bell, BellOff, ChevronsUpDown, LogOut, UserCog } from 'lucide-react';
+import {
+    Bell,
+    BellOff,
+    ChevronsUpDown,
+    LogOut,
+    Search,
+    UserCog,
+} from 'lucide-react';
+import {
+    openCommandPalette,
+    shortcutLabel,
+} from '@/components/lj/command-palette';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,29 +23,13 @@ import { LogMark } from '@/components/lj/logo';
 import { useT } from '@/lib/i18n';
 import { useSoundSetting } from '@/lib/use-sound-setting';
 import { cn } from '@/lib/utils';
-import { audit as adminAudit } from '@/routes/admin';
-import { index as adminTeams } from '@/routes/admin/teams';
-import { index as adminUsers } from '@/routes/admin/users';
-import { index as alertsIndex } from '@/routes/alerts';
-import { index as commandsIndex } from '@/routes/commands';
-import { index as issuesIndex } from '@/routes/issues';
-import { index as jobsIndex } from '@/routes/jobs';
-import { index as logsIndex } from '@/routes/logs';
+import { useNavigation } from '@/lib/use-navigation';
+import type { NavItem } from '@/lib/use-navigation';
 import { edit as profileEdit } from '@/routes/profile';
-import {
-    index as projectsIndex,
-    settings as projectSettings,
-    show as projectShow,
-} from '@/routes/projects';
-import { index as queriesIndex } from '@/routes/queries';
-import { index as routesIndex } from '@/routes/routes';
-import { index as scheduleIndex } from '@/routes/schedule';
-import { show as teamShow } from '@/routes/team';
+import { index as projectsIndex, show as projectShow } from '@/routes/projects';
 import { switchMethod as switchTeam } from '@/routes/teams';
 import { logout } from '@/routes';
 import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
-
-type NavItem = { label: string; href: string; active: boolean; count?: number };
 
 function NavLink({ item }: { item: NavItem }) {
     return (
@@ -81,105 +76,11 @@ export function Sidebar() {
     const project =
         page.props.project ?? page.props.sidebar_project ?? undefined;
     const counts = page.props.sidebar_project?.counts;
-    const path = page.url.split('?')[0];
-    const isAt = (href: string, exact = false) =>
-        exact ? path === href : path === href || path.startsWith(href + '/');
-
-    const projectNav: NavItem[] = project
-        ? [
-              {
-                  label: t('common.nav.overview'),
-                  href: projectShow(project.uuid).url,
-                  active: isAt(projectShow(project.uuid).url, true),
-              },
-              {
-                  label: t('common.nav.issues'),
-                  href: issuesIndex(project.uuid).url,
-                  active: isAt(issuesIndex(project.uuid).url),
-                  count: counts?.issues,
-              },
-              {
-                  label: t('common.nav.routes'),
-                  href: routesIndex(project.uuid).url,
-                  active: isAt(routesIndex(project.uuid).url),
-              },
-              {
-                  label: t('common.nav.queries'),
-                  href: queriesIndex(project.uuid).url,
-                  active: isAt(queriesIndex(project.uuid).url),
-              },
-              {
-                  label: t('common.nav.jobs'),
-                  href: jobsIndex(project.uuid).url,
-                  active: isAt(jobsIndex(project.uuid).url),
-                  count: counts?.jobs,
-              },
-              {
-                  label: t('common.nav.schedule'),
-                  href: scheduleIndex(project.uuid).url,
-                  active: isAt(scheduleIndex(project.uuid).url),
-                  count: counts?.schedule,
-              },
-              {
-                  label: t('common.nav.commands'),
-                  href: commandsIndex(project.uuid).url,
-                  active: isAt(commandsIndex(project.uuid).url),
-                  count: counts?.commands,
-              },
-              {
-                  label: t('common.nav.logs'),
-                  href: logsIndex(project.uuid).url,
-                  active: isAt(logsIndex(project.uuid).url),
-              },
-              ...(project.can_administer
-                  ? [
-                        {
-                            label: t('common.nav.settings'),
-                            href: projectSettings(project.uuid).url,
-                            active: isAt(projectSettings(project.uuid).url),
-                        },
-                    ]
-                  : []),
-          ]
-        : [];
-
-    const teamNav: NavItem[] = [
-        {
-            label: t('common.nav.all_projects'),
-            href: projectsIndex().url,
-            active: isAt(projectsIndex().url, true),
-        },
-        {
-            label: t('common.nav.team'),
-            href: teamShow().url,
-            active: isAt(teamShow().url, true),
-        },
-        {
-            label: t('common.nav.alerts'),
-            href: alertsIndex().url,
-            active: isAt(alertsIndex().url),
-        },
-    ];
-
-    const adminNav: NavItem[] = is_admin
-        ? [
-              {
-                  label: t('admin.nav.teams'),
-                  href: adminTeams().url,
-                  active: isAt(adminTeams().url),
-              },
-              {
-                  label: t('admin.nav.users'),
-                  href: adminUsers().url,
-                  active: isAt(adminUsers().url),
-              },
-              {
-                  label: t('admin.nav.audit'),
-                  href: adminAudit().url,
-                  active: isAt(adminAudit().url),
-              },
-          ]
-        : [];
+    const { projectNav, teamNav, adminNav } = useNavigation(
+        project,
+        counts,
+        is_admin,
+    );
 
     return (
         <nav
@@ -197,6 +98,17 @@ export function Sidebar() {
             </Link>
 
             <div className="flex flex-col gap-1.5">
+                <button
+                    type="button"
+                    onClick={openCommandPalette}
+                    className="flex h-9 w-full cursor-pointer items-center gap-2 rounded-md border border-line bg-panel px-2.5 text-left text-ink-3 hover:border-line-strong hover:text-ink-2"
+                >
+                    <Search className="size-3.5" aria-hidden="true" />
+                    <span className="flex-1">{t('palette.open')}</span>
+                    <kbd className="rounded border border-line px-1 font-mono text-[10px]">
+                        {shortcutLabel()}
+                    </kbd>
+                </button>
                 <DropdownMenu>
                     <DropdownMenuTrigger className="flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-line bg-panel px-2.5 text-left">
                         <span className="flex min-w-0 items-center gap-2">
