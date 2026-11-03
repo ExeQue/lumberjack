@@ -201,6 +201,18 @@
 }
 
 @layer base {
+    /* Slim scrollbars in the brand amber, quiet until a pane is hovered. */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in oklab, var(--lj-amber) 35%, transparent)
+            transparent;
+    }
+
+    *:hover {
+        scrollbar-color: color-mix(in oklab, var(--lj-amber) 70%, transparent)
+            transparent;
+    }
+
     /* Tailwind v4 leaves the default cursor on buttons; everything clickable gets the pointer. */
     button:not(:disabled),
     [role='button']:not([aria-disabled='true']),
