@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
@@ -47,16 +46,13 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
-        // A suspended user cannot sign in; the error does not say whether the password was right.
+        // A suspended user cannot sign in, and gets the same error as a wrong password: a
+        // message only for the right password would tell anyone that it is right.
         Fortify::authenticateUsing(function (Request $request): ?User {
             $user = User::query()->where('email', (string) $request->input('email'))->first();
 
-            if ($user === null || ! Hash::check((string) $request->input('password'), $user->password)) {
+            if ($user === null || ! Hash::check((string) $request->input('password'), $user->password) || $user->isSuspended()) {
                 return null;
-            }
-
-            if ($user->isSuspended()) {
-                throw ValidationException::withMessages(['email' => __('administration.suspended')]);
             }
 
             return $user;

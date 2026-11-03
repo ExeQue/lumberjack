@@ -101,6 +101,14 @@ describe('system administration', function () {
         $this->assertGuest();
     });
 
+    test('a suspended account answers a right password as it does a wrong one', function () {
+        $user = User::factory()->inTeam()->create(['suspended_at' => now()]);
+
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password'])->assertSessionHasErrors(['email' => __('auth.failed')]);
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'not-it'])->assertSessionHasErrors(['email' => __('auth.failed')]);
+        $this->assertGuest();
+    });
+
     test('an administrator cannot suspend or demote themselves', function () {
         $this->actingAs($this->admin)->put(route('admin.users.suspend', $this->admin), ['suspended' => true])->assertSessionHasErrors('user');
         $this->actingAs($this->admin)->put(route('admin.users.admin', $this->admin), ['is_admin' => false])->assertSessionHasErrors('user');
