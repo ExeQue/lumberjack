@@ -262,6 +262,7 @@ final class WidgetSchema
         ])));
         $rotation = $section('rotation', [
             $select('rotate_every', ['5', '10', '20', '30', '60'], '10'),
+            $select('title_size', ['s', 'm', 'l', 'xl'], 'm'),
             $select('transition', ['fade', 'slide', 'none'], 'fade'),
             $toggle('hold_problem', true),
             $toggle('dots', true),
