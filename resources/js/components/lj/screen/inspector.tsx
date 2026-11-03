@@ -1,5 +1,5 @@
 import { Settings } from 'lucide-react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Button, Input, Label, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
@@ -167,6 +167,14 @@ export function WidgetInspector({
     const active = Math.min(tab, Math.max(0, items.length - 1));
     const first = active === 0;
     const item = items[active];
+    const tablist = useRef<HTMLDivElement>(null);
+
+    // The open tab scrolls fully into view, however it was opened.
+    useEffect(() => {
+        tablist.current
+            ?.querySelectorAll<HTMLElement>('[role="tab"]')
+            [active]?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+    }, [active]);
     // What the active value's filter narrows: a queue, host, job or route.
     const filterOn =
         pool.find((s) => s.id === (item?.source ?? widget.source))?.filter_on ??
@@ -1112,7 +1120,9 @@ export function WidgetInspector({
                         <div
                             role="tablist"
                             aria-label={t('screens.inspector.values')}
-                            className="flex min-w-0 flex-1 [scrollbar-width:thin] gap-0.5 overflow-x-auto"
+                            ref={tablist}
+                            // The app's own slim scrollbar; snapping to whole tabs.
+                            className="flex min-w-0 flex-1 snap-x snap-proximity scroll-px-2 gap-0.5 overflow-x-auto"
                             onKeyDown={(e) => {
                                 const to = (
                                     {
@@ -1176,7 +1186,7 @@ export function WidgetInspector({
                                     }}
                                     onClick={() => onTab(i)}
                                     className={cn(
-                                        'max-w-32 flex-none truncate border-b-2 px-2.5 py-1.5 text-xs',
+                                        'max-w-32 flex-none snap-start truncate border-b-2 px-2.5 py-1.5 text-xs',
                                         i === active
                                             ? 'border-amber font-medium text-ink'
                                             : 'border-transparent text-ink-3 hover:text-ink',
