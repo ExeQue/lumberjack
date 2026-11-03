@@ -1,6 +1,6 @@
 import { echo } from '@laravel/echo-react';
 import { useEffect, useRef, useState } from 'react';
-import { dataKey, option } from './lib';
+import { dataKey, option, rotationOf } from './lib';
 import type { Schema, Screen, ScreenData, Widget } from './types';
 import { DATA_KINDS } from './types';
 
@@ -197,12 +197,11 @@ export function useScreenData(
                                   option<string>(schema, w, 'refresh') ===
                                   'live',
                           )
-                          .flatMap((w) => {
-                              const own =
-                                  w.scope.projects ?? screen.scope.projects;
-
-                              return own.length > 0 ? own : teamProjects;
-                          }),
+                          .flatMap((w) =>
+                              projectsOf(w, screen).flatMap((own) =>
+                                  own.length > 0 ? own : teamProjects,
+                              ),
+                          ),
                   ),
               ]
                   .sort()
@@ -226,11 +225,10 @@ export function useScreenData(
                         return false;
                     }
 
-                    const own = w.scope.projects ?? screen.scope.projects;
-
-                    return (
-                        own.length === 0 ||
-                        own.some((p) => changedProjects.has(p))
+                    return projectsOf(w, screen).some(
+                        (own) =>
+                            own.length === 0 ||
+                            own.some((p) => changedProjects.has(p)),
                     );
                 })
                 .map((w) => w.id);
@@ -275,4 +273,19 @@ export function useScreenData(
     }, [watched, schema]);
 
     return { data, offlineSince, updatedAt };
+}
+
+/**
+ * The projects each value of a widget shows (a rotated value may pick its own), an
+ * empty list meaning every project of the team.
+ */
+function projectsOf(widget: Widget, screen: Pick<Screen, 'scope'>): string[][] {
+    const own = widget.scope.projects ?? screen.scope.projects;
+
+    return [
+        own,
+        ...rotationOf(widget)
+            .slice(1)
+            .map((item) => item.scope?.projects ?? own),
+    ];
 }
