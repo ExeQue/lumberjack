@@ -21,11 +21,12 @@ class BroadcastTrailingProjectChange implements ShouldQueue
     public function __construct(
         public readonly int $projectId,
         public readonly ChangeKind $kind,
+        public readonly ?string $issueUuid = null,
     ) {
     }
 
     public function handle(BroadcastProjectChangeAction $action): void
     {
-        $action->trailing($this->projectId, $this->kind);
+        $action->trailing($this->projectId, $this->kind, $this->issueUuid);
     }
 }

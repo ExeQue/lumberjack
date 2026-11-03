@@ -263,7 +263,7 @@ class ProcessIngestBatchAction
         }
 
         foreach ($kinds as $kind) {
-            $this->broadcast->execute($project->id, $kind);
+            $this->broadcast->execute($project->id, $kind, $project->uuid);
         }
     }
 }

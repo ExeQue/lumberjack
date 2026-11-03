@@ -726,7 +726,7 @@ export default function IssueShow({
 
     useProjectLive(
         project.uuid,
-        ['issue.updated', 'issues.changed'],
+        ['issue.updated'],
         ['issue', 'latest', 'occurrences', 'series', 'notes'],
         { issue: issue.id },
     );

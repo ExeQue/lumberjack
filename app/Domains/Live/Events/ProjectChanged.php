@@ -37,6 +37,6 @@ class ProjectChanged implements ShouldBroadcastNow
     /** @return array<string, string|null> */
     public function broadcastWith(): array
     {
-        return ['issue' => $this->issueUuid];
+        return ['issue' => $this->issueUuid, 'kind' => $this->kind->value];
     }
 }
