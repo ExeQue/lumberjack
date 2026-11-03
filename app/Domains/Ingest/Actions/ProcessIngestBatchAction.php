@@ -15,6 +15,7 @@ use App\Domains\Jobs\Actions\RecordJobEventAction;
 use App\Domains\Live\Actions\BroadcastProjectChangeAction;
 use App\Domains\Live\Enums\ChangeKind;
 use App\Domains\Logs\Actions\RecordLogLineAction;
+use App\Domains\Performance\Actions\RecordRequestCountsAction;
 use App\Domains\Performance\Enums\SpanKind;
 use App\Domains\Performance\Support\SqlNormalizer;
 use App\Domains\Projects\Models\Project;
@@ -44,6 +45,7 @@ class ProcessIngestBatchAction
         private readonly RecordScheduleEventAction $recordScheduleEventAction,
         private readonly RecordCommandEventAction $recordCommandEventAction,
         private readonly RecordReportedHealthAction $recordReportedHealthAction,
+        private readonly RecordRequestCountsAction $recordRequestCountsAction,
         private readonly SignalFactory $signalFactory,
         private readonly SqlNormalizer $sqlNormalizer,
         private readonly BroadcastProjectChangeAction $broadcast,
@@ -63,6 +65,7 @@ class ProcessIngestBatchAction
         $queries = [];
         $spans = [];
         $vitals = [];
+        $counts = [];
         $touched = [];
 
         foreach ($events as $event) {
@@ -83,6 +86,7 @@ class ProcessIngestBatchAction
                     'query' => $queries[] = $this->queryRow($project, $event, $envelope),
                     'span' => $spans[] = $this->spanRow($project, $event, $envelope),
                     'vital' => $vitals[] = $this->vitalRow($project, $event, $envelope),
+                    'request_counts' => $counts[] = $event,
                     'exception' => $this->recordOccurrenceAction->execute($project, $this->signalFactory->fromException($event, $envelope, $fromBrowser ? IssueSource::Browser : IssueSource::Server, $project->scrub_keys ?? [])),
                     'job' => $this->recordJobEventAction->execute($project, $event, $envelope),
                     'log' => $this->recordLogLineAction->execute($project, $event, $envelope),
@@ -116,6 +120,10 @@ class ProcessIngestBatchAction
 
         foreach (array_chunk($vitals, self::INSERT_CHUNK) as $chunk) {
             DB::table('web_vitals')->insert($chunk);
+        }
+
+        if ($counts !== []) {
+            $this->recordRequestCountsAction->execute($project, $counts, $envelope);
         }
 
         $this->broadcastChanges($project, $touched);
@@ -188,6 +196,7 @@ class ProcessIngestBatchAction
             'status_code' => max(0, min(999, (int) ($event['status'] ?? 0))),
             'duration_us' => Envelope::micros($event['duration_ms'] ?? 0),
             'memory_peak' => isset($event['memory_peak']) && is_numeric($event['memory_peak']) ? (int) $event['memory_peak'] : null,
+            ...Envelope::sampling($event),
             'occurred_at' => Envelope::time($event['timestamp'] ?? null)->format('Y-m-d H:i:s.v'),
         ];
     }
@@ -233,6 +242,7 @@ class ProcessIngestBatchAction
             'sql_hash' => $this->sqlNormalizer->hash($sql),
             'location' => Envelope::short($event['location'] ?? null, 255),
             'duration_us' => Envelope::micros($event['duration_ms'] ?? 0),
+            ...Envelope::sampling($event),
             'occurred_at' => Envelope::time($event['timestamp'] ?? null)->format('Y-m-d H:i:s.v'),
         ];
     }
@@ -264,7 +274,7 @@ class ProcessIngestBatchAction
             $kinds[] = ChangeKind::Logs;
         }
 
-        if (isset($touched['request']) || isset($touched['query']) || isset($touched['vital'])) {
+        if (isset($touched['request']) || isset($touched['request_counts']) || isset($touched['query']) || isset($touched['vital'])) {
             $kinds[] = ChangeKind::Performance;
         }
 

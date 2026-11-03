@@ -25,9 +25,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $sql_hash
  * @property string|null $location
  * @property int $duration_us
+ * @property float $sample_rate
+ * @property bool $sampled
  * @property CarbonImmutable $occurred_at
  */
-#[Fillable(['project_id', 'trace_id', 'environment', 'connection', 'sql', 'sql_hash', 'location', 'duration_us', 'occurred_at'])]
+#[Fillable(['project_id', 'trace_id', 'environment', 'connection', 'sql', 'sql_hash', 'location', 'duration_us', 'sample_rate', 'sampled', 'occurred_at'])]
 #[WithoutTimestamps]
 #[DateFormat('Y-m-d H:i:s.v')]
 #[UseFactory(QueryRunFactory::class)]
@@ -39,6 +41,8 @@ class QueryRun extends Model
     protected function casts(): array
     {
         return [
+            'sample_rate' => 'float',
+            'sampled' => 'boolean',
             'occurred_at' => 'datetime',
         ];
     }

@@ -41,6 +41,9 @@ class PruneProjectTelemetryAction
             };
         }
 
+        // The per-minute request counts age with the request runs they count.
+        $deleted[RetentionCategory::Requests->value] += $this->prune($project, RetentionCategory::Requests, $days(RetentionCategory::Requests), table: 'request_counts', column: 'minute');
+
         // Failed runs stay at least as long as the errors they belong to.
         $occurrences = $days(RetentionCategory::Occurrences);
         $failed = ['job_runs' => [JobRunStatus::Failed->value], 'scheduled_task_runs' => ['failed', 'missed'], 'command_runs' => ['failed']];
@@ -91,7 +94,7 @@ class PruneProjectTelemetryAction
     /**
      * @param  Closure(Builder): mixed|null  $constrain
      */
-    private function prune(Project $project, RetentionCategory $category, ?int $days, ?Closure $constrain = null): int
+    private function prune(Project $project, RetentionCategory $category, ?int $days, ?Closure $constrain = null, ?string $table = null, ?string $column = null): int
     {
         // Forever.
         if ($days === null) {
@@ -100,8 +103,8 @@ class PruneProjectTelemetryAction
 
         $cutoff = now()->subDays($days)->format('Y-m-d H:i:s');
 
-        return $this->deleter->delete($category->table(), function (Builder $q) use ($project, $category, $cutoff, $constrain): void {
-            self::scope($q, $category, $project)->where($category->timeColumn(), '<', $cutoff);
+        return $this->deleter->delete($table ?? $category->table(), function (Builder $q) use ($project, $category, $cutoff, $constrain, $column): void {
+            self::scope($q, $category, $project)->where($column ?? $category->timeColumn(), '<', $cutoff);
 
             if ($constrain !== null) {
                 $constrain($q);

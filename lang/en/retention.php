@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'categories' => [
         'occurrences' => ['label' => 'Occurrences', 'description' => 'Each time an error happened, with its stack trace and context. Issues themselves are kept.'],
-        'requests' => ['label' => 'Requests', 'description' => 'One row per HTTP request: route, status and duration.'],
+        'requests' => ['label' => 'Requests', 'description' => 'One row per recorded HTTP request: route, status and duration, and the per-minute request counts.'],
         'queries' => ['label' => 'Queries', 'description' => 'Database queries recorded with their requests and jobs.'],
         'spans' => ['label' => 'Spans', 'description' => 'Trace spans: outgoing HTTP, cache and custom timings.'],
         'web_vitals' => ['label' => 'Web vitals', 'description' => 'Page load metrics from browsers: LCP, INP, CLS and more.'],

@@ -61,4 +61,19 @@ final readonly class Envelope
     {
         return is_numeric($milliseconds) ? max(0, min(4_294_967_295, (int) round((float) $milliseconds * 1000))) : 0;
     }
+
+    /**
+     * How a run, or a query or span of one, was picked: the rate that applied, and whether
+     * it was sampled (false: kept only because it was slow or failed). An SDK that does not
+     * sample sends neither, which is a rate of 1.
+     *
+     * @param  array<string, mixed>  $event
+     * @return array{sample_rate: float, sampled: bool}
+     */
+    public static function sampling(array $event): array
+    {
+        $rate = isset($event['sample_rate']) && is_numeric($event['sample_rate']) ? max(0.0, min(1.0, (float) $event['sample_rate'])) : 1.0;
+
+        return ['sample_rate' => $rate, 'sampled' => filter_var($event['sampled'] ?? true, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? true];
+    }
 }
