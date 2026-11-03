@@ -7,6 +7,7 @@ namespace App\Domains\Performance\Queries;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Support\LikePattern;
 use App\Domains\Shared\Support\Percentiles;
+use App\Domains\Shared\Support\StatisticsCache;
 use Illuminate\Support\Facades\DB;
 
 class RouteStatisticsQuery
@@ -24,6 +25,14 @@ class RouteStatisticsQuery
      * @return list<array{method: string, route: string, requests: int, p50: int, p95: int, p99: int, error_rate: float, total_us: int, apdex: float, statuses: array{'2xx': int, '3xx': int, '4xx': int, '5xx': int}}>
      */
     public function get(int $projectId, Period $period, ?string $environment = null, string $sort = 'p95', ?string $search = null, int $limit = 100): array
+    {
+        return StatisticsCache::remember('routes', $period, [$projectId, $environment, $sort, $search, $limit], fn (): array => $this->compute($projectId, $period, $environment, $sort, $search, $limit));
+    }
+
+    /**
+     * @return list<array{method: string, route: string, requests: int, p50: int, p95: int, p99: int, error_rate: float, total_us: int, apdex: float, statuses: array{'2xx': int, '3xx': int, '4xx': int, '5xx': int}}>
+     */
+    private function compute(int $projectId, Period $period, ?string $environment, string $sort, ?string $search, int $limit): array
     {
         $bindings = [$projectId, $period->since()->format('Y-m-d H:i:s')];
         $where = 'project_id = ? AND occurred_at >= ?';

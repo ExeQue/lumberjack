@@ -7,6 +7,7 @@ namespace App\Domains\Releases\Queries;
 use App\Domains\Issues\Enums\IssueEventType;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Support\Percentiles;
+use App\Domains\Shared\Support\StatisticsCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,14 @@ class ReleaseHealthQuery
      * @return list<array{release: string, first_seen_at: string, last_seen_at: string, requests: int, error_rate: float|null, p95: int|null, occurrences: int, new_issues: int, regressions: int, previous: array{release: string, error_rate: float|null, p95: int|null}|null, change: array{error_rate: float|null, p95: float|null}}>
      */
     public function get(int $projectId, Period $period, ?string $environment = null, int $limit = 50): array
+    {
+        return StatisticsCache::remember('releases', $period, [$projectId, $environment, $limit], fn (): array => $this->compute($projectId, $period, $environment, $limit));
+    }
+
+    /**
+     * @return list<array{release: string, first_seen_at: string, last_seen_at: string, requests: int, error_rate: float|null, p95: int|null, occurrences: int, new_issues: int, regressions: int, previous: array{release: string, error_rate: float|null, p95: int|null}|null, change: array{error_rate: float|null, p95: float|null}}>
+     */
+    private function compute(int $projectId, Period $period, ?string $environment, int $limit): array
     {
         $since = $period->since()->format('Y-m-d H:i:s');
         $bindings = [$projectId, $since];

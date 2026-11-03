@@ -13,6 +13,7 @@ use App\Domains\Performance\Queries\RouteStatisticsQuery;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Support\Percentiles;
+use App\Domains\Shared\Support\StatisticsCache;
 use App\Domains\Shared\Support\TimeSeries;
 use Illuminate\Support\Facades\DB;
 
@@ -29,6 +30,14 @@ class ProjectOverviewQuery
      * @return array<string, mixed>
      */
     public function get(Project $project, Period $period, ?string $environment = null): array
+    {
+        return StatisticsCache::remember('overview', $period, [$project->id, $environment], fn (): array => $this->compute($project, $period, $environment));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function compute(Project $project, Period $period, ?string $environment): array
     {
         $since = $period->since();
         $requests = DB::table('request_runs')->where('project_id', $project->id)->when($environment !== null)->where('environment', $environment);

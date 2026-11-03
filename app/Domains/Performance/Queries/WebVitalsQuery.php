@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Performance\Queries;
 
 use App\Domains\Shared\Enums\Period;
+use App\Domains\Shared\Support\StatisticsCache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -16,6 +17,14 @@ class WebVitalsQuery
      * @return list<array{route: string, views: int, lcp_us: int|null, inp_us: int|null, cls: float|null}>
      */
     public function get(int $projectId, Period $period, ?string $environment = null, int $limit = 100): array
+    {
+        return StatisticsCache::remember('vitals', $period, [$projectId, $environment, $limit], fn (): array => $this->compute($projectId, $period, $environment, $limit));
+    }
+
+    /**
+     * @return list<array{route: string, views: int, lcp_us: int|null, inp_us: int|null, cls: float|null}>
+     */
+    private function compute(int $projectId, Period $period, ?string $environment, int $limit): array
     {
         // ponytail: percentile_disc instead of the Percentiles helper, since each vital
         // has its own nulls and would need its own ranking window.
