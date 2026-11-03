@@ -4,16 +4,19 @@ SDKs and their agents send to Lumberjack over HTTP. This page lists the endpoint
 their limits, for running Lumberjack behind a proxy or writing an SDK of your own. The
 Laravel SDK does all of this for you.
 
-| Endpoint                                 | Auth                              | Limit                            |
-| ---------------------------------------- | --------------------------------- | -------------------------------- |
-| `POST /api/ingest`                       | Server token, as a bearer token   | 600 batches a minute per project |
-| `POST /api/ingest/heartbeat`             | Server token                      | Counted with the batches         |
-| `POST /api/ingest/browser?key=`          | Public key, and an allowed origin | 30 a minute per address and key  |
-| `GET /api/health`                        | Server token                      | 120 a minute per project         |
-| `GET` or `POST /api/health/ping/{token}` | The heartbeat check's secret URL  | 60 a minute per address          |
-| `/mcp`                                   | MCP token, as a bearer token      | 120 calls a minute per token     |
+| Endpoint                                 | Auth                              | Limit                                                     |
+| ---------------------------------------- | --------------------------------- | --------------------------------------------------------- |
+| `POST /api/ingest`                       | Server token, as a bearer token   | 600 batches a minute per project                          |
+| `POST /api/ingest/heartbeat`             | Server token                      | Counted with the batches                                  |
+| `POST /api/ingest/browser?key=`          | Public key, and an allowed origin | 30 a minute per address and key, 300 a minute per address |
+| `GET /api/health`                        | Server token                      | 120 a minute per project                                  |
+| `GET` or `POST /api/health/ping/{token}` | The heartbeat check's secret URL  | 60 a minute per address                                   |
+| `/mcp`                                   | MCP token, as a bearer token      | 120 calls a minute per token                              |
 
-A wrong or missing token gets a 401, a limit a 429.
+A wrong or missing token gets a 401, a limit a 429. An address that sends 30 unknown
+server or MCP tokens in a minute gets a 429 for the rest of that minute, before any token
+is looked up. The browser endpoint checks the key and origin before it reads the body,
+and answers a compressed body with a 415: browsers send plain JSON.
 
 ## Batches
 
