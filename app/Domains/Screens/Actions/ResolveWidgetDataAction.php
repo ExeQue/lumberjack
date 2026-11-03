@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Actions;
 
+use App\Domains\Alerts\Data\QueueBacklogSettings;
+use App\Domains\Alerts\Enums\AlertRuleType;
+use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Enums\JobRunStatus;
@@ -42,6 +45,9 @@ use Illuminate\Support\Facades\DB;
  */
 class ResolveWidgetDataAction
 {
+    /** @var array<int, AlertRule|false> the queue backlog rule per project, false for none */
+    private array $backlogRules = [];
+
     public const int LIST_LIMIT = 10;
 
     public function __construct(
@@ -337,7 +343,7 @@ class ResolveWidgetDataAction
                         'connection' => $q['connection'],
                         'size' => $q['size'],
                         'oldest_age_s' => $q['oldest_age_s'],
-                        'state' => $q['size'] !== null ? $this->state((float) $q['size'], $limits) : null,
+                        ...$this->queueState($p, $q, $options, $limits),
                     ],
                     $this->queues->get($p->id, $scope->period, $scope->environment),
                 ))->when($scope->filter !== null)->filter(fn (array $q): bool => fnmatch((string) $scope->filter, $q['queue']))
@@ -507,6 +513,44 @@ class ResolveWidgetDataAction
     private function line(array $points): array
     {
         return array_map(fn (array $p): array => ['t' => $p['t'], 'v' => $p['value']], $points);
+    }
+
+    /**
+     * A queue's state and why. Limits set on the widget count as given (on its size).
+     * Otherwise the queue is judged like its backlog alert: red past the project's alert
+     * thresholds (its own for that queue, or the rule's), amber past half of them.
+     *
+     * @param  array{queue: string, connection: string, size: int|null, oldest_age_s: int|null}  $q
+     * @param  array<string, mixed>  $options
+     * @param  array{amber: float|null, red: float|null, low_is_bad: bool}  $limits
+     * @return array{state: string|null, reason: string|null}
+     */
+    private function queueState(Project $project, array $q, array $options, array $limits): array
+    {
+        if ($this->number($options['amber'] ?? null) !== null || $this->number($options['red'] ?? null) !== null) {
+            return ['state' => $q['size'] !== null ? $this->state((float) $q['size'], $limits) : null, 'reason' => 'size'];
+        }
+
+        $rule = $this->backlogRules[$project->id] ??= AlertRule::query()->whereEffectiveFor($project)->whereType(AlertRuleType::QueueBacklog)->first() ?? false;
+        $settings = $rule instanceof AlertRule
+            ? QueueBacklogSettings::forQueue($rule, $project, $q['connection'], $q['queue'])
+            : new QueueBacklogSettings();
+
+        if ($settings->muted) {
+            return ['state' => 'ok', 'reason' => null];
+        }
+
+        $size = $q['size'] ?? 0;
+        $age = $q['oldest_age_s'] ?? 0;
+        $past = fn (float $share): ?string => match (true) {
+            $settings->size !== null && $size >= $settings->size * $share => 'size',
+            $settings->ageMinutes !== null && $age >= $settings->ageMinutes * 60 * $share => 'age',
+            default => null,
+        };
+
+        return ($reason = $past(1.0)) !== null
+            ? ['state' => 'red', 'reason' => $reason]
+            : (($reason = $past(0.5)) !== null ? ['state' => 'amber', 'reason' => $reason] : ['state' => 'ok', 'reason' => null]);
     }
 
     /**

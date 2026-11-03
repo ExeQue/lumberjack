@@ -81,6 +81,12 @@ A widget is a way of showing something; what it shows is picked under **Shows**.
 | Clock and text | The time (12 or 24 hour, any time zone, with seconds or the date), a note for the room, or both.                                                                                                                                |
 | Empty cell     | A gap of any size; dashed in the designer, invisible on the TV.                                                                                                                                                                 |
 
+A list of queues judges each queue like its [backlog alert](./alerts#queue-backlog): red
+past the project's thresholds (its own for that queue, or the rule's: 1,000 jobs or 10
+minutes by default), amber past half of them, and says why (**Backlog** or **Waiting**).
+A muted queue stays calm. Limits set on the widget replace that and count on its size.
+A list of hosts shows each host once with CPU, memory and disk meters.
+
 Each widget's settings are grouped in sections that open and close:
 
 - **Value**, **Scale**, **Chart**, **Rows**, **Checks** or **Clock**: what the type

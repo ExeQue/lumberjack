@@ -1044,6 +1044,21 @@ function rowText(
             return {
                 key: String(row.queue),
                 main: String(row.size ?? '-'),
+                // Why it needs attention: too many waiting, or waiting too long.
+                tag:
+                    tone === 'red' || tone === 'amber'
+                        ? {
+                              text:
+                                  row.reason === 'age'
+                                      ? t('screens.list.queue.waiting', {
+                                            age: duration(
+                                                Number(row.oldest_age_s ?? 0),
+                                            ),
+                                        })
+                                      : t('screens.list.queue.backlog'),
+                              tone,
+                          }
+                        : undefined,
                 count:
                     row.oldest_age_s !== null && row.oldest_age_s !== undefined
                         ? t('screens.list.oldest', {
