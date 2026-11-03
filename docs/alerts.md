@@ -17,7 +17,15 @@ A project can also have channels of its own, in its settings.
 | Telegram        | A bot token and a chat id (a group id starting with `-`, or `@name` of a public channel). The bot has to be a member. |
 | ntfy            | The topic URL, on ntfy.sh or your own server, and an access token for a protected topic.                              |
 | Pushover        | Your user or group key and an application token from pushover.net/apps.                                               |
-| Webhook         | Any HTTPS endpoint. Project channels only.                                                                            |
+| Webhook         | Any public `http://` or `https://` URL. Project channels only.                                                        |
+
+A Discord URL starts with `https://discord.com/api/webhooks/` (or `discordapp.com`), a
+Slack URL with `https://hooks.slack.com/`, and a Teams URL has to be `https://`. A
+Discord sender name is at most 80 characters and may not contain "discord", "clyde",
+`@`, `#`, `:` or backticks, which Discord refuses. When editing a channel, secret
+fields stay empty: leave them so to keep the current value.
+
+![The first step of adding a channel: picking where alerts go](./screenshots/channel-wizard.png)
 
 **Add new channel** opens a short wizard: pick where alerts go, then fill in the
 details. Each type explains where to find its URL or keys and shows a preview of a
@@ -33,8 +41,11 @@ is tried again up to three times within about 8 seconds. Each attempt waits at m
 seconds for an answer, so one delivery takes half a minute at the very most. One the other side refuses,
 such as a removed webhook, fails at once and shows on the channel.
 
-**Send test** delivers a test message so you can check the setup. Each channel shows
-when it last delivered or failed.
+**Send test** delivers a test message so you can check the setup (at most six a minute
+per person). Each channel shows
+**Not used yet**, **Delivered** or **Failed**, with when.
+
+Only team owners and admins add, change and delete the team's channels and rules.
 
 Webhook, Teams and ntfy URLs may not point at private or reserved addresses (this
 server, the network behind it, carrier-grade NAT, NAT64 and 6to4 forms of those). The
@@ -47,7 +58,30 @@ allow private addresses, for example in local development. It is separate from
 ## Rules
 
 A rule is on or off, sends to the channels you pick, and can be limited to some
-environments (comma separated, empty means all).
+environments (comma separated, empty means all). There is one rule per type:
+
+| Rule                   | Sends                                                                   | Default |
+| ---------------------- | ----------------------------------------------------------------------- | ------- |
+| New issue              | The first occurrence of a new issue.                                    | On      |
+| Regression             | A new occurrence of a resolved issue, or an ignored issue coming back.  | On      |
+| Escalation             | An issue that suddenly happens far more often than usual.               | On      |
+| Note                   | Every note written on an issue, by a person or an agent.                | Off     |
+| Resolved or ignored    | Every issue someone resolves or ignores.                                | Off     |
+| Queue backlog          | A queue with too many jobs waiting, or one waiting too long.            | On      |
+| Health check degraded  | A [health check](./health#alerts) that keeps warning or starts failing. | On      |
+| Health check down      | A health check that keeps failing.                                      | On      |
+| Health check recovered | A health check that is ok again.                                        | On      |
+
+New issue and Escalation send at most one message per issue, rule and channel every 30
+minutes. Every regression, note and status change is sent. Ignored issues and browser
+errors never send an alert.
+
+A message carries the first line of the issue's latest note, so a triage result
+travels with the alert. A regression names who resolved the issue and when. A comment given
+when resolving or ignoring goes with the **Resolved or ignored** message, not as a
+separate note, while that rule is on.
+
+![The team's Alerts page with a shared channel and the rules](./screenshots/team-alerts.png)
 
 ### Team rules and project overrides
 
