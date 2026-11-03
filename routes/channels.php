@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Projects\Models\Project;
+use App\Domains\Screens\Broadcasting\ScreenChannel;
 use App\Domains\Teams\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
@@ -20,3 +21,5 @@ Broadcast::channel('team.{teamUuid}', function (User $user, string $teamUuid): b
 
     return $team !== null && $user->belongsToTeam($team);
 });
+
+Broadcast::channel('screen.{screen}', ScreenChannel::class);

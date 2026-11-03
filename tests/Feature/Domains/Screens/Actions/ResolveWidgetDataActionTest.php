@@ -2,21 +2,28 @@
 
 declare(strict_types=1);
 
+use App\Domains\Health\Enums\HealthStatus;
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Jobs\Models\QueueSample;
 use App\Domains\Performance\Models\RequestRun;
+use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
+use App\Domains\Schedule\Enums\ScheduledRunStatus;
+use App\Domains\Schedule\Models\ScheduledTask;
 use App\Domains\Screens\Actions\ResolveWidgetDataAction;
 use App\Domains\Screens\Data\WidgetScope;
+use App\Domains\Screens\Data\WidgetSource;
 use App\Domains\Screens\Enums\ReleaseScope;
 use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Exceptions\UnknownWidgetSourceException;
 use App\Domains\Screens\Support\WidgetSources;
+use App\Domains\Teams\Models\Team;
 use Tests\Support\Performance\CreatesRequestCounts;
 
-covers(ResolveWidgetDataAction::class, WidgetSources::class);
+covers(ResolveWidgetDataAction::class, WidgetSources::class, WidgetScope::class, WidgetSource::class);
 
 uses(CreatesRequestCounts::class);
 
@@ -139,5 +146,125 @@ describe('a gauge, a chart and a list', function () {
 
         expect($resolve('latest_issues')['rows'][0]['title'])->toBeNull()
             ->and($resolve('agents')['rows'][0]['host'])->toBe('host 1');
+    });
+});
+
+describe('the sources and scope', function () {
+    it('describes a source for the designer, its name translated', function () {
+        expect(WidgetSources::find(WidgetType::Gauge, 'apdex')->toArray())->toBe([
+            'type' => 'gauge', 'id' => 'apdex', 'label' => 'Apdex', 'unit' => 'score', 'amber' => 0.85, 'red' => 0.7,
+            'low_is_bad' => true, 'metric' => 'apdex', 'filter_on' => 'route',
+        ])->and(WidgetSources::has(WidgetType::List, 'queues'))->toBeTrue()
+            ->and(WidgetSources::has(WidgetType::Stat, 'queues'))->toBeFalse()
+            ->and(array_column(array_map(fn (WidgetSource $s): array => $s->toArray(), WidgetSources::for(WidgetType::Health)), 'id'))->toBe(['checks']);
+    });
+
+    it('reads a stored scope, ignoring what it cannot use', function () {
+        $scope = WidgetScope::fromArray(['projects' => ['a', 3, 'b'], 'environment' => '', 'period' => '7d', 'release' => 'current', 'filter' => 'GET *']);
+        $fallback = WidgetScope::fromArray(['period' => 'forever', 'release' => 'latest', 'environment' => ['x']]);
+
+        expect($scope->projects)->toBe(['a', 'b'])
+            ->and($scope->environment)->toBeNull()
+            ->and($scope->period->value)->toBe('7d')
+            ->and($scope->release)->toBe(ReleaseScope::Current)
+            ->and($scope->filter)->toBe('GET *')
+            ->and($fallback->period->value)->toBe('24h')
+            ->and($fallback->release)->toBe(ReleaseScope::All)
+            ->and($fallback->environment)->toBeNull();
+    });
+});
+
+describe('the edges of each type', function () {
+    it('compares a stat with yesterday, last week or nothing', function () {
+        $this->createRequestCount($this->project, 30);
+        $this->createRequestCount($this->project, 10, minute: now()->subDay()->subHour()->startOfMinute());
+        $this->createRequestCount($this->project, 60, minute: now()->subDays(7)->subHour()->startOfMinute());
+
+        expect(($this->resolve)(WidgetType::Stat, 'requests', ['compare' => 'yesterday'])['previous'])->toEqual(10)
+            ->and(($this->resolve)(WidgetType::Stat, 'requests', ['compare' => 'last_week'])['change'])->toEqual(-0.5)
+            ->and(($this->resolve)(WidgetType::Stat, 'requests', ['compare' => 'none', 'sparkline' => false]))->toMatchArray(['previous' => null, 'change' => null, 'sparkline' => null]);
+    });
+
+    it('has no value for a source it cannot read, and no release without projects', function () {
+        $empty = app(ResolveWidgetDataAction::class)->execute(Team::factory()->create(), WidgetType::Stat, 'current_release', new WidgetScope());
+
+        expect($empty['value'])->toBeNull()->and($empty['state'])->toBeNull();
+    });
+
+    it('overlays the previous period on a chart, moved onto its own times', function () {
+        $this->createRequestCount($this->project, 5, minute: now()->subDay()->subHours(2)->startOfMinute());
+
+        $series = collect(($this->resolve)(WidgetType::Chart, 'requests', ['overlay_previous' => true])['series'])->keyBy('name');
+
+        expect($series->has('previous'))->toBeTrue()
+            ->and(collect($series['previous']['points'])->sum('v'))->toEqual(5)
+            ->and(collect($series['previous']['points'])->every(fn (array $p): bool => $p['t'] >= now()->subDay()->subHour()->toIso8601ZuluString()))->toBeTrue();
+    });
+
+    it('colors scheduled tasks by how they last ran, failed first', function () {
+        ScheduledTask::factory()->for($this->project)->create(['name' => 'fine', 'last_status' => ScheduledRunStatus::Finished]);
+        ScheduledTask::factory()->for($this->project)->create(['name' => 'late', 'last_status' => ScheduledRunStatus::Missed]);
+        ScheduledTask::factory()->for($this->project)->create(['name' => 'broke', 'last_status' => ScheduledRunStatus::Failed]);
+        ScheduledTask::factory()->for($this->project)->create(['name' => 'new', 'last_status' => null]);
+
+        $rows = ($this->resolve)(WidgetType::List, 'scheduled_tasks')['rows'];
+
+        expect(array_column($rows, 'state', 'name'))->toBe(['broke' => 'red', 'late' => 'amber', 'fine' => 'ok', 'new' => null]);
+    });
+
+    it('lists hosts with their latest shares, red when offline', function () {
+        $agent = ProjectAgent::factory()->for($this->project)->create(['host' => 'web-1']);
+        ProjectAgent::factory()->for($this->project)->offline()->create(['host' => 'web-2']);
+        HostSample::query()->create(['project_agent_id' => $agent->id, 'cpu_load_1m' => 1.0, 'cpu_cores' => 4, 'memory_used_bytes' => 95, 'memory_total_bytes' => 100,
+            'disk_used_bytes' => 10, 'disk_total_bytes' => 100, 'sampled_at' => now()->subMinute()]);
+
+        $rows = collect(($this->resolve)(WidgetType::List, 'hosts')['rows'])->keyBy('host');
+
+        expect($rows['web-1'])->toMatchArray(['cpu_load' => 0.25, 'memory_used' => 0.95, 'disk_used' => 0.1, 'state' => 'red'])
+            ->and($rows['web-2'])->toMatchArray(['cpu_load' => null, 'state' => 'red'])
+            ->and(($this->resolve)(WidgetType::List, 'agents', ['only_problems' => true])['rows'])->toHaveCount(1);
+    });
+});
+
+describe('health', function () {
+    beforeEach(function () {
+        $this->check = function (string $slug, HealthStatus $status): HealthCheck {
+            $check = HealthCheck::factory()->create(['project_id' => $this->project->id, 'slug' => $slug, 'status' => $status, 'status_changed_at' => now()->subMinutes(6)]);
+            $check->hosts()->create(['host' => 'web-1', 'status' => $status, 'last_message' => $slug.' says hi', 'last_result_at' => now()]);
+
+            return $check;
+        };
+    });
+
+    it('counts every check, worst first, and leaves ok ones out when asked', function () {
+        ($this->check)('cache:redis', HealthStatus::Ok);
+        ($this->check)('disk:s3', HealthStatus::Down);
+
+        $all = ($this->resolve)(WidgetType::Health, 'checks');
+        $problems = ($this->resolve)(WidgetType::Health, 'checks', ['only_problems' => true]);
+
+        expect($all['summary'])->toMatchArray(['total' => 2, 'ok' => 1, 'down' => 1])
+            ->and(array_column($all['checks'], 'name'))->toBe(['disk:s3', 'cache:redis'])
+            ->and($all['checks'][0]['since'])->toBe(now()->subMinutes(6)->toIso8601String())
+            ->and($all['check'])->toBeNull()
+            ->and(array_column($problems['checks'], 'name'))->toBe(['disk:s3'])
+            ->and($problems['summary']['total'])->toBe(2);
+    });
+
+    it('shows one picked check in detail, with its uptime and timeline', function () {
+        ($this->check)('cache:redis', HealthStatus::Ok);
+        $picked = ($this->check)('disk:s3', HealthStatus::Down);
+
+        $data = ($this->resolve)(WidgetType::Health, 'checks', ['checks' => [$picked->uuid]]);
+
+        expect($data['summary']['total'])->toBe(1)
+            ->and($data['check'])->toMatchArray(['uuid' => $picked->uuid, 'name' => 'disk:s3', 'state' => 'down', 'last_message' => 'disk:s3 says hi'])
+            ->and($data['check'])->toHaveKeys(['uptime', 'strip', 'since']);
+    });
+
+    it('gauges the lowest uptime of the checks', function () {
+        ($this->check)('cache:redis', HealthStatus::Ok)->forceFill(['created_at' => now()->subDays(2)])->save();
+
+        expect(($this->resolve)(WidgetType::Gauge, 'health_uptime'))->toMatchArray(['value' => 1.0, 'max' => 1.0, 'state' => 'ok']);
     });
 });

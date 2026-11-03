@@ -60,7 +60,7 @@ class HealthChecksQuery
     /**
      * How many checks stand where, archived ones left out.
      *
-     * @return array{total: int, ok: int, recovering: int, degraded: int, down: int, stale: int, pending: int, checks: list<array{uuid: string, name: string, state: string, message: string|null}>}
+     * @return array{total: int, ok: int, recovering: int, degraded: int, down: int, stale: int, pending: int, checks: list<array{uuid: string, name: string, state: string, message: string|null, since: string|null}>}
      */
     public function summary(Project $project, ?string $environment = null): array
     {
@@ -82,6 +82,8 @@ class HealthChecksQuery
                     'name' => $check->displayName(),
                     'state' => self::state($check),
                     'message' => $check->hosts->sortByDesc('last_result_at')->first()?->last_message,
+                    // Since when it stands where it stands, or since its last result once stale.
+                    'since' => (self::state($check) === 'stale' ? $check->last_result_at : $check->status_changed_at)?->toIso8601String(),
                 ])
                 ->sortBy([fn (array $a, array $b): int => array_search($a['state'], self::SEVERITY, true) <=> array_search($b['state'], self::SEVERITY, true), ['name', 'asc']])
                 ->all()),

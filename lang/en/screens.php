@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    // Flash messages on the list of screens.
+    'duplicated' => 'Screen duplicated.',
+    'deleted' => 'Screen deleted.',
+
     // Source names in the designer and as widget titles.
     'sources' => [
         'stat' => [
