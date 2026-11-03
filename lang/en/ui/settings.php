@@ -68,6 +68,12 @@ return [
         'rotate' => 'Rotate',
         'rotate_token_question' => 'Rotate the server token? Agents need the new one.',
         'rotate_public_question' => 'Rotate the public key? Update the script tag afterwards.',
+        'public_stats' => 'Public stats',
+        'public_stats_hint' => 'Serves this project\'s aggregates on the metrics API at a secret URL, without a token: for Grafana or a wall display. No issue messages, stack traces, user ids or host names. Off by default.',
+        'public_stats_enable' => 'Serve public stats',
+        'public_stats_url' => 'Public stats URL',
+        'public_stats_titles' => 'Include issue titles',
+        'rotate_stats_question' => 'Rotate the public stats key? The current URL stops working at once.',
     ],
     'agents' => [
         'title' => 'Agents',

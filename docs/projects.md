@@ -38,7 +38,9 @@ The settings are in sections, one open at a time; the address keeps which (for e
   MCP; letters, digits, `-` and `_`, unique in the team), the issue prefix, allowed
   origins and extra secret fields.
 - **Installation:** what to install and set, as when the project was created.
-- **Keys:** the server token (for the agent) and the public key (for browser errors).
+- **Keys:** the server token (for the agent), the public key (for browser errors) and
+  public stats, a secret URL serving the project's aggregates on the
+  [metrics API](./metrics-api#authentication) without a token, off by default.
   Both can be rotated; the server token is shown only once.
 - **Allowed origins:** browser errors are only accepted from these origins (up to 50,
   each an origin such as `https://shop.example.com`, without a path). Until one is

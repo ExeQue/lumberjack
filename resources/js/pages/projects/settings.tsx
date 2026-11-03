@@ -51,7 +51,9 @@ import {
 import {
     destroy as projectDestroy,
     retention as retentionUpdate,
+    publicStats,
     rotatePublicKey,
+    rotateStatsKey,
     rotateToken,
     show as projectShow,
 } from '@/routes/projects';
@@ -87,6 +89,9 @@ type Settings = {
     ingest_url: string;
     browser_sdk_url: string;
     server_url: string;
+    /** The metrics API under the public stats key; null while public stats are off. */
+    stats_url: string | null;
+    stats_include_titles: boolean;
 };
 
 type Agent = {
@@ -791,7 +796,92 @@ function KeysSection({ project, settings }: Props) {
                     </ConfirmButton>
                 </div>
             </Field>
+            <PublicStatsField project={project} settings={settings} />
         </Section>
+    );
+}
+
+function PublicStatsField({
+    project,
+    settings,
+}: Pick<Props, 'project' | 'settings'>) {
+    const t = useT();
+    const save = (enabled: boolean, includeTitles: boolean) =>
+        router.put(
+            publicStats(project.uuid).url,
+            { enabled, include_titles: includeTitles },
+            { preserveScroll: true },
+        );
+
+    return (
+        <Field
+            label={t('settings.keys.public_stats')}
+            htmlFor="public-stats"
+            hint={t('settings.keys.public_stats_hint')}
+        >
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                    <input
+                        id="public-stats"
+                        type="checkbox"
+                        className="size-4 accent-amber"
+                        checked={settings.stats_url !== null}
+                        onChange={(e) =>
+                            save(
+                                e.target.checked,
+                                settings.stats_include_titles,
+                            )
+                        }
+                    />
+                    <Label htmlFor="public-stats">
+                        {t('settings.keys.public_stats_enable')}
+                    </Label>
+                </div>
+                {settings.stats_url !== null && (
+                    <>
+                        <div className="flex flex-wrap gap-2">
+                            <Input
+                                id="public-stats-url"
+                                aria-label={t('settings.keys.public_stats_url')}
+                                readOnly
+                                className="min-w-0 flex-1 font-mono"
+                                value={settings.stats_url}
+                                onFocus={(e) => e.currentTarget.select()}
+                            />
+                            <CopyButton text={settings.stats_url} />
+                            <ConfirmButton
+                                variant="default"
+                                question={t(
+                                    'settings.keys.rotate_stats_question',
+                                )}
+                                confirmLabel={t('settings.keys.rotate')}
+                                onConfirm={() =>
+                                    router.post(
+                                        rotateStatsKey(project.uuid).url,
+                                        {},
+                                        { preserveScroll: true },
+                                    )
+                                }
+                            >
+                                {t('settings.keys.rotate')}
+                            </ConfirmButton>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input
+                                id="public-stats-titles"
+                                type="checkbox"
+                                className="size-4 accent-amber"
+                                checked={settings.stats_include_titles}
+                                onChange={(e) => save(true, e.target.checked)}
+                            />
+                            <Label htmlFor="public-stats-titles">
+                                {t('settings.keys.public_stats_titles')}
+                            </Label>
+                        </div>
+                    </>
+                )}
+            </div>
+        </Field>
     );
 }
 

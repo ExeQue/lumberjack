@@ -38,10 +38,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string $public_key
  * @property list<string>|null $allowed_origins
  * @property list<string>|null $scrub_keys
+ * @property string|null $stats_key
+ * @property bool $stats_include_titles
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'name', 'slug', 'issue_prefix', 'token_hash', 'token_last_four', 'public_key', 'allowed_origins', 'scrub_keys'])]
+#[Fillable(['team_id', 'name', 'slug', 'issue_prefix', 'token_hash', 'token_last_four', 'public_key', 'allowed_origins', 'scrub_keys', 'stats_key', 'stats_include_titles'])]
 #[Hidden(['token_hash'])]
 #[UseFactory(ProjectFactory::class)]
 class Project extends Model
@@ -66,6 +68,7 @@ class Project extends Model
         return [
             'allowed_origins' => 'array',
             'scrub_keys' => 'array',
+            'stats_include_titles' => 'boolean',
         ];
     }
 

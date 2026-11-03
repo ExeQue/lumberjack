@@ -16,4 +16,8 @@ enum AdminAction: string
     case PasswordResetSent = 'password_reset_sent';
     case PasswordChangeRequired = 'password_change_required';
     case UserInvited = 'user_invited';
+    case PublicStatsEnabled = 'public_stats_enabled';
+    case PublicStatsRotated = 'public_stats_rotated';
+    case PublicStatsChanged = 'public_stats_changed';
+    case PublicStatsDisabled = 'public_stats_disabled';
 }

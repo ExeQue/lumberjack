@@ -60,7 +60,7 @@ class HealthChecksQuery
     /**
      * How many checks stand where, archived ones left out.
      *
-     * @return array{total: int, ok: int, recovering: int, degraded: int, down: int, stale: int, pending: int}
+     * @return array{total: int, ok: int, recovering: int, degraded: int, down: int, stale: int, pending: int, checks: list<array{uuid: string, name: string, state: string, message: string|null}>}
      */
     public function summary(Project $project, ?string $environment = null): array
     {
@@ -68,7 +68,7 @@ class HealthChecksQuery
         $states = $checks->map(fn (HealthCheck $check): string => self::state($check))->countBy();
 
         return [
-            'total' => $states->sum(),
+            'total' => (int) $states->sum(),
             'ok' => (int) $states->get('ok', 0),
             'recovering' => (int) $states->get('recovering', 0),
             'degraded' => (int) $states->get('degraded', 0),
@@ -76,7 +76,7 @@ class HealthChecksQuery
             'stale' => (int) $states->get('stale', 0),
             'pending' => (int) $states->get('pending', 0),
             // Worst first, so what needs attention leads the list on the overview.
-            'checks' => $checks
+            'checks' => array_values($checks
                 ->map(fn (HealthCheck $check): array => [
                     'uuid' => $check->uuid,
                     'name' => $check->displayName(),
@@ -84,8 +84,7 @@ class HealthChecksQuery
                     'message' => $check->hosts->sortByDesc('last_result_at')->first()?->last_message,
                 ])
                 ->sortBy([fn (array $a, array $b): int => array_search($a['state'], self::SEVERITY, true) <=> array_search($b['state'], self::SEVERITY, true), ['name', 'asc']])
-                ->values()
-                ->all(),
+                ->all()),
         ];
     }
 

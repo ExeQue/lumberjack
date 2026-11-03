@@ -12,8 +12,10 @@ Laravel SDK does all of this for you.
 | `GET /api/health`                        | Server token                      | 120 a minute per project                                  |
 | `GET` or `POST /api/health/ping/{token}` | The heartbeat check's secret URL  | 60 a minute per address                                   |
 | `/mcp`                                   | MCP token, as a bearer token      | 120 calls a minute per token                              |
+| `GET /api/v1/...`                        | Team token, or public stats key   | 120 a minute per token or key                             |
 
-A wrong or missing token gets a 401, a limit a 429. An address that sends 30 unknown
+The read-only [metrics API](./metrics-api) under `/api/v1` (Grafana, Prometheus) has its
+own page. A wrong or missing token gets a 401, a limit a 429. An address that sends 30 unknown
 server or MCP tokens in a minute gets a 429 for the rest of that minute, before any token
 is looked up. The browser endpoint checks the key and origin before it reads the body,
 and answers a compressed body with a 415: browsers send plain JSON.

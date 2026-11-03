@@ -6,6 +6,8 @@ use App\Domains\Health\Http\Controllers\HealthPingController;
 use App\Domains\Health\Http\Controllers\HealthStatesController;
 use App\Domains\Ingest\Http\Controllers\IngestController;
 use App\Domains\Ingest\Http\Middleware\AuthenticateProjectToken;
+use App\Domains\Metrics\Http\Controllers\MetricsApiController;
+use App\Domains\Metrics\Http\Middleware\AuthenticateMetricsCredential;
 use Illuminate\Support\Facades\Route;
 
 // Everything an app calls with its project's server token.
@@ -27,3 +29,25 @@ Route::match(['get', 'post'], 'health/ping/{token}', HealthPingController::class
     ->where('token', '[a-f0-9]{40}')
     ->middleware('throttle:60,1')
     ->name('health.ping');
+
+// The read-only metrics API (Grafana, Prometheus, the status screen): with a team token,
+// or under a project's public stats key without one. See docs/metrics-api.md.
+$metrics = function (): void {
+    Route::get('projects', [MetricsApiController::class, 'projects'])->name('projects');
+    Route::get('metrics', [MetricsApiController::class, 'prometheus'])->name('prometheus');
+
+    Route::prefix('projects/{project}')->group(function () {
+        Route::get('summary', [MetricsApiController::class, 'summary'])->name('summary');
+        Route::get('series/{metric}', [MetricsApiController::class, 'series'])->name('series');
+        Route::get('routes', [MetricsApiController::class, 'routes'])->name('routes');
+        Route::get('issues', [MetricsApiController::class, 'issues'])->name('issues');
+        Route::get('jobs', [MetricsApiController::class, 'jobs'])->name('jobs');
+        Route::get('queues', [MetricsApiController::class, 'queues'])->name('queues');
+        Route::get('hosts', [MetricsApiController::class, 'hosts'])->name('hosts');
+        Route::get('releases', [MetricsApiController::class, 'releases'])->name('releases');
+    });
+};
+
+Route::prefix('v1')->name('metrics.')->middleware([AuthenticateMetricsCredential::class, 'throttle:metrics'])->group($metrics);
+Route::prefix('v1/public/{key}')->name('metrics.public.')->where(['key' => 'ps_[a-z0-9]{40}'])
+    ->middleware([AuthenticateMetricsCredential::class, 'throttle:metrics'])->group($metrics);
