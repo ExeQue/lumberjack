@@ -86,7 +86,7 @@ class DatabaseSeeder extends Seeder
 
         Project::factory()->for($other)->create(['name' => 'Acme Shop', 'slug' => 'acme-shop']);
 
-        $this->call(DemoScreenSeeder::class);
+        $this->call([DemoScreenSeeder::class, DemoDisplaySeeder::class]);
 
         $this->command?->info('Log in as '.implode(', ', array_column([...self::MEMBERS, ...self::OUTSIDERS], 'email')).' / '.self::PASSWORD);
         $this->command?->info("Project \"{$project->name}\" server token: ".self::TOKEN);
