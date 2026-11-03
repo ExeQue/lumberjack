@@ -7,6 +7,11 @@ import type { Screen } from './types';
 
 type Size = { w: number; h: number };
 
+/** Loads the page afresh after up to 3 s at random, so a wall of TVs does not ask at once. */
+export function reloadSoon(): void {
+    window.setTimeout(() => window.location.reload(), Math.random() * 3_000);
+}
+
 /** The screen's shape as it stands: width over height, portrait flipping it. */
 export function ratioOf(
     screen: Pick<Screen, 'aspect' | 'orientation'>,

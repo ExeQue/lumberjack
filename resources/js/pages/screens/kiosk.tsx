@@ -7,6 +7,7 @@ import {
     KioskStatus,
     kioskClock,
     kioskSubtitle,
+    reloadSoon,
 } from '@/components/lj/screen/frame';
 import { fits, themeAt } from '@/components/lj/screen/lib';
 import type {
@@ -92,6 +93,14 @@ export default function Kiosk({
         '.screen.changed',
         // A view transition glides moved and resized widgets to their new cells.
         () => router.reload({ only: reloadOnly, viewTransition: true }),
+        [],
+        share ? 'public' : 'private',
+    );
+    // Someone asked everything showing the screen to load afresh.
+    useEcho(
+        channel,
+        '.screen.reload',
+        () => reloadSoon(),
         [],
         share ? 'public' : 'private',
     );

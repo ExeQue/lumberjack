@@ -172,6 +172,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('screens/{screen:uuid}', [ScreenController::class, 'update'])->name('screens.update');
     Route::put('screens/{screen:uuid}/layout', [ScreenController::class, 'layout'])->name('screens.layout');
     Route::put('screens/{screen:uuid}/widgets/{widget}', [ScreenController::class, 'widget'])->where('widget', '[A-Za-z0-9_-]{1,40}')->name('screens.widget');
+    Route::post('screens/{screen:uuid}/reload', [ScreenController::class, 'reload'])->name('screens.reload');
     Route::post('screens/{screen:uuid}/duplicate', [ScreenController::class, 'duplicate'])->name('screens.duplicate');
     Route::delete('screens/{screen:uuid}', [ScreenController::class, 'destroy'])->name('screens.destroy');
     Route::put('screens/{screen:uuid}/share', [ScreenShareController::class, 'update'])->name('screens.share');
@@ -184,6 +185,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('pair/{code}', [PairController::class, 'confirm'])->where('code', '[A-Za-z0-9-]{1,12}')->middleware('throttle:tv-pair')->name('pair.confirm');
     Route::get('team/displays', [DisplayController::class, 'index'])->name('team.displays');
     Route::put('team/displays/{display:uuid}', [DisplayController::class, 'update'])->name('displays.update');
+    Route::post('team/displays/{display:uuid}/reload', [DisplayController::class, 'reload'])->name('displays.reload');
     Route::delete('team/displays/{display:uuid}', [DisplayController::class, 'destroy'])->name('displays.destroy');
 
     Route::get('team/alerts', [AlertController::class, 'index'])->name('alerts.index');

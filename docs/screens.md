@@ -32,6 +32,10 @@ grid in the middle, and the settings of the selected widget on the right. Every 
 saves itself a moment later, and every TV showing the screen follows within a second,
 without reloading and without losing the data it shows. The top bar says whether the
 last change is saved and on how many screens it is live right now.
+**Reload TVs** next to it makes every kiosk, paired TV and share link showing the
+screen load its page afresh, as after an update, each within three seconds at random so
+a wall of TVs does not ask at once; it says how many screens it reached, and can be sent
+again after ten seconds.
 
 ![The designer](./screenshots/screen-designer.png)
 
@@ -278,6 +282,8 @@ Team admins change them; every member can see them.
   screen has something red it stays until that clears, unless you turn that off.
 - **Theme**: the screen's own theme, or always **Dark**, **Light** or **By time of
   day**, for a TV in a bright room showing a screen that is dark elsewhere.
+- **Reload**: the TV loads its page afresh, as after an update (team admins, once every
+  ten seconds).
 - **Remove**: the TV goes back to showing a pairing code at once.
 
 ## Share links

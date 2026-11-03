@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
-import { destroy, update } from '@/routes/displays';
+import { destroy, reload, update } from '@/routes/displays';
 import type { TeamShared } from '@/types/lumberjack';
 
 type Row = {
@@ -314,8 +314,29 @@ export default function Displays({
                                             </td>
                                             {can_manage && (
                                                 <td
-                                                    className={`${tdClass} text-right`}
+                                                    className={`${tdClass} text-right whitespace-nowrap`}
                                                 >
+                                                    <Button
+                                                        variant="ghost"
+                                                        title={t(
+                                                            'screens.displays.reload_hint',
+                                                        )}
+                                                        onClick={() =>
+                                                            router.post(
+                                                                reload(
+                                                                    display.uuid,
+                                                                ).url,
+                                                                {},
+                                                                {
+                                                                    preserveScroll: true,
+                                                                },
+                                                            )
+                                                        }
+                                                    >
+                                                        {t(
+                                                            'screens.displays.reload',
+                                                        )}
+                                                    </Button>
                                                     <ConfirmButton
                                                         question={t(
                                                             'screens.displays.remove_question',

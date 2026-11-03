@@ -61,6 +61,7 @@ import { cn } from '@/lib/utils';
 import {
     index as screensIndex,
     layout as layoutRoute,
+    reload as reloadRoute,
     show as showRoute,
     update as updateRoute,
     viewers as viewersRoute,
@@ -1145,6 +1146,38 @@ export default function EditScreen(props: Props) {
                         />
                         {statusText}
                     </span>
+                    <Button
+                        title={t('screens.designer.reload_hint')}
+                        onClick={async () => {
+                            const response = await fetch(
+                                reloadRoute(screen.uuid).url,
+                                {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: {
+                                        Accept: 'application/json',
+                                        'X-XSRF-TOKEN': xsrf(),
+                                    },
+                                },
+                            ).catch(() => null);
+                            const json = (await response
+                                ?.json()
+                                .catch(() => null)) as {
+                                message?: string;
+                            } | null;
+                            const message =
+                                json?.message ??
+                                t('screens.designer.reload_failed');
+
+                            if (response?.ok) {
+                                toast.success(message);
+                            } else {
+                                toast.error(message);
+                            }
+                        }}
+                    >
+                        {t('screens.designer.reload')}
+                    </Button>
                     <Button onClick={() => setDialog('tv')}>
                         {t('screens.open_tv.button')}
                     </Button>

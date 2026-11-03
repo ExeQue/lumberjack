@@ -6,6 +6,7 @@ import { LogMark } from '@/components/lj/logo';
 import { displayTokenKey } from '@/components/lj/screen/tv';
 import type { TvUrls } from '@/components/lj/screen/tv';
 import { useT } from '@/lib/i18n';
+import { reloadSoon } from '@/components/lj/screen/frame';
 import Kiosk from '@/pages/screens/kiosk';
 
 type KioskProps = Omit<
@@ -65,6 +66,7 @@ export default function TvShow({
         router.reload({ viewTransition: true }),
     );
     useEcho(display_channel, '.display.removed', () => unpair());
+    useEcho(display_channel, '.display.reload', () => reloadSoon());
 
     useEffect(() => {
         // The window's size goes along, so the designer can preview a screen at it.
