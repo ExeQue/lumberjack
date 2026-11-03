@@ -204,6 +204,7 @@ export function WidgetTile({
     }, [onStatus, widget.id, status]);
     const textSize = opt<string>('text_size') ?? 'auto';
     const align = opt<string>('align') === 'center' ? 'center' : 'left';
+    const middle = opt<string>('valign') === 'middle';
     const hideWhen = opt<string>('hide_when') ?? 'never';
     const empty =
         payload !== undefined &&
@@ -276,7 +277,14 @@ export function WidgetTile({
         >
             {decoration}
             {showTitle && widget.type !== 'empty' && title && (
-                <div className="flex items-baseline justify-between gap-[0.6em]">
+                <div
+                    className={cn(
+                        'flex items-baseline gap-[0.6em]',
+                        align === 'center'
+                            ? 'justify-center'
+                            : 'justify-between',
+                    )}
+                >
                     <span className="lj-tile-title min-w-0 truncate">
                         {title}
                     </span>
@@ -304,6 +312,7 @@ export function WidgetTile({
                 )}
                 style={{
                     alignItems: align === 'center' ? 'center' : undefined,
+                    justifyContent: middle ? 'center' : undefined,
                 }}
             >
                 {body}
