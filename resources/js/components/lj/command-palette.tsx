@@ -165,7 +165,8 @@ export function CommandPalette() {
                                     .filter((r) => r.group === group)
                                     .map((r) => (
                                         <Command.Item
-                                            key={r.href}
+                                            // cmdk keeps an item's first keywords, so each search mounts its own.
+                                            key={`${term} ${r.href}`}
                                             value={`${group} ${r.href}`}
                                             // The server already matched these.
                                             keywords={[term]}
