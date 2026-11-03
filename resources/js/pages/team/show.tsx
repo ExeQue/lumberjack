@@ -1,4 +1,4 @@
-import { Relative, useNow } from '@/components/lj/relative';
+import { Relative, WithRelative } from '@/components/lj/relative';
 import { Form, Head, router, useForm, usePage } from '@inertiajs/react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import {
@@ -23,7 +23,7 @@ import {
     thClass,
 } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import { formatDateTime, formatRelative } from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -104,8 +104,6 @@ export default function TeamShow({
     mcp_url,
     can_create_team,
 }: Props) {
-    // Relative times in the text below stay current.
-    const now = useNow();
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const admin = team.can_administer;
@@ -348,15 +346,18 @@ export default function TeamShow({
                                                     </Badge>
                                                 ) : (
                                                     <span className="text-xs text-ink-3">
-                                                        {t(
-                                                            'team.invitations.expires',
-                                                            {
-                                                                time: formatRelative(
-                                                                    invitation.expires_at,
-                                                                    now,
-                                                                ),
-                                                            },
-                                                        )}
+                                                        <WithRelative
+                                                            iso={
+                                                                invitation.expires_at
+                                                            }
+                                                        >
+                                                            {(time) =>
+                                                                t(
+                                                                    'team.invitations.expires',
+                                                                    { time },
+                                                                )
+                                                            }
+                                                        </WithRelative>
                                                     </span>
                                                 )}
                                             </span>

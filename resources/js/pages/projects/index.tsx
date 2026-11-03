@@ -1,4 +1,4 @@
-import { useNow } from '@/components/lj/relative';
+import { WithRelative } from '@/components/lj/relative';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -24,12 +24,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
-import {
-    formatDuration,
-    formatNumber,
-    formatPercent,
-    formatRelative,
-} from '@/lib/format';
+import { formatDuration, formatNumber, formatPercent } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { show as projectShow, store as projectStore } from '@/routes/projects';
 import type { SeriesPoint, TeamShared } from '@/types/lumberjack';
@@ -53,8 +48,6 @@ export default function ProjectsIndex({
 }: {
     projects: ProjectCard[];
 }) {
-    // Relative times in the text below stay current.
-    const now = useNow();
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const [search, setSearch] = useState('');
@@ -254,25 +247,30 @@ export default function ProjectsIndex({
                                                     offline ? 'text-warn' : ''
                                                 }
                                             >
-                                                {offline
-                                                    ? t(
-                                                          'projects.agent_missing',
-                                                          {
-                                                              hosts: project.offline_agents.join(
-                                                                  ', ',
-                                                              ),
-                                                          },
-                                                      )
-                                                    : t(
-                                                          'projects.agents_seen',
-                                                          {
-                                                              time: formatRelative(
-                                                                  project.last_agent_seen_at,
-                                                                  now,
-                                                              ),
-                                                          },
-                                                          project.agents,
-                                                      )}
+                                                {offline ? (
+                                                    t(
+                                                        'projects.agent_missing',
+                                                        {
+                                                            hosts: project.offline_agents.join(
+                                                                ', ',
+                                                            ),
+                                                        },
+                                                    )
+                                                ) : (
+                                                    <WithRelative
+                                                        iso={
+                                                            project.last_agent_seen_at
+                                                        }
+                                                    >
+                                                        {(time) =>
+                                                            t(
+                                                                'projects.agents_seen',
+                                                                { time },
+                                                                project.agents,
+                                                            )
+                                                        }
+                                                    </WithRelative>
+                                                )}
                                             </span>
                                         </div>
                                     </div>

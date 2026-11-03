@@ -69,6 +69,12 @@ describe('server ingest', function () {
             ->and(Issue::sole()->source)->toBe(IssueSource::Server);
     });
 
+    it('turns down a batch with an event of no known type, in one pass over the events', function () {
+        $this->postJson('/api/ingest', $this->batch([['type' => 'log', 'message' => 'ok'], ['type' => 'bogus']]), ['Authorization' => 'Bearer lj_srv_test-token'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('events');
+    });
+
     it('stores spans on their trace, and skips a span of a kind it does not know', function () {
         $this->postJson('/api/ingest', $this->batch([
             ['type' => 'span', 'trace_id' => 't1', 'timestamp' => now()->getTimestamp(), 'kind' => 'http', 'name' => 'POST', 'target' => 'api.stripe.com/v1/charges', 'duration_ms' => 182.4, 'attributes' => ['status' => 201]],
