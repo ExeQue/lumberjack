@@ -107,6 +107,19 @@ enum ScreenTemplate: string
         return __('ui/screens.templates.'.$this->value.'.description');
     }
 
+    /**
+     * Every template but the empty one, with its full widgets, for an empty designer to fill.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function forDesigner(): array
+    {
+        return array_values(array_map(
+            fn (self $t): array => [...$t->toArray(), 'widgets' => $t->widgets()],
+            array_filter(self::cases(), fn (self $t): bool => $t !== self::Blank),
+        ));
+    }
+
     /** @return array{id: string, label: string, description: string, cols: int, rows: int, widgets: list<array{type: string, w: int, h: int}>} */
     public function toArray(): array
     {

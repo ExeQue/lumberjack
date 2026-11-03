@@ -747,7 +747,8 @@ function Chart({ widget, schema, data, t }: BodyProps) {
               )
             : '';
     const yTicks = [top, (top + bottom) / 2, bottom];
-    const xTicks = Math.min(5, points.length);
+    // Room for a label every column or so: three ticks on a narrow chart, five on a wide one.
+    const xTicks = Math.min(widget.w >= 3 ? 5 : 3, points.length);
     const xAt = Array.from({ length: xTicks }, (_, k) =>
         Math.round((k * (points.length - 1)) / Math.max(1, xTicks - 1)),
     );
@@ -1078,6 +1079,10 @@ function rowText(
             return {
                 key: '●',
                 main: [row.host, row.name].filter(Boolean).join(' · '),
+                tag:
+                    row.online === false
+                        ? { text: t('screens.list.offline'), tone: 'red' }
+                        : undefined,
                 at: row.last_seen_at as string,
             };
         default:
