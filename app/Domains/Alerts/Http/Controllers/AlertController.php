@@ -33,15 +33,16 @@ class AlertController
     {
         $team = $request->user()->currentTeam;
         abort_if($team === null, 404);
+        $admin = $request->user()->canAdministerTeam($team);
 
         return Inertia::render('team/alerts', [
             // The team's shared channels; a project's own channels and its rules are in its settings.
-            'channels' => $team->notificationChannels()->whereTeamWide()->orderBy('name')->get()->map(fn (NotificationChannel $c): array => $presenter->present($c))->all(),
+            'channels' => $team->notificationChannels()->whereTeamWide()->orderBy('name')->get()->map(fn (NotificationChannel $c): array => $presenter->present($c, reveal: $admin))->all(),
             // Webhooks belong to one project, so they are added in its settings.
             'types' => collect(ChannelType::cases())->reject(fn (ChannelType $t): bool => $t === ChannelType::Webhook)->map(fn (ChannelType $t): string => $t->value)->values()->all(),
             'projects' => $team->projects()->orderBy('name')->get()->map(fn (Project $p): array => ['uuid' => $p->uuid, 'name' => $p->name])->all(),
             'rules' => $rules->forTeam($team),
-            'can_administer' => $request->user()->canAdministerTeam($team),
+            'can_administer' => $admin,
         ]);
     }
 
