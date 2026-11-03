@@ -53,8 +53,8 @@ views and the 75th percentile of each vital, colored by Google's thresholds:
 
 Between good (green) and poor (red) is needs improvement (amber). INP is the slowest
 interaction of the page view. TTFB and FCP are stored as well. Values below zero or
-above a minute are dropped as broken measurements. Web vitals follow the performance
-retention.
+above a minute are dropped as broken measurements. Web vitals have their own
+[retention](./projects#retention), 30 days by default.
 
 ## Traces
 

@@ -9,8 +9,6 @@ use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Issues\Console\Commands\ReturnIgnoredIssuesCommand;
 use App\Domains\Issues\Console\Commands\SendWatchDigestsCommand;
 use App\Domains\Jobs\Console\Commands\MarkStuckJobsCommand;
-use App\Domains\Jobs\Models\QueueSample;
-use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Retention\Console\Commands\PruneTelemetryCommand;
 use App\Domains\Schedule\Console\Commands\MarkMissedScheduledTasksCommand;
@@ -25,4 +23,4 @@ Schedule::command(RunHealthChecksCommand::class)->everyMinute()->withoutOverlapp
 Schedule::command(ArchiveSilentHealthChecksCommand::class)->daily()->withoutOverlapping();
 Schedule::command(PruneTelemetryCommand::class)->dailyAt('03:15')->timezone('Europe/Copenhagen')->withoutOverlapping();
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
-Schedule::command('model:prune', ['--model' => [ProjectAgent::class, QueueSample::class, HostSample::class, HealthCheckHost::class]])->hourly()->withoutOverlapping();
+Schedule::command('model:prune', ['--model' => [ProjectAgent::class, HealthCheckHost::class]])->hourly()->withoutOverlapping();

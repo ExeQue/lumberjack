@@ -16,7 +16,7 @@ class RetentionPolicyFactory extends Factory
     public function definition(): array
     {
         return [
-            'category' => RetentionCategory::Errors,
+            'category' => RetentionCategory::Occurrences,
             'days' => 30,
         ];
     }

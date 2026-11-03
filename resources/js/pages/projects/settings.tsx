@@ -1,4 +1,9 @@
 import { Relative } from '@/components/lj/relative';
+import {
+    RetentionTable,
+    retentionFormData,
+    retentionPayload,
+} from '@/components/lj/retention-table';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ExternalLink, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -65,6 +70,8 @@ import {
 import type {
     ProjectAlertRule,
     ProjectHeader,
+    RetentionRow,
+    RetentionStats,
     TeamShared,
 } from '@/types/lumberjack';
 
@@ -113,12 +120,6 @@ type Channel = {
     lines_24h: number;
     retention_days: number | null;
 };
-type RetentionRow = {
-    category: 'errors' | 'jobs' | 'logs' | 'performance';
-    label: string;
-    team_days: number;
-    project_days: number | null;
-};
 type JobOverride = { job_class: string; days: number };
 type Repository = {
     provider: string;
@@ -136,6 +137,8 @@ type Props = {
     labels: (IssueLabel & { issues: number })[];
     unknown_channels: string[];
     retention: RetentionRow[];
+    /** Deferred: counted after the page shows. */
+    retention_stats?: RetentionStats;
     job_overrides: JobOverride[];
     repository: Repository;
     triage: TriageProvider[];
@@ -1199,7 +1202,7 @@ function ChannelsSection({
     const inputRef = useRef<HTMLInputElement>(null);
     const [autoSubmit, setAutoSubmit] = useState(false);
     const logs = retention.find((r) => r.category === 'logs');
-    const projectLogDays = logs?.project_days ?? logs?.team_days ?? 0;
+    const projectLogDays = logs?.effective.days ?? 0;
     const names = channels.map((c) => c.name);
     const unknown = unknown_channels.filter((name) => !names.includes(name));
 
@@ -1462,17 +1465,13 @@ function ChannelsSection({
 function RetentionSection({
     project,
     retention,
+    retention_stats,
     job_overrides,
     channels,
 }: Props) {
     const t = useT();
     const form = useForm({
-        days: Object.fromEntries(
-            retention.map((r) => [
-                r.category,
-                r.project_days?.toString() ?? '',
-            ]),
-        ) as Record<string, string>,
+        ...retentionFormData(retention),
         job_overrides: job_overrides.map((o) => ({
             job_class: o.job_class,
             days: o.days.toString(),
@@ -1502,12 +1501,7 @@ function RetentionSection({
 
     const save = () => {
         form.transform((data) => ({
-            days: Object.fromEntries(
-                Object.entries(data.days).map(([key, value]) => [
-                    key,
-                    daysOrNull(value),
-                ]),
-            ),
+            ...retentionPayload(data),
             job_overrides: data.job_overrides.map((o) => ({
                 job_class: o.job_class,
                 days: Number(o.days),
@@ -1522,6 +1516,30 @@ function RetentionSection({
         form.submit(retentionUpdate(project.uuid), { preserveScroll: true });
     };
 
+    const capOf = (category: string) => {
+        const row = retention.find((r) => r.category === category);
+
+        return {
+            days: row?.effective.cap_days ?? null,
+            level: t(
+                `settings.retention.levels.${row?.effective.cap_level ?? 'default'}`,
+            ),
+        };
+    };
+    const jobCap = capOf('job_runs');
+    const logCap = capOf('logs');
+    const cappedNote = (
+        days: string,
+        cap: { days: number | null; level: string },
+    ) =>
+        cap.days !== null && Number(days) > cap.days ? (
+            <span className="text-xs text-warn">
+                {t('settings.retention.override_capped', {
+                    value: t('settings.days', { count: cap.days }, cap.days),
+                    level: cap.level,
+                })}
+            </span>
+        ) : null;
     const jobErrors = errorsFor(errors, 'job_overrides');
     const channelErrors = errorsFor(errors, 'channels');
 
@@ -1538,75 +1556,14 @@ function RetentionSection({
                     save();
                 }}
             >
-                <div className="overflow-x-auto">
-                    <table className={tableClass}>
-                        <thead>
-                            <tr>
-                                <th className={thClass}>
-                                    {t('settings.retention.category')}
-                                </th>
-                                <th className={thClass}>
-                                    {t('settings.retention.team_value')}
-                                </th>
-                                <th className={thClass}>
-                                    {t('settings.retention.project_value')}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {retention.map((row) => (
-                                <tr key={row.category}>
-                                    <td className={tdClass}>{row.label}</td>
-                                    <td className={cn(tdClass, 'text-ink-2')}>
-                                        {t(
-                                            'settings.days',
-                                            { count: row.team_days },
-                                            row.team_days,
-                                        )}
-                                    </td>
-                                    <td className={tdClass}>
-                                        <label
-                                            className="sr-only"
-                                            htmlFor={`retention-${row.category}`}
-                                        >
-                                            {t('settings.retention.days_for', {
-                                                label: row.label,
-                                            })}
-                                        </label>
-                                        <Input
-                                            id={`retention-${row.category}`}
-                                            type="number"
-                                            min={1}
-                                            inputMode="numeric"
-                                            className="w-28 font-mono"
-                                            placeholder={t(
-                                                'settings.retention.inherit',
-                                            )}
-                                            value={form.data.days[row.category]}
-                                            onChange={(e) =>
-                                                form.setData('days', {
-                                                    ...form.data.days,
-                                                    [row.category]:
-                                                        e.target.value,
-                                                })
-                                            }
-                                            aria-invalid={
-                                                errors[
-                                                    `days.${row.category}`
-                                                ] !== undefined
-                                            }
-                                        />
-                                        {errors[`days.${row.category}`] && (
-                                            <p className="mt-1 text-xs text-err">
-                                                {errors[`days.${row.category}`]}
-                                            </p>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                <RetentionTable
+                    level="project"
+                    rows={retention}
+                    stats={retention_stats}
+                    data={{ days: form.data.days, forever: form.data.forever }}
+                    setData={(next) => form.setData({ ...form.data, ...next })}
+                    errors={errors}
+                />
 
                 <fieldset className="flex flex-col gap-2">
                     <legend className="mb-1.5 text-[13px] font-medium">
@@ -1626,6 +1583,7 @@ function RetentionSection({
                                     <span className="min-w-0 font-mono text-xs break-all">
                                         {override.job_class}
                                     </span>
+                                    {cappedNote(override.days, jobCap)}
                                     <span className="flex items-center gap-2">
                                         <span className="font-mono text-xs text-ink-2">
                                             {t(
@@ -1742,6 +1700,10 @@ function RetentionSection({
                                             })
                                         }
                                     />
+                                    {cappedNote(
+                                        form.data.channels[channel.id] ?? '',
+                                        logCap,
+                                    )}
                                 </Field>
                             ))}
                         </div>

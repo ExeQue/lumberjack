@@ -33,11 +33,12 @@ Pages that belong to one thing, like a trace, open the other project's overview.
   since its server or pod is most likely gone (Kubernetes names every pod for
   itself). **Remove** forgets one right away; it comes back if it checks in again.
   The heartbeat also reports the size of the app's queues (the package's `queues`
-  config), kept for 30 days for the [Jobs page](./performance#queues), and how busy
+  config), kept for 30 days by default for the [Jobs page](./performance#queues), and how busy
   its host is: the table shows the 1 minute load against the cores, memory and disk
   in use (hover for the bytes), with the highest load and memory per hour over the
   last day. Memory and disk turn amber past 90%, load past the number of cores. In a
-  container the container's own limits count. Host samples are kept for 7 days.
+  container the container's own limits count. Host samples are kept for 7 days by
+  default. Both follow [retention](#retention).
 - **Alerts:** the project's [own channels, and its rules](./alerts#team-rules-and-project-overrides): the team's by default, or customized for the project.
 - **Labels:** rename, recolor or delete [issue labels](./issues#working-on-an-issue).
 - **Retention:** see below.
@@ -70,17 +71,56 @@ Crawlers and automated browsers are skipped.
 
 ## Retention
 
-Data is kept for a number of days per category. Empty means inherit; the most specific
-value wins: team, project, job class or log channel.
+Every kind of data has its own retention, set on three levels. Each level is the
+default for the one below it and the most it may keep:
 
-| Category    | Default |
-| ----------- | ------- |
-| Errors      | 90 days |
-| Jobs        | 30 days |
-| Logs        | 14 days |
-| Performance | 14 days |
+1. **Application**, the whole Lumberjack: **Administration > Retention**, for system
+   administrators. Empty uses the built-in default and sets no maximum.
+2. **Team**: the team page, for team owners and admins. At most the application value.
+3. **Project**: the project's settings, for whoever administers the project. At most
+   the team value; job classes and log channels can have their own, also at most the
+   team value.
 
-Failed job runs always follow error retention. Web vitals count as performance.
+Each value is a number of days (1 to 3650), empty to inherit, or **forever**. Forever
+can only be chosen where no level above sets a number.
+
+Saving more than a level above allows is refused, naming the limit. Lowering a level
+does not change what the levels below store: their values are capped right away, shown
+as capped, and come back once the limit is raised again. A level that stores nothing
+sets no limit, so a project can keep longer than the built-in default as long as
+neither its team nor the application says otherwise.
+
+Each table shows per data type what the level inherits, the limit from above, how many
+rows are stored (counted up to 100,000; an estimate on the application page) with the
+age of the oldest, and the date the daily prune would delete up to.
+
+| Group          | Data type           | Default  | Holds                                                             |
+| -------------- | ------------------- | -------- | ----------------------------------------------------------------- |
+| Errors         | Occurrences         | 90 days  | Each time an error happened, with stack trace and context         |
+| Performance    | Requests            | 14 days  | One row per HTTP request: route, status and duration              |
+| Performance    | Queries             | 14 days  | Database queries recorded with their requests and jobs            |
+| Performance    | Spans               | 14 days  | Trace spans: outgoing HTTP, cache and custom timings              |
+| Performance    | Web vitals          | 30 days  | Page load metrics from browsers                                   |
+| Jobs           | Job runs            | 30 days  | Each queued job attempt; can be set per job class                 |
+| Jobs           | Scheduled task runs | 30 days  | Each run of a scheduled task                                      |
+| Jobs           | Command runs        | 30 days  | Each Artisan command run                                          |
+| Logs           | Logs                | 14 days  | Log lines; can be set per channel                                 |
+| Health         | Health results      | 14 days  | Each health check probe and its latency                           |
+| Health         | Health outages      | 365 days | Periods a check was down or degraded; uptime is counted from them |
+| Infrastructure | Queue size samples  | 30 days  | Queue length and oldest job age, sampled by the agent             |
+| Infrastructure | Host metrics        | 7 days   | CPU, memory and disk samples from the agent                       |
+| Alerts         | Alert history       | 90 days  | Every alert sent, to which channel, and whether it got through    |
+| Administration | Audit log           | 365 days | What administrators did; set on the application level only        |
+
+Issues themselves are never pruned, only their occurrences. Failed job runs, failed or
+missed scheduled runs and failed command runs stay at least as long as occurrences.
+Open outages are kept until they end. Data is pruned once a day, at 03:15
+Europe/Copenhagen.
+
+Upgrading keeps what was set: an old Errors value became Occurrences (and Health
+outages when it was longer than a year), Performance became Requests, Queries, Spans,
+Web vitals and Health results, Jobs became Job runs, Scheduled task runs and Command
+runs, and Logs stayed Logs.
 
 ## Repository integration
 

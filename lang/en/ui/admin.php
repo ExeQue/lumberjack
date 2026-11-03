@@ -8,6 +8,7 @@ return [
         'teams' => 'All teams',
         'users' => 'All users',
         'audit' => 'Audit log',
+        'retention' => 'Retention',
     ],
     'teams' => [
         'title' => 'All teams',
@@ -88,5 +89,9 @@ return [
             'password_change_required' => 'Required password change',
             'user_invited' => 'Invited user',
         ],
+    ],
+    'retention' => [
+        'title' => 'Retention',
+        'description' => 'How long this Lumberjack keeps each kind of data. A value here is the default for every team and the most any team or project may keep. Empty uses the built-in default and sets no maximum.',
     ],
 ];

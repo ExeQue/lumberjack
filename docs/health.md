@@ -205,5 +205,5 @@ and starts fresh as soon as a result moves a check.
 
 ## Retention
 
-Results are kept as long as the project's performance data; outages, which uptime is
-counted from, as long as its errors.
+Results (14 days by default) and outages (a year by default; uptime is counted from
+them) each have their own [retention](./projects#retention).

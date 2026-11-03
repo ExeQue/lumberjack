@@ -6,8 +6,9 @@ namespace App\Domains\Teams\Http\Controllers;
 
 use App\Domains\Mcp\Enums\McpScope;
 use App\Domains\Mcp\Models\McpToken;
+use App\Domains\Retention\Actions\MeasureRetentionAction;
 use App\Domains\Retention\Enums\RetentionCategory;
-use App\Domains\Retention\Models\RetentionPolicy;
+use App\Domains\Retention\Presenters\RetentionPresenter;
 use App\Domains\Teams\Actions\CreateTeamAction;
 use App\Domains\Teams\Actions\SwitchTeamAction;
 use App\Domains\Teams\Http\Requests\StoreTeamRequest;
@@ -21,7 +22,7 @@ use Inertia\Response;
 
 class TeamController
 {
-    public function show(Request $request): Response
+    public function show(Request $request, RetentionPresenter $retention, MeasureRetentionAction $measure): Response
     {
         $user = $request->user();
         $team = $user->currentTeam;
@@ -30,8 +31,6 @@ class TeamController
         if ($team === null) {
             return Inertia::render('team/none');
         }
-
-        $policies = $team->retentionPolicies()->whereNull('project_id')->get();
 
         return Inertia::render('team/show', [
             'members' => $team->members()->orderBy('name')->get()->map(fn (User $m): array => [
@@ -58,12 +57,8 @@ class TeamController
                 'expires_at' => $t->expires_at?->toIso8601String(),
             ])->all(),
             'scopes' => array_map(fn (McpScope $s): string => $s->value, McpScope::cases()),
-            'retention' => collect(RetentionCategory::cases())->map(fn (RetentionCategory $c): array => [
-                'category' => $c->value,
-                'label' => $c->label(),
-                'days' => $policies->first(fn (RetentionPolicy $p): bool => $p->category === $c)?->days,
-                'default_days' => $c->defaultDays(),
-            ])->all(),
+            'retention' => $retention->rows($team),
+            'retention_stats' => Inertia::defer(fn (): array => $measure->execute(RetentionCategory::forTeams(), $team)),
             'mcp_url' => url('/mcp'),
         ]);
     }

@@ -6,9 +6,7 @@ namespace App\Domains\Projects\Models;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -26,14 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['project_agent_id', 'cpu_load_1m', 'cpu_cores', 'memory_used_bytes', 'memory_total_bytes', 'disk_used_bytes', 'disk_total_bytes', 'php_memory_peak_bytes', 'sampled_at'])]
 class HostSample extends Model
 {
-    use Prunable;
-
     public $timestamps = false;
-
-    /**
-     * The agents table shows the last day; a week leaves room to look back.
-     */
-    public const int KEEP_DAYS = 7;
 
     protected function casts(): array
     {
@@ -53,11 +44,5 @@ class HostSample extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(ProjectAgent::class, 'project_agent_id');
-    }
-
-    /** @return Builder<static> */
-    public function prunable(): Builder
-    {
-        return static::query()->where('sampled_at', '<', now()->subDays(self::KEEP_DAYS));
     }
 }

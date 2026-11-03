@@ -1,6 +1,9 @@
 import { usePage } from '@inertiajs/react';
 import { useT } from '@/lib/i18n';
-import { audit as adminAudit } from '@/routes/admin';
+import {
+    audit as adminAudit,
+    retention as adminRetention,
+} from '@/routes/admin';
 import { index as adminTeams } from '@/routes/admin/teams';
 import { index as adminUsers } from '@/routes/admin/users';
 import { index as alertsIndex } from '@/routes/alerts';
@@ -151,6 +154,11 @@ export function useNavigation(
                   label: t('admin.nav.audit'),
                   href: adminAudit().url,
                   active: isAt(adminAudit().url),
+              },
+              {
+                  label: t('admin.nav.retention'),
+                  href: adminRetention().url,
+                  active: isAt(adminRetention().url),
               },
           ]
         : [];
