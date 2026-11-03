@@ -131,6 +131,14 @@ const BIG_SIZE: Record<string, string> = {
     xl: 'min(56cqh, 24cqw)',
 };
 
+/** Title size relative to the tile's text. */
+const TITLE_SIZE: Record<string, string> = {
+    s: '0.85em',
+    m: '1em',
+    l: '1.3em',
+    xl: '1.7em',
+};
+
 const TEXT_SCALE: Record<string, number> = {
     auto: 1,
     s: 0.85,
@@ -376,7 +384,13 @@ export function WidgetTile({
                             : 'justify-between',
                     )}
                 >
-                    <span className="lj-tile-title min-w-0 truncate">
+                    <span
+                        className="lj-tile-title min-w-0 truncate"
+                        style={{
+                            fontSize:
+                                TITLE_SIZE[opt<string>('title_size') ?? 'm'],
+                        }}
+                    >
                         {title}
                     </span>
                     <span className="lj-tile-small flex-none whitespace-nowrap">
