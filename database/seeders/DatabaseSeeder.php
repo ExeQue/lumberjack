@@ -15,10 +15,10 @@ use Illuminate\Database\Seeder;
 
 /**
  * Local development: the Local Team with the Demo project, three of its
- * members and three MCP agents, plus a second team whose people have no
- * access to Demo. Every password is "password". The Demo keys and the agent
- * tokens are fixed, so the SDK workbench and local MCP clients keep working
- * after a fresh seed.
+ * members, three MCP agents and the Ops status screen, plus a second team
+ * whose people have no access to Demo. Every password is "password". The
+ * Demo keys and the agent tokens are fixed, so the SDK workbench and local
+ * MCP clients keep working after a fresh seed.
  */
 class DatabaseSeeder extends Seeder
 {
@@ -85,6 +85,8 @@ class DatabaseSeeder extends Seeder
         }
 
         Project::factory()->for($other)->create(['name' => 'Acme Shop', 'slug' => 'acme-shop']);
+
+        $this->call(DemoScreenSeeder::class);
 
         $this->command?->info('Log in as '.implode(', ', array_column([...self::MEMBERS, ...self::OUTSIDERS], 'email')).' / '.self::PASSWORD);
         $this->command?->info("Project \"{$project->name}\" server token: ".self::TOKEN);

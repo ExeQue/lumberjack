@@ -72,6 +72,7 @@ export default defineConfig({
                     },
                     { text: 'Releases', link: '/docs/releases' },
                     { text: 'Health', link: '/docs/health' },
+                    { text: 'Status screens', link: '/docs/screens' },
                     { text: 'Finding things', link: '/docs/finding-things' },
                     { text: 'MCP', link: '/docs/mcp' },
                     {
