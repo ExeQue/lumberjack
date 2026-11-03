@@ -89,6 +89,17 @@
 }
 
 /*
+ * Registered as a length, so it is worked out once on the grid and inherited as pixels:
+ * unregistered, each tile would resolve the container units against itself and tiles
+ * of different sizes would get different type.
+ */
+@property --lj-cell-font {
+    syntax: '<length>';
+    inherits: true;
+    initial-value: 14px;
+}
+
+/*
  * The grid is the container a tile's type scales with: one cell's share of it, so the
  * designer's grid is a true small TV and the TV gets large type.
  */

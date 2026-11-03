@@ -422,7 +422,7 @@ export function WidgetTile({
                     <span
                         className="lj-tile-small flex-none whitespace-nowrap"
                         // The same size on every tile, whatever its text or title size.
-                        style={{ fontSize: 'calc(var(--lj-cell-font) * 0.8)' }}
+                        style={{ fontSize: 'var(--lj-cell-font)' }}
                     >
                         {[
                             widget.type === 'list' && sourceId
