@@ -232,6 +232,22 @@ describe('the edges of each type', function () {
             ->and(($this->resolve)(WidgetType::List, 'agents', ['only_problems' => true])['rows'])->toHaveCount(1);
     });
 
+    it('gives requests per minute over the last minutes, and per bucket on a chart', function () {
+        $this->createRequestCount($this->project, 50, minute: now()->subMinutes(2)->startOfMinute());
+        $this->createRequestCount($this->project, 25, minute: now()->subMinutes(7)->startOfMinute());
+        $this->createRequestCount($this->project, 600, minute: now()->subMinutes(40)->startOfMinute());
+
+        $stat = ($this->resolve)(WidgetType::Stat, 'requests_per_minute');
+        $chart = ($this->resolve)(WidgetType::Chart, 'requests_per_minute', scope: new WidgetScope(period: Period::Hour));
+        $points = collect($chart['series'][0]['points']);
+
+        expect($stat['value'])->toEqual(10.0)
+            ->and($stat['previous'])->toEqual(5.0)
+            ->and($stat['period'])->toBe('now')
+            ->and(($this->resolve)(WidgetType::Gauge, 'requests_per_minute')['value'])->toEqual(10.0)
+            ->and($points->max('v'))->toEqual(600 / ($chart['interval'] === '1m' ? 1 : (int) $chart['interval']));
+    });
+
     it('sorts issues newest, most important or last reported first', function () {
         $plain = Issue::factory()->for($this->project)->create(['title' => 'plain', 'surfaced_at' => now()->subMinute(), 'last_seen_at' => now()->subHours(3)]);
         Issue::factory()->for($this->project)->create(['title' => 'regressed', 'surfaced_at' => now()->subHours(2), 'regressed_at' => now()->subHour(), 'last_seen_at' => now()->subHours(2)]);

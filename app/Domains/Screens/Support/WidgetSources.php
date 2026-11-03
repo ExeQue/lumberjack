@@ -58,6 +58,7 @@ final class WidgetSources
         $sources = [
             // Stat: one number with its trend.
             new WidgetSource($stat, 'requests', 'count', metric: Metric::Requests, filterOn: 'route'),
+            new WidgetSource($stat, 'requests_per_minute', 'count', metric: Metric::Requests, filterOn: 'route', snapshot: true),
             new WidgetSource($stat, 'error_rate', 'ratio', 0.01, 0.05, metric: Metric::ErrorRate, filterOn: 'route'),
             new WidgetSource($stat, 'p95', 'ms', 500, 1000, metric: Metric::P95, filterOn: 'route'),
             new WidgetSource($stat, 'apdex', 'score', 0.85, 0.7, lowIsBad: true, metric: Metric::Apdex, filterOn: 'route'),
@@ -75,6 +76,7 @@ final class WidgetSources
             new WidgetSource($stat, 'db_connections', 'count', metric: Metric::DbConnections, filterOn: 'check', snapshot: true),
 
             // Gauge: one value on a scale.
+            new WidgetSource($gauge, 'requests_per_minute', 'count', metric: Metric::Requests, filterOn: 'route', snapshot: true),
             new WidgetSource($gauge, 'error_rate', 'ratio', 0.01, 0.05, metric: Metric::ErrorRate, filterOn: 'route'),
             new WidgetSource($gauge, 'p95', 'ms', 500, 1000, metric: Metric::P95, filterOn: 'route'),
             new WidgetSource($gauge, 'apdex', 'score', 0.85, 0.7, lowIsBad: true, metric: Metric::Apdex, filterOn: 'route'),
@@ -88,6 +90,7 @@ final class WidgetSources
             // Chart: one series (or a split) over the period.
             new WidgetSource($chart, 'requests_errors', 'count', metric: Metric::Requests, filterOn: 'route'),
             new WidgetSource($chart, 'requests', 'count', metric: Metric::Requests, filterOn: 'route'),
+            new WidgetSource($chart, 'requests_per_minute', 'count', metric: Metric::Requests, filterOn: 'route'),
             new WidgetSource($chart, 'error_rate', 'ratio', red: 0.05, metric: Metric::ErrorRate, filterOn: 'route'),
             new WidgetSource($chart, 'p95', 'ms', red: 1000, metric: Metric::P95, filterOn: 'route'),
             new WidgetSource($chart, 'apdex', 'score', red: 0.7, lowIsBad: true, metric: Metric::Apdex, filterOn: 'route'),
