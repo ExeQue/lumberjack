@@ -11,6 +11,6 @@ class QueueBulkStatusChangeAlert
 {
     public function handle(IssuesStatusChangedInBulk $event): void
     {
-        SendBulkStatusChangeAlert::dispatch($event->project, $event->issueIds, $event->status, $event->actor);
+        SendBulkStatusChangeAlert::dispatch($event->project, $event->issueIds, $event->status, $event->actor, $event->byUserId);
     }
 }

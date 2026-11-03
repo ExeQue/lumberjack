@@ -169,9 +169,10 @@ return [
             'took' => 'took it',
             'took_from' => 'took it over from :from',
             'unassigned' => 'took :from off it',
+            'regression' => 'came back',
+            'escalation' => 'is escalating',
         ],
         'why' => [
-            'manual' => null,
             'assigned' => 'you were assigned to it',
             'noted' => 'you wrote a note on it',
             'mentioned' => 'you were mentioned on it',

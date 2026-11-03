@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domains\Administration\Casts\NotificationPreferencesCast;
+use App\Domains\Administration\Data\NotificationPreferences;
 use App\Domains\Administration\Eloquent\Builders\UserBuilder;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Domains\Teams\Models\Membership;
@@ -38,6 +40,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $two_factor_recovery_codes
  * @property CarbonImmutable|null $two_factor_confirmed_at
  * @property string|null $remember_token
+ * @property NotificationPreferences $notification_preferences
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -77,6 +80,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password_change_required' => 'boolean',
             'suspended_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
+            'notification_preferences' => NotificationPreferencesCast::class,
         ];
     }
 

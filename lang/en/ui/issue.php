@@ -31,6 +31,11 @@ return [
         'add' => 'Add a label',
         'remove' => 'Remove :label',
     ],
+    'watching' => [
+        'watch' => 'Watch',
+        'unwatch' => 'Stop watching',
+        'watchers' => 'Watching: :names',
+    ],
     'actions' => [
         'assignee' => 'Assignee',
         // Buttons

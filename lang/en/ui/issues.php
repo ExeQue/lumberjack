@@ -39,6 +39,8 @@ return [
     'trend' => ':count occurrences in the last 24 hours',
     'resolve_selected' => 'Resolve selected',
     'start_selected' => 'Start working',
+    'watch_selected' => 'Watch',
+    'watching' => 'Watching',
     'assign_selected' => 'Assign selected…',
     'assign_me' => 'Me',
     'unassign' => 'Unassign',

@@ -34,6 +34,10 @@ class OfferMentionMailsAction
         $body = $this->mentions->render($note->body, $project->team);
 
         foreach ($this->mentions->users($note) as $user) {
+            if (! $user->notification_preferences->mail('mentions')) {
+                continue;
+            }
+
             $recipients->offer($user->email, MailRecipients::PERSONAL, MailReason::mentioned($author, $project->name), function (array $reasons) use ($user, $note, $author, $body): void {
                 $user->notifyNow(new MentionedInNoteNotification($note, $author, $body, $reasons));
             });

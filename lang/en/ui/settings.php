@@ -7,6 +7,17 @@ return [
     'toc' => 'Sections',
     'actions' => 'Actions',
     'days' => '{1} 1 day|[2,*] :count days',
+    'notifications' => [
+        'title' => 'Notifications',
+        'description' => 'How you hear about what concerns you. Alerts a rule sends to a channel are set up under the team\'s alerts.',
+        'what' => 'What',
+        'mail' => 'Mail',
+        'toast' => 'In app',
+        'save' => 'Save',
+        'watching' => ['label' => 'Issues you watch', 'description' => 'Notes, status and assignee changes grouped into one mail; regressions and escalations right away.'],
+        'mentions' => ['label' => 'Mentions', 'description' => 'A note tags you.'],
+        'assignments' => ['label' => 'Assignments', 'description' => 'Someone assigns you to issues or takes you off them.'],
+    ],
     'account' => [
         'title' => 'Profile and security',
         'description' => 'Your name, email, password, two-factor authentication and how Lumberjack looks for you.',

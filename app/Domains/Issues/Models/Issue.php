@@ -130,6 +130,16 @@ class Issue extends Model
         return $this->belongsToMany(Label::class)->orderBy('name');
     }
 
+    /**
+     * Who watches it now; IssueWatcher rows also remember who stopped.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function watchers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'issue_watchers')->withPivot('reason')->wherePivotNull('unwatched_at');
+    }
+
     /** @return HasMany<IssueNote, $this> */
     public function notes(): HasMany
     {

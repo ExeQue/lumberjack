@@ -14,6 +14,7 @@ use App\Domains\Health\Http\Controllers\HealthController;
 use App\Domains\Issues\Http\Controllers\IssueActionController;
 use App\Domains\Issues\Http\Controllers\IssueController;
 use App\Domains\Issues\Http\Controllers\LabelController;
+use App\Domains\Issues\Http\Controllers\WatchingController;
 use App\Domains\Jobs\Http\Controllers\JobController;
 use App\Domains\Logs\Http\Controllers\LogChannelController;
 use App\Domains\Logs\Http\Controllers\LogController;
@@ -34,6 +35,7 @@ use App\Domains\Search\Http\Controllers\SearchController;
 use App\Domains\Teams\Http\Controllers\InvitationController;
 use App\Domains\Teams\Http\Controllers\MemberController;
 use App\Domains\Teams\Http\Controllers\TeamController;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/projects')->name('home');
@@ -43,6 +45,11 @@ Route::get('setup', [SetupController::class, 'show'])->middleware(['throttle:30,
 Route::post('setup', [SetupController::class, 'store'])->middleware(['throttle:10,1', EnsureSetupIsOpen::class, 'guest'])->name('setup.store');
 
 Route::get('invitations/{token}', [InvitationController::class, 'show'])->name('invitations.show');
+
+// The signed "Stop watching" link of watching mails, without signing in. POST is also the
+// mail client's one-click unsubscribe (List-Unsubscribe-Post), so it skips CSRF.
+Route::get('watch/{issue}/stop', [WatchingController::class, 'confirm'])->middleware(['signed', 'throttle:30,1'])->name('watching.stop');
+Route::post('watch/{issue}/stop', [WatchingController::class, 'stop'])->middleware(['signed', 'throttle:30,1'])->withoutMiddleware(ValidateCsrfToken::class)->name('watching.stop.confirm');
 Route::post('invitations/{token}', [InvitationController::class, 'accept'])->middleware('throttle:10,1')->name('invitations.accept');
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -59,10 +66,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('issues/status', [IssueActionController::class, 'bulkStatus'])->name('issues.bulk-status');
         Route::post('issues/assignee', [IssueActionController::class, 'bulkAssign'])->name('issues.bulk-assign');
         Route::post('issues/labels', [IssueActionController::class, 'bulkLabels'])->name('issues.bulk-labels');
+        Route::post('issues/watch', [WatchingController::class, 'bulk'])->name('issues.bulk-watch');
         Route::get('issues/{issue}', [IssueController::class, 'show'])->name('issues.show');
         Route::put('issues/{issue}/status', [IssueActionController::class, 'status'])->name('issues.status');
         Route::put('issues/{issue}/assignee', [IssueActionController::class, 'assign'])->name('issues.assign');
         Route::put('issues/{issue}/labels', [IssueActionController::class, 'labels'])->name('issues.labels');
+        Route::put('issues/{issue}/watch', [WatchingController::class, 'update'])->name('issues.watch');
         Route::post('issues/{issue}/notes', [IssueActionController::class, 'note'])->name('issues.notes.store');
         Route::post('issues/{issue}/repo-issue', [IssueActionController::class, 'repoIssue'])->name('issues.repo-issue');
 

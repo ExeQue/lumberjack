@@ -7,6 +7,7 @@ namespace App\Domains\Issues\Actions;
 use App\Domains\Issues\Data\IgnoreCondition;
 use App\Domains\Issues\Enums\IssueEventType;
 use App\Domains\Issues\Enums\IssueStatus;
+use App\Domains\Issues\Enums\WatchReason;
 use App\Domains\Issues\Events\IssueStatusChanged;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Live\Actions\BroadcastProjectChangeAction;
@@ -23,6 +24,7 @@ class ChangeIssueStatusAction
         private readonly AddIssueNoteAction $addNote,
         private readonly RecordIssueEventAction $history,
         private readonly AssignIssueAction $assign,
+        private readonly WatchIssueAction $watch,
     ) {
     }
 
@@ -81,9 +83,14 @@ class ChangeIssueStatusAction
             ? $this->addNote->execute($issue, $comment, $by, $token, $status)
             : null;
 
-        if ($announce && ($status === IssueStatus::Resolved || $status === IssueStatus::Ignored)) {
+        // Whoever resolves or ignores an issue hears if it comes back.
+        if ($by !== null && $token === null && ($status === IssueStatus::Resolved || $status === IssueStatus::Ignored)) {
+            $this->watch->execute($issue, $by, WatchReason::Resolved);
+        }
+
+        if ($announce) {
             $actor = $token !== null ? __('alerts.messages.via_mcp', ['token' => $token->name]) : ($by->name ?? __('alerts.messages.unknown_author'));
-            IssueStatusChanged::dispatch($issue, $status, $actor, $note);
+            IssueStatusChanged::dispatch($issue, $status, $actor, $note, $token === null ? $by : null);
         }
 
         $this->broadcast->issueUpdated($issue->project_id, $issue->uuid);
