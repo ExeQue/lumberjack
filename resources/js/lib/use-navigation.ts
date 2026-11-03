@@ -138,3 +138,31 @@ export function useNavigation(
 
     return { projectNav, teamNav, adminNav };
 }
+
+const sections: Record<string, (project: string) => { url: string }> = {
+    issues: issuesIndex,
+    routes: routesIndex,
+    queries: queriesIndex,
+    jobs: jobsIndex,
+    schedule: scheduleIndex,
+    commands: commandsIndex,
+    logs: logsIndex,
+    settings: projectSettings,
+};
+
+/**
+ * Where switching to another project lands: the same section as the page you are on
+ * (an issue opens that project's issues), else its overview.
+ */
+export function useProjectSwitchUrl(): (project: string) => string {
+    const page = usePage<{ team: { can_administer: boolean } | null }>();
+    const section = page.url.match(/^\/projects\/[^/?#]+\/([a-z-]+)/)?.[1];
+    const to =
+        section !== undefined &&
+        section in sections &&
+        (section !== 'settings' || page.props.team?.can_administer)
+            ? sections[section]
+            : null;
+
+    return (project) => (to ?? projectShow)(project).url;
+}

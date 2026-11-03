@@ -8,8 +8,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { useT } from '@/lib/i18n';
-import { useNavigation } from '@/lib/use-navigation';
-import { search, show as projectShow } from '@/routes/projects';
+import { useNavigation, useProjectSwitchUrl } from '@/lib/use-navigation';
+import { search } from '@/routes/projects';
 import { switchMethod as switchTeam } from '@/routes/teams';
 import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
 
@@ -55,6 +55,7 @@ export function CommandPalette() {
     const { team, teams, is_admin } = page.props;
     const project =
         page.props.project ?? page.props.sidebar_project ?? undefined;
+    const switchTo = useProjectSwitchUrl();
     const { projectNav, teamNav, adminNav } = useNavigation(
         project,
         undefined,
@@ -226,9 +227,7 @@ export function CommandPalette() {
                                     <Command.Item
                                         key={item.uuid}
                                         value={`project ${item.name} ${item.slug}`}
-                                        onSelect={() =>
-                                            go(projectShow(item.uuid).url)
-                                        }
+                                        onSelect={() => go(switchTo(item.uuid))}
                                         className={itemClass}
                                     >
                                         <span className="font-mono text-xs">

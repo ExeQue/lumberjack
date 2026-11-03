@@ -23,10 +23,10 @@ import { LogMark } from '@/components/lj/logo';
 import { useT } from '@/lib/i18n';
 import { useSoundSetting } from '@/lib/use-sound-setting';
 import { cn } from '@/lib/utils';
-import { useNavigation } from '@/lib/use-navigation';
+import { useNavigation, useProjectSwitchUrl } from '@/lib/use-navigation';
 import type { NavItem } from '@/lib/use-navigation';
 import { edit as profileEdit } from '@/routes/profile';
-import { index as projectsIndex, show as projectShow } from '@/routes/projects';
+import { index as projectsIndex } from '@/routes/projects';
 import { switchMethod as switchTeam } from '@/routes/teams';
 import { logout } from '@/routes';
 import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
@@ -76,6 +76,7 @@ export function Sidebar() {
     const project =
         page.props.project ?? page.props.sidebar_project ?? undefined;
     const counts = page.props.sidebar_project?.counts;
+    const switchTo = useProjectSwitchUrl();
     const { projectNav, teamNav, adminNav } = useNavigation(
         project,
         counts,
@@ -165,7 +166,7 @@ export function Sidebar() {
                             {team.projects.map((item) => (
                                 <DropdownMenuItem key={item.uuid} asChild>
                                     <Link
-                                        href={projectShow(item.uuid).url}
+                                        href={switchTo(item.uuid)}
                                         className="font-mono text-xs"
                                     >
                                         {item.name}

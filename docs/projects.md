@@ -12,6 +12,12 @@ for several words, the word itself for one) and is used for
 The project settings then show how to install the package, the `.env` values and the
 agent setup.
 
+## Switching project
+
+Pick another project in the sidebar or the [command palette](./finding-things) and you
+land on the same page in it: from the issues to its issues, from a job to its jobs.
+Pages that belong to one thing, like a trace, open the other project's overview.
+
 ## Settings
 
 - **Keys:** the server token (for the agent) and the public key (for browser errors).
