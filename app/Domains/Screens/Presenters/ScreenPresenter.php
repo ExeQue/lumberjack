@@ -37,6 +37,8 @@ class ScreenPresenter
             'name' => $screen->name,
             'cols' => $screen->cols,
             'rows' => $screen->rows,
+            'aspect' => $screen->aspect->value,
+            'orientation' => $screen->orientation->value,
             'theme' => $screen->theme->value,
             'light_from' => $screen->light_from,
             'light_to' => $screen->light_to,

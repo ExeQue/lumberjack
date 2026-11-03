@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Domains\Screens\Enums\ScreenAspect;
+use App\Domains\Screens\Enums\ScreenOrientation;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Teams\Models\Team;
@@ -21,6 +23,8 @@ class ScreenFactory extends Factory
             'name' => 'Ops',
             'cols' => 4,
             'rows' => 4,
+            'aspect' => ScreenAspect::Wide,
+            'orientation' => ScreenOrientation::Landscape,
             'theme' => ScreenTheme::Dark,
             'timezone' => 'Europe/Copenhagen',
             'scope' => ['projects' => [], 'environment' => null, 'period' => '24h'],

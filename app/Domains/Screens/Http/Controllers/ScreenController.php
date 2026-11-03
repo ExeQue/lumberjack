@@ -13,6 +13,7 @@ use App\Domains\Screens\Actions\UpdateScreenAction;
 use App\Domains\Screens\Actions\UpdateScreenLayoutAction;
 use App\Domains\Screens\Actions\UpdateScreenWidgetAction;
 use App\Domains\Screens\Broadcasting\ScreenChannel;
+use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenTemplate;
 use App\Domains\Screens\Exceptions\WidgetNotFoundException;
 use App\Domains\Screens\Http\Requests\ScreenDataRequest;
@@ -81,6 +82,7 @@ class ScreenController
             'projects' => $presenter->projects($screen->team),
             'data_url' => route('screens.data', $screen, absolute: false),
             'templates' => ScreenTemplate::forDesigner(),
+            'aspects' => array_map(fn (ScreenAspect $a): string => $a->value, ScreenAspect::cases()),
             ...$presenter->designer($screen->team),
         ]);
     }

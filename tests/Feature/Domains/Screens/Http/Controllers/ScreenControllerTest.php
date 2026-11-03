@@ -11,6 +11,8 @@ use App\Domains\Screens\Actions\DuplicateScreenAction;
 use App\Domains\Screens\Actions\UpdateScreenAction;
 use App\Domains\Screens\Actions\UpdateScreenLayoutAction;
 use App\Domains\Screens\Actions\UpdateScreenWidgetAction;
+use App\Domains\Screens\Enums\ScreenAspect;
+use App\Domains\Screens\Enums\ScreenOrientation;
 use App\Domains\Screens\Enums\ScreenTemplate;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Enums\WidgetType;
@@ -128,6 +130,7 @@ describe('the screens of a team', function () {
 
         expect($copy->uuid)->not->toBe($this->screen->uuid)
             ->and($copy->widgets)->toBe($this->screen->widgets)
+            ->and([$copy->aspect, $copy->orientation])->toBe([$this->screen->aspect, $this->screen->orientation])
             ->and(Screen::query()->whereKey($this->screen->id)->exists())->toBeFalse();
         Event::assertDispatchedTimes(ScreenChanged::class, 2);
         Event::assertDispatched(ScreenChanged::class, fn (ScreenChanged $e): bool => $e->broadcastAs() === 'screen.deleted');
@@ -159,6 +162,8 @@ describe('the pages', function () {
             ->component('screens/kiosk')
             ->where('screen.uuid', $this->screen->uuid)
             ->where('screen.current_theme', 'dark')
+            ->where('screen.aspect', '16:9')
+            ->where('screen.orientation', 'landscape')
             ->where('channel', 'screen.'.$this->screen->uuid)
             ->where('data_url', '/screens/'.$this->screen->uuid.'/data')
             ->has('schema.stat')
@@ -267,6 +272,16 @@ describe('saving from the designer', function () {
         $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), [
             'light_from' => '25:00', 'timezone' => 'Mars/Olympus', 'theme' => 'sepia',
         ])->assertJsonValidationErrors(['light_from', 'timezone', 'theme']);
+    });
+
+    it('saves the display\'s aspect and orientation, and refuses others', function () {
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '32:9', 'orientation' => 'portrait'])->assertOk();
+
+        expect($this->screen->refresh()->aspect)->toBe(ScreenAspect::SuperUltrawide)
+            ->and($this->screen->orientation)->toBe(ScreenOrientation::Portrait);
+
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '9:16', 'orientation' => 'upside-down'])
+            ->assertJsonValidationErrors(['aspect', 'orientation']);
     });
 });
 
