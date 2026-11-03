@@ -4,10 +4,12 @@ import {
     retentionFormData,
     retentionPayload,
 } from '@/components/lj/retention-table';
+import { LiveNotice } from '@/components/lj/live-notice';
 import { TopBar } from '@/components/lj/top-bar';
 import { Button, Card, PageTitle } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
+import { useTeamLive, useFormSync } from '@/lib/use-live';
 import { retention as teamRetention } from '@/routes/team';
 import type {
     RetentionRow,
@@ -27,6 +29,10 @@ export default function TeamRetention({
     const { team } = usePage<{ team: TeamShared }>().props;
     const admin = team.can_administer;
     const form = useForm(retentionFormData(retention));
+    useFormSync(form, retentionFormData(retention));
+    const live = useTeamLive(['retention.changed'], ['retention'], {
+        guard: true,
+    });
 
     return (
         <>
@@ -76,6 +82,7 @@ export default function TeamRetention({
                     </form>
                 </Card>
             </PageBody>
+            <LiveNotice live={live} />
         </>
     );
 }

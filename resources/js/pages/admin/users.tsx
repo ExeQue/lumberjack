@@ -19,6 +19,7 @@ import {
 } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
+import { useAdminLive } from '@/lib/use-live';
 import { cn } from '@/lib/utils';
 import {
     admin as setAdmin,
@@ -53,6 +54,7 @@ const keep = { preserveScroll: true };
 
 export default function AdminUsers({ filters, users, teams }: Props) {
     const t = useT();
+    useAdminLive(['users.changed', 'teams.changed'], ['users', 'teams']);
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
     const [search, setSearch] = useState(filters.search);
     const form = useForm({

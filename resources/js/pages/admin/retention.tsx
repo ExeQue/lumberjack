@@ -4,10 +4,12 @@ import {
     retentionFormData,
     retentionPayload,
 } from '@/components/lj/retention-table';
+import { LiveNotice } from '@/components/lj/live-notice';
 import { TopBar } from '@/components/lj/top-bar';
 import { Button, Card, PageTitle } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
+import { useAdminLive, useFormSync } from '@/lib/use-live';
 import { update as retentionUpdate } from '@/routes/admin/retention';
 import type { RetentionRow, RetentionStats } from '@/types/lumberjack';
 
@@ -21,6 +23,10 @@ export default function AdminRetention({
 }) {
     const t = useT();
     const form = useForm(retentionFormData(retention));
+    useFormSync(form, retentionFormData(retention));
+    const live = useAdminLive(['retention.changed'], ['retention'], {
+        guard: true,
+    });
 
     return (
         <>
@@ -67,6 +73,7 @@ export default function AdminRetention({
                     </form>
                 </Card>
             </PageBody>
+            <LiveNotice live={live} />
         </>
     );
 }

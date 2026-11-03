@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CommandPalette } from '@/components/lj/command-palette';
 import { FlashMessages } from '@/components/lj/flash';
+import { LiveSidebar } from '@/components/lj/live-sidebar';
 import { LogMark } from '@/components/lj/logo';
 import { NewIssueToasts } from '@/components/lj/new-issue-toasts';
 import { Sidebar } from '@/components/lj/sidebar';
@@ -63,6 +64,7 @@ export default function LumberjackLayout({
             <main className="flex min-w-0 flex-1 flex-col">{children}</main>
             <FlashMessages />
             <NewIssueToasts />
+            <LiveSidebar />
         </div>
     );
 }

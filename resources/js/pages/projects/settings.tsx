@@ -40,9 +40,12 @@ import {
     thClass,
     numClass,
 } from '@/components/lj/ui';
+import { LiveNotice } from '@/components/lj/live-notice';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { formatBytes, formatNumber, formatPercent } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { useFormSync, useTeamLive } from '@/lib/use-live';
+import { useProjectLive } from '@/lib/use-project-live';
 import { cn } from '@/lib/utils';
 import {
     destroy as channelDestroy,
@@ -327,6 +330,33 @@ export default function ProjectSettings(props: Props) {
     }, [active, uuid]);
     const { team } = usePage<{ team: TeamShared }>().props;
     const { project } = props;
+    // The forms here are filled from these props: while one has unsaved edits, a
+    // change made elsewhere is announced instead of loaded.
+    const live = [
+        useProjectLive(
+            uuid,
+            ['settings.changed'],
+            [
+                'project',
+                'settings',
+                'labels',
+                'channels',
+                'unknown_channels',
+                'retention',
+                'job_overrides',
+                'repository',
+                'alerts',
+            ],
+            { guard: true },
+        ),
+        useProjectLive(uuid, ['agents.changed'], ['agents']),
+        // The team's channels, rules and retention show here as what the project inherits.
+        useTeamLive(
+            ['alerts.changed', 'retention.changed'],
+            ['alerts', 'retention'],
+            { guard: true },
+        ),
+    ];
 
     return (
         <>
@@ -394,19 +424,22 @@ export default function ProjectSettings(props: Props) {
                     </div>
                 </div>
             </PageBody>
+            <LiveNotice live={live} />
         </>
     );
 }
 
 function GeneralSection({ project, settings }: Props) {
     const t = useT();
-    const form = useForm({
+    const initial = {
         name: settings.name,
         slug: settings.slug,
         issue_prefix: settings.issue_prefix,
         allowed_origins: settings.allowed_origins,
         scrub_keys: settings.scrub_keys,
-    });
+    };
+    const form = useForm(initial);
+    useFormSync(form, initial);
     const [scrubKey, setScrubKey] = useState('');
     const [scrubError, setScrubError] = useState<string | null>(null);
 
@@ -1174,7 +1207,9 @@ function LabelRow({
     label: IssueLabel & { issues: number };
 }) {
     const t = useT();
-    const form = useForm({ name: label.name, color: label.color });
+    const initial = { name: label.name, color: label.color };
+    const form = useForm(initial);
+    useFormSync(form, initial);
 
     return (
         <li className="flex flex-wrap items-center gap-2 border-t border-line py-2.5 first:border-t-0">
@@ -1550,7 +1585,7 @@ function RetentionSection({
     channels,
 }: Props) {
     const t = useT();
-    const form = useForm({
+    const initial = {
         ...retentionFormData(retention),
         job_overrides: job_overrides.map((o) => ({
             job_class: o.job_class,
@@ -1559,7 +1594,9 @@ function RetentionSection({
         channels: Object.fromEntries(
             channels.map((c) => [c.id, c.retention_days?.toString() ?? '']),
         ) as Record<string, string>,
-    });
+    };
+    const form = useForm(initial);
+    useFormSync(form, initial);
     const [jobClass, setJobClass] = useState('');
     const [jobDays, setJobDays] = useState('');
     const errors = form.errors as Record<string, string>;
@@ -2010,14 +2047,16 @@ function AlertsSection({ project, alerts }: Props) {
 
 function RepositorySection({ project, repository }: Props) {
     const t = useT();
-    const form = useForm({
+    const initial = {
         provider: repository?.provider ?? 'github',
         repository: repository?.repository ?? '',
         token: '',
         token_expires_at: repository?.token_expires_at ?? '',
         labels: (repository?.labels ?? []).join(', '),
         allow_public: repository?.allow_public ?? false,
-    });
+    };
+    const form = useForm(initial);
+    useFormSync(form, initial);
 
     // GitHub pre-fills a fine-grained token from these query parameters. The owner
     // (target_name) comes from the repository field; GitHub has no parameter for the

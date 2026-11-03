@@ -20,6 +20,7 @@ import {
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { useTeamLive } from '@/lib/use-live';
 import { cn } from '@/lib/utils';
 import {
     destroy as invitationDestroy,
@@ -95,6 +96,10 @@ export default function TeamShow({
     const { team } = usePage<{ team: TeamShared }>().props;
     const admin = team.can_administer;
     const isOwner = team.role === 'owner';
+    useTeamLive(
+        ['members.changed', 'invitations.changed', 'tokens.changed'],
+        ['members', 'invitations', 'tokens'],
+    );
 
     return (
         <>

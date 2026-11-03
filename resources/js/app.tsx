@@ -1,11 +1,11 @@
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, http } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
 import AuthLayout from '@/layouts/auth-layout';
 import LumberjackLayout from '@/layouts/lumberjack-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { configureEcho } from '@laravel/echo-react';
+import { configureEcho, echo } from '@laravel/echo-react';
 
 // Where to reach Reverb comes from the server on each page load, not from the build.
 const reverb = JSON.parse(
@@ -22,6 +22,17 @@ configureEcho({
     wssPort: reverb.port,
     forceTLS: reverb.scheme === 'https',
     enabledTransports: ['ws', 'wss'],
+});
+
+// Live broadcasts caused by this tab's own requests skip it: the response already shows them.
+http.onRequest((config) => {
+    const socket = echo().socketId();
+
+    if (socket) {
+        config.headers = { ...config.headers, 'X-Socket-ID': socket };
+    }
+
+    return config;
 });
 
 const appName = 'Lumberjack';
