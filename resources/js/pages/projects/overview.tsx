@@ -22,12 +22,14 @@ import {
 } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useProjectLive } from '@/lib/use-project-live';
+import { cn } from '@/lib/utils';
 import { index as healthIndex } from '@/routes/health';
 import { show as issueShow, index as issuesIndex } from '@/routes/issues';
 import { index as jobsIndex } from '@/routes/jobs';
 import { index as routesIndex } from '@/routes/routes';
 import type {
     DashboardFilters,
+    HealthState,
     HealthSummary,
     IssueSummary,
     Period,
@@ -384,6 +386,75 @@ function HealthCard({
     );
 }
 
+const healthDot: Record<HealthState, string> = {
+    ok: 'bg-ok',
+    degraded: 'bg-warn',
+    down: 'bg-err',
+    stale: 'bg-ink-3',
+    pending: 'bg-ink-3',
+};
+
+/**
+ * Every health check as a chip, worst first, each opening its details on the Health page.
+ */
+function HealthStrip({
+    summary,
+    projectUuid,
+}: {
+    summary: HealthSummary;
+    projectUuid: string;
+}) {
+    const t = useT();
+
+    return (
+        <Card aria-labelledby="overview-health">
+            <CardHeader
+                id="overview-health"
+                title={t('overview.health.title')}
+                aside={
+                    <SectionLink href={healthIndex(projectUuid).url}>
+                        {t('overview.health.open')}
+                    </SectionLink>
+                }
+            />
+            <ul className="flex flex-wrap gap-2 p-4">
+                {summary.checks.map((check) => (
+                    <li key={check.uuid}>
+                        <Link
+                            href={
+                                healthIndex(projectUuid, {
+                                    query: { check: check.uuid },
+                                }).url
+                            }
+                            title={check.message ?? undefined}
+                            aria-label={t('overview.health.check_label', {
+                                name: check.name,
+                                state: t(`health.states.${check.state}`),
+                            })}
+                            className={cn(
+                                'inline-flex items-center gap-2 rounded-full border border-line bg-panel-2/40 px-3 py-1 font-mono text-xs text-ink-2 hover:border-line-strong hover:text-ink',
+                                check.state === 'down' &&
+                                    'border-err-line bg-err-bg text-err',
+                                check.state === 'degraded' &&
+                                    'border-warn-line bg-warn-bg text-warn',
+                            )}
+                        >
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    'size-2 rounded-full',
+                                    healthDot[check.state],
+                                )}
+                            />
+                            {check.name}
+                        </Link>
+                    </li>
+                ))}
+            </ul>
+        </Card>
+    );
+}
+
 export default function ProjectOverview({ project, filters, overview }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
@@ -495,6 +566,13 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                         />
                     )}
                 </div>
+
+                {overview.health.total > 0 && (
+                    <HealthStrip
+                        summary={overview.health}
+                        projectUuid={project.uuid}
+                    />
+                )}
 
                 <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] gap-4">
                     <SeriesChart

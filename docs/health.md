@@ -105,7 +105,9 @@ from when the check was added. Degraded time counts as up, as on a status page. 
 strip on each row has one segment per part of the period, colored by the worst the
 check was in it.
 
-The project overview shows how many checks are ok, linking to the Health page, and the
+The project overview shows how many checks are ok, and below its numbers every check
+as a chip, worst first: down in red, degraded in amber, stale and pending in gray.
+Hover a chip for its last message, click it for its details on the Health page. The
 sidebar counts the checks that are degraded or down.
 
 ## Alerts

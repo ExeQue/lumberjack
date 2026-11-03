@@ -219,6 +219,13 @@ export type HealthSummary = {
     down: number;
     stale: number;
     pending: number;
+    /** Worst first. */
+    checks: {
+        uuid: string;
+        name: string;
+        state: HealthState;
+        message: string | null;
+    }[];
 };
 
 /** Where a check stands as shown: stale when it stopped reporting, pending before its first result. */
