@@ -18,6 +18,9 @@ return [
 
     'allow_private' => (bool) env('LUMBERJACK_HEALTH_ALLOW_PRIVATE', false),
 
+    // The most checks Lumberjack runs for one project.
+    'max_checks_per_project' => (int) env('LUMBERJACK_HEALTH_MAX_CHECKS', 50),
+
     // The low-priority queue the checks run on; the background workers take it after alerts.
     'queue' => 'health',
 

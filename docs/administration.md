@@ -149,6 +149,12 @@ account in no team sees a page saying so until an invitation arrives.
 There is no public registration. Accounts come from first-run setup, an
 invitation, or the command line.
 
+### Who may create teams
+
+By default anyone signed in can create a team on the team page and becomes its owner.
+Set `LUMBERJACK_TEAM_CREATION=admins` to leave that to system administrators; they also
+create teams for others under **All teams**.
+
 ### Suspending a user
 
 A suspended user is signed out at once (database sessions end immediately, others

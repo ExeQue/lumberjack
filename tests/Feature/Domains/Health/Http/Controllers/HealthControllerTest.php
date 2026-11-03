@@ -66,6 +66,22 @@ describe('adding and editing checks', function () {
             ->and($check->down_after)->toBe(4);
     });
 
+    it('refuses a check beyond the per-project limit', function () {
+        config(['health.max_checks_per_project' => 1]);
+
+        $this->actingAs($this->admin)->post(route('health.store', $this->project), [
+            'type' => 'http', 'name' => 'One too many', 'interval_minutes' => 5, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 4,
+            'config' => ['url' => 'https://example.com/up'],
+        ])->assertSessionHasErrors(['type' => 'A project can have at most 1 checks that Lumberjack runs.']);
+    });
+
+    it('refuses a timeout longer than the most a check waits', function () {
+        $this->actingAs($this->admin)->post(route('health.store', $this->project), [
+            'type' => 'http', 'name' => 'Slow', 'interval_minutes' => 5, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 4,
+            'config' => ['url' => 'https://example.com/up', 'timeout_s' => 30],
+        ])->assertSessionHasErrors('config.timeout_s');
+    });
+
     it('refuses down_after below degrade_after', function () {
         $this->actingAs($this->admin)->post(route('health.store', $this->project), [
             'type' => 'tcp', 'name' => 'Database', 'interval_minutes' => 5, 'degrade_after' => 3, 'recover_after' => 5, 'down_after' => 2, 'config' => ['host' => 'db.example.com', 'port' => 5432],

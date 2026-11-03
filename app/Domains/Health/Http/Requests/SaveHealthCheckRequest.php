@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domains\Health\Http\Requests;
 
+use App\Domains\Health\Actions\RunHealthCheckAction;
 use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Models\HealthCheck;
+use App\Domains\Projects\Models\Project;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -80,6 +82,13 @@ class SaveHealthCheckRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $project = $this->route('project');
+            $max = (int) config('health.max_checks_per_project', 50);
+
+            if ($this->check() === null && $project instanceof Project && $project->healthChecks()->whereMonitored()->count() >= $max) {
+                $validator->errors()->add('type', __('health.too_many_checks', ['max' => $max]));
+            }
+
             $down = $this->input('down_after');
             $degrade = $this->input('degrade_after') ?? $this->check()?->degrade_after;
 
@@ -101,7 +110,7 @@ class SaveHealthCheckRequest extends FormRequest
                 'config.expected_status' => ['nullable', 'integer', 'min:100', 'max:599'],
                 'config.body_contains' => ['nullable', 'string', 'max:200'],
                 'config.max_latency_ms' => ['nullable', 'integer', 'min:1', 'max:60000'],
-                'config.timeout_s' => ['nullable', 'integer', 'min:1', 'max:30'],
+                'config.timeout_s' => ['nullable', 'integer', 'min:1', 'max:'.RunHealthCheckAction::MAX_TIMEOUT_S],
             ],
             HealthCheckType::Ssl => [
                 'config.host' => ['required', 'string', self::HOST],
@@ -112,7 +121,7 @@ class SaveHealthCheckRequest extends FormRequest
             HealthCheckType::Tcp => [
                 'config.host' => ['required', 'string', self::HOST],
                 'config.port' => ['required', 'integer', 'min:1', 'max:65535'],
-                'config.timeout_s' => ['nullable', 'integer', 'min:1', 'max:30'],
+                'config.timeout_s' => ['nullable', 'integer', 'min:1', 'max:'.RunHealthCheckAction::MAX_TIMEOUT_S],
             ],
             HealthCheckType::Dns => [
                 'config.name' => ['required', 'string', 'max:253', 'regex:/^[A-Za-z0-9._-]+$/'],

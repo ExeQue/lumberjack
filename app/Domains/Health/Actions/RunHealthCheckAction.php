@@ -28,6 +28,12 @@ class RunHealthCheckAction
 {
     public const int MAX_REDIRECTS = 3;
 
+    /** The longest any check waits, whatever it was saved with. */
+    public const int MAX_TIMEOUT_S = 15;
+
+    /** How much of a body an HTTP check reads to look for its text. */
+    public const int MAX_BODY_BYTES = 1_048_576;
+
     public function __construct(
         private readonly NetworkGuard $guard,
         private readonly DnsResolver $dns,
@@ -68,7 +74,7 @@ class RunHealthCheckAction
     {
         $url = (string) $check->setting('url');
         $method = strtoupper((string) $check->setting('method', 'GET'));
-        $timeout = (int) $check->setting('timeout_s', 10);
+        $timeout = min((int) $check->setting('timeout_s', 10), self::MAX_TIMEOUT_S);
         $started = hrtime(true);
         $response = $this->request($method, $url, $timeout);
 
@@ -89,7 +95,7 @@ class RunHealthCheckAction
 
         return match (true) {
             $response->status() !== $expected => new HealthResultData(HealthResultStatus::Failed, __('health.results.http_status', ['expected' => $expected, 'got' => $response->status()]), $metrics),
-            $contains !== '' && ! str_contains($response->body(), $contains) => new HealthResultData(HealthResultStatus::Failed, __('health.results.http_body', ['text' => $contains]), $metrics),
+            $contains !== '' && ! str_contains(self::bodyStart($response), $contains) => new HealthResultData(HealthResultStatus::Failed, __('health.results.http_body', ['text' => $contains]), $metrics),
             is_numeric($maxLatency) && $ms > (int) $maxLatency => new HealthResultData(HealthResultStatus::Warning, __('health.results.http_slow', ['ms' => $ms, 'max' => (int) $maxLatency]), $metrics),
             default => new HealthResultData(HealthResultStatus::Ok, __('health.results.http_ok', ['status' => $response->status(), 'ms' => $ms]), $metrics),
         };
@@ -103,7 +109,32 @@ class RunHealthCheckAction
             ->withUserAgent('Lumberjack-Health/1')
             // Connect to the address the guard checked, not whatever a second lookup says.
             ->withOptions($this->guard->pin($url))
+            // Streamed, so a huge body is never downloaded whole; see bodyStart().
+            ->withOptions(['stream' => true])
             ->send($method, $url);
+    }
+
+    /**
+     * The first MAX_BODY_BYTES of the body; the rest is never read.
+     */
+    private static function bodyStart(Response $response): string
+    {
+        $stream = $response->toPsrResponse()->getBody();
+        $body = '';
+
+        while (! $stream->eof() && strlen($body) < self::MAX_BODY_BYTES) {
+            $chunk = $stream->read(self::MAX_BODY_BYTES - strlen($body));
+
+            if ($chunk === '') {
+                break;
+            }
+
+            $body .= $chunk;
+        }
+
+        $stream->close();
+
+        return $body;
     }
 
     private function ssl(HealthCheck $check): HealthResultData
@@ -125,7 +156,7 @@ class RunHealthCheckAction
     {
         $port = (int) $check->setting('port');
         $started = hrtime(true);
-        $this->tcp->connect($this->guard->resolve((string) $check->setting('host')), $port, (float) $check->setting('timeout_s', 5));
+        $this->tcp->connect($this->guard->resolve((string) $check->setting('host')), $port, (float) min((int) $check->setting('timeout_s', 5), self::MAX_TIMEOUT_S));
         $ms = round((hrtime(true) - $started) / 1e6, 1);
 
         return new HealthResultData(HealthResultStatus::Ok, __('health.results.tcp_ok', ['port' => $port, 'ms' => $ms]), ['latency_ms' => $ms]);

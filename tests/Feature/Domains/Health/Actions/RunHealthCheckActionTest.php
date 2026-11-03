@@ -57,6 +57,25 @@ describe('http checks', function () {
         expect(($this->run)(HealthCheckType::Http, ['url' => 'https://example.com/up', 'max_latency_ms' => 5])->status)->toBe(HealthResultStatus::Warning);
     });
 
+    it('looks for its text only in the first megabyte of the body', function () {
+        Http::fake(['*' => Http::response(str_repeat('x', RunHealthCheckAction::MAX_BODY_BYTES).'healthy')]);
+
+        expect(($this->run)(HealthCheckType::Http, ['url' => 'https://example.com/up', 'body_contains' => 'healthy'])->status)->toBe(HealthResultStatus::Failed);
+    });
+
+    it('waits no longer than the most a check may, whatever it was saved with', function () {
+        $options = null;
+        Http::fake(function ($request, array $sent) use (&$options) {
+            $options = $sent;
+
+            return Http::response('ok');
+        });
+
+        ($this->run)(HealthCheckType::Http, ['url' => 'https://example.com/up', 'timeout_s' => 30]);
+
+        expect($options['timeout'])->toBe(RunHealthCheckAction::MAX_TIMEOUT_S);
+    });
+
     it('follows a few redirects, and no more', function () {
         Http::fake([
             'https://example.com/old' => Http::response('', 301, ['Location' => '/up']),
