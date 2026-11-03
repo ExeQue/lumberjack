@@ -335,8 +335,8 @@ return [
         'every_passes' => 'Every check passes',
         'for' => ':state for :time',
         'uptime' => ':uptime uptime',
-        'connections_of' => ':used of :max connections',
-        'connections' => ':count connections',
+        'connections_of' => ':used of :max conns',
+        'connections' => ':count conns',
         'more' => '+:count more',
     ],
 

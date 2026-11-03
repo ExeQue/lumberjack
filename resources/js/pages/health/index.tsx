@@ -89,7 +89,7 @@ function latency(metrics: Record<string, number>, durationUs: number | null) {
         : formatDuration(durationUs);
 }
 
-/** A database check's size and connections, such as "13.8 MB · 4 of 100 connections". */
+/** A database check's size and connections, such as "13.8 MB · 4 of 100 conns". */
 function DatabaseFigures({ metrics }: { metrics: Record<string, number> }) {
     const t = useT();
     const parts = [

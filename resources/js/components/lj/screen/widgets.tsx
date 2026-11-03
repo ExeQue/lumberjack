@@ -114,7 +114,7 @@ function hasDatabaseFigures(
     );
 }
 
-/** A database check's latest connections and size: "4 of 100 connections · 13.8 MB". */
+/** A database check's latest connections and size: "4 of 100 conns · 13.8 MB". */
 function DatabaseLine({ metrics }: { metrics: Record<string, number> }) {
     const t = useT();
     const { connections, max_connections: max, size_bytes: size } = metrics;
