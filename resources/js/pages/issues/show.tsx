@@ -1,10 +1,10 @@
-import { Head, router, useForm, usePage, Link } from "@inertiajs/react";
-import { ChevronRight, CircleDot } from "lucide-react";
-import { useRef, useState } from "react";
-import type { CSSProperties, FormEvent, KeyboardEvent } from "react";
-import { LabelEditor } from "@/components/lj/labels";
-import type { IssueLabel } from "@/components/lj/labels";
-import { MentionTextarea, NoteBody, toStored } from "@/components/lj/mentions";
+import { Head, router, useForm, usePage, Link } from '@inertiajs/react';
+import { ChevronRight, CircleDot } from 'lucide-react';
+import { useRef, useState } from 'react';
+import type { CSSProperties, FormEvent, KeyboardEvent } from 'react';
+import { LabelEditor } from '@/components/lj/labels';
+import type { IssueLabel } from '@/components/lj/labels';
+import { MentionTextarea, NoteBody, toStored } from '@/components/lj/mentions';
 import {
     Dialog,
     DialogContent,
@@ -12,10 +12,10 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog";
-import type { Mentionable } from "@/components/lj/mentions";
-import { CopyText } from "@/components/lj/copy-text";
-import { TopBar } from "@/components/lj/top-bar";
+} from '@/components/ui/dialog';
+import type { Mentionable } from '@/components/lj/mentions';
+import { CopyText } from '@/components/lj/copy-text';
+import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
     Segmented,
@@ -31,28 +31,28 @@ import {
     tableClass,
     tdClass,
     thClass,
-} from "@/components/lj/ui";
-import type { Tone } from "@/components/lj/ui";
-import { PageBody } from "@/layouts/lumberjack-layout";
+} from '@/components/lj/ui';
+import type { Tone } from '@/components/lj/ui';
+import { PageBody } from '@/layouts/lumberjack-layout';
 import {
     formatDateTime,
     formatNumber,
     formatRelative,
     formatTime,
-} from "@/lib/format";
-import { languageOf, useHighlightedLines } from "@/lib/highlight";
-import { useT } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
-import { useProjectLive } from "@/lib/use-project-live";
+} from '@/lib/format';
+import { languageOf, useHighlightedLines } from '@/lib/highlight';
+import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
+import { useProjectLive } from '@/lib/use-project-live';
 import {
     assign,
     index as issuesIndex,
     repoIssue,
     status as issueStatus,
-} from "@/routes/issues";
-import { store as storeNote } from "@/routes/issues/notes";
-import { show as projectShow } from "@/routes/projects";
-import { show as traceShow } from "@/routes/traces";
+} from '@/routes/issues';
+import { store as storeNote } from '@/routes/issues/notes';
+import { show as projectShow } from '@/routes/projects';
+import { show as traceShow } from '@/routes/traces';
 import type {
     IssueNote,
     IssueSummary,
@@ -62,7 +62,7 @@ import type {
     SeriesPoint,
     StackFrame,
     TeamShared,
-} from "@/types/lumberjack";
+} from '@/types/lumberjack';
 
 type IssueDetail = IssueSummary & {
     hosts: string | null;
@@ -74,7 +74,7 @@ type Props = {
     project: ProjectHeader;
     issue: IssueDetail;
     latest: Occurrence | null;
-    occurrences: Omit<Occurrence, "stacktrace">[];
+    occurrences: Omit<Occurrence, 'stacktrace'>[];
     series: SeriesPoint[];
     period: Period;
     notes: IssueNote[];
@@ -85,15 +85,15 @@ type Props = {
     has_repository: boolean;
 };
 
-type Tab = "stacktrace" | "occurrences" | "notes" | "history";
+type Tab = 'stacktrace' | 'occurrences' | 'notes' | 'history';
 
-const TABS: Tab[] = ["stacktrace", "occurrences", "notes", "history"];
+const TABS: Tab[] = ['stacktrace', 'occurrences', 'notes', 'history'];
 
-const statusTone: Record<IssueSummary["status"], Tone> = {
-    open: "err",
-    in_progress: "info",
-    resolved: "ok",
-    ignored: "neutral",
+const statusTone: Record<IssueSummary['status'], Tone> = {
+    open: 'err',
+    in_progress: 'info',
+    resolved: 'ok',
+    ignored: 'neutral',
 };
 
 function frameFunction(frame: StackFrame): string | null {
@@ -101,7 +101,7 @@ function frameFunction(frame: StackFrame): string | null {
         return null;
     }
 
-    return `${frame.class ? `${frame.class}::` : ""}${frame.function}()`;
+    return `${frame.class ? `${frame.class}::` : ''}${frame.function}()`;
 }
 
 function Frame({ frame }: { frame: StackFrame }) {
@@ -116,18 +116,18 @@ function Frame({ frame }: { frame: StackFrame }) {
         <li className="border-b border-line/60 last:border-b-0">
             <div className="flex items-start justify-between gap-3 px-4 py-2.5">
                 <span className="min-w-0 font-mono text-xs break-all">
-                    <span className={frame.in_app ? "text-ink" : "text-ink-2"}>
-                        {frame.file ?? "?"}
+                    <span className={frame.in_app ? 'text-ink' : 'text-ink-2'}>
+                        {frame.file ?? '?'}
                     </span>
                     {frame.line !== undefined && (
                         <span className="text-ink-3">:{frame.line}</span>
-                    )}{" "}
+                    )}{' '}
                     {fn && <span className="text-info">{fn}</span>}
                 </span>
-                <Badge tone={frame.in_app ? "amber" : "neutral"}>
+                <Badge tone={frame.in_app ? 'amber' : 'neutral'}>
                     {frame.in_app
-                        ? t("issue.stack.app")
-                        : t("issue.stack.vendor")}
+                        ? t('issue.stack.app')
+                        : t('issue.stack.vendor')}
                 </Badge>
             </div>
             {frame.code && frame.code.lines.length > 0 && (
@@ -140,25 +140,25 @@ function Frame({ frame }: { frame: StackFrame }) {
                             <div
                                 key={number}
                                 className={cn(
-                                    "flex",
-                                    current && "bg-err-bg text-err",
+                                    'flex',
+                                    current && 'bg-err-bg text-err',
                                 )}
                             >
                                 <span
                                     className={cn(
-                                        "w-14 shrink-0 pr-3 text-right select-none",
-                                        current ? "text-err" : "text-ink-3",
+                                        'w-14 shrink-0 pr-3 text-right select-none',
+                                        current ? 'text-err' : 'text-ink-3',
                                     )}
                                 >
                                     <span aria-hidden="true">
-                                        {current ? "> " : ""}
+                                        {current ? '> ' : ''}
                                     </span>
                                     {number}
                                 </span>
                                 <span className="whitespace-pre">
                                     {current && (
                                         <span className="sr-only">
-                                            {t("issue.stack.error_line")}{" "}
+                                            {t('issue.stack.error_line')}{' '}
                                         </span>
                                     )}
                                     {tokens?.[i]
@@ -184,7 +184,7 @@ function Frame({ frame }: { frame: StackFrame }) {
 }
 
 function ContextValue({ value }: { value: unknown }) {
-    if (value !== null && typeof value === "object") {
+    if (value !== null && typeof value === 'object') {
         return (
             <pre className="overflow-x-auto font-mono text-xs whitespace-pre-wrap">
                 {JSON.stringify(value, null, 2)}
@@ -194,8 +194,8 @@ function ContextValue({ value }: { value: unknown }) {
 
     return (
         <span className="font-mono text-xs break-all">
-            {value === null || value === undefined || value === ""
-                ? "-"
+            {value === null || value === undefined || value === ''
+                ? '-'
                 : String(value as string | number | boolean)}
         </span>
     );
@@ -219,7 +219,7 @@ function KeyValues({ rows }: { rows: [string, unknown][] }) {
 type ContextSection = { title: string; rows: [string, unknown][] };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-    return value !== null && typeof value === "object" && !Array.isArray(value);
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**
@@ -247,24 +247,24 @@ function contextSections(
 function ContextCell({ value }: { value: unknown }) {
     const t = useT();
 
-    if (value === "[filtered]") {
-        return <Badge>{t("issue.side.filtered")}</Badge>;
+    if (value === '[filtered]') {
+        return <Badge>{t('issue.side.filtered')}</Badge>;
     }
 
-    if (value === null || value === undefined || value === "") {
+    if (value === null || value === undefined || value === '') {
         return <span className="text-ink-3">-</span>;
     }
 
     if (
         Array.isArray(value) &&
-        value.every((v) => v === null || typeof v !== "object")
+        value.every((v) => v === null || typeof v !== 'object')
     ) {
         return (
-            <span className="break-all">{value.map(String).join(", ")}</span>
+            <span className="break-all">{value.map(String).join(', ')}</span>
         );
     }
 
-    if (typeof value === "object") {
+    if (typeof value === 'object') {
         return (
             <pre className="font-mono text-xs break-all whitespace-pre-wrap">
                 {JSON.stringify(value, null, 2)}
@@ -289,7 +289,7 @@ function ContextTables({ context }: { context: Record<string, unknown> }) {
     );
     const sections = [
         ...(loose.length > 0
-            ? [{ title: t("issue.side.general"), rows: loose }]
+            ? [{ title: t('issue.side.general'), rows: loose }]
             : []),
         ...Object.entries(context).flatMap(([key, v]) =>
             isRecord(v) ? contextSections(key, v) : [],
@@ -341,31 +341,31 @@ function ContextTables({ context }: { context: Record<string, unknown> }) {
 
 type HistoryEntry = {
     type:
-        | "created"
-        | "regressed"
-        | "escalated"
-        | "status_changed"
-        | "assigned"
-        | "labels_changed"
-        | "repo_issue_created"
-        | "returned"
-        | "note";
+        | 'created'
+        | 'regressed'
+        | 'escalated'
+        | 'status_changed'
+        | 'assigned'
+        | 'labels_changed'
+        | 'repo_issue_created'
+        | 'returned'
+        | 'note';
     actor: string | null;
     via_mcp: boolean;
     data: Record<string, unknown> | null;
     at: string;
 };
 
-const historyDot: Record<HistoryEntry["type"], string> = {
-    created: "bg-err",
-    regressed: "bg-err",
-    escalated: "bg-err",
-    status_changed: "bg-ok",
-    assigned: "bg-info",
-    labels_changed: "bg-info",
-    repo_issue_created: "bg-ink-3",
-    returned: "bg-warn",
-    note: "bg-amber",
+const historyDot: Record<HistoryEntry['type'], string> = {
+    created: 'bg-err',
+    regressed: 'bg-err',
+    escalated: 'bg-err',
+    status_changed: 'bg-ok',
+    assigned: 'bg-info',
+    labels_changed: 'bg-info',
+    repo_issue_created: 'bg-ink-3',
+    returned: 'bg-warn',
+    note: 'bg-amber',
 };
 
 /**
@@ -382,61 +382,61 @@ function IssueHistory({
     const t = useT();
 
     if (entries.length === 0) {
-        return <p className="text-ink-3">{t("issue.history.empty")}</p>;
+        return <p className="text-ink-3">{t('issue.history.empty')}</p>;
     }
 
     const text = (e: HistoryEntry): string => {
         const d = e.data ?? {};
         const status = (value: unknown) =>
-            typeof value === "string" ? t(`common.statuses.${value}`) : "";
+            typeof value === 'string' ? t(`common.statuses.${value}`) : '';
         const str = (value: unknown) =>
-            typeof value === "string" || typeof value === "number"
+            typeof value === 'string' || typeof value === 'number'
                 ? String(value)
-                : "";
+                : '';
         const names = (value: unknown) =>
-            Array.isArray(value) ? value.map(String).join(", ") : "";
+            Array.isArray(value) ? value.map(String).join(', ') : '';
 
         switch (e.type) {
-            case "status_changed":
+            case 'status_changed':
                 return d.from
-                    ? t("issue.history.status_changed", {
+                    ? t('issue.history.status_changed', {
                           from: status(d.from),
                           to: status(d.to),
                       })
-                    : t("issue.history.status_set", { to: status(d.to) });
-            case "assigned":
+                    : t('issue.history.status_set', { to: status(d.to) });
+            case 'assigned':
                 return d.to
-                    ? t("issue.history.assigned", { to: str(d.to) })
-                    : t("issue.history.unassigned");
-            case "labels_changed":
+                    ? t('issue.history.assigned', { to: str(d.to) })
+                    : t('issue.history.unassigned');
+            case 'labels_changed':
                 return [
                     names(d.added) &&
-                        t("issue.history.labels_added", {
+                        t('issue.history.labels_added', {
                             labels: names(d.added),
                         }),
                     names(d.removed) &&
-                        t("issue.history.labels_removed", {
+                        t('issue.history.labels_removed', {
                             labels: names(d.removed),
                         }),
                 ]
                     .filter(Boolean)
-                    .join(", ");
-            case "escalated":
-                return t("issue.history.escalated", {
+                    .join(', ');
+            case 'escalated':
+                return t('issue.history.escalated', {
                     burst: str(d.burst),
                     minutes: str(d.minutes ?? 5),
                 });
-            case "returned":
-                return t(`issue.history.returned_${str(d.reason) || "time"}`, {
+            case 'returned':
+                return t(`issue.history.returned_${str(d.reason) || 'time'}`, {
                     burst: str(d.burst),
                     minutes: str(d.minutes ?? 5),
                 });
-            case "note":
+            case 'note':
                 return d.status
-                    ? t("issue.history.note_with_status", {
+                    ? t('issue.history.note_with_status', {
                           status: status(d.status),
                       })
-                    : t("issue.history.note");
+                    : t('issue.history.note');
             default:
                 return t(`issue.history.${e.type}`);
         }
@@ -452,7 +452,7 @@ function IssueHistory({
                     >
                         <span
                             className={cn(
-                                "mt-1.5 size-2 rounded-full",
+                                'mt-1.5 size-2 rounded-full',
                                 historyDot[e.type],
                             )}
                         />
@@ -465,8 +465,8 @@ function IssueHistory({
                             <span>{text(e)}</span>
                             {e.actor && (
                                 <span className="text-ink-3">
-                                    {t("issue.history.by", { actor: e.actor })}
-                                    {e.via_mcp && " (MCP)"}
+                                    {t('issue.history.by', { actor: e.actor })}
+                                    {e.via_mcp && ' (MCP)'}
                                 </span>
                             )}
                             <time
@@ -477,8 +477,8 @@ function IssueHistory({
                                 {formatRelative(e.at)}
                             </time>
                         </span>
-                        {e.type === "note" &&
-                            typeof e.data?.body === "string" && (
+                        {e.type === 'note' &&
+                            typeof e.data?.body === 'string' && (
                                 <div className="rounded-md border border-line bg-rail px-3 py-2 text-[13px]">
                                     <NoteBody
                                         body={e.data.body}
@@ -486,8 +486,8 @@ function IssueHistory({
                                     />
                                 </div>
                             )}
-                        {e.type === "repo_issue_created" &&
-                            typeof e.data?.url === "string" && (
+                        {e.type === 'repo_issue_created' &&
+                            typeof e.data?.url === 'string' && (
                                 <a
                                     href={e.data.url}
                                     target="_blank"
@@ -505,14 +505,14 @@ function IssueHistory({
 }
 
 const IGNORE_CHOICES = [
-    "escalation",
-    "1h",
-    "24h",
-    "7d",
-    "count:10",
-    "count:100",
-    "count:1000",
-    "forever",
+    'escalation',
+    '1h',
+    '24h',
+    '7d',
+    'count:10',
+    'count:100',
+    'count:1000',
+    'forever',
 ] as const;
 
 function StatusCommentDialog({
@@ -521,25 +521,25 @@ function StatusCommentDialog({
     onClose,
     onConfirm,
 }: {
-    status: "resolved" | "ignored" | null;
+    status: 'resolved' | 'ignored' | null;
     candidates: Mentionable[];
     onClose: () => void;
     onConfirm: (
-        status: "resolved" | "ignored",
+        status: 'resolved' | 'ignored',
         comment: string,
         until: string | null,
     ) => void;
 }) {
     const t = useT();
-    const [comment, setComment] = useState("");
-    const [until, setUntil] = useState("escalation");
+    const [comment, setComment] = useState('');
+    const [until, setUntil] = useState('escalation');
 
     return (
         <Dialog
             open={status !== null}
             onOpenChange={(open) => {
                 if (!open) {
-                    setComment("");
+                    setComment('');
                     onClose();
                 }
             }}
@@ -553,27 +553,27 @@ function StatusCommentDialog({
                             onConfirm(
                                 status,
                                 comment,
-                                status === "ignored" ? until : null,
+                                status === 'ignored' ? until : null,
                             );
-                            setComment("");
-                            setUntil("escalation");
+                            setComment('');
+                            setUntil('escalation');
                         }
                     }}
                     className="flex flex-col gap-4"
                 >
                     <DialogHeader>
                         <DialogTitle>
-                            {status === "ignored"
-                                ? t("issue.close.ignore_title")
-                                : t("issue.close.resolve_title")}
+                            {status === 'ignored'
+                                ? t('issue.close.ignore_title')
+                                : t('issue.close.resolve_title')}
                         </DialogTitle>
                         <DialogDescription>
-                            {t("issue.close.description")}
+                            {t('issue.close.description')}
                         </DialogDescription>
                     </DialogHeader>
-                    {status === "ignored" && (
+                    {status === 'ignored' && (
                         <Field
-                            label={t("issue.close.until")}
+                            label={t('issue.close.until')}
                             htmlFor="ignore-until"
                         >
                             <Select
@@ -584,7 +584,7 @@ function StatusCommentDialog({
                                 {IGNORE_CHOICES.map((choice) => (
                                     <option key={choice} value={choice}>
                                         {t(
-                                            `issue.close.choices.${choice.replace(":", "_")}`,
+                                            `issue.close.choices.${choice.replace(':', '_')}`,
                                         )}
                                     </option>
                                 ))}
@@ -597,14 +597,14 @@ function StatusCommentDialog({
                         onChange={setComment}
                         candidates={candidates}
                         required={false}
-                        placeholder={t("issue.close.placeholder")}
+                        placeholder={t('issue.close.placeholder')}
                     />
                     <DialogFooter>
-                        <Button onClick={onClose}>{t("common.cancel")}</Button>
+                        <Button onClick={onClose}>{t('common.cancel')}</Button>
                         <Button type="submit" variant="primary">
-                            {status === "ignored"
-                                ? t("issue.actions.ignore")
-                                : t("issue.actions.resolve")}
+                            {status === 'ignored'
+                                ? t('issue.actions.ignore')
+                                : t('issue.actions.resolve')}
                         </Button>
                     </DialogFooter>
                 </form>
@@ -632,7 +632,7 @@ export default function IssueShow({
         team: TeamShared;
         auth: { user: { id: number } | null };
     }>().props;
-    const [tab, setTab] = useState<Tab>("stacktrace");
+    const [tab, setTab] = useState<Tab>('stacktrace');
     const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({
         stacktrace: null,
         occurrences: null,
@@ -644,29 +644,29 @@ export default function IssueShow({
     const vendorCount = frames.length - appFrames.length;
     const [showVendor, setShowVendor] = useState(appFrames.length === 0);
     const [creatingRepoIssue, setCreatingRepoIssue] = useState(false);
-    const note = useForm({ body: "" });
+    const note = useForm({ body: '' });
     const key = [project.uuid, issue.id] as [string, string];
 
     useProjectLive(
         project.uuid,
-        ["issue.updated", "issues.changed"],
-        ["issue", "latest", "occurrences", "series", "notes"],
+        ['issue.updated', 'issues.changed'],
+        ['issue', 'latest', 'occurrences', 'series', 'notes'],
         { issue: issue.id },
     );
 
     const changeStatus = (
-        status: IssueSummary["status"],
-        comment = "",
+        status: IssueSummary['status'],
+        comment = '',
         until: string | null = null,
     ) =>
         router.put(
             issueStatus(key).url,
-            { status, note: comment.trim() === "" ? null : comment, until },
+            { status, note: comment.trim() === '' ? null : comment, until },
             { preserveScroll: true },
         );
 
     // Resolve and ignore ask for an optional comment, which becomes a note.
-    const [closing, setClosing] = useState<"resolved" | "ignored" | null>(null);
+    const [closing, setClosing] = useState<'resolved' | 'ignored' | null>(null);
 
     const createRepoIssue = () =>
         router.post(
@@ -699,7 +699,7 @@ export default function IssueShow({
 
     const onTabKey = (e: KeyboardEvent) => {
         const step =
-            e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+            e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
 
         if (step === 0) {
             return;
@@ -719,7 +719,7 @@ export default function IssueShow({
     const seriesSummary =
         peak && peak.v > 0
             ? t(
-                  "issue.series.summary",
+                  'issue.series.summary',
                   {
                       count: formatNumber(total),
                       peak: formatNumber(peak.v),
@@ -728,7 +728,7 @@ export default function IssueShow({
                   },
                   total,
               )
-            : t("issue.series.empty", {
+            : t('issue.series.empty', {
                   period: t(`issue.series.in.${period}`),
               });
 
@@ -743,7 +743,7 @@ export default function IssueShow({
     return (
         <>
             <Head
-                title={`${issue.reference ? `${issue.reference} ` : ""}${issue.title} · ${project.name}`}
+                title={`${issue.reference ? `${issue.reference} ` : ''}${issue.title} · ${project.name}`}
             />
             <TopBar
                 crumbs={[
@@ -754,7 +754,7 @@ export default function IssueShow({
                         mono: true,
                     },
                     {
-                        label: t("common.nav.issues"),
+                        label: t('common.nav.issues'),
                         href: issuesIndex(project.uuid).url,
                     },
                     { label: issue.reference ?? issue.title, mono: true },
@@ -778,31 +778,31 @@ export default function IssueShow({
                             </Badge>
                             {issue.escalating && (
                                 <Badge tone="err">
-                                    {t("common.flags.escalating")}
+                                    {t('common.flags.escalating')}
                                 </Badge>
                             )}
                             {issue.returned && (
                                 <Badge tone="warn">
-                                    {t("common.flags.returned")}
+                                    {t('common.flags.returned')}
                                 </Badge>
                             )}
                             {issue.ignore_until && (
                                 <span className="text-xs text-ink-3">
                                     {issue.ignore_until.at
-                                        ? t("issue.ignored_until.at", {
+                                        ? t('issue.ignored_until.at', {
                                               time: formatDateTime(
                                                   issue.ignore_until.at,
                                               ),
                                           })
                                         : issue.ignore_until
                                                 .occurrences_left !== undefined
-                                          ? t("issue.ignored_until.count", {
+                                          ? t('issue.ignored_until.count', {
                                                 count: String(
                                                     issue.ignore_until
                                                         .occurrences_left,
                                                 ),
                                             })
-                                          : t("issue.ignored_until.escalation")}
+                                          : t('issue.ignored_until.escalation')}
                                 </span>
                             )}
                             <Badge>{t(`common.sources.${issue.source}`)}</Badge>
@@ -811,12 +811,12 @@ export default function IssueShow({
                             )}
                             {issue.regressed && (
                                 <Badge tone="err">
-                                    {t("common.flags.regression")}
+                                    {t('common.flags.regression')}
                                 </Badge>
                             )}
                             {!issue.regressed && issue.new && (
                                 <Badge tone="info">
-                                    {t("common.flags.new")}
+                                    {t('common.flags.new')}
                                 </Badge>
                             )}
                         </div>
@@ -838,11 +838,11 @@ export default function IssueShow({
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <label className="sr-only" htmlFor="issue-assignee">
-                            {t("issue.actions.assignee")}
+                            {t('issue.actions.assignee')}
                         </label>
                         <Select
                             id="issue-assignee"
-                            value={issue.assignee?.id ?? ""}
+                            value={issue.assignee?.id ?? ''}
                             onChange={(e) =>
                                 router.put(
                                     assign(key).url,
@@ -851,7 +851,7 @@ export default function IssueShow({
                                 )
                             }
                         >
-                            <option value="">{t("common.unassigned")}</option>
+                            <option value="">{t('common.unassigned')}</option>
                             {members.map((member) => (
                                 <option key={member.id} value={member.id}>
                                     {member.name}
@@ -869,7 +869,7 @@ export default function IssueShow({
                                     className="size-3.5"
                                     aria-hidden="true"
                                 />
-                                {t("issue.actions.open_repo_issue")}
+                                {t('issue.actions.open_repo_issue')}
                             </a>
                         ) : (
                             has_repository && (
@@ -881,41 +881,41 @@ export default function IssueShow({
                                         className="size-3.5"
                                         aria-hidden="true"
                                     />
-                                    {t("issue.actions.create_repo_issue")}
+                                    {t('issue.actions.create_repo_issue')}
                                 </Button>
                             )
                         )}
-                        {issue.status === "open" ||
-                        issue.status === "in_progress" ? (
+                        {issue.status === 'open' ||
+                        issue.status === 'in_progress' ? (
                             <>
-                                {issue.status === "open" ? (
+                                {issue.status === 'open' ? (
                                     <Button
                                         onClick={() =>
-                                            changeStatus("in_progress")
+                                            changeStatus('in_progress')
                                         }
                                     >
-                                        {t("issue.actions.start")}
+                                        {t('issue.actions.start')}
                                     </Button>
                                 ) : (
                                     <Button
-                                        onClick={() => changeStatus("open")}
+                                        onClick={() => changeStatus('open')}
                                     >
-                                        {t("issue.actions.stop")}
+                                        {t('issue.actions.stop')}
                                     </Button>
                                 )}
-                                <Button onClick={() => setClosing("ignored")}>
-                                    {t("issue.actions.ignore")}
+                                <Button onClick={() => setClosing('ignored')}>
+                                    {t('issue.actions.ignore')}
                                 </Button>
                                 <Button
                                     variant="primary"
-                                    onClick={() => setClosing("resolved")}
+                                    onClick={() => setClosing('resolved')}
                                 >
-                                    {t("issue.actions.resolve")}
+                                    {t('issue.actions.resolve')}
                                 </Button>
                             </>
                         ) : (
-                            <Button onClick={() => changeStatus("open")}>
-                                {t("issue.actions.reopen")}
+                            <Button onClick={() => changeStatus('open')}>
+                                {t('issue.actions.reopen')}
                             </Button>
                         )}
                     </div>
@@ -924,31 +924,31 @@ export default function IssueShow({
                 <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
                     {[
                         [
-                            t("issue.stats.occurrences"),
+                            t('issue.stats.occurrences'),
                             <span className="font-mono text-lg">
                                 {formatNumber(issue.occurrences)}
                             </span>,
                         ],
                         [
-                            t("issue.stats.first_seen"),
+                            t('issue.stats.first_seen'),
                             <span title={formatDateTime(issue.first_seen_at)}>
                                 {formatRelative(issue.first_seen_at)}
                             </span>,
                         ],
                         [
-                            t("issue.stats.last_seen"),
+                            t('issue.stats.last_seen'),
                             <span title={formatDateTime(issue.last_seen_at)}>
                                 {formatRelative(issue.last_seen_at)}
                             </span>,
                         ],
                         [
-                            t("issue.stats.releases"),
+                            t('issue.stats.releases'),
                             <span className="font-mono">
-                                {issue.last_release ?? "-"}
+                                {issue.last_release ?? '-'}
                                 {issue.releases > 1 && (
                                     <span className="text-ink-3">
-                                        {" "}
-                                        {t("issue.stats.more_releases", {
+                                        {' '}
+                                        {t('issue.stats.more_releases', {
                                             count: issue.releases - 1,
                                         })}
                                     </span>
@@ -956,9 +956,9 @@ export default function IssueShow({
                             </span>,
                         ],
                         [
-                            t("issue.stats.hosts"),
+                            t('issue.stats.hosts'),
                             <span className="font-mono break-all">
-                                {issue.hosts ?? "-"}
+                                {issue.hosts ?? '-'}
                             </span>,
                         ],
                     ].map(([label, value], i) => (
@@ -986,7 +986,7 @@ export default function IssueShow({
                         <span className="flex flex-wrap items-center gap-3">
                             {issue.regressed_at && (
                                 <span className="text-xs text-ink-3">
-                                    {t("issue.series.regressed_at", {
+                                    {t('issue.series.regressed_at', {
                                         time: formatDateTime(
                                             issue.regressed_at,
                                         ),
@@ -994,14 +994,14 @@ export default function IssueShow({
                                 </span>
                             )}
                             <Segmented<Period>
-                                label={t("common.filters.period")}
+                                label={t('common.filters.period')}
                                 value={period}
                                 onChange={(value) =>
                                     router.get(
                                         window.location.pathname,
                                         { period: value },
                                         {
-                                            only: ["series", "period"],
+                                            only: ['series', 'period'],
                                             preserveState: true,
                                             preserveScroll: true,
                                             replace: true,
@@ -1009,7 +1009,7 @@ export default function IssueShow({
                                     )
                                 }
                                 options={(
-                                    ["1h", "24h", "7d", "30d"] as Period[]
+                                    ['1h', '24h', '7d', '30d'] as Period[]
                                 ).map((value) => ({
                                     value,
                                     label: t(`common.periods.${value}`),
@@ -1034,7 +1034,7 @@ export default function IssueShow({
                     <Card className="min-w-0 flex-[999_1_560px]">
                         <div
                             role="tablist"
-                            aria-label={t("issue.tabs.label")}
+                            aria-label={t('issue.tabs.label')}
                             className="flex gap-4 overflow-x-auto border-b border-line px-4"
                             onKeyDown={onTabKey}
                         >
@@ -1067,10 +1067,10 @@ export default function IssueShow({
                             role="tabpanel"
                             id="panel-stacktrace"
                             aria-labelledby="tab-stacktrace"
-                            hidden={tab !== "stacktrace"}
+                            hidden={tab !== 'stacktrace'}
                         >
                             {frames.length === 0 ? (
-                                <EmptyState title={t("issue.stack.empty")} />
+                                <EmptyState title={t('issue.stack.empty')} />
                             ) : (
                                 <>
                                     <ol>
@@ -1090,12 +1090,12 @@ export default function IssueShow({
                                             >
                                                 {showVendor
                                                     ? t(
-                                                          "issue.stack.hide_vendor",
+                                                          'issue.stack.hide_vendor',
                                                           {},
                                                           vendorCount,
                                                       )
                                                     : t(
-                                                          "issue.stack.show_vendor",
+                                                          'issue.stack.show_vendor',
                                                           {},
                                                           vendorCount,
                                                       )}
@@ -1109,37 +1109,37 @@ export default function IssueShow({
                             role="tabpanel"
                             id="panel-occurrences"
                             aria-labelledby="tab-occurrences"
-                            hidden={tab !== "occurrences"}
+                            hidden={tab !== 'occurrences'}
                             className="overflow-x-auto"
                         >
                             {occurrences.length === 0 ? (
                                 <EmptyState
-                                    title={t("issue.occurrences.empty")}
+                                    title={t('issue.occurrences.empty')}
                                 />
                             ) : (
                                 <table className={tableClass}>
                                     <thead>
                                         <tr>
                                             <th className={thClass}>
-                                                {t("issue.occurrences.time")}
+                                                {t('issue.occurrences.time')}
                                             </th>
                                             <th className={thClass}>
-                                                {t("issue.occurrences.request")}
+                                                {t('issue.occurrences.request')}
                                             </th>
                                             <th className={thClass}>
-                                                {t("issue.occurrences.user")}
+                                                {t('issue.occurrences.user')}
                                             </th>
                                             <th className={thClass}>
-                                                {t("issue.fields.environment")}
+                                                {t('issue.fields.environment')}
                                             </th>
                                             <th className={thClass}>
-                                                {t("issue.fields.release")}
+                                                {t('issue.fields.release')}
                                             </th>
                                             <th className={thClass}>
-                                                {t("issue.fields.host")}
+                                                {t('issue.fields.host')}
                                             </th>
                                             <th className={thClass}>
-                                                {t("issue.fields.trace_id")}
+                                                {t('issue.fields.trace_id')}
                                             </th>
                                         </tr>
                                     </thead>
@@ -1162,7 +1162,7 @@ export default function IssueShow({
                                                                 .documentElement
                                                                 .lang ||
                                                                 undefined,
-                                                        )}{" "}
+                                                        )}{' '}
                                                         {formatTime(
                                                             o.occurred_at,
                                                             true,
@@ -1173,29 +1173,29 @@ export default function IssueShow({
                                                     className={`${tdClass} font-mono text-xs`}
                                                 >
                                                     {o.request
-                                                        ? `${o.request.method ?? ""} ${o.request.route ?? ""}`.trim() ||
-                                                          "-"
-                                                        : "-"}
+                                                        ? `${o.request.method ?? ''} ${o.request.route ?? ''}`.trim() ||
+                                                          '-'
+                                                        : '-'}
                                                 </td>
                                                 <td
                                                     className={`${tdClass} font-mono text-xs`}
                                                 >
-                                                    {o.user_id ?? "-"}
+                                                    {o.user_id ?? '-'}
                                                 </td>
                                                 <td
                                                     className={`${tdClass} font-mono text-xs`}
                                                 >
-                                                    {o.environment ?? "-"}
+                                                    {o.environment ?? '-'}
                                                 </td>
                                                 <td
                                                     className={`${tdClass} font-mono text-xs`}
                                                 >
-                                                    {o.release ?? "-"}
+                                                    {o.release ?? '-'}
                                                 </td>
                                                 <td
                                                     className={`${tdClass} font-mono text-xs`}
                                                 >
-                                                    {o.host ?? "-"}
+                                                    {o.host ?? '-'}
                                                 </td>
                                                 <td
                                                     className={`${tdClass} font-mono text-xs`}
@@ -1213,7 +1213,7 @@ export default function IssueShow({
                                                             {o.trace_id}
                                                         </Link>
                                                     ) : (
-                                                        "-"
+                                                        '-'
                                                     )}
                                                 </td>
                                             </tr>
@@ -1227,7 +1227,7 @@ export default function IssueShow({
                             role="tabpanel"
                             id="panel-history"
                             aria-labelledby="tab-history"
-                            hidden={tab !== "history"}
+                            hidden={tab !== 'history'}
                             className="p-4"
                         >
                             <IssueHistory
@@ -1240,12 +1240,12 @@ export default function IssueShow({
                             role="tabpanel"
                             id="panel-notes"
                             aria-labelledby="tab-notes"
-                            hidden={tab !== "notes"}
+                            hidden={tab !== 'notes'}
                             className="flex flex-col gap-3.5 p-4"
                         >
                             {notes.length === 0 && (
                                 <p className="text-ink-3">
-                                    {t("issue.notes.empty")}
+                                    {t('issue.notes.empty')}
                                 </p>
                             )}
                             {notes.map((n) => (
@@ -1266,14 +1266,14 @@ export default function IssueShow({
                                         )}
                                         <span>
                                             {n.via_mcp !== null
-                                                ? t("issue.notes.via_mcp", {
+                                                ? t('issue.notes.via_mcp', {
                                                       token: n.via_mcp,
                                                   })
                                                 : (n.author ??
                                                   t(
-                                                      "issue.notes.unknown_author",
+                                                      'issue.notes.unknown_author',
                                                   ))}
-                                            {", "}
+                                            {', '}
                                             <time
                                                 dateTime={
                                                     n.created_at ?? undefined
@@ -1297,7 +1297,7 @@ export default function IssueShow({
                                 className="flex flex-col gap-2"
                             >
                                 <Field
-                                    label={t("issue.notes.new")}
+                                    label={t('issue.notes.new')}
                                     htmlFor="note-body"
                                     error={note.errors.body}
                                 >
@@ -1305,11 +1305,11 @@ export default function IssueShow({
                                         id="note-body"
                                         value={note.data.body}
                                         onChange={(value) =>
-                                            note.setData("body", value)
+                                            note.setData('body', value)
                                         }
                                         candidates={mentionable}
                                         placeholder={t(
-                                            "issue.notes.placeholder",
+                                            'issue.notes.placeholder',
                                         )}
                                         invalid={!!note.errors.body}
                                     />
@@ -1319,10 +1319,10 @@ export default function IssueShow({
                                         type="submit"
                                         disabled={
                                             note.processing ||
-                                            note.data.body.trim() === ""
+                                            note.data.body.trim() === ''
                                         }
                                     >
-                                        {t("issue.notes.save")}
+                                        {t('issue.notes.save')}
                                     </Button>
                                 </div>
                             </form>
@@ -1331,26 +1331,26 @@ export default function IssueShow({
 
                     <aside
                         className="flex min-w-0 flex-[1_1_320px] flex-col gap-4"
-                        aria-label={t("issue.side.label")}
+                        aria-label={t('issue.side.label')}
                     >
                         <Card aria-labelledby="side-context">
                             <CardHeader
                                 id="side-context"
-                                title={t("issue.side.context")}
+                                title={t('issue.side.context')}
                             />
                             {latest &&
                             Object.keys(latest.context).length > 0 ? (
                                 <ContextTables context={latest.context} />
                             ) : (
                                 <p className="px-4 py-3.5 text-ink-3">
-                                    {t("issue.side.no_context")}
+                                    {t('issue.side.no_context')}
                                 </p>
                             )}
                         </Card>
                         <Card aria-labelledby="side-labels">
                             <CardHeader
                                 id="side-labels"
-                                title={t("issue.labels.title")}
+                                title={t('issue.labels.title')}
                             />
                             <LabelEditor
                                 issueKey={key}
@@ -1361,21 +1361,21 @@ export default function IssueShow({
                         <Card aria-labelledby="side-environment">
                             <CardHeader
                                 id="side-environment"
-                                title={t("issue.side.environment")}
+                                title={t('issue.side.environment')}
                             />
                             <KeyValues
                                 rows={[
                                     [
-                                        t("issue.fields.environment"),
+                                        t('issue.fields.environment'),
                                         latest?.environment,
                                     ],
                                     [
-                                        t("issue.fields.release"),
+                                        t('issue.fields.release'),
                                         latest?.release,
                                     ],
-                                    [t("issue.fields.host"), latest?.host],
+                                    [t('issue.fields.host'), latest?.host],
                                     [
-                                        t("issue.fields.trace_id"),
+                                        t('issue.fields.trace_id'),
                                         latest?.trace_id,
                                     ],
                                 ]}
@@ -1385,7 +1385,7 @@ export default function IssueShow({
                             <Card aria-labelledby="side-github">
                                 <CardHeader
                                     id="side-github"
-                                    title={t("issue.side.github")}
+                                    title={t('issue.side.github')}
                                 />
                                 <div className="px-4 py-3.5">
                                     <a
@@ -1396,7 +1396,7 @@ export default function IssueShow({
                                     >
                                         {issue.repo_issue_url.replace(
                                             /^https?:\/\/(www\.)?github\.com\//,
-                                            "",
+                                            '',
                                         )}
                                     </a>
                                 </div>
