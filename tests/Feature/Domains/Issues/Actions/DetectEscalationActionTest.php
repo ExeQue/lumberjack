@@ -80,6 +80,29 @@ describe('escalation', function () {
         Event::assertNotDispatched(IssueEscalated::class);
     });
 
+    it('counts a flood in the cache, not with a query per occurrence', function () {
+        $issue = Issue::factory()->create(['surfaced_at' => now()->subDay()]);
+        $detect = app(DetectEscalationAction::class);
+        // Steady: three a minute all day, so 40 in five minutes is under five times that.
+        DB::table('occurrences')->insert(array_map(fn (int $i): array => [
+            'issue_id' => $issue->id, 'project_id' => $issue->project_id, 'environment' => 'production',
+            'stacktrace' => '[]', 'context' => '[]', 'occurred_at' => now()->subSeconds(300 + $i * 20)->format('Y-m-d H:i:s.v'),
+        ], range(1, 4200)));
+
+        $queries = 0;
+        DB::listen(function ($query) use (&$queries): void {
+            $queries += str_contains($query->sql, 'occurrences') ? 1 : 0;
+        });
+
+        foreach (range(1, 40) as $_) {
+            Occurrence::factory()->for($issue)->create(['project_id' => $issue->project_id, 'occurred_at' => now()]);
+            expect($detect->execute($issue, 'production'))->toBeFalse();
+        }
+
+        // 40 inserts, one recount of the window and one count of the day before it.
+        expect($queries)->toBe(42);
+    });
+
     it('stops escalating an hour later', function () {
         $issue = Issue::factory()->create(['escalated_at' => now()->subMinutes(DetectEscalationAction::ACTIVE_MINUTES + 1)]);
 
