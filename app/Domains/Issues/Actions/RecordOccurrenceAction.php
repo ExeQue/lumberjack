@@ -76,6 +76,7 @@ class RecordOccurrenceAction
                     'log_channel' => $signal->logChannel,
                     'last_release' => $signal->release,
                     'occurrences_count' => 1,
+                    'users_count' => 0,
                     'first_seen_at' => $at,
                     'last_seen_at' => $at,
                     'surfaced_at' => now(),
@@ -115,8 +116,16 @@ class RecordOccurrenceAction
                 }
             }
 
+            $userId = $signal->userId();
+
+            // The issue row is locked, so two workers cannot both count the same new user.
+            if ($userId !== null && ! $issue->occurrences()->where('user_id', $userId)->exists()) {
+                $issue->increment('users_count');
+            }
+
             return $issue->occurrences()->create([
                 'project_id' => $project->id,
+                'user_id' => $userId,
                 'trace_id' => $signal->traceId,
                 'environment' => $signal->environment,
                 'release' => $signal->release,

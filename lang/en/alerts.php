@@ -31,7 +31,7 @@ return [
         'via_mcp' => ':token (MCP)',
         'unknown_author' => 'Someone',
     ],
-    'discord' => ['location' => 'Location', 'release' => 'Release', 'occurrences' => 'Occurrences'],
+    'discord' => ['location' => 'Location', 'release' => 'Release', 'occurrences' => 'Occurrences', 'users' => 'Users'],
     'open_issue' => 'Open in Lumberjack',
     'test_subject' => 'Lumberjack test alert',
     'test_message' => 'Test message from Lumberjack to :channel. Alerts will arrive here.',

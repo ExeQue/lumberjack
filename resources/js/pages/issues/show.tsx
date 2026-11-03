@@ -930,6 +930,12 @@ export default function IssueShow({
                             </span>,
                         ],
                         [
+                            t('issue.stats.users'),
+                            <span className="font-mono text-lg">
+                                {formatNumber(issue.users)}
+                            </span>,
+                        ],
+                        [
                             t('issue.stats.first_seen'),
                             <span title={formatDateTime(issue.first_seen_at)}>
                                 {formatRelative(issue.first_seen_at)}

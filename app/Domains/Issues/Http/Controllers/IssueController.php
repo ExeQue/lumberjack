@@ -53,6 +53,7 @@ class IssueController
             ->when($label !== '')->whereHasLabel($label)
             ->orderByDesc(match ($sort) {
                 'occurrences' => 'occurrences_count',
+                'users' => 'users_count',
                 'first_seen' => 'first_seen_at',
                 default => 'last_seen_at',
             })

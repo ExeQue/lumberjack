@@ -44,6 +44,7 @@ return [
     ],
     'stats' => [
         'occurrences' => 'Occurrences',
+        'users' => 'Users affected',
         'first_seen' => 'First seen',
         'last_seen' => 'Last seen',
         'releases' => 'Releases',

@@ -36,6 +36,7 @@ export type IssueSummary = {
     new: boolean;
     location: string | null;
     occurrences: number;
+    users: number;
     notes: number;
     labels: { id: number; name: string; color: string }[];
     first_seen_at: string;

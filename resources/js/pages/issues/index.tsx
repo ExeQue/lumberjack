@@ -28,6 +28,7 @@ import {
     show as issueShow,
 } from '@/routes/issues';
 import { show as projectShow } from '@/routes/projects';
+import { cn } from '@/lib/utils';
 import type {
     IssueSummary,
     Paginated,
@@ -246,6 +247,7 @@ export default function IssuesIndex({
                         <option value="occurrences">
                             {t('issues.sort.occurrences')}
                         </option>
+                        <option value="users">{t('issues.sort.users')}</option>
                         <option value="first_seen">
                             {t('issues.sort.first_seen')}
                         </option>
@@ -291,6 +293,9 @@ export default function IssuesIndex({
                                     </th>
                                     <th className={`${thClass} text-right`}>
                                         {t('issues.columns.occurrences')}
+                                    </th>
+                                    <th className={`${thClass} text-right`}>
+                                        {t('issues.columns.users')}
                                     </th>
                                     <th className={thClass}>
                                         {t('issues.columns.last_seen')}
@@ -466,6 +471,16 @@ export default function IssuesIndex({
                                             className={`${tdClass} ${numClass}`}
                                         >
                                             {formatNumber(issue.occurrences)}
+                                        </td>
+                                        <td
+                                            className={cn(
+                                                tdClass,
+                                                numClass,
+                                                issue.users === 0 &&
+                                                    'text-ink-3',
+                                            )}
+                                        >
+                                            {formatNumber(issue.users)}
                                         </td>
                                         <td
                                             className={`${tdClass} whitespace-nowrap text-ink-2`}

@@ -22,11 +22,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $environment
  * @property string|null $release
  * @property string|null $host
+ * @property string|null $user_id
  * @property list<array<string, mixed>>|null $stacktrace
  * @property array<string, mixed>|null $context
  * @property CarbonImmutable $occurred_at
  */
-#[Fillable(['issue_id', 'project_id', 'trace_id', 'environment', 'release', 'host', 'stacktrace', 'context', 'occurred_at'])]
+#[Fillable(['issue_id', 'project_id', 'trace_id', 'environment', 'release', 'host', 'user_id', 'stacktrace', 'context', 'occurred_at'])]
 #[WithoutTimestamps]
 #[DateFormat('Y-m-d H:i:s.v')]
 #[UseFactory(OccurrenceFactory::class)]

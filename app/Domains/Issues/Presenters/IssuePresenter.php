@@ -43,6 +43,7 @@ class IssuePresenter
             'new' => $issue->first_seen_at->greaterThan(now()->subDay()),
             'location' => $issue->file !== null ? $issue->file.($issue->line !== null ? ':'.$issue->line : '') : $issue->log_channel,
             'occurrences' => $issue->occurrences_count,
+            'users' => $issue->users_count,
             'notes' => (int) ($issue->notes_count ?? 0),
             'labels' => $issue->relationLoaded('labels') ? $issue->labels->map(fn (Label $l): array => $l->toSummary())->values()->all() : [],
             'first_seen_at' => $issue->first_seen_at->toIso8601String(),

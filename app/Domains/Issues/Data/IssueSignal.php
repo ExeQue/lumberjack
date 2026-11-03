@@ -33,4 +33,13 @@ final readonly class IssueSignal
         public ?string $customFingerprint = null,
     ) {
     }
+
+    /** The signed-in user the error happened to, as the SDK reported them. */
+    public function userId(): ?string
+    {
+        $user = $this->context['user'] ?? null;
+        $id = is_array($user) ? ($user['id'] ?? null) : null;
+
+        return is_int($id) || (is_string($id) && $id !== '') ? mb_substr((string) $id, 0, 191) : null;
+    }
 }

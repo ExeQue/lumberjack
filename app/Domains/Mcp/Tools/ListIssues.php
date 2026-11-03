@@ -36,7 +36,7 @@ class ListIssues extends Tool
             'source' => $schema->string()->enum(['server', 'browser', 'log']),
             'search' => $schema->string()->description('Matches title or message.'),
             'label' => $schema->string()->description('Only issues with this label.'),
-            'sort' => $schema->string()->enum(['last_seen', 'occurrences', 'first_seen'])->description('Defaults to last_seen.'),
+            'sort' => $schema->string()->enum(['last_seen', 'occurrences', 'users', 'first_seen'])->description('Defaults to last_seen.'),
             'limit' => $schema->integer()->min(1)->max(100)->description('Defaults to 25.'),
         ];
     }
@@ -62,6 +62,7 @@ class ListIssues extends Tool
             ->when($label !== '')->whereHasLabel($label)
             ->orderByDesc(match ($request->get('sort')) {
                 'occurrences' => 'occurrences_count',
+                'users' => 'users_count',
                 'first_seen' => 'first_seen_at',
                 default => 'last_seen_at',
             })

@@ -96,6 +96,7 @@ final readonly class IssueAlert
             (string) __('alerts.discord.location') => $issue->file !== null ? $issue->file.($issue->line ? ':'.$issue->line : '') : null,
             (string) __('alerts.discord.release') => $issue->last_release ?? '-',
             (string) __('alerts.discord.occurrences') => (string) $issue->occurrences_count,
+            (string) __('alerts.discord.users') => $issue->users_count > 0 ? (string) $issue->users_count : null,
         ], fn (?string $value): bool => $value !== null);
     }
 

@@ -21,6 +21,7 @@ return [
         'label' => 'Sort',
         'last_seen' => 'Last seen',
         'occurrences' => 'Most occurrences',
+        'users' => 'Most users',
         'first_seen' => 'First seen',
     ],
     'columns' => [
@@ -28,6 +29,7 @@ return [
         'issue' => 'Issue',
         'last_24h' => 'Last 24 h',
         'occurrences' => 'Occurrences',
+        'users' => 'Users',
         'last_seen' => 'Last seen',
         'first_seen' => 'First seen',
         'assignee' => 'Assignee',
