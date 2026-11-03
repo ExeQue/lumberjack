@@ -72,7 +72,7 @@ class McpToken extends Model
     /**
      * A token acts for the team, but only while the person who made it may still make
      * one: it stops working when they leave the team, lose the admin role, are
-     * suspended or deleted. Revoking it, or asking an admin to make a new one, is the way back.
+     * suspended or deleted; a current admin makes a new one.
      */
     public function isUsable(): bool
     {
