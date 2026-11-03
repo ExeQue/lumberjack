@@ -7,9 +7,12 @@ namespace App\Domains\Alerts\Actions;
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Drivers\MailDriver;
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Alerts\Support\ChannelDriverRegistry;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Mail\MailReason;
+use App\Domains\Shared\Mail\MailRecipients;
+use Closure;
 use Throwable;
 
 /**
@@ -24,29 +27,49 @@ class SendProjectAlertAction
     }
 
     /**
-     * @return int channels it reached
+     * @param  MailRecipients|null  $recipients  the event's mail recipients, when it spans several rules; none sends right away
+     * @return int channels it reached, mail channels counted once sent
      */
-    public function execute(AlertRule $rule, Project $project, Alert $alert): int
+    public function execute(AlertRule $rule, Project $project, Alert $alert, ?MailRecipients $recipients = null): int
     {
         $sent = 0;
+        $own = $recipients === null;
+        $recipients ??= new MailRecipients();
 
         foreach ($rule->channelsFor($project) as $channel) {
-            $error = null;
+            $driver = $this->drivers->for($channel->type);
 
-            try {
-                $driver = $this->drivers->for($channel->type);
-                $driver instanceof MailDriver
-                    ? $driver->sendWithReasons($channel, $alert, [MailReason::rule($rule, $channel, $project)])
-                    : $driver->send($channel, $alert);
-                $sent++;
-            } catch (Throwable $e) {
-                report($e);
-                $error = $e->getMessage();
+            if ($driver instanceof MailDriver) {
+                $recipients->offer(MailDriver::address($channel), MailRecipients::CHANNEL, MailReason::rule($rule, $channel, $project), function (array $reasons) use ($driver, $channel, $alert, &$sent): void {
+                    $sent += $this->record($channel, fn () => $driver->sendWithReasons($channel, $alert, $reasons));
+                });
+
+                continue;
             }
 
-            $channel->forceFill(['last_delivery_status' => $error === null ? 'sent' : 'failed', 'last_delivery_at' => now()])->save();
+            $sent += $this->record($channel, fn () => $driver->send($channel, $alert));
+        }
+
+        if ($own) {
+            $recipients->send();
         }
 
         return $sent;
+    }
+
+    private function record(NotificationChannel $channel, Closure $send): int
+    {
+        $error = null;
+
+        try {
+            $send();
+        } catch (Throwable $e) {
+            report($e);
+            $error = $e->getMessage();
+        }
+
+        $channel->forceFill(['last_delivery_status' => $error === null ? 'sent' : 'failed', 'last_delivery_at' => now()])->save();
+
+        return $error === null ? 1 : 0;
     }
 }

@@ -66,6 +66,16 @@ final class NoteMentions
     }
 
     /**
+     * Who wrote the note, as mails and toasts name them: a person, or an agent's MCP token.
+     */
+    public function author(IssueNote $note): string
+    {
+        return $note->mcpToken !== null
+            ? (string) __('alerts.messages.via_mcp', ['token' => $note->mcpToken->name])
+            : ($note->user->name ?? (string) __('alerts.messages.unknown_author'));
+    }
+
+    /**
      * The note as text, every tag of a team member written as @Name.
      */
     public function render(string $body, ?Team $team): string

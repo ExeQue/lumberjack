@@ -6,12 +6,12 @@ namespace App\Domains\Issues\Listeners;
 
 use App\Domains\Issues\Events\IssueNoteAdded;
 use App\Domains\Issues\Events\NoteMentioned;
-use App\Domains\Issues\Notifications\MentionedInNoteNotification;
 use App\Domains\Issues\Support\NoteMentions;
 use Throwable;
 
 /**
- * Every team member a note tags gets a mail, and a toast if Lumberjack is open.
+ * Every team member a note tags gets a toast if Lumberjack is open. Their mail goes out
+ * with the note's other mails (SendNoteAlerts), so nobody gets two about one note.
  */
 class NotifyMentionedMembers
 {
@@ -29,16 +29,14 @@ class NotifyMentionedMembers
             return;
         }
 
-        $author = $note->mcpToken !== null ? __('alerts.messages.via_mcp', ['token' => $note->mcpToken->name]) : ($note->user->name ?? __('alerts.messages.unknown_author'));
+        $author = $this->mentions->author($note);
         $body = $this->mentions->render($note->body, $note->issue?->project?->team);
 
         foreach ($users as $user) {
-            $user->notify(new MentionedInNoteNotification($note, $author, $body));
-
             try {
                 broadcast(new NoteMentioned($note, $user->uuid, $author, $body));
             } catch (Throwable $e) {
-                // A toast is a nicety; the mail still goes out.
+                // A toast is a nicety; the mail goes out anyway.
                 report($e);
             }
         }
