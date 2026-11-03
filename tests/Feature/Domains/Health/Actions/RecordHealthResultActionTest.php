@@ -275,35 +275,20 @@ describe('alerts', function () {
         expect(($this->titles)())->toBe(['Health check down in Shop', 'Health check recovered in Shop']);
     });
 
-    it('stays quiet when a flapping check goes down again within 30 minutes', function () {
+    it('tells every time a check goes bad again, however soon after it recovered', function () {
         $flap = function (): void {
-            ($this->report)('failed');
-            ($this->report)('failed');
-            foreach (range(1, 3) as $i) {
-                ($this->report)('ok');
-            }
-        };
-
-        $flap();
-        $flap();
-        $flap();
-
-        expect(($this->titles)())->toBe(['Health check down in Shop', 'Health check recovered in Shop']);
-    });
-
-    it('takes the throttle window from the config', function () {
-        config(['health.alert_throttle_minutes' => 3]);
-        $flap = function (): void {
-            foreach (['failed', 'failed', 'ok', 'ok', 'ok'] as $status) {
+            foreach (['warning', 'warning', 'ok', 'ok', 'ok'] as $status) {
                 ($this->report)($status);
             }
         };
 
         $flap();
-        $this->travel(5)->minutes();
         $flap();
 
-        expect(($this->titles)())->toBe(['Health check down in Shop', 'Health check recovered in Shop', 'Health check down in Shop', 'Health check recovered in Shop']);
+        expect(($this->titles)())->toBe([
+            'Health check degraded in Shop', 'Health check recovered in Shop',
+            'Health check degraded in Shop', 'Health check recovered in Shop',
+        ]);
     });
 
     it('sends nothing for a muted check', function () {

@@ -153,9 +153,9 @@ class RecordHealthResultAction
 
     /**
      * What to tell the rule, if anything: a check getting worse than what was last sent,
-     * or one that was reported bad and is ok again. A check that turns bad again within
-     * the throttle window of its last alert stays quiet; one already told about may
-     * still escalate from degraded to down, and one back from recovering stays quiet.
+     * or one that was reported bad and is ok again. Each step for the worse is told at
+     * once (ok to degraded, degraded to down); one back from recovering to the state it
+     * was already told about stays quiet.
      *
      * @param  list<string>  $hosts
      * @return array{AlertRule, HealthCheck, string, ?string, list<string>, string}|null
@@ -179,9 +179,10 @@ class RecordHealthResultAction
             $check->alerted_status = null;
             [$type, $kind, $hosts, $since] = [AlertRuleType::HealthRecovered, HealthCheckAlert::RECOVERED, [], ($check->alerted_at ?? now())->toIso8601String()];
         } else {
-            $throttled = $check->alerted_status === null && $check->alerted_at?->gt(now()->subMinutes((int) config('health.alert_throttle_minutes')));
-
-            if (! $status->worseThan($check->alerted_status) || $throttled) {
+            // Every step for the worse is told at once: ok to degraded, degraded to down.
+            // The thresholds already keep a flapping check quiet; a time window on top
+            // would hide a real failure.
+            if (! $status->worseThan($check->alerted_status)) {
                 return null;
             }
 
