@@ -318,12 +318,15 @@ export function Sparkline({
     color = 'var(--lj-err)',
     width = 120,
     height = 28,
+    tips,
 }: {
     values: number[];
     label: string;
     color?: string;
     width?: number;
     height?: number;
+    /** One hover text per value. */
+    tips?: string[];
 }) {
     const max = Math.max(1, ...values);
     // Nothing happened: a quiet line, not one in the alarm color.
@@ -335,23 +338,43 @@ export function Sparkline({
         )
         .join(' ');
 
+    const step = 100 / Math.max(1, values.length - 1);
+
     return (
-        <svg
-            viewBox={`0 0 ${width} ${height}`}
-            preserveAspectRatio="none"
-            className="block"
-            style={{ width: '100%', maxWidth: width, height }}
-            role="img"
-            aria-label={label}
-        >
-            <polyline
-                points={points}
-                fill="none"
-                stroke={quiet ? 'var(--lj-line-strong)' : color}
-                strokeWidth={1.5}
-                vectorEffect="non-scaling-stroke"
-            />
-        </svg>
+        <div className="relative" style={{ maxWidth: width }}>
+            <svg
+                viewBox={`0 0 ${width} ${height}`}
+                preserveAspectRatio="none"
+                className="block"
+                style={{ width: '100%', height }}
+                role="img"
+                aria-label={label}
+            >
+                <polyline
+                    points={points}
+                    fill="none"
+                    stroke={quiet ? 'var(--lj-line-strong)' : color}
+                    strokeWidth={1.5}
+                    vectorEffect="non-scaling-stroke"
+                />
+            </svg>
+            {tips && (
+                <div className="absolute inset-0" aria-hidden="true">
+                    {values.map((_, i) => (
+                        <div
+                            key={i}
+                            className="group absolute inset-y-0 -translate-x-1/2"
+                            style={{ left: `${i * step}%`, width: `${step}%` }}
+                        >
+                            <div className="absolute inset-y-0 left-1/2 hidden w-px bg-line-strong group-hover:block" />
+                            <span className="pointer-events-none absolute top-0 left-1/2 z-10 hidden -translate-x-1/2 -translate-y-full rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block">
+                                {tips[i]}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -413,6 +436,29 @@ export function Bars({
  * The time a bucket starts, the way the period reads: a time of day for 1h and 24h, a
  * date beyond.
  */
+const periodMs: Record<string, number> = {
+    '1h': 3_600_000,
+    '24h': 86_400_000,
+    '7d': 604_800_000,
+    '30d': 2_592_000_000,
+};
+
+/** Hover texts for plain values spread evenly over a period that ends now. */
+export function spreadTips(
+    values: number[],
+    period: string,
+    formatValue: (v: number) => string = String,
+): string[] {
+    const span = periodMs[period] ?? periodMs['24h'];
+    const step = span / Math.max(1, values.length - 1);
+    const end = Date.now();
+
+    return values.map(
+        (v, i) =>
+            `${bucketLabel(new Date(end - (values.length - 1 - i) * step).toISOString(), period)} · ${formatValue(v)}`,
+    );
+}
+
 export function bucketLabel(iso: string, period: string): string {
     const lang = document.documentElement.lang || undefined;
     const date = new Date(iso);

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
+    bucketLabel,
     Button,
     Card,
     EmptyState,
@@ -234,6 +235,10 @@ export default function ProjectsIndex({
                                             label={t('projects.spark_label', {
                                                 count: project.errors,
                                             })}
+                                            tips={project.error_series.map(
+                                                (p) =>
+                                                    `${bucketLabel(p.t, '24h')} · ${formatNumber(p.v)}`,
+                                            )}
                                             width={300}
                                             height={40}
                                         />

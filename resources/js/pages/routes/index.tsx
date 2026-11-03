@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
+    bucketLabel,
     Badge,
     Card,
     CardHeader,
@@ -15,6 +16,7 @@ import {
     tdClass,
     thClass,
     Sparkline,
+    spreadTips,
 } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import {
@@ -287,6 +289,11 @@ export default function RoutesIndex({
                                             <td className={tdClass}>
                                                 <Sparkline
                                                     values={r.series ?? []}
+                                                    tips={spreadTips(
+                                                        r.series ?? [],
+                                                        filters.period,
+                                                        formatNumber,
+                                                    )}
                                                     color="var(--lj-info)"
                                                     label={t(
                                                         'routes.trend_label',
@@ -338,7 +345,10 @@ export default function RoutesIndex({
                         <div className="flex flex-wrap">
                             <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-2 p-4">
                                 <Eyebrow>{t('routes.detail.hourly')}</Eyebrow>
-                                <HourlyChart hourly={detail.hourly} />
+                                <HourlyChart
+                                    hourly={detail.hourly}
+                                    period={filters.period}
+                                />
                             </div>
                             <div className="flex min-w-0 flex-[1_1_420px] flex-col border-line md:border-l">
                                 <Eyebrow className="px-4 pt-4 pb-2">
@@ -414,7 +424,13 @@ export default function RoutesIndex({
     );
 }
 
-function HourlyChart({ hourly }: { hourly: Detail['hourly'] }) {
+function HourlyChart({
+    hourly,
+    period,
+}: {
+    hourly: Detail['hourly'];
+    period: string;
+}) {
     const t = useT();
     const max = Math.max(1, ...hourly.map((h) => h.p95 ?? 0));
     const peak = hourly.reduce<Detail['hourly'][number] | null>(
@@ -439,8 +455,8 @@ function HourlyChart({ hourly }: { hourly: Detail['hourly'] }) {
             : hourly;
     const tip = (h: Detail['hourly'][number]) =>
         h.p95 === null
-            ? `${formatTime(h.t)} · -`
-            : `${formatTime(h.t)} · p95 ${formatDuration(h.p95)} · p50 ${formatDuration(h.p50)}`;
+            ? `${bucketLabel(h.t, period)} · -`
+            : `${bucketLabel(h.t, period)} · p95 ${formatDuration(h.p95)} · p50 ${formatDuration(h.p50)}`;
 
     return (
         <>
@@ -494,7 +510,7 @@ function HourlyChart({ hourly }: { hourly: Detail['hourly'] }) {
                 aria-hidden="true"
             >
                 {ticks.map((h, i) => (
-                    <span key={i}>{formatTime(h.t)}</span>
+                    <span key={i}>{bucketLabel(h.t, period)}</span>
                 ))}
             </div>
             <div className="flex gap-4 text-xs text-ink-2">

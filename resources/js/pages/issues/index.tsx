@@ -12,6 +12,7 @@ import {
     Segmented,
     Select,
     Sparkline,
+    spreadTips,
     numClass,
     tableClass,
     tdClass,
@@ -448,6 +449,11 @@ export default function IssuesIndex({
                                         <td className={tdClass}>
                                             <Sparkline
                                                 values={issue.hourly}
+                                                tips={spreadTips(
+                                                    issue.hourly,
+                                                    '24h',
+                                                    formatNumber,
+                                                )}
                                                 label={t('issues.trend', {
                                                     count: issue.hourly.reduce(
                                                         (a, b) => a + b,

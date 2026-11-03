@@ -209,6 +209,23 @@ function LatencyChart({
                                         }}
                                     >
                                         <div className="absolute inset-y-0 left-1/2 hidden w-px bg-line-strong group-hover:block" />
+                                        {/* A point without neighbors draws no line, so it gets a dot. */}
+                                        {(['p50', 'p95'] as const).map(
+                                            (key) =>
+                                                p[key] !== null &&
+                                                (series[i - 1]?.[key] ??
+                                                    null) === null &&
+                                                (series[i + 1]?.[key] ??
+                                                    null) === null && (
+                                                    <span
+                                                        key={key}
+                                                        className={`absolute left-1/2 size-1.5 -translate-1/2 rounded-full ${key === 'p95' ? 'bg-amber' : 'bg-ink-3'}`}
+                                                        style={{
+                                                            top: `${(y(p[key]) / height) * 100}%`,
+                                                        }}
+                                                    />
+                                                ),
+                                        )}
                                         <span className="pointer-events-none absolute top-0 left-1/2 z-10 hidden -translate-x-1/2 -translate-y-full rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block">
                                             {bucketLabel(p.t, period)}
                                             {p.p95 === null
