@@ -117,7 +117,8 @@ Each widget's settings are grouped in sections that open and close:
   holds everything about its value: what it shows, its title, its period (**Over**),
   how many seconds it stays on screen, and the type's value settings (limits, low
   values are bad, compare, decimals, prefix and suffix, a gauge's scale, chart or list
-  options). On the first tab these are the widget's own; on the others, left empty,
+  options) and its **Scope**, so one stat can show the requests of a route and then the
+  size of a queue. On the first tab these are the widget's own; on the others, left empty,
   each shows what the widget uses ("Same as widget"). Drag a tab, or use the arrows
   above its settings, to change the order; **Remove this value** takes it out of the
   rotation. Moving a value to the front, or removing the first, makes it the widget's
@@ -127,7 +128,7 @@ Each widget's settings are grouped in sections that open and close:
     Below the tabs, **Whole widget** holds what applies to every value: under
     **Rotation**, how often they switch (every 5 seconds to a minute), with a fade, a
     slide or neither, whether a value that needs attention (amber or red) holds the tile
-    until it clears, and a progress bar; then Scope and how often it updates (the rest
+    until it clears, and a progress bar; then how often it updates (the rest
     of Display is behind the gear). Tiles with the same timing switch together. The
     progress bar runs along the bottom edge of the tile, growing from the center to the
     full width just as the next value takes over; it stands still while a value holds
@@ -150,9 +151,13 @@ Each widget's settings are grouped in sections that open and close:
 
     ![A rotating widget's value tabs](./screenshots/screen-designer-rotation.png)
 
-- **Scope**: the projects, environment, period and release the widget shows, each the
-  screen's default unless set, and a filter on the route, queue, job, host or database check (`*`
-  matches anything, so `POST /checkout*` or `payments*`).
+- **Scope**, on each value's tab: the projects, environment and release it shows,
+  each the widget's (on the first tab the screen's) default unless set, and a filter
+  named after what the value can narrow: the route, queue, job, host or database check
+  (`*` matches anything, so `POST /checkout*` or `payments*`). A value with nothing to
+  narrow has no filter, and one that narrows something else than the first value (a
+  queue after a route) does not take the widget's filter. A rotated value's scope is stored in its `rotate` entry, such as
+  `{"source": "queue_size", "scope": {"filter": "bulk"}}`.
 - **Display**: not in the inspector but behind the gear in the tile's top right corner,
   next to the period, which shows while the pointer is on the tile, it has focus or it is
   selected (never on the TV). The gear selects the widget and opens its display settings

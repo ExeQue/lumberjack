@@ -60,7 +60,7 @@ export function dataKey(schema: Schema, widget: Widget): string {
     // A rotated value's seconds and title only change how it draws.
     const rotation = rotationOf(widget).map((item) => [
         item.source,
-        item.scope?.period ?? null,
+        item.scope ?? null,
         Object.keys(item.options ?? {})
             .filter((key) => fields[key]?.data)
             .sort()

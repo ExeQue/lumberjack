@@ -83,6 +83,43 @@ describe('a screen\'s data', function () {
             ->and($calls['apdex'])->toEqual([Period::Hour, ['compare' => 'none', 'red' => 50.0, 'sparkline' => true]]);
     });
 
+    it('scopes each rotated value by its own scope over the widget\'s over the screen\'s', function () {
+        $this->screen->update(['widgets' => [
+            ['id' => 'a', 'type' => 'stat', 'source' => 'requests', 'w' => 1, 'h' => 1, 'title' => null, 'options' => [], 'scope' => ['filter' => 'GET /checkout*', 'environment' => 'staging'], 'rotate' => [
+                ['source' => 'queue_size', 'scope' => ['filter' => 'bulk', 'projects' => []]],
+            ]],
+        ]]);
+        $scopes = [];
+        $this->mock(ResolveWidgetDataAction::class)->shouldReceive('execute')
+            ->andReturnUsing(function (Team $team, WidgetType $type, string $source, WidgetScope $scope) use (&$scopes): array {
+                $scopes[$source] = [$scope->filter, $scope->environment, $scope->projects, $scope->period];
+
+                return [];
+            });
+
+        app(ResolveScreenDataAction::class)->execute($this->screen);
+
+        expect($scopes['requests'])->toBe(['GET /checkout*', 'staging', [$this->project->uuid], Period::Week])
+            ->and($scopes['queue_size'])->toBe(['bulk', 'staging', [], Period::Week]);
+    });
+
+    it('keeps the widget\'s filter from a value that filters something else', function () {
+        $this->screen->update(['widgets' => [
+            ['id' => 'a', 'type' => 'stat', 'source' => 'requests', 'w' => 1, 'h' => 1, 'title' => null, 'options' => [], 'scope' => ['filter' => 'GET /checkout*'], 'rotate' => ['queue_size', 'p95']],
+        ]]);
+        $filters = [];
+        $this->mock(ResolveWidgetDataAction::class)->shouldReceive('execute')
+            ->andReturnUsing(function (Team $team, WidgetType $type, string $source, WidgetScope $scope) use (&$filters): array {
+                $filters[$source] = $scope->filter;
+
+                return [];
+            });
+
+        app(ResolveScreenDataAction::class)->execute($this->screen);
+
+        expect($filters)->toBe(['requests' => 'GET /checkout*', 'queue_size' => null, 'p95' => 'GET /checkout*']);
+    });
+
     it('resolves each health value with its own checks, under source#index past the first', function () {
         $this->screen->update(['widgets' => [
             ['id' => 'h', 'type' => 'health', 'source' => 'checks', 'w' => 1, 'h' => 1, 'title' => null, 'options' => ['checks' => ['u1'], 'only_problems' => true], 'scope' => [], 'rotate' => [

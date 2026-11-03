@@ -23,7 +23,8 @@ export type RotateItem = {
     title?: string;
     /** Only fields of the type's first section (itemFieldsOf). */
     options?: Record<string, unknown>;
-    scope?: { period?: string };
+    /** Any scope key over the widget's; see WidgetScope. */
+    scope?: Partial<WidgetScope>;
 };
 
 export type WidgetKind =

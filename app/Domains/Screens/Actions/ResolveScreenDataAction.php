@@ -8,6 +8,7 @@ use App\Domains\Screens\Data\WidgetScope;
 use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Support\WidgetSchema;
+use App\Domains\Screens\Support\WidgetSources;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
@@ -48,7 +49,15 @@ class ResolveScreenDataAction
                 $source = $item['source'];
                 // A repeated source (health values differ by their checks) answers as source#index.
                 $at = array_search($source, array_column($items, 'source'), true) === $i ? $source : "{$source}#{$i}";
-                $scope = $this->scope($screen, [...$widget, 'scope' => [...(array) ($widget['scope'] ?? []), ...$item['scope']]]);
+                $own = (array) ($widget['scope'] ?? []);
+
+                // A filter names a route, queue, job or host: a value that filters something
+                // else does not take the widget's.
+                if ($this->filterOn($type, $source) !== $this->filterOn($type, (string) $widget['source'])) {
+                    unset($own['filter']);
+                }
+
+                $scope = $this->scope($screen, [...$widget, 'scope' => [...$own, ...$item['scope']]]);
                 $options = $this->options($type, [...(array) ($widget['options'] ?? []), ...$item['options']]);
                 $key = 'screen-data:'.md5(serialize([$screen->team_id, $type->value, $source, $scope, $options, $aggregatesOnly]));
 
@@ -86,6 +95,11 @@ class ResolveScreenDataAction
             'release' => $own['release'] ?? null,
             'filter' => $own['filter'] ?? null,
         ]);
+    }
+
+    private function filterOn(WidgetType $type, string $source): ?string
+    {
+        return WidgetSources::has($type, $source) ? WidgetSources::find($type, $source)->filterOn : null;
     }
 
     /**
