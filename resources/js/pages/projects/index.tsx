@@ -26,6 +26,8 @@ import {
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { formatDuration, formatNumber, formatPercent } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { useLiveChannel, useTeamLive } from '@/lib/use-live';
+import type { LiveReload } from '@/lib/use-live';
 import { show as projectShow, store as projectStore } from '@/routes/projects';
 import type { SeriesPoint, TeamShared } from '@/types/lumberjack';
 
@@ -43,6 +45,20 @@ type ProjectCard = {
     last_agent_seen_at: string | null;
 };
 
+/**
+ * A card's figures change with its project's issues, jobs and agents. The day's figures
+ * are reused for a minute on the server, so they may trail by that much.
+ */
+function ProjectLive({ uuid, live }: { uuid: string; live: LiveReload }) {
+    useLiveChannel(
+        `project.${uuid}`,
+        ['issues.changed', 'jobs.changed', 'agents.changed'],
+        live,
+    );
+
+    return null;
+}
+
 export default function ProjectsIndex({
     projects,
 }: {
@@ -51,6 +67,7 @@ export default function ProjectsIndex({
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const [search, setSearch] = useState('');
+    const live = useTeamLive(['projects.changed'], ['projects']);
     const [creating, setCreating] = useState(false);
     // The prefix follows the name until it is edited by hand.
     const [prefix, setPrefix] = useState('');
@@ -78,6 +95,13 @@ export default function ProjectsIndex({
 
     return (
         <>
+            {projects.map((project) => (
+                <ProjectLive
+                    key={project.uuid}
+                    uuid={project.uuid}
+                    live={live}
+                />
+            ))}
             <Head title={t('projects.title')} />
             <TopBar
                 crumbs={[{ label: team.name }, { label: t('projects.title') }]}

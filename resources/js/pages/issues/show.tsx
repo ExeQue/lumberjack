@@ -39,6 +39,7 @@ import { formatDateTime, formatNumber, formatTime } from '@/lib/format';
 import { languageOf, useHighlightedLines } from '@/lib/highlight';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useTeamLive } from '@/lib/use-live';
 import { useProjectLive } from '@/lib/use-project-live';
 import {
     assign,
@@ -730,6 +731,9 @@ export default function IssueShow({
         ['issue', 'latest', 'occurrences', 'series', 'notes'],
         { issue: issue.id },
     );
+    // A label renamed or removed in the settings.
+    useProjectLive(project.uuid, ['settings.changed'], ['issue', 'labels']);
+    useTeamLive(['members.changed'], ['members']);
 
     const changeStatus = (
         status: IssueSummary['status'],

@@ -87,6 +87,12 @@ return [
     'unassigned' => 'Unassigned',
     'live' => 'Live',
     'live_hint' => 'Updates as data arrives',
+    // Shown instead of a live update while the page has unsaved edits.
+    'live_changed' => [
+        'message' => 'This page changed elsewhere.',
+        // Button; discards the unsaved edits
+        'reload' => 'Reload',
+    ],
     'previous' => 'Previous',
     'next' => 'Next',
     'showing' => 'Showing :from-:to of :total',

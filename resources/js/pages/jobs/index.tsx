@@ -31,6 +31,7 @@ import {
 } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useTeamLive } from '@/lib/use-live';
 import { useProjectLive } from '@/lib/use-project-live';
 import { show as issueShow } from '@/routes/issues';
 import { show as traceShow } from '@/routes/traces';
@@ -155,6 +156,9 @@ export default function JobsIndex({
     );
     // Queue sizes come with each agent's heartbeat.
     useProjectLive(project.uuid, ['agents.changed'], ['queue_stats']);
+    // Queue alert thresholds: the project's own, and the team's rule.
+    useProjectLive(project.uuid, ['settings.changed'], ['queue_alerts']);
+    useTeamLive(['alerts.changed'], ['queue_alerts']);
 
     const apply = (changes: Partial<Filters>) => {
         const query = Object.fromEntries(

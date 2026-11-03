@@ -11,6 +11,7 @@ import {
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { useAdminLive } from '@/lib/use-live';
 import { cn } from '@/lib/utils';
 import type { Paginated } from '@/types/lumberjack';
 
@@ -28,6 +29,7 @@ const pagerClass =
 
 export default function AdminAudit({ entries }: { entries: Paginated<Entry> }) {
     const t = useT();
+    useAdminLive(['audit.changed'], ['entries']);
 
     return (
         <>

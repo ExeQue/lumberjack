@@ -511,7 +511,7 @@ export function RulesCard(
                 ) : props.scope === 'team' ? (
                     props.rules.map((rule) => (
                         <RuleRow
-                            key={rule.id}
+                            key={ruleKey(rule)}
                             rule={rule}
                             channels={channels}
                             disabled={!canAdminister}
@@ -521,7 +521,7 @@ export function RulesCard(
                     props.rules.map(({ project: own, ...row }) =>
                         own ? (
                             <RuleRow
-                                key={own.id}
+                                key={ruleKey(own)}
                                 rule={own}
                                 channels={channels}
                                 disabled={!canAdminister}
@@ -704,6 +704,11 @@ function DeliveryBadge({ channel }: { channel: Channel }) {
             )}
         </Badge>
     );
+}
+
+/** A rule row keeps what is typed in local state; it starts over when the rule changes elsewhere. */
+function ruleKey(rule: Rule): string {
+    return `${rule.id}:${JSON.stringify([rule.enabled, rule.channels, rule.environments, rule.settings])}`;
 }
 
 function RuleRow({

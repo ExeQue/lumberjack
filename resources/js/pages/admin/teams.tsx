@@ -17,6 +17,7 @@ import {
 } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
+import { useAdminLive } from '@/lib/use-live';
 import { cn } from '@/lib/utils';
 import { destroy, open, store } from '@/routes/admin/teams';
 
@@ -37,6 +38,7 @@ type Props = {
 
 export default function AdminTeams({ teams, users }: Props) {
     const t = useT();
+    useAdminLive(['teams.changed', 'users.changed'], ['teams', 'users']);
     const { auth } = usePage<{ auth: { user: { email: string } } }>().props;
     const form = useForm({ name: '', owner: auth.user.email });
 

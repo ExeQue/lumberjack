@@ -1,10 +1,12 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ChannelsCard, RulesCard } from '@/components/lj/alerts';
 import type { Channel } from '@/components/lj/alerts';
+import { LiveNotice } from '@/components/lj/live-notice';
 import { TopBar } from '@/components/lj/top-bar';
 import { Card, CardHeader, PageTitle } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
+import { useTeamLive } from '@/lib/use-live';
 import { settings as projectSettings } from '@/routes/projects';
 import type { AlertRule, TeamShared } from '@/types/lumberjack';
 
@@ -29,6 +31,11 @@ export default function Alerts({
 }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
+    const live = useTeamLive(
+        ['alerts.changed', 'projects.changed'],
+        ['channels', 'rules', 'projects'],
+        { guard: true },
+    );
 
     return (
         <>
@@ -72,6 +79,7 @@ export default function Alerts({
                     </ul>
                 </Card>
             </PageBody>
+            <LiveNotice live={live} />
         </>
     );
 }

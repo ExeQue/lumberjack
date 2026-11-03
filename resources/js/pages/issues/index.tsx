@@ -23,6 +23,7 @@ import {
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { formatNumber, formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { useTeamLive } from '@/lib/use-live';
 import { useProjectLive } from '@/lib/use-project-live';
 import {
     bulkAssign,
@@ -86,8 +87,10 @@ export default function IssuesIndex({
     useProjectLive(
         project.uuid,
         ['issues.changed', 'issue.updated'],
-        ['issues', 'counts'],
+        ['issues', 'counts', 'labels'],
     );
+    // Who issues can be assigned to.
+    useTeamLive(['members.changed'], ['members']);
 
     const apply = (changes: Partial<Filters>) => {
         const next = { ...filters, ...changes };
