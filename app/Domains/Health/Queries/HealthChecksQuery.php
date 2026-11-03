@@ -13,6 +13,8 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Enums\Period;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 /**
  * A project's checks as the Health page, the overview and MCP show them: their live
@@ -21,6 +23,8 @@ use Illuminate\Support\Collection;
 class HealthChecksQuery
 {
     /** States from most to least in need of attention. */
+    public const int STATES_CACHE_SECONDS = 10;
+
     private const array SEVERITY = ['down', 'degraded', 'recovering', 'stale', 'pending', 'ok'];
 
     /**
@@ -86,11 +90,62 @@ class HealthChecksQuery
     }
 
     /**
+     * Where the project's reported checks stand, for the app itself: the heartbeat's
+     * answer and GET /api/health. Cached briefly, as every agent asks once a minute; a
+     * result that moves a check starts a fresh cache through forgetStates().
+     *
+     * @return array{checks: list<array{slug: string, environment: string|null, state: string, since: string|null, message: string|null, hosts?: list<array{host: string|null, state: string}>}>, at: string}
+     */
+    public function states(Project $project, ?string $environment = null): array
+    {
+        $version = (string) Cache::get(self::statesVersionKey($project->id), '0');
+
+        return Cache::remember("health:states:{$project->id}:{$version}:".($environment ?? '*'), self::STATES_CACHE_SECONDS, fn (): array => [
+            'checks' => array_values($this->checks($project, $environment, archived: false)
+                ->filter(fn (HealthCheck $check): bool => $check->isReported() && $check->slug !== null)
+                ->map(fn (HealthCheck $check): array => $this->stateRow($check))
+                ->all()),
+            'at' => now()->toIso8601String(),
+        ]);
+    }
+
+    public static function forgetStates(int $projectId): void
+    {
+        Cache::forever(self::statesVersionKey($projectId), Str::random(8));
+    }
+
+    /**
      * "ok", "recovering", "degraded", "down", "stale" or "pending" (nothing reported yet).
      */
     public static function state(HealthCheck $check): string
     {
         return $check->isStale() ? 'stale' : ($check->liveStatus()->value ?? 'pending');
+    }
+
+    /**
+     * @return array{slug: string, environment: string|null, state: string, since: string|null, message: string|null, hosts?: list<array{host: string|null, state: string}>}
+     */
+    private function stateRow(HealthCheck $check): array
+    {
+        $state = self::state($check);
+
+        return [
+            'slug' => (string) $check->slug,
+            'environment' => $check->environment !== '' ? $check->environment : null,
+            'state' => $state,
+            // A stale check went quiet after its last result, whatever its status was.
+            'since' => ($state === 'stale' ? $check->last_result_at : $check->status_changed_at)?->toIso8601String(),
+            'message' => $check->hosts->sortByDesc('last_result_at')->first()?->last_message,
+            ...($check->hosts->count() > 1 ? ['hosts' => array_values($check->hosts->map(fn (HealthCheckHost $h): array => [
+                'host' => $h->host !== '' ? $h->host : null,
+                'state' => $h->isStale() ? 'stale' : ($h->status->value ?? 'pending'),
+            ])->all())] : []),
+        ];
+    }
+
+    private static function statesVersionKey(int $projectId): string
+    {
+        return "health:states:{$projectId}:version";
     }
 
     /**

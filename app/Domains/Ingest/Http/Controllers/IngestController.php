@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Ingest\Http\Controllers;
 
+use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Ingest\Http\Requests\BrowserIngestRequest;
 use App\Domains\Ingest\Http\Requests\HeartbeatRequest;
 use App\Domains\Ingest\Http\Requests\IngestBatchRequest;
@@ -46,7 +47,7 @@ class IngestController
         return response()->noContent()->withHeaders($this->corsHeaders((string) $request->header('Origin')));
     }
 
-    public function heartbeat(HeartbeatRequest $request, RecordAgentHeartbeatAction $action, RecordQueueSamplesAction $queues, RecordHostSampleAction $hostSample, BroadcastProjectChangeAction $broadcast): JsonResponse
+    public function heartbeat(HeartbeatRequest $request, RecordAgentHeartbeatAction $action, RecordQueueSamplesAction $queues, RecordHostSampleAction $hostSample, BroadcastProjectChangeAction $broadcast, HealthChecksQuery $health): JsonResponse
     {
         $project = $request->project();
         $host = $request->string('host')->toString();
@@ -55,7 +56,8 @@ class IngestController
         $queues->execute($project, $host, $request->queues());
         $broadcast->execute($project->id, ChangeKind::Agents);
 
-        return response()->json(['ok' => true]);
+        // The app reads its health check states back from this answer, through the agent.
+        return response()->json(['ok' => true, 'health' => $health->states($project, $request->environment())]);
     }
 
     /**
