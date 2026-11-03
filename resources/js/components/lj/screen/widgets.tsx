@@ -365,8 +365,8 @@ export function WidgetTile({
             data-status={status ?? undefined}
             data-flash={flash || undefined}
             style={{
-                gridColumn: `span ${widget.w}`,
-                gridRow: `span ${widget.h}`,
+                gridColumn: `${widget.x + 1} / span ${widget.w}`,
+                gridRow: `${widget.y + 1} / span ${widget.h}`,
                 textAlign: align,
                 ['--lj-text-scale' as string]: TEXT_SCALE[textSize] ?? 1,
                 visibility: hidden && !designer ? 'hidden' : undefined,

@@ -3,7 +3,7 @@ import { useEcho } from '@laravel/echo-react';
 import { useEffect, useRef, useState } from 'react';
 import { LogMark } from '@/components/lj/logo';
 import { useNow } from '@/components/lj/relative';
-import { placements, themeAt } from '@/components/lj/screen/lib';
+import { fits, themeAt } from '@/components/lj/screen/lib';
 import type {
     Schema,
     Screen,
@@ -132,8 +132,10 @@ export default function Kiosk({
 
     const theme = themeAt(screen, now);
     const [dx, dy] = SHIFTS[Math.floor(now / SHIFT_EVERY_MS) % SHIFTS.length];
-    const place = placements(screen.widgets, screen.cols, screen.rows);
-    const shown = screen.widgets.filter((_, i) => place[i].fits);
+    // A widget outside the grid (the grid got smaller) waits in the designer.
+    const shown = screen.widgets.filter((w) =>
+        fits(w, screen.cols, screen.rows),
+    );
     const attention = shown.filter(
         (w) => statuses[w.id] === 'down' || statuses[w.id] === 'degraded',
     ).length;

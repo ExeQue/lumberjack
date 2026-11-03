@@ -332,67 +332,110 @@ export function newWidgetId(): string {
     return 'w' + Math.random().toString(36).slice(2, 10);
 }
 
-/** Cells the widgets need, each counted at most the size of the grid. */
-export function cellsUsed(
-    widgets: Widget[],
-    cols: number,
-    rows: number,
-): number {
-    return widgets.reduce(
-        (n, w) => n + Math.min(w.w, cols) * Math.min(w.h, rows),
-        0,
+type Box = Pick<Widget, 'x' | 'y' | 'w' | 'h'>;
+
+/** Whether a widget lies inside the grid, so the TV shows it. */
+export function fits(box: Box, cols: number, rows: number): boolean {
+    return (
+        box.x >= 0 &&
+        box.y >= 0 &&
+        box.x + box.w <= cols &&
+        box.y + box.h <= rows
     );
 }
 
-/**
- * Where each widget lands, the way the CSS grid places them (row by row, in order, no
- * gap filling behind the last one placed), and whether it lands inside the screen's
- * rows. A widget wider than the grid is clamped to it, as on the TV.
- */
-export function placements(
+/** Whether no widget but `except` covers a cell of the box, inside the grid or not. */
+export function isFree(widgets: Widget[], box: Box, except?: string): boolean {
+    return widgets.every(
+        (o) =>
+            o.id === except ||
+            o.x >= box.x + box.w ||
+            box.x >= o.x + o.w ||
+            o.y >= box.y + box.h ||
+            box.y >= o.y + o.h,
+    );
+}
+
+/** Whether a widget can go there: inside the grid, on cells no other widget covers. */
+export function canPlace(
     widgets: Widget[],
     cols: number,
     rows: number,
-): { row: number; col: number; fits: boolean }[] {
-    const taken = new Set<string>();
-    let cursorRow = 0;
-    let cursorCol = 0;
+    box: Box,
+    except?: string,
+): boolean {
+    return fits(box, cols, rows) && isFree(widgets, box, except);
+}
 
-    return widgets.map((widget) => {
-        const w = Math.min(widget.w, cols);
-        const h = Math.min(widget.h, rows);
-        const free = (row: number, col: number) => {
-            for (let r = row; r < row + h; r++) {
-                for (let c = col; c < col + w; c++) {
-                    if (taken.has(`${r}:${c}`)) {
-                        return false;
-                    }
+/** The first free spot for a w x h widget, row by row, or null when there is none. */
+export function firstFree(
+    widgets: Widget[],
+    cols: number,
+    rows: number,
+    w: number,
+    h: number,
+): { x: number; y: number } | null {
+    for (let y = 0; y + h <= rows; y++) {
+        for (let x = 0; x + w <= cols; x++) {
+            if (isFree(widgets, { x, y, w, h })) {
+                return { x, y };
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * The widgets on a new grid size: none larger than the grid, those that still fit stay,
+ * the others move just far enough back inside when those cells are free, or wait below
+ * the grid (kept, not shown on the TV) until there is room again.
+ */
+export function regrid(
+    widgets: Widget[],
+    cols: number,
+    rows: number,
+): Widget[] {
+    const result = widgets.map((w) => ({
+        ...w,
+        w: Math.min(w.w, cols),
+        h: Math.min(w.h, rows),
+    }));
+
+    result.forEach((widget, i) => {
+        if (fits(widget, cols, rows)) {
+            return;
+        }
+
+        const clamped = {
+            ...widget,
+            x: Math.max(0, Math.min(widget.x, cols - widget.w)),
+            y: Math.max(0, Math.min(widget.y, rows - widget.h)),
+        };
+
+        if (isFree(result, clamped, widget.id)) {
+            result[i] = clamped;
+
+            return;
+        }
+
+        // ponytail: scans down from the grid's last row, at most 48 widgets
+        for (let y = rows; ; y++) {
+            for (let x = 0; x + widget.w <= cols; x++) {
+                if (
+                    isFree(
+                        result,
+                        { x, y, w: widget.w, h: widget.h },
+                        widget.id,
+                    )
+                ) {
+                    result[i] = { ...widget, x, y };
+
+                    return;
                 }
             }
-
-            return true;
-        };
-        let row = cursorRow;
-        let col = cursorCol;
-
-        while (col + w > cols || !free(row, col)) {
-            col++;
-
-            if (col + w > cols) {
-                col = 0;
-                row++;
-            }
         }
-
-        for (let r = row; r < row + h; r++) {
-            for (let c = col; c < col + w; c++) {
-                taken.add(`${r}:${c}`);
-            }
-        }
-
-        cursorRow = row;
-        cursorCol = col + w;
-
-        return { row, col, fits: row + h <= rows };
     });
+
+    return result;
 }

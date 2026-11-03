@@ -51,7 +51,7 @@ type Template = {
     description: string;
     cols: number;
     rows: number;
-    widgets: { type: string; w: number; h: number }[];
+    widgets: { type: string; x: number; y: number; w: number; h: number }[];
 };
 
 /** A thumbnail of a template's grid: each widget a block, tinted by its kind. */
@@ -87,8 +87,8 @@ function TemplatePreview({ template }: { template: Template }) {
                           key={i}
                           className={`rounded-[2px] ${tint[w.type] ?? 'bg-panel-2'}`}
                           style={{
-                              gridColumn: `span ${w.w}`,
-                              gridRow: `span ${w.h}`,
+                              gridColumn: `${w.x + 1} / span ${w.w}`,
+                              gridRow: `${w.y + 1} / span ${w.h}`,
                           }}
                       />
                   ))}

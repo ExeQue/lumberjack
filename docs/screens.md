@@ -38,21 +38,31 @@ last change is saved and on how many screens it is live right now.
 ### The grid
 
 A screen is a grid of 2 to 12 columns and 2 to 6 rows, and the TV shows exactly that
-grid, so a widget's size in cells is its size on the TV. Widgets fill the grid in order,
-row by row, and keep their order: an empty cell holds its place.
+grid, so a widget's size in cells is its size on the TV. Each widget sits on the cells
+you put it on; cells no widget covers simply stay empty on the TV.
 
-- **Add**: drag a widget type from the left onto the grid (before the widget you drop
-  it on, or at the end), or click it to add it at the end. The search field finds a type
+- **Add**: drag a widget type from the left onto any free cell, or click it to add it
+  in the first free spot (row by row from the top left). The search field finds a type
   by what it can show, so "queue" finds Stat, Gauge, Chart and List.
-- **Move**: drag a widget onto another to put it there.
-- **Resize**: drag its bottom right corner; sizes follow whole cells. The **Size**
-  buttons in its settings are shortcuts for 1 x 1, 2 x 1, 2 x 2 and 4 x 2.
-- **Keyboard**: with a widget focused, the arrow keys move it, Shift and the arrows
-  resize it, Delete removes it and Escape shows the screen's settings.
+- **Move**: drag a widget to other cells. While you drag, every cell of the grid shows
+  as a drop zone and the widget's footprint follows the pointer: green where it fits,
+  red where it would cover another widget or reach past the grid. A red drop is refused
+  and the widget stays where it was.
+- **Resize**: drag any edge or corner; sizes follow whole cells, and the left and top
+  edges move the widget as they resize it. A widget only grows into free cells. The
+  **Size** buttons in its settings are shortcuts for 1 x 1, 2 x 1, 2 x 2 and 4 x 2 (a
+  size without room is grayed out).
+- **Keyboard**: with a widget focused, the arrow keys move it one cell, Shift and the
+  arrows resize it (both only into free cells), Delete removes it and Escape shows the
+  screen's settings.
 
-When the widgets need more cells than the grid has, the designer says how many do not
-fit; those are dimmed and do not show on the TV. Making the grid smaller shrinks widgets
-that would be larger than it.
+![Dragging a widget onto a free cell](./screenshots/screen-designer-drop.png)
+
+Making the grid smaller shrinks widgets larger than it, and moves a widget that no
+longer fits just far enough back inside when those cells are free. Any other widget is
+kept, not deleted: the designer lists it above the grid as not fitting (it does not
+show on the TV) until you drag it back onto free cells, make the grid larger again or
+remove it.
 
 **Show an incident** previews the screen in trouble (the first issue escalating, a
 check down, values past their limits), so the colors and rotation can be judged before
@@ -79,7 +89,6 @@ A widget is a way of showing something; what it shows is picked under **Shows**.
 | List           | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents.                                                                                                                |
 | Health         | The health checks of the projects: a count at 1 x 1, a list when narrow, small cards when two or more fit side by side. With exactly one check picked, that check alone with its uptime, timeline and last message.             |
 | Clock and text | The time (12 or 24 hour, any time zone, with seconds or the date), a note for the room, or both.                                                                                                                                |
-| Empty cell     | A gap of any size; dashed in the designer, invisible on the TV.                                                                                                                                                                 |
 
 A list of queues judges each queue like its [backlog alert](./alerts#queue-backlog): red
 past the project's thresholds (its own for that queue, or the rule's: 1,000 jobs or 10
@@ -110,6 +119,11 @@ Each widget's settings are grouped in sections that open and close:
   the text size (fitted to the tile, or small to huge), alignment (left or centered, top or vertically centered), how often it updates
   (live, every minute, every 5 minutes), and whether to hide it while all is ok or while
   it has nothing to show.
+
+Older screens may still have an **Empty cell** widget, from when widgets filled the grid
+in order and a gap needed a filler. It still works (dashed in the designer, invisible
+on the TV), but it is no longer offered: a free cell is empty on its own, so it can be
+removed.
 
 ### Status colors
 

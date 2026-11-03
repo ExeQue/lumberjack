@@ -4,6 +4,9 @@ export type Widget = {
     type: WidgetKind;
     source: string | null;
     rotate: string[];
+    /** 0-based column and row of its top left cell. */
+    x: number;
+    y: number;
     w: number;
     h: number;
     title: string | null;
