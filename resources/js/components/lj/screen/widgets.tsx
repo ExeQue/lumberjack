@@ -21,6 +21,13 @@ import type { Schema, Sources, Status, Widget, WidgetData } from './types';
 type Payload = Record<string, unknown>;
 type Translate = ReturnType<typeof useT>;
 
+/** A translation, or the fallback when the key has none. */
+function orKey(t: Translate, key: string, fallback: string): string {
+    const text = t(key);
+
+    return text === key ? fallback : text;
+}
+
 /** Status words and colors per check state, worst first. */
 const STATE_COLOR: Record<string, string> = {
     down: 'var(--s-red)',
@@ -269,7 +276,20 @@ export function WidgetTile({
         >
             {decoration}
             {showTitle && widget.type !== 'empty' && title && (
-                <span className="lj-tile-title">{title}</span>
+                <div className="flex items-baseline justify-between gap-[0.6em]">
+                    <span className="lj-tile-title min-w-0 truncate">
+                        {title}
+                    </span>
+                    {widget.type === 'list' && sourceId && (
+                        <span className="lj-tile-small whitespace-nowrap">
+                            {orKey(
+                                t,
+                                `screens.list.sort_hint.${sourceId}.${opt<string>('sort') ?? 'default'}`,
+                                t(`screens.list.sort_hint.${sourceId}.default`),
+                            )}
+                        </span>
+                    )}
+                </div>
             )}
             <div
                 key={sourceId ?? 'tile'}
@@ -717,30 +737,47 @@ type Row = Record<string, string | number | boolean | null | undefined> & {
     project?: string;
 };
 
-/** A list row as text: what leads, what follows, and how old it is. */
-function rowText(
-    source: string,
-    row: Row,
-    t: Translate,
-): { main: string; count?: string; at?: string } {
+/** A list row as columns: a short key, the text, a colored tag, a count and its age. */
+type RowText = {
+    key?: string;
+    main: string;
+    tag?: { text: string; tone: string | null };
+    count?: string;
+    at?: string;
+};
+
+function rowText(source: string, row: Row, t: Translate): RowText {
     const percent = (v: unknown) =>
         v === null || v === undefined ? '-' : formatPercent(Number(v), 0);
+    const tone = row.state ?? null;
 
     switch (source) {
         case 'latest_issues':
             return {
-                main: [
-                    row.reference,
+                key: (row.reference as string) ?? undefined,
+                main: String(
                     row.title ?? t(`screens.list.issue_status.${row.status}`),
-                ]
-                    .filter(Boolean)
-                    .join(' '),
+                ),
+                tag: {
+                    text:
+                        tone === 'red'
+                            ? t('screens.list.escalating')
+                            : tone === 'amber'
+                              ? t('screens.list.regressed')
+                              : t(`screens.list.issue_status.${row.status}`),
+                    tone,
+                },
                 count: `× ${row.occurrences}`,
                 at: row.last_seen_at as string,
             };
         case 'alert_feed':
             return {
-                main: [row.issue, row.channel].filter(Boolean).join(' · '),
+                main: String(row.issue ?? ''),
+                key: (row.channel as string) ?? undefined,
+                tag:
+                    tone === 'red'
+                        ? { text: String(row.status), tone }
+                        : undefined,
                 at: row.sent_at as string,
             };
         case 'failed_jobs':
@@ -751,22 +788,30 @@ function rowText(
             };
         case 'scheduled_tasks':
             return {
-                main:
-                    (row.state === 'red'
-                        ? '✕ '
-                        : row.state === 'amber'
-                          ? '! '
-                          : '✓ ') + String(row.name),
+                key: tone === 'red' ? '✕' : tone === 'amber' ? '!' : '✓',
+                main: String(row.name),
+                tag: row.status
+                    ? {
+                          text: orKey(
+                              t,
+                              `screens.list.task_status.${row.status}`,
+                              String(row.status),
+                          ),
+                          tone: tone ?? 'ok',
+                      }
+                    : undefined,
                 at: (row.last_run_at as string) ?? undefined,
             };
         case 'slowest_routes':
             return {
-                main: `${formatValue(row.p95, 'ms')}  ${row.method} ${row.route}`,
+                key: formatValue(row.p95, 'ms'),
+                main: `${row.method} ${row.route}`,
                 count: `× ${row.requests}`,
             };
         case 'queues':
             return {
-                main: `${row.queue} · ${row.size ?? '-'}`,
+                key: String(row.queue),
+                main: String(row.size ?? '-'),
                 count:
                     row.oldest_age_s !== null && row.oldest_age_s !== undefined
                         ? t('screens.list.oldest', {
@@ -776,8 +821,8 @@ function rowText(
             };
         case 'hosts':
             return {
-                main: t('screens.list.host', {
-                    host: String(row.host),
+                key: String(row.host),
+                main: t('screens.list.host_usage', {
                     cpu: percent(row.cpu_load),
                     memory: percent(row.memory_used),
                     disk: percent(row.disk_used),
@@ -785,7 +830,8 @@ function rowText(
             };
         case 'agents':
             return {
-                main: `● ${[row.host, row.name].filter(Boolean).join(' · ')}`,
+                key: '●',
+                main: [row.host, row.name].filter(Boolean).join(' · '),
                 at: row.last_seen_at as string,
             };
         default:
@@ -810,11 +856,22 @@ function List({ widget, schema, data, now, t }: BodyProps) {
                 return (
                     <li
                         key={i}
-                        className="flex items-baseline gap-[0.6em] border-t border-(--s-line) py-[0.25em] first:border-t-0"
-                        style={{
-                            color: ROW_COLOR[row.state ?? ''] ?? undefined,
-                        }}
+                        className="flex items-baseline gap-[0.8em] border-t border-(--s-line) py-[0.35em] first:border-t-0"
                     >
+                        {text.key && (
+                            <span
+                                className="w-[6.5em] flex-none truncate font-mono text-(--s-ink-2)"
+                                style={{
+                                    color:
+                                        text.key.length <= 1
+                                            ? (ROW_COLOR[row.state ?? 'ok'] ??
+                                              undefined)
+                                            : undefined,
+                                }}
+                            >
+                                {text.key}
+                            </span>
+                        )}
                         <span
                             className={cn(
                                 'min-w-0 flex-1',
@@ -828,13 +885,25 @@ function List({ widget, schema, data, now, t }: BodyProps) {
                             )}
                             {text.main}
                         </span>
+                        {text.tag && (
+                            <span
+                                className="flex-none text-[0.85em] font-semibold whitespace-nowrap"
+                                style={{
+                                    color:
+                                        ROW_COLOR[text.tag.tone ?? ''] ??
+                                        'var(--s-ink-2)',
+                                }}
+                            >
+                                {text.tag.text}
+                            </span>
+                        )}
                         {opt<boolean>('show_count') !== false && text.count && (
-                            <span className="font-mono text-[0.85em] text-(--s-ink-3)">
+                            <span className="flex-none font-mono text-[0.85em] text-(--s-ink-3)">
                                 {text.count}
                             </span>
                         )}
                         {opt<boolean>('show_age') !== false && text.at && (
-                            <span className="font-mono text-[0.85em] whitespace-nowrap text-(--s-ink-3)">
+                            <span className="flex-none font-mono text-[0.85em] whitespace-nowrap text-(--s-ink-3)">
                                 {lasted(text.at, now)}
                             </span>
                         )}
