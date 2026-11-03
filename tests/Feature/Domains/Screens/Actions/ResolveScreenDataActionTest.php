@@ -83,6 +83,31 @@ describe('a screen\'s data', function () {
             ->and($calls['apdex'])->toEqual([Period::Hour, ['compare' => 'none', 'red' => 50.0, 'sparkline' => true]]);
     });
 
+    it('resolves each health value with its own checks, under source#index past the first', function () {
+        $this->screen->update(['widgets' => [
+            ['id' => 'h', 'type' => 'health', 'source' => 'checks', 'w' => 1, 'h' => 1, 'title' => null, 'options' => ['checks' => ['u1'], 'only_problems' => true], 'scope' => [], 'rotate' => [
+                ['source' => 'checks', 'options' => ['checks' => ['u2']]],
+                'checks',
+            ]],
+        ]]);
+        $calls = [];
+        $this->mock(ResolveWidgetDataAction::class)->shouldReceive('execute')
+            ->andReturnUsing(function (Team $team, WidgetType $type, string $source, WidgetScope $scope, array $options) use (&$calls): array {
+                $calls[] = [$source, $options];
+
+                return ['checks' => $options['checks'] ?? null];
+            });
+
+        $data = app(ResolveScreenDataAction::class)->execute($this->screen);
+
+        expect($data['h'])->toBe(['checks' => ['checks' => ['u1']], 'checks#1' => ['checks' => ['u2']], 'checks#2' => ['checks' => []]])
+            ->and($calls)->toBe([
+                ['checks', ['checks' => ['u1'], 'only_problems' => true]],
+                ['checks', ['checks' => ['u2'], 'only_problems' => true]],
+                ['checks', ['checks' => [], 'only_problems' => true]],
+            ]);
+    });
+
     it('answers one widget alone', function () {
         expect(array_keys(app(ResolveScreenDataAction::class)->execute($this->screen, 'b')))->toBe(['b']);
     });

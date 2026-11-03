@@ -28,7 +28,7 @@ class ResolveScreenDataAction
     }
 
     /**
-     * @return array<string, array<string, array<string, mixed>|null>>  by widget id, then source id; null where it failed
+     * @return array<string, array<string, array<string, mixed>|null>>  by widget id, then source id (source#index for a repeated one); null where it failed
      */
     public function execute(Screen $screen, ?string $widgetId = null, bool $aggregatesOnly = false): array
     {
@@ -42,13 +42,17 @@ class ResolveScreenDataAction
             }
 
             // Each value of a rotation with its own options and period over the widget's.
-            foreach (WidgetSchema::rotation($widget) as $item) {
+            $items = WidgetSchema::rotation($widget);
+
+            foreach ($items as $i => $item) {
                 $source = $item['source'];
+                // A repeated source (health values differ by their checks) answers as source#index.
+                $at = array_search($source, array_column($items, 'source'), true) === $i ? $source : "{$source}#{$i}";
                 $scope = $this->scope($screen, [...$widget, 'scope' => [...(array) ($widget['scope'] ?? []), ...$item['scope']]]);
                 $options = $this->options($type, [...(array) ($widget['options'] ?? []), ...$item['options']]);
                 $key = 'screen-data:'.md5(serialize([$screen->team_id, $type->value, $source, $scope, $options, $aggregatesOnly]));
 
-                $data[$widget['id']][$source] = Cache::remember($key, self::CACHE_SECONDS, function () use ($screen, $type, $source, $scope, $options, $aggregatesOnly): ?array {
+                $data[$widget['id']][$at] = Cache::remember($key, self::CACHE_SECONDS, function () use ($screen, $type, $source, $scope, $options, $aggregatesOnly): ?array {
                     try {
                         return $this->resolveWidgetData->execute($screen->team, $type, $source, $scope, $options, $aggregatesOnly);
                     } catch (Throwable $e) {

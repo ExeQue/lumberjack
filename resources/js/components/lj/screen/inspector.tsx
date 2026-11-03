@@ -160,6 +160,8 @@ export function WidgetInspector({
     };
 
     const rotating = ROTATING_KINDS.includes(widget.type);
+    // Health's values all show its one source, told apart by their checks.
+    const repeats = widget.type === 'health';
     const items = rotating ? rotationOf(widget) : [];
     const rotated = items.slice(1);
     const active = Math.min(tab, Math.max(0, items.length - 1));
@@ -200,7 +202,7 @@ export function WidgetInspector({
     const arrange = (order: RotateItem[]) => {
         const [lead, ...rest] = order;
 
-        if (lead.source === widget.source) {
+        if (lead === items[0]) {
             setRotate(rest);
 
             return;
@@ -212,6 +214,16 @@ export function WidgetInspector({
             ...lead.options,
         };
         delete options.source_seconds;
+
+        // A health value's checks are its own, never the widget's: the old first keeps
+        // its checks, the new first brings its own (none for all checks).
+        if (repeats) {
+            delete options.checks;
+
+            if (lead.options?.checks) {
+                options.checks = lead.options.checks;
+            }
+        }
 
         if (lead.seconds) {
             options.source_seconds = lead.seconds;
@@ -248,9 +260,13 @@ export function WidgetInspector({
                     options: {
                         ...Object.fromEntries(
                             Object.keys(lead.options ?? {})
+                                .filter((key) => !repeats || key !== 'checks')
                                 .map((key) => [key, before(r, key)])
                                 .filter(([, v]) => v !== undefined),
                         ),
+                        ...(repeats && r === items[0]
+                            ? { checks: widget.options.checks }
+                            : {}),
                         ...r.options,
                     },
                 }))
@@ -269,8 +285,29 @@ export function WidgetInspector({
         onTab(Math.min(index, items.length - 2));
     };
     const unused = pool.find((s) => !items.some((i) => i.source === s.id));
+    // The checks a value shows; on the first tab the widget's own.
+    const checksOf = (r: RotateItem, i: number) =>
+        ((i === 0 ? widget.options.checks : r.options?.checks) as
+            | string[]
+            | undefined) ?? [];
+    // The next check not on a tab yet, else none picked (all checks).
+    const nextCheck = catalog.checks.find(
+        (c) => !items.some((r, i) => checksOf(r, i).includes(c.uuid)),
+    );
+    const canAdd = (repeats || unused) && rotated.length < MAX_ROTATE;
     const addValue = () => {
-        if (unused) {
+        if (repeats && widget.source) {
+            setRotate([
+                ...rotated,
+                {
+                    source: widget.source,
+                    options: nextCheck
+                        ? { checks: [nextCheck.uuid] }
+                        : undefined,
+                },
+            ]);
+            onTab(items.length);
+        } else if (unused) {
             setRotate([...rotated, { source: unused.id }]);
             onTab(items.length);
         }
@@ -549,7 +586,7 @@ export function WidgetInspector({
                                         title={check.project ?? undefined}
                                         className={cn(chip(on), 'font-mono')}
                                         onClick={() =>
-                                            setOption(
+                                            target.set(
                                                 field.key,
                                                 on
                                                     ? picked.filter(
@@ -772,8 +809,23 @@ export function WidgetInspector({
         (target.values.low_is_bad as boolean | undefined) ??
         (widget.options.low_is_bad as boolean | undefined) ??
         valueSource?.low_is_bad;
-    const label = (r: RotateItem) =>
-        r.title ?? pool.find((s) => s.id === r.source)?.label ?? r.source;
+    // A health value is named after its checks: one by name, else how many, else all.
+    const checksLabel = (picked: string[]) =>
+        picked.length === 0
+            ? t('screens.inspector.all_checks')
+            : picked.length === 1
+              ? (catalog.checks.find((c) => c.uuid === picked[0])?.name ??
+                t('screens.inspector.some_checks', { count: 1 }, 1))
+              : t(
+                    'screens.inspector.some_checks',
+                    { count: picked.length },
+                    picked.length,
+                );
+    const label = (r: RotateItem, i: number) =>
+        r.title ??
+        (repeats
+            ? checksLabel(checksOf(r, i))
+            : (pool.find((s) => s.id === r.source)?.label ?? r.source));
     const sections = schema[widget.type] ?? [];
     const [valueSection, ...rest] = sections;
     const whole = rest.filter((s) => s.id !== 'rotation' || items.length > 1);
@@ -820,7 +872,9 @@ export function WidgetInspector({
                         id={vid('title')}
                         value={(first ? widget.title : item.title) ?? ''}
                         placeholder={
-                            valueSource?.label ??
+                            (repeats && item
+                                ? checksLabel(checksOf(item, active))
+                                : valueSource?.label) ??
                             t(`screens.kinds.${widget.type}`)
                         }
                         onChange={(e) =>
@@ -992,14 +1046,14 @@ export function WidgetInspector({
                         >
                             {items.map((r, i) => (
                                 <button
-                                    key={r.source}
+                                    key={i}
                                     type="button"
                                     role="tab"
                                     id={id(`tab-${i}`)}
                                     aria-selected={i === active}
                                     aria-controls={id('panel')}
                                     tabIndex={i === active ? 0 : -1}
-                                    title={label(r)}
+                                    title={label(r, i)}
                                     draggable={items.length > 1}
                                     onDragStart={(e) => {
                                         e.dataTransfer.setData(
@@ -1035,7 +1089,7 @@ export function WidgetInspector({
                                             : 'border-transparent text-ink-3 hover:text-ink',
                                     )}
                                 >
-                                    {label(r)}
+                                    {label(r, i)}
                                 </button>
                             ))}
                         </div>
@@ -1043,7 +1097,7 @@ export function WidgetInspector({
                             type="button"
                             aria-label={t('screens.inspector.add_value')}
                             title={t('screens.inspector.add_value')}
-                            disabled={!unused || rotated.length >= MAX_ROTATE}
+                            disabled={!canAdd}
                             className="mb-0.5 flex-none rounded px-2 py-1 text-sm text-ink-3 hover:text-ink disabled:opacity-30"
                             onClick={addValue}
                         >

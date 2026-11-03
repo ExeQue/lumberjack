@@ -92,7 +92,11 @@ export function rotationOf(widget: Widget): RotateItem[] {
         for (const entry of widget.rotate ?? []) {
             const item = typeof entry === 'string' ? { source: entry } : entry;
 
-            if (!items.some((i) => i.source === item.source)) {
+            // Health's values all show its one source, told apart by their checks.
+            if (
+                widget.type === 'health' ||
+                !items.some((i) => i.source === item.source)
+            ) {
                 items.push(item);
             }
         }
@@ -101,9 +105,16 @@ export function rotationOf(widget: Widget): RotateItem[] {
     return items;
 }
 
-/** The sources a tile shows in turn: the picked one first, then those it rotates through. */
-export function sourcesOf(widget: Widget): string[] {
-    return rotationOf(widget).map((item) => item.source);
+/**
+ * Where the data endpoint answers each value: its source, or source#index for a source
+ * an earlier value already shows (see ResolveScreenDataAction).
+ */
+export function keysOf(items: RotateItem[]): string[] {
+    return items.map((item, i) =>
+        items.findIndex((r) => r.source === item.source) === i
+            ? item.source
+            : `${item.source}#${i}`,
+    );
 }
 
 /** The option fields a rotated value can set for itself: its type's first section. */
@@ -111,17 +122,27 @@ export function itemFieldsOf(schema: Schema, kind: WidgetKind): SchemaField[] {
     return schema[kind]?.[0]?.fields ?? [];
 }
 
-/** The widget as it shows one value of its rotation: that value's settings over its own. */
+/**
+ * The widget as it shows a rotated value (not its first, which is the widget itself):
+ * that value's settings over its own. A health value's checks are its own, none picked
+ * meaning all of them.
+ */
 export function shownAs(widget: Widget, item: RotateItem | undefined): Widget {
-    if (!item || item.source === widget.source) {
+    if (!item) {
         return widget;
+    }
+
+    const options = { ...widget.options, ...item.options };
+
+    if (widget.type === 'health' && !item.options?.checks) {
+        delete options.checks;
     }
 
     return {
         ...widget,
         source: item.source,
         title: item.title ?? null,
-        options: { ...widget.options, ...item.options },
+        options,
         scope: { ...widget.scope, ...item.scope },
     };
 }
@@ -201,27 +222,35 @@ export function needsAttention(status: Status): boolean {
     return status === 'down' || status === 'degraded';
 }
 
+/** Whether a value holds a rotation: it needs attention, or a check it shows is degraded. */
+function holds(kind: WidgetKind, data: Payload | null | undefined): boolean {
+    const summary = data?.summary as Record<string, number> | undefined;
+
+    return (
+        needsAttention(statusOf(kind, data)) ||
+        (kind === 'health' && (summary?.degraded ?? 0) > 0)
+    );
+}
+
 /**
- * Which source a rotating tile shows at this moment, each for its own seconds. Every
- * tile and every kiosk counts from the same clock, so tiles with the same timing switch
- * together; one that needs attention holds.
+ * Which value a rotating tile shows at this moment, by its data key (keysOf), each for
+ * its own seconds. Every tile and every kiosk counts from the same clock, so tiles with
+ * the same timing switch together; one that needs attention holds.
  */
 export function rotationIndex(
     kind: WidgetKind,
-    sources: string[],
+    keys: string[],
     data: WidgetData | undefined,
     seconds: number[],
     hold: boolean,
     now: number,
 ): number {
-    if (sources.length < 2) {
+    if (keys.length < 2) {
         return 0;
     }
 
     if (hold) {
-        const bad = sources.findIndex((id) =>
-            needsAttention(statusOf(kind, data?.[id])),
-        );
+        const bad = keys.findIndex((key) => holds(kind, data?.[key]));
 
         if (bad >= 0) {
             return bad;
@@ -229,7 +258,7 @@ export function rotationIndex(
     }
 
     // Each value shows for its own seconds; a cycle is their sum.
-    const spans = sources.map((_, i) => Math.max(1, seconds[i] ?? 10));
+    const spans = keys.map((_, i) => Math.max(1, seconds[i] ?? 10));
     let at = (now / 1000) % spans.reduce((sum, s) => sum + s, 0);
 
     for (let i = 0; i < spans.length; i++) {

@@ -73,12 +73,20 @@ describe('validating a widget', function () {
         'a rotated value shown for no time' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'seconds' => 0]], 'w' => 1, 'h' => 1], 'w.rotate.0.seconds'],
         'a rotated value with a limit that is no number' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'options' => ['red' => 'high']]], 'w' => 1, 'h' => 1], 'w.rotate.0.options.red'],
         'a rotated value over an unknown period' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'scope' => ['period' => '2y']]], 'w' => 1, 'h' => 1], 'w.rotate.0.scope.period'],
+        'a rotated health value with a check that is no uuid' => [['id' => 'e', 'type' => 'health', 'source' => 'checks', 'rotate' => [['source' => 'checks', 'options' => ['checks' => ['x']]]], 'w' => 1, 'h' => 1], 'w.rotate.0.options.checks.0'],
     ]);
 
     it('takes rotated values as ids and as objects with settings of their own', function () use ($validate) {
         expect($validate(['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'w' => 1, 'h' => 1, 'options' => ['source_seconds' => 20], 'rotate' => [
             'apdex',
             ['source' => 'requests', 'seconds' => 30, 'title' => 'Traffic', 'options' => ['amber' => 100, 'red' => 200, 'low_is_bad' => true, 'suffix' => ' rpm'], 'scope' => ['period' => '24h']],
+        ]]))->toBe([]);
+    });
+
+    it('takes health values that repeat its source with checks of their own', function () use ($validate) {
+        expect($validate(['id' => 'e', 'type' => 'health', 'source' => 'checks', 'w' => 1, 'h' => 1, 'options' => ['checks' => ['8a3a9c5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e']], 'rotate' => [
+            ['source' => 'checks', 'seconds' => 5, 'options' => ['checks' => ['9b4b0d6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f'], 'show_uptime' => false]],
+            'checks',
         ]]))->toBe([]);
     });
 });
@@ -122,6 +130,29 @@ describe('storing a widget', function () {
                 ['source' => 'requests', 'seconds' => 30, 'title' => 'Traffic', 'options' => ['red' => 200.0], 'scope' => ['period' => '24h']],
                 ['source' => 'users_affected', 'seconds' => null, 'title' => null, 'options' => [], 'scope' => []],
             ]);
+    });
+
+    it('keeps health values that repeat its source, each with its own checks and seconds', function () {
+        $clean = WidgetSchema::clean([
+            'id' => 'h', 'type' => 'health', 'source' => 'checks', 'w' => 1, 'h' => 1, 'options' => ['checks' => ['u1'], 'source_seconds' => 5, 'show_uptime' => false],
+            'rotate' => [
+                ['source' => 'checks', 'seconds' => 5, 'options' => ['checks' => ['u2'], 'red' => 1]],
+                ['source' => 'checks', 'seconds' => 5, 'options' => ['checks' => ['u3', 'u3']]],
+                ['source' => 'checks', 'title' => 'Everything'],
+            ],
+        ], 4, 4);
+
+        expect($clean['rotate'])->toBe([
+            ['source' => 'checks', 'seconds' => 5, 'options' => ['checks' => ['u2']]],
+            ['source' => 'checks', 'seconds' => 5, 'options' => ['checks' => ['u3']]],
+            ['source' => 'checks', 'title' => 'Everything'],
+        ])->and(WidgetSchema::rotation($clean))->toBe([
+            ['source' => 'checks', 'seconds' => 5, 'title' => null, 'options' => [], 'scope' => []],
+            ['source' => 'checks', 'seconds' => 5, 'title' => null, 'options' => ['checks' => ['u2']], 'scope' => []],
+            ['source' => 'checks', 'seconds' => 5, 'title' => null, 'options' => ['checks' => ['u3']], 'scope' => []],
+            // None picked shows every check, not the widget's.
+            ['source' => 'checks', 'seconds' => null, 'title' => 'Everything', 'options' => ['checks' => []], 'scope' => []],
+        ]);
     });
 
     it('gives layout widgets no source, rotation or scope', function () {

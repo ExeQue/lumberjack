@@ -26,9 +26,11 @@ use Illuminate\Validation\Rule;
  *
  * A rotating widget's rotate entries are source ids, or {source, seconds, title, options,
  * scope} where a value of the rotation has settings of its own: options only from the
- * type's first section (ITEM_SECTION: value, scale, chart or rows) and only the period in
- * scope, each over the widget's. The widget's source is the rotation's first value; its
- * own time on screen is the source_seconds option.
+ * type's first section (ITEM_SECTION: value, scale, chart, rows or checks) and only the
+ * period in scope, each over the widget's. The widget's source is the rotation's first value; its
+ * own time on screen is the source_seconds option. Health has the one source, so its
+ * values repeat it and differ by their checks (REPEATING_TYPES), which a value picks for
+ * itself: none picked shows every check, never the widget's.
  */
 final class WidgetSchema
 {
@@ -36,7 +38,10 @@ final class WidgetSchema
     public const array LAYOUT_TYPES = ['clock', 'empty'];
 
     /** Types that can rotate through several sources on one tile. */
-    public const array ROTATING_TYPES = ['stat', 'gauge', 'chart', 'list'];
+    public const array ROTATING_TYPES = ['stat', 'gauge', 'chart', 'list', 'health'];
+
+    /** Rotating types whose values may repeat a source, told apart by their options. */
+    public const array REPEATING_TYPES = ['health'];
 
     public const int MAX_WIDGETS = 48;
 
@@ -128,19 +133,23 @@ final class WidgetSchema
         $source = (string) ($widget['source'] ?? '');
         $seconds = $widget['options']['source_seconds'] ?? null;
         $items = [['source' => $source, 'seconds' => $seconds !== null ? (int) $seconds : null, 'title' => null, 'options' => [], 'scope' => []]];
+        $repeats = in_array($widget['type'] ?? null, self::REPEATING_TYPES, true);
 
         foreach (in_array($widget['type'] ?? null, self::ROTATING_TYPES, true) ? (array) ($widget['rotate'] ?? []) : [] as $entry) {
             $entry = is_array($entry) ? $entry : ['source' => (string) $entry];
 
-            if (($entry['source'] ?? $source) === $source || in_array($entry['source'], array_column($items, 'source'), true)) {
+            if (! isset($entry['source']) || (! $repeats && in_array($entry['source'], array_column($items, 'source'), true))) {
                 continue;
             }
+
+            $options = (array) ($entry['options'] ?? []);
 
             $items[] = [
                 'source' => (string) $entry['source'],
                 'seconds' => isset($entry['seconds']) ? (int) $entry['seconds'] : null,
                 'title' => $entry['title'] ?? null,
-                'options' => (array) ($entry['options'] ?? []),
+                // A repeated health value's checks are its own: none picked means all of them.
+                'options' => $repeats ? [...$options, 'checks' => $options['checks'] ?? []] : $options,
                 'scope' => (array) ($entry['scope'] ?? []),
             ];
         }
@@ -240,12 +249,13 @@ final class WidgetSchema
         $type = (string) $widget['type'];
         $source = self::isDataType($type) ? (string) $widget['source'] : null;
         $rotate = [];
+        $repeats = in_array($type, self::REPEATING_TYPES, true);
 
         foreach (in_array($type, self::ROTATING_TYPES, true) ? (array) ($widget['rotate'] ?? []) : [] as $entry) {
             $entry = is_array($entry) ? $entry : ['source' => $entry];
             $id = (string) ($entry['source'] ?? '');
 
-            if ($id === '' || $id === $source || in_array($id, array_map(fn (string|array $r): string => is_array($r) ? $r['source'] : $r, $rotate), true)) {
+            if ($id === '' || (! $repeats && ($id === $source || in_array($id, array_map(fn (string|array $r): string => is_array($r) ? $r['source'] : $r, $rotate), true)))) {
                 continue;
             }
 
@@ -427,7 +437,7 @@ final class WidgetSchema
                     $toggle('show_message', true),
                     $select('stale_as', ['stale', 'degraded', 'ok'], 'stale', false, 2),
                 ]),
-                $scope(false), $display(true),
+                $rotation, $scope(false), $display(true),
             ],
             'clock' => [
                 $section('clock', [
