@@ -9,6 +9,7 @@ use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Retention\Models\RetentionPolicy;
+use App\Domains\Screens\Models\Screen;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -97,6 +98,12 @@ class Team extends Model
     public function retentionPolicies(): HasMany
     {
         return $this->hasMany(RetentionPolicy::class);
+    }
+
+    /** @return HasMany<Screen, $this> */
+    public function screens(): HasMany
+    {
+        return $this->hasMany(Screen::class);
     }
 
     public function roleOf(User $user): ?TeamRole

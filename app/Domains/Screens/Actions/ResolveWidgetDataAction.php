@@ -62,9 +62,10 @@ class ResolveWidgetDataAction
     public function execute(Team $team, WidgetType $type, string $sourceId, WidgetScope $scope, array $options = [], bool $aggregatesOnly = false): array
     {
         $source = WidgetSources::find($type, $sourceId);
-        $projects = $team->projects()
+        // The team's projects load once per team instance: a screen asks for every widget.
+        $projects = $team->projects
             ->when($scope->projects !== [])->whereIn('uuid', $scope->projects)
-            ->orderBy('name')->get();
+            ->sortBy('name')->values();
         $limits = [
             'amber' => $this->number($options['amber'] ?? null) ?? $source->amber,
             'red' => $this->number($options['red'] ?? null) ?? $source->red,
@@ -378,7 +379,7 @@ class ResolveWidgetDataAction
      * {summary: {total, ok, degraded, down, recovering, stale, pending}, checks: [{uuid,
      * project, name, state, message}], check}: worst first. With exactly one check picked,
      * check is its detail: {uuid, name, state, last_message, last_result_at, duration_us,
-     * uptime, strip: [{t, s}]}, else null.
+     * uptime, strip: [{t, s}], since}, else null.
      *
      * @param  Collection<int, Project>  $projects
      * @param  array<string, mixed>  $options
@@ -412,7 +413,7 @@ class ResolveWidgetDataAction
         if (count($picked) === 1 && count($checks) === 1) {
             $project = $projects->firstWhere('slug', $checks[0]['project']);
             $row = collect($this->health->rows($project, $scope->period, $scope->environment))->firstWhere('uuid', $picked[0]);
-            $detail = $row !== null ? array_intersect_key($row, array_flip(['uuid', 'name', 'state', 'last_message', 'last_result_at', 'duration_us', 'uptime', 'strip'])) : null;
+            $detail = $row !== null ? [...array_intersect_key($row, array_flip(['uuid', 'name', 'state', 'last_message', 'last_result_at', 'duration_us', 'uptime', 'strip'])), 'since' => $checks[0]['since'] ?? null] : null;
         }
 
         return ['summary' => $states, 'checks' => $checks, 'check' => $detail];

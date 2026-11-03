@@ -32,6 +32,7 @@ use App\Domains\Releases\Http\Controllers\ReleaseController;
 use App\Domains\Repositories\Http\Controllers\RepositoryController;
 use App\Domains\Retention\Http\Controllers\RetentionController;
 use App\Domains\Schedule\Http\Controllers\ScheduleController;
+use App\Domains\Screens\Http\Controllers\ScreenController;
 use App\Domains\Search\Http\Controllers\SearchController;
 use App\Domains\Shared\Http\Controllers\MailPreviewController;
 use App\Domains\Teams\Http\Controllers\InvitationController;
@@ -143,6 +144,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('team/invitations/{invitation}', [InvitationController::class, 'destroy'])->name('invitations.destroy');
     Route::post('team/mcp-tokens', [McpTokenController::class, 'store'])->name('mcp-tokens.store');
     Route::delete('team/mcp-tokens/{token}', [McpTokenController::class, 'destroy'])->name('mcp-tokens.destroy');
+
+    // Status screens: the team's wall displays. See docs/screens.md.
+    Route::get('screens', [ScreenController::class, 'index'])->name('screens.index');
+    Route::post('screens', [ScreenController::class, 'store'])->name('screens.store');
+    Route::get('screens/{screen:uuid}', [ScreenController::class, 'show'])->name('screens.show');
+    Route::get('screens/{screen:uuid}/edit', [ScreenController::class, 'edit'])->name('screens.edit');
+    Route::get('screens/{screen:uuid}/data', [ScreenController::class, 'data'])->middleware('throttle:120,1')->name('screens.data');
+    Route::get('screens/{screen:uuid}/viewers', [ScreenController::class, 'viewers'])->name('screens.viewers');
+    Route::put('screens/{screen:uuid}', [ScreenController::class, 'update'])->name('screens.update');
+    Route::put('screens/{screen:uuid}/layout', [ScreenController::class, 'layout'])->name('screens.layout');
+    Route::put('screens/{screen:uuid}/widgets/{widget}', [ScreenController::class, 'widget'])->where('widget', '[A-Za-z0-9_-]{1,40}')->name('screens.widget');
+    Route::post('screens/{screen:uuid}/duplicate', [ScreenController::class, 'duplicate'])->name('screens.duplicate');
+    Route::delete('screens/{screen:uuid}', [ScreenController::class, 'destroy'])->name('screens.destroy');
 
     Route::get('team/alerts', [AlertController::class, 'index'])->name('alerts.index');
     Route::post('team/alerts/channels', [AlertController::class, 'storeChannel'])->name('alerts.channels.store');

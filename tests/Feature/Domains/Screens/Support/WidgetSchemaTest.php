@@ -1,0 +1,101 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Domains\Screens\Enums\WidgetType;
+use App\Domains\Screens\Support\WidgetSchema;
+use Illuminate\Support\Facades\Validator;
+
+covers(WidgetSchema::class);
+
+describe('the schema', function () {
+    it('has sections for every type, scope only for data types', function (string $type) {
+        $sections = array_column(WidgetSchema::sections($type), 'id');
+
+        expect(in_array('scope', $sections, true))->toBe(WidgetSchema::isDataType($type))
+            ->and(in_array('rotation', $sections, true))->toBe(in_array($type, WidgetSchema::ROTATING_TYPES, true));
+    })->with(array_values(array_diff(WidgetSchema::types(), ['empty'])));
+
+    it('knows every visualization and the layout widgets', function () {
+        expect(WidgetSchema::types())->toBe([...array_map(fn (WidgetType $t): string => $t->value, WidgetType::cases()), 'clock', 'empty'])
+            ->and(WidgetSchema::sections('empty'))->toBe([])
+            ->and(WidgetSchema::sections('pie'))->toBe([]);
+    });
+
+    it('labels every field and choice for the designer', function () {
+        foreach (WidgetSchema::all() as $sections) {
+            foreach ($sections as $section) {
+                expect(__('ui/screens.sections.'.$section['id']))->not->toStartWith('ui/');
+
+                foreach ($section['fields'] as $field) {
+                    expect(__('ui/screens.fields.'.$field['key'].'.label'))->not->toStartWith('ui/');
+
+                    foreach ($field['options'] ?? [] as $value) {
+                        if ($field['key'] !== 'period') {
+                            expect(__("ui/screens.fields.{$field['key']}.options.{$value}"))->not->toStartWith('ui/');
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    it('fills in the defaults under what is stored', function () {
+        expect(WidgetSchema::options('stat', ['compare' => 'none']))->toMatchArray(['compare' => 'none', 'sparkline' => true, 'decimals' => 'auto'])
+            ->and(WidgetSchema::options('stat', []))->not->toHaveKey('low_is_bad');
+    });
+});
+
+describe('validating a widget', function () {
+    $validate = fn (array $widget, int $cols = 4, int $rows = 4): array => Validator::make(['w' => $widget], WidgetSchema::rules('w', $widget, $cols, $rows, ['p1']))->errors()->keys();
+
+    it('accepts a complete widget of every type', function (array $widget) use ($validate) {
+        expect($validate($widget))->toBe([]);
+    })->with([
+        'a stat' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => ['apdex'], 'w' => 1, 'h' => 1, 'options' => ['amber' => 400, 'low_is_bad' => false, 'decimals' => '1', 'prefix' => '~'], 'scope' => ['projects' => ['p1'], 'period' => '1h', 'release' => 'current', 'filter' => 'GET /*', 'environment' => '*']]],
+        'a gauge' => [['id' => 'b', 'type' => 'gauge', 'source' => 'host_cpu', 'w' => 1, 'h' => 1, 'options' => ['min' => 0, 'max' => 1, 'show_limits' => true]]],
+        'a chart' => [['id' => 'c', 'type' => 'chart', 'source' => 'requests', 'w' => 4, 'h' => 2, 'options' => ['style' => 'area', 'split_by' => 'route', 'top' => '10']]],
+        'a list' => [['id' => 'd', 'type' => 'list', 'source' => 'queues', 'w' => 2, 'h' => 2, 'options' => ['limit' => 'auto', 'only_problems' => true]]],
+        'health' => [['id' => 'e', 'type' => 'health', 'source' => 'checks', 'w' => 2, 'h' => 1, 'options' => ['view' => 'cards', 'checks' => ['8a3a9c5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e']]]],
+        'a clock' => [['id' => 'f', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['timezone' => 'Europe/Copenhagen', 'format' => '12']]],
+        'an empty cell' => [['id' => 'g', 'type' => 'empty', 'w' => 3, 'h' => 2]],
+    ]);
+
+    it('refuses what the type does not take', function (array $widget, string $error) use ($validate) {
+        expect($validate($widget))->toContain($error);
+    })->with([
+        'a check that is no uuid' => [['id' => 'e', 'type' => 'health', 'source' => 'checks', 'w' => 1, 'h' => 1, 'options' => ['checks' => ['x']]], 'w.options.checks.0'],
+        'an unknown time zone' => [['id' => 'f', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['timezone' => 'Nowhere']], 'w.options.timezone'],
+        'a gauge source on a stat' => [['id' => 'a', 'type' => 'stat', 'source' => 'host_disk', 'w' => 1, 'h' => 1], 'w.source'],
+        'a widget that is no object' => [[], 'w'],
+    ]);
+});
+
+describe('storing a widget', function () {
+    it('keeps only what its type takes, typed, and leaves empty values to the defaults', function () {
+        $clean = WidgetSchema::clean([
+            'id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => ['p95', 'apdex', 'apdex'], 'w' => 9, 'h' => 0, 'title' => '  ',
+            'options' => ['amber' => '400', 'sparkline' => 0, 'prefix' => '', 'style' => 'bars', 'decimals' => 1],
+            'scope' => ['projects' => [], 'environment' => '', 'period' => '7d', 'nonsense' => 1],
+            'extra' => 'dropped',
+        ], 4, 3);
+
+        expect($clean)->toBe([
+            'id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => ['apdex'], 'w' => 4, 'h' => 1, 'title' => null,
+            'options' => ['amber' => 400.0, 'decimals' => '1', 'sparkline' => false],
+            'scope' => ['projects' => [], 'period' => '7d'],
+        ]);
+    });
+
+    it('gives layout widgets no source, rotation or scope', function () {
+        $clean = WidgetSchema::clean(['id' => 'c', 'type' => 'clock', 'source' => 'requests', 'rotate' => ['x'], 'w' => 1, 'h' => 1, 'title' => 'Ops', 'scope' => ['period' => '1h'], 'options' => ['checks' => ['a']]], 4, 4);
+
+        expect($clean)->toMatchArray(['source' => null, 'rotate' => [], 'scope' => [], 'options' => [], 'title' => 'Ops']);
+    });
+
+    it('drops the period and release health has no use for', function () {
+        $clean = WidgetSchema::clean(['id' => 'h', 'type' => 'health', 'source' => 'checks', 'w' => 1, 'h' => 1, 'options' => ['checks' => ['u1', 'u1']], 'scope' => ['period' => '1h', 'release' => 'current', 'environment' => 'production']], 4, 4);
+
+        expect($clean['scope'])->toBe(['environment' => 'production'])->and($clean['options'])->toBe(['checks' => ['u1']]);
+    });
+});
