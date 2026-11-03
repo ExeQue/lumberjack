@@ -210,7 +210,8 @@ export type TeamLiveKind =
     | 'tokens.changed'
     | 'alerts.changed'
     | 'retention.changed'
-    | 'projects.changed';
+    | 'projects.changed'
+    | 'screens.changed';
 
 export type AdminLiveKind =
     | 'teams.changed'

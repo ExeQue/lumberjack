@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
+import { useTeamLive } from '@/lib/use-live';
 import {
     destroy,
     duplicate,
@@ -106,6 +107,8 @@ export default function Screens({
 }) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
+    // Another member adds, renames or edits a screen: the list follows.
+    useTeamLive(['screens.changed'], ['screens']);
     const [creating, setCreating] = useState(false);
     const [template, setTemplate] = useState('overview');
     const [renaming, setRenaming] = useState<Row | null>(null);

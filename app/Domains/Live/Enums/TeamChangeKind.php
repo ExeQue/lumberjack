@@ -15,4 +15,5 @@ enum TeamChangeKind: string
     case Alerts = 'alerts.changed';
     case Retention = 'retention.changed';
     case Projects = 'projects.changed';
+    case Screens = 'screens.changed';
 }

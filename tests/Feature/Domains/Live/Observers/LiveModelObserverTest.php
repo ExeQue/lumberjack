@@ -21,6 +21,7 @@ use App\Domains\Projects\Actions\UpdateProjectAction;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Retention\Actions\SaveRetentionPolicyAction;
 use App\Domains\Retention\Enums\RetentionCategory;
+use App\Domains\Screens\Actions\CreateScreenAction;
 use App\Domains\Teams\Actions\ChangeMemberRoleAction;
 use App\Domains\Teams\Actions\InviteMemberAction;
 use App\Domains\Teams\Actions\RemoveMemberAction;
@@ -67,6 +68,15 @@ describe('team pages', function () {
 
         expect($this->broadcasts())->toBe(['private-admin teams.changed', 'private-admin users.changed', $this->channel.' members.changed']);
     })->with(['role', 'removal']);
+
+    it('announces a screen made, changed or deleted', function () {
+        $this->listenForBroadcasts();
+        $screen = app(CreateScreenAction::class)->execute($this->team, 'Wall');
+        $screen->update(['name' => 'Ops wall']);
+        $screen->delete();
+
+        expect(array_unique($this->broadcasts()))->toBe([$this->channel.' screens.changed']);
+    });
 
     it('announces a new MCP token', function () {
         $this->listenForBroadcasts();
