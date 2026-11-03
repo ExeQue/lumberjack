@@ -319,6 +319,16 @@ describe('the summary and tables', function () {
     ]);
 });
 
+describe('filters', function () {
+    it('refuses a host filter on a metric counted without hosts', function () {
+        $project = Project::factory()->create();
+        $token = $this->createMetricsToken($project);
+
+        $this->withToken($token)->getJson("/api/v1/projects/{$project->slug}/series/requests?host=web-1")->assertUnprocessable()->assertJsonValidationErrors('host');
+        $this->withToken($token)->getJson("/api/v1/projects/{$project->slug}/series/p95?host=web-1")->assertOk();
+    });
+});
+
 describe('the Prometheus page', function () {
     it('exposes the gauges of every project the token covers', function () {
         $project = Project::factory()->create(['slug' => 'shop']);
@@ -339,6 +349,15 @@ describe('the Prometheus page', function () {
             ->toContain('lumberjack_database_size_bytes{project="shop",environment="production",check="database:pgsql"} 4096')
             ->toContain('lumberjack_database_max_connections{project="shop",environment="production",check="database:pgsql"} 100')
             ->toContain('lumberjack_health_checks{project="shop",state="down"} 0');
+    });
+
+    it('leaves out the Apdex of a project without requests', function () {
+        $project = Project::factory()->create(['slug' => 'idle']);
+
+        $content = $this->withToken($this->createMetricsToken($project))->get('/api/v1/metrics')->assertOk()->getContent();
+
+        expect($content)->toContain('lumberjack_requests{project="idle"} 0')
+            ->not->toContain('lumberjack_apdex{project="idle"}');
     });
 
     it('is served under a public stats key too', function () {
