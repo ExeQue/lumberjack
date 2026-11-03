@@ -397,6 +397,8 @@ export default function EditScreen(props: Props) {
     const timer = useRef<number | null>(null);
     const savedRef = useRef<Screen>(props.screen);
     const latest = useRef<Screen>(props.screen);
+    // One save at a time: a later one diffs against what the earlier one stored.
+    const inFlight = useRef(false);
     const { schema, sources } = props;
     const catalog: Catalog = {
         schema,
@@ -417,6 +419,12 @@ export default function EditScreen(props: Props) {
 
     const save = async () => {
         timer.current = null;
+
+        if (inFlight.current) {
+            return;
+        }
+
+        inFlight.current = true;
         const before = savedRef.current;
         const after = latest.current;
         const settings = SETTINGS.filter(
@@ -451,8 +459,16 @@ export default function EditScreen(props: Props) {
 
             savedRef.current = after;
             setSaved(after);
-            setStatus(latest.current === after ? 'saved' : 'saving');
+            inFlight.current = false;
+
+            if (latest.current === after) {
+                setStatus('saved');
+            } else if (timer.current === null) {
+                // Changed while this save was under way: store that too.
+                void save();
+            }
         } catch (error) {
+            inFlight.current = false;
             setStatus('error');
             toast.error(
                 t('screens.designer.not_saved', {
