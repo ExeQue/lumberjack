@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Http\Controllers;
 
 use App\Domains\Alerts\Actions\CustomizeAlertRuleAction;
+use App\Domains\Alerts\Actions\ResetAlertRuleAction;
 use App\Domains\Alerts\Actions\SaveNotificationChannelAction;
 use App\Domains\Alerts\Actions\SendTestAlertAction;
+use App\Domains\Alerts\Actions\SetAlertRuleAddOnsAction;
 use App\Domains\Alerts\Actions\UpdateAlertRuleAction;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Exceptions\AlertExceptionInterface;
 use App\Domains\Alerts\Http\Requests\SaveNotificationChannelRequest;
+use App\Domains\Alerts\Http\Requests\UpdateAlertRuleAddOnsRequest;
 use App\Domains\Alerts\Http\Requests\UpdateAlertRuleRequest;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
@@ -101,12 +104,20 @@ class AlertController
         return back()->with('status', __('alerts.rule_customized'));
     }
 
+    /** The channels the project adds to a team rule it uses. */
+    public function updateAddOns(UpdateAlertRuleAddOnsRequest $request, Project $project, AlertRule $rule, SetAlertRuleAddOnsAction $action): RedirectResponse
+    {
+        $action->execute($project, $rule, array_values(array_map('intval', (array) $request->input('channels', []))));
+
+        return back();
+    }
+
     /** The project's own rule goes, so the team's counts again. */
-    public function resetRule(AlertRule $rule): RedirectResponse
+    public function resetRule(AlertRule $rule, ResetAlertRuleAction $action): RedirectResponse
     {
         abort_if($rule->project === null, 404);
         Gate::authorize('update', $rule->project);
-        $rule->delete();
+        $action->execute($rule);
 
         return back()->with('status', __('alerts.rule_reset'));
     }

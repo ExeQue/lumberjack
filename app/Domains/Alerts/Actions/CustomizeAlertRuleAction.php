@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Gives the project a rule of its own for the type, starting as a copy of the team's,
- * so it can be changed without changing it for every project. Deleting the project's
- * rule goes back to the team's.
+ * with the channels the project added to it, so it can be changed without changing it
+ * for every project. ResetAlertRuleAction goes back to the team's.
  */
 class CustomizeAlertRuleAction
 {
@@ -33,7 +33,10 @@ class CustomizeAlertRuleAction
                 'environments' => $team?->environments,
                 'settings' => $team?->settings,
             ]);
-            $rule->channels()->attach($team?->channels->modelKeys() ?? []);
+            // The channels it sent to keep getting it: the team's and the project's add-ons,
+            // which the project's own rule now holds instead.
+            $rule->channels()->attach($team?->channelsFor($project)->modelKeys() ?? []);
+            $team?->addOnsFor($project)->detach();
 
             return $rule;
         });

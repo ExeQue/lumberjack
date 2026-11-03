@@ -314,4 +314,6 @@ export type ProjectAlertRule = {
     description: string;
     team: AlertRule | null;
     project: AlertRule | null;
+    /** Channels the project adds to the team's rule while it uses that. */
+    add_ons: number[];
 };

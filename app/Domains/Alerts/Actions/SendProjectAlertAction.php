@@ -7,6 +7,7 @@ namespace App\Domains\Alerts\Actions;
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Support\ChannelDriverRegistry;
+use App\Domains\Projects\Models\Project;
 use Throwable;
 
 /**
@@ -23,11 +24,11 @@ class SendProjectAlertAction
     /**
      * @return int channels it reached
      */
-    public function execute(AlertRule $rule, Alert $alert): int
+    public function execute(AlertRule $rule, Project $project, Alert $alert): int
     {
         $sent = 0;
 
-        foreach ($rule->channels as $channel) {
+        foreach ($rule->channelsFor($project) as $channel) {
             $error = null;
 
             try {

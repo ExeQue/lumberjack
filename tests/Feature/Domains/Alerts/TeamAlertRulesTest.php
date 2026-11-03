@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 use App\Domains\Alerts\Actions\CheckQueueBacklogsAction;
 use App\Domains\Alerts\Actions\CustomizeAlertRuleAction;
+use App\Domains\Alerts\Actions\ResetAlertRuleAction;
+use App\Domains\Alerts\Actions\SaveNotificationChannelAction;
 use App\Domains\Alerts\Actions\SendIssueAlertsAction;
+use App\Domains\Alerts\Actions\SetAlertRuleAddOnsAction;
 use App\Domains\Alerts\Eloquent\Builders\AlertRuleBuilder;
 use App\Domains\Alerts\Enums\AlertRuleType;
+use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Http\Controllers\AlertController;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
@@ -22,7 +26,7 @@ use App\Domains\Teams\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 
-covers(AlertRuleBuilder::class, CustomizeAlertRuleAction::class, AlertController::class);
+covers(AlertRuleBuilder::class, CustomizeAlertRuleAction::class, ResetAlertRuleAction::class, SetAlertRuleAddOnsAction::class, SaveNotificationChannelAction::class, AlertController::class);
 
 beforeEach(function () {
     Http::fake(['*' => Http::response(null, 204)]);
@@ -172,4 +176,100 @@ describe('editing rules', function () {
         expect($rule->refresh()->enabled)->toBeTrue()
             ->and($this->shop->alertRules()->count())->toBe(0);
     })->with(['member', 'outsider']);
+});
+
+describe('project add-ons on a team rule', function () {
+    beforeEach(function () {
+        // The shop's own Slack, added only to the team rules it uses.
+        $this->addOn = NotificationChannel::factory()->for($this->team)->create(['project_id' => $this->shop->id, 'config' => ['webhook_url' => 'https://discord.com/api/webhooks/2/shop']]);
+        $this->hits = fn (): array => Http::recorded()->map(fn (array $pair) => $pair[0]->url())->unique()->values()->all();
+        $this->addTo = fn (AlertRuleType $type) => app(SetAlertRuleAddOnsAction::class)->execute($this->shop, ($this->teamRule)($type), [$this->addOn->id]);
+    });
+
+    it('sends issue alerts to the add-on with the team\'s channels, and nothing once the team turns the rule off', function () {
+        ($this->addTo)(AlertRuleType::Regression);
+        $issue = Issue::factory()->for($this->shop)->create();
+
+        expect(app(SendIssueAlertsAction::class)->execute($issue, AlertRuleType::Regression, 'production'))->toBe(2)
+            ->and(app(SendIssueAlertsAction::class)->execute(Issue::factory()->for($this->blog)->create(), AlertRuleType::Regression, 'production'))->toBe(1);
+
+        ($this->teamRule)(AlertRuleType::Regression)->update(['enabled' => false]);
+
+        expect(app(SendIssueAlertsAction::class)->execute($issue, AlertRuleType::Regression, 'production'))->toBe(0);
+    });
+
+    it('sends queue backlog alerts to the add-on, even when the team rule has no channels', function () {
+        $rule = ($this->teamRule)(AlertRuleType::QueueBacklog);
+        $rule->channels()->detach();
+        $rule->update(['settings' => ['size' => 100, 'age_minutes' => null, 'sustain_minutes' => 1]]);
+        ($this->addTo)(AlertRuleType::QueueBacklog);
+
+        foreach (range(1, 3) as $i) {
+            $this->travel(1)->minutes();
+            QueueSample::query()->create(['project_id' => $this->shop->id, 'host' => 'web-1', 'connection' => 'redis', 'queue' => 'default', 'size' => 500, 'oldest_age_s' => 60, 'sampled_at' => now()]);
+            app(CheckQueueBacklogsAction::class)->execute();
+        }
+
+        expect(($this->hits)())->toBe(['https://discord.com/api/webhooks/2/shop']);
+    });
+
+    it('sends health alerts to the add-on', function () {
+        ($this->teamRule)(AlertRuleType::HealthDown)->channels()->detach();
+        ($this->addTo)(AlertRuleType::HealthDown);
+        $check = HealthCheck::factory()->for($this->shop)->create(['degrade_after' => 1]);
+
+        $this->travel(1)->minutes();
+        app(RecordHealthResultAction::class)->execute($check, new HealthResultData(HealthResultStatus::Failed, 'msg', host: 'web-1', at: now()->toImmutable()));
+
+        expect(($this->hits)())->toBe(['https://discord.com/api/webhooks/2/shop']);
+    });
+
+    it('carries add-ons into a customized rule and turns project channels back into add-ons on reset', function () {
+        ($this->addTo)(AlertRuleType::NewIssue);
+        $team = ($this->teamRule)(AlertRuleType::NewIssue);
+
+        $own = app(CustomizeAlertRuleAction::class)->execute($this->shop, AlertRuleType::NewIssue);
+
+        expect($own->channels()->pluck('notification_channels.id')->sort()->values()->all())->toBe([$this->channel->id, $this->addOn->id])
+            ->and($team->addOnsFor($this->shop)->count())->toBe(0);
+
+        app(ResetAlertRuleAction::class)->execute($own);
+
+        expect($this->shop->alertRules()->count())->toBe(0)
+            ->and($team->addOnsFor($this->shop)->pluck('notification_channels.id')->all())->toBe([$this->addOn->id]);
+    });
+
+    it('adds a new project channel to the team rules it uses without customizing them', function () {
+        $own = app(CustomizeAlertRuleAction::class)->execute($this->shop, AlertRuleType::Escalation);
+
+        $webhook = app(SaveNotificationChannelAction::class)->execute($this->team, ChannelType::Webhook, 'Shop app', ['url' => 'https://93.184.215.14/hook'], project: $this->shop);
+
+        expect($this->shop->alertRules()->count())->toBe(1)
+            ->and($own->channels()->pluck('notification_channels.id')->all())->toContain($webhook->id)
+            ->and(($this->teamRule)(AlertRuleType::NewIssue)->addOnsFor($this->shop)->pluck('notification_channels.id')->all())->toBe([$webhook->id])
+            ->and(($this->teamRule)(AlertRuleType::Note)->addOnsFor($this->shop)->count())->toBe(0)
+            ->and(($this->teamRule)(AlertRuleType::NewIssue)->addOnsFor($this->blog)->count())->toBe(0);
+    });
+
+    it('lets an admin set add-ons to channels the project may use only', function () {
+        $admin = User::factory()->inTeam($this->team, TeamRole::Admin)->create();
+        $blogs = NotificationChannel::factory()->for($this->team)->create(['project_id' => $this->blog->id]);
+        $rule = ($this->teamRule)(AlertRuleType::NewIssue);
+
+        $this->actingAs($admin)->put(route('alerts.rules.add-ons', [$this->shop, $rule]), ['channels' => [$this->addOn->id, $blogs->id]])->assertSessionHasNoErrors();
+
+        expect($rule->addOnsFor($this->shop)->pluck('notification_channels.id')->all())->toBe([$this->addOn->id]);
+    });
+
+    it('keeps members and outsiders from setting add-ons, and other teams\' rules out', function () {
+        $rule = ($this->teamRule)(AlertRuleType::NewIssue);
+        $admin = User::factory()->inTeam($this->team, TeamRole::Admin)->create();
+        $other = AlertRule::query()->whereForTeam(Team::factory()->create())->whereType(AlertRuleType::NewIssue)->sole();
+
+        $this->actingAs(User::factory()->inTeam($this->team, TeamRole::Member)->create())->put(route('alerts.rules.add-ons', [$this->shop, $rule]), ['channels' => [$this->addOn->id]])->assertForbidden();
+        $this->actingAs(User::factory()->create())->put(route('alerts.rules.add-ons', [$this->shop, $rule]), ['channels' => [$this->addOn->id]])->assertForbidden();
+        $this->actingAs($admin)->put(route('alerts.rules.add-ons', [$this->shop, $other]), ['channels' => [$this->addOn->id]])->assertNotFound();
+
+        expect($rule->addOnsFor($this->shop)->count())->toBe(0);
+    });
 });

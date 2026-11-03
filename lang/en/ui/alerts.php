@@ -70,6 +70,9 @@ return [
         'sends_to' => 'Sends to :channels',
         'nowhere' => 'Sends nowhere yet',
         'only_in' => 'Only in :environments',
+        'add_ons' => 'Also send for this project to',
+        'add_ons_off' => 'Off for the team, so these get nothing until it is on or customized',
+        'add_on' => '+ :channel (this project)',
         // Button
         'customize' => 'Customize',
         // Button

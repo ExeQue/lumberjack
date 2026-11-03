@@ -91,6 +91,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('settings/labels/{label}', [LabelController::class, 'destroy'])->name('labels.destroy');
         Route::put('settings/retention', [RetentionController::class, 'project'])->name('projects.retention');
         Route::post('settings/alert-rules/{type}', [AlertController::class, 'customizeRule'])->name('alerts.rules.customize');
+        Route::put('settings/alert-rules/{rule}/add-ons', [AlertController::class, 'updateAddOns'])->withoutScopedBindings()->name('alerts.rules.add-ons');
         Route::put('settings/repository', [RepositoryController::class, 'update'])->name('repository.update');
         Route::post('settings/repository/test', [RepositoryController::class, 'test'])->name('repository.test');
         Route::delete('settings/repository', [RepositoryController::class, 'destroy'])->name('repository.destroy');
