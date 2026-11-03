@@ -81,4 +81,14 @@ the **Escalation** alert rule fires.
 - **History:** every status change, assignment, label change, regression and
   escalation, with who did it.
 
-Select issues on the list to resolve, ignore or re-open several at once.
+Select issues on the list to change several at once:
+
+- **Resolve**, **Ignore** or **Re-open** them, after a confirmation. Resolving or
+  ignoring sends one [status change alert](./alerts#resolved-or-ignored) for all of them.
+- **Assign** them to a member, to yourself (**Me**) or to nobody (**Unassign**).
+- **Label** them: add one of the project's labels, or remove it.
+- **Start working** on them: they go in progress, and the unassigned ones are assigned
+  to you.
+
+Assigning, labeling and starting work apply at once and confirm with a toast. Each
+person assigned or taken off gets one message for the whole action.

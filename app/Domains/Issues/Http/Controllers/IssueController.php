@@ -85,6 +85,7 @@ class IssueController
                 'label' => $label,
             ],
             'labels' => $project->labels()->get()->map(fn (Label $l): array => $l->toSummary())->all(),
+            'members' => $project->team->members()->orderBy('name')->get()->map(fn (User $u): array => ['id' => $u->id, 'name' => $u->name])->all(),
             // The open tab holds the issues in progress too.
             'counts' => tap((clone $base)->selectRaw('status, COUNT(*) AS c')->groupBy('status')->pluck('c', 'status'), function ($counts): void {
                 $counts['open'] = (int) ($counts['open'] ?? 0) + (int) ($counts['in_progress'] ?? 0);

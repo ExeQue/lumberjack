@@ -57,6 +57,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('issues', [IssueController::class, 'index'])->name('issues.index');
         Route::post('issues/status', [IssueActionController::class, 'bulkStatus'])->name('issues.bulk-status');
+        Route::post('issues/assignee', [IssueActionController::class, 'bulkAssign'])->name('issues.bulk-assign');
+        Route::post('issues/labels', [IssueActionController::class, 'bulkLabels'])->name('issues.bulk-labels');
         Route::get('issues/{issue}', [IssueController::class, 'show'])->name('issues.show');
         Route::put('issues/{issue}/status', [IssueActionController::class, 'status'])->name('issues.status');
         Route::put('issues/{issue}/assignee', [IssueActionController::class, 'assign'])->name('issues.assign');

@@ -6,13 +6,17 @@ namespace App\Domains\Issues\Http\Controllers;
 
 use App\Domains\Issues\Actions\AddIssueNoteAction;
 use App\Domains\Issues\Actions\AssignIssueAction;
+use App\Domains\Issues\Actions\BulkAssignIssuesAction;
 use App\Domains\Issues\Actions\BulkChangeIssueStatusAction;
+use App\Domains\Issues\Actions\BulkLabelIssuesAction;
 use App\Domains\Issues\Actions\ChangeIssueStatusAction;
 use App\Domains\Issues\Actions\SetIssueLabelsAction;
 use App\Domains\Issues\Data\IgnoreCondition;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Exceptions\IssueExceptionInterface;
 use App\Domains\Issues\Http\Requests\AssignIssueRequest;
+use App\Domains\Issues\Http\Requests\BulkAssignIssuesRequest;
+use App\Domains\Issues\Http\Requests\BulkIssueLabelsRequest;
 use App\Domains\Issues\Http\Requests\BulkIssueStatusRequest;
 use App\Domains\Issues\Http\Requests\SetIssueLabelsRequest;
 use App\Domains\Issues\Http\Requests\StoreIssueNoteRequest;
@@ -25,6 +29,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class IssueActionController
 {
@@ -47,7 +52,40 @@ class IssueActionController
         /** @var User $user */
         $user = $request->user();
 
-        $action->execute($project, $request->issueUuids(), IssueStatus::from($request->string('status')->toString()), $user);
+        $status = IssueStatus::from($request->string('status')->toString());
+        $count = $action->execute($project, $request->issueUuids(), $status, $user);
+        Inertia::flash('toast', ['type' => 'success', 'message' => trans_choice('issues.bulk.'.$status->value, $count)]);
+
+        return back();
+    }
+
+    public function bulkAssign(BulkAssignIssuesRequest $request, Project $project, BulkAssignIssuesAction $action): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $assignee = $request->filled('user_id') ? User::query()->find($request->integer('user_id')) : null;
+
+        try {
+            $count = $action->execute($project, $request->issueUuids(), $assignee, $user);
+        } catch (IssueExceptionInterface $e) {
+            return back()->withErrors(['user_id' => $e->getMessage()]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $assignee !== null
+            ? trans_choice('issues.bulk.assigned', $count, ['name' => $assignee->name])
+            : trans_choice('issues.bulk.unassigned', $count)]);
+
+        return back();
+    }
+
+    public function bulkLabels(BulkIssueLabelsRequest $request, Project $project, BulkLabelIssuesAction $action): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $label = trim($request->string('label')->toString());
+        $remove = $request->boolean('remove');
+        $count = $action->execute($project, $request->issueUuids(), $label, $remove, $user);
+        Inertia::flash('toast', ['type' => 'success', 'message' => trans_choice($remove ? 'issues.bulk.label_removed' : 'issues.bulk.label_added', $count, ['label' => $label])]);
 
         return back();
     }
