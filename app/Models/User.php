@@ -14,6 +14,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -23,6 +24,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 /**
  * @property int $id
+ * @property string $uuid
  * @property int|null $current_team_id
  * @property-read Membership $pivot  set when loaded through a team's members
  * @property string $name
@@ -46,8 +48,20 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
+    use HasUuids;
     use Notifiable;
     use TwoFactorAuthenticatable;
+
+    /**
+     * The uuid names the user outside the database, e.g. in broadcast channels; the
+     * id stays the key.
+     *
+     * @return list<string>
+     */
+    public function uniqueIds(): array
+    {
+        return ['uuid'];
+    }
 
     /**
      * Get the attributes that should be cast.

@@ -6,6 +6,8 @@ namespace App\Domains\Live\Actions;
 
 use App\Domains\Live\Enums\ChangeKind;
 use App\Domains\Live\Events\ProjectChanged;
+use App\Domains\Projects\Models\Project;
+use Closure;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
@@ -21,21 +23,28 @@ class BroadcastProjectChangeAction
             return;
         }
 
-        $this->send(new ProjectChanged($projectId, $kind));
+        $this->send($projectId, fn (string $uuid): ProjectChanged => new ProjectChanged($uuid, $kind));
     }
 
     public function issueUpdated(int $projectId, string $issueUuid): void
     {
-        $this->send(new ProjectChanged($projectId, ChangeKind::Issues, $issueUuid));
+        $this->send($projectId, fn (string $uuid): ProjectChanged => new ProjectChanged($uuid, ChangeKind::Issues, $issueUuid));
     }
 
     /**
      * Live updates are a convenience: a Reverb outage must never fail ingest or a user action.
      */
-    private function send(ProjectChanged $event): void
+    /**
+     * @param  Closure(string): ProjectChanged  $event  the event for the project's uuid, which names its channel
+     */
+    private function send(int $projectId, Closure $event): void
     {
         try {
-            broadcast($event);
+            $uuid = Project::query()->whereKey($projectId)->value('uuid');
+
+            if (is_string($uuid)) {
+                broadcast($event($uuid));
+            }
         } catch (Throwable $e) {
             report($e);
         }

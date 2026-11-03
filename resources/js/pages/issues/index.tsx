@@ -72,7 +72,7 @@ export default function IssuesIndex({
     const [search, setSearch] = useState(filters.search);
 
     useProjectLive(
-        project.id,
+        project.uuid,
         ['issues.changed', 'issue.updated'],
         ['issues', 'counts'],
     );

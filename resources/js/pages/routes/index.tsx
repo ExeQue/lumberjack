@@ -76,7 +76,7 @@ export default function RoutesIndex({
     const { team } = usePage<{ team: TeamShared }>().props;
     const [search, setSearch] = useState(filters.search);
 
-    useProjectLive(project.id, ['performance.changed'], ['routes', 'detail']);
+    useProjectLive(project.uuid, ['performance.changed'], ['routes', 'detail']);
 
     const apply = (changes: Partial<Filters>, only?: string[]) => {
         const query = Object.fromEntries(

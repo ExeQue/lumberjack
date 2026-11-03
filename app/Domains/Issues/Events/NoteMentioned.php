@@ -18,7 +18,7 @@ class NoteMentioned implements ShouldBroadcastNow
 
     public function __construct(
         private readonly IssueNote $note,
-        private readonly int $userId,
+        private readonly string $userUuid,
         private readonly string $author,
         private readonly string $excerpt,
     ) {
@@ -26,7 +26,7 @@ class NoteMentioned implements ShouldBroadcastNow
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('App.Models.User.'.$this->userId);
+        return new PrivateChannel('user.'.$this->userUuid);
     }
 
     public function broadcastAs(): string

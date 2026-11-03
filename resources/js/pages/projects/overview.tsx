@@ -347,7 +347,7 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
     const { team } = usePage<{ team: TeamShared }>().props;
 
     useProjectLive(
-        project.id,
+        project.uuid,
         [
             'issues.changed',
             'issue.updated',

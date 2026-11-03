@@ -7,10 +7,10 @@ use App\Domains\Teams\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
-Broadcast::channel('App.Models.User.{id}', fn (User $user, int $id): bool => $user->id === $id);
+Broadcast::channel('user.{uuid}', fn (User $user, string $uuid): bool => $user->uuid === $uuid);
 
-Broadcast::channel('project.{projectId}', function (User $user, int $projectId): bool {
-    $project = Project::query()->find($projectId);
+Broadcast::channel('project.{projectUuid}', function (User $user, string $projectUuid): bool {
+    $project = Project::query()->where('uuid', $projectUuid)->first();
 
     return $project !== null && $user->can('view', $project);
 });

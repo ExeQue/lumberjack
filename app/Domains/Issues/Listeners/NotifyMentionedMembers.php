@@ -36,7 +36,7 @@ class NotifyMentionedMembers
             $user->notify(new MentionedInNoteNotification($note, $author, $body));
 
             try {
-                broadcast(new NoteMentioned($note, $user->id, $author, $body));
+                broadcast(new NoteMentioned($note, $user->uuid, $author, $body));
             } catch (Throwable $e) {
                 // A toast is a nicety; the mail still goes out.
                 report($e);

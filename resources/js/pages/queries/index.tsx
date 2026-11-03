@@ -60,7 +60,7 @@ export default function QueriesIndex({
     const { team } = usePage<{ team: TeamShared }>().props;
     const [search, setSearch] = useState(filters.search);
 
-    useProjectLive(project.id, ['performance.changed'], ['stats']);
+    useProjectLive(project.uuid, ['performance.changed'], ['stats']);
 
     const apply = (changes: Partial<Filters>) => {
         const query = Object.fromEntries(

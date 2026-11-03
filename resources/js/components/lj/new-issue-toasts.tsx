@@ -25,36 +25,32 @@ type Mentioned = {
     excerpt: string;
 };
 
-function MentionListener({ userId }: { userId: number }) {
+function MentionListener({ userUuid }: { userUuid: string }) {
     const t = useT();
     const [sound] = useSoundSetting();
 
-    useEcho<Mentioned>(
-        `App.Models.User.${userId}`,
-        '.note.mentioned',
-        (event) => {
-            toast.info(
-                t('common.toasts.mentioned', {
-                    author: event.author,
-                    title: event.title,
-                }),
-                {
-                    description: `${event.project_name} · ${event.excerpt}`,
-                    action: {
-                        label: t('common.toasts.view'),
-                        onClick: () =>
-                            router.visit(
-                                issueShow([event.project, event.issue]).url,
-                            ),
-                    },
+    useEcho<Mentioned>(`user.${userUuid}`, '.note.mentioned', (event) => {
+        toast.info(
+            t('common.toasts.mentioned', {
+                author: event.author,
+                title: event.title,
+            }),
+            {
+                description: `${event.project_name} · ${event.excerpt}`,
+                action: {
+                    label: t('common.toasts.view'),
+                    onClick: () =>
+                        router.visit(
+                            issueShow([event.project, event.issue]).url,
+                        ),
                 },
-            );
+            },
+        );
 
-            if (sound) {
-                playChime();
-            }
-        },
-    );
+        if (sound) {
+            playChime();
+        }
+    });
 
     return null;
 }
@@ -95,13 +91,13 @@ function Listener({ team }: { team: TeamShared }) {
 export function NewIssueToasts() {
     const { team, auth } = usePage<{
         team: TeamShared | null;
-        auth: { user: { id: number } | null };
+        auth: { user: { uuid: string } | null };
     }>().props;
 
     return (
         <>
             {team && <Listener key={team.uuid} team={team} />}
-            {auth.user && <MentionListener userId={auth.user.id} />}
+            {auth.user && <MentionListener userUuid={auth.user.uuid} />}
         </>
     );
 }

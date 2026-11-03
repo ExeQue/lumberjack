@@ -16,13 +16,13 @@ export type LiveKind =
  * The events carry no data; the page asks the server again.
  */
 export function useProjectLive(
-    projectId: number,
+    projectUuid: string,
     kinds: LiveKind[],
     only: string[],
     options: { paused?: boolean; issue?: string } = {},
 ): void {
     useEcho<{ issue: string | null }>(
-        `project.${projectId}`,
+        `project.${projectUuid}`,
         kinds.map((kind) => `.${kind}`),
         (payload) => {
             if (options.paused) {
@@ -41,6 +41,6 @@ export function useProjectLive(
                 typeof router.reload
             >[0]);
         },
-        [projectId, options.paused, options.issue, only.join(',')],
+        [projectUuid, options.paused, options.issue, only.join(',')],
     );
 }

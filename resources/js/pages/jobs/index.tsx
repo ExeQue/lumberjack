@@ -101,7 +101,7 @@ export default function JobsIndex({
     const { team } = usePage<{ team: TeamShared }>().props;
 
     useProjectLive(
-        project.id,
+        project.uuid,
         ['jobs.changed'],
         ['jobs', 'runs', 'stuck', 'stuck_names'],
     );

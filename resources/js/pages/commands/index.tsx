@@ -99,7 +99,7 @@ export default function CommandsIndex({
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
 
-    useProjectLive(project.id, ['commands.changed'], ['commands', 'runs']);
+    useProjectLive(project.uuid, ['commands.changed'], ['commands', 'runs']);
 
     const apply = (changes: Partial<Filters>) => {
         const query = Object.fromEntries(

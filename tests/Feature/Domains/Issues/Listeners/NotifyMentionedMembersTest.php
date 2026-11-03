@@ -31,7 +31,7 @@ describe('tagging members in a note', function () {
         Notification::assertSentTo($this->tagged, MentionedInNoteNotification::class, fn ($n) => str_contains($n->body, '@Sofie can you check the DB? cc @Morten')
             && str_contains($n->body, "<@{$this->outsider->id}>"));
         Notification::assertNotSentTo([$this->author, $this->outsider], MentionedInNoteNotification::class);
-        Event::assertDispatched(NoteMentioned::class, fn (NoteMentioned $e) => $e->broadcastOn()->name === 'private-App.Models.User.'.$this->tagged->id);
+        Event::assertDispatched(NoteMentioned::class, fn (NoteMentioned $e) => $e->broadcastOn()->name === 'private-user.'.$this->tagged->uuid);
     });
 
     it('does nothing for a note without tags', function () {

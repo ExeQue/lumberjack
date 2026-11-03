@@ -624,7 +624,7 @@ export default function IssueShow({
     const key = [project.uuid, issue.id] as [string, string];
 
     useProjectLive(
-        project.id,
+        project.uuid,
         ['issue.updated', 'issues.changed'],
         ['issue', 'latest', 'occurrences', 'series', 'notes'],
         { issue: issue.id },

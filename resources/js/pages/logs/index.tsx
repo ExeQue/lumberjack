@@ -122,7 +122,7 @@ export default function LogsIndex({
 
     // Live tail: reload in place while the reader sits at the top; hold back while they scroll or select text.
     useEcho(
-        `project.${project.id}`,
+        `project.${project.uuid}`,
         ['.logs.changed'],
         () => {
             if (
@@ -138,7 +138,7 @@ export default function LogsIndex({
                 typeof router.reload
             >[0]);
         },
-        [project.id],
+        [project.uuid],
     );
 
     const showNew = () => {

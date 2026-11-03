@@ -18,7 +18,7 @@ class ProjectChanged implements ShouldBroadcastNow
     use Dispatchable;
 
     public function __construct(
-        private readonly int $projectId,
+        private readonly string $projectUuid,
         private readonly ChangeKind $kind,
         private readonly ?string $issueUuid = null,
     ) {
@@ -26,7 +26,7 @@ class ProjectChanged implements ShouldBroadcastNow
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('project.'.$this->projectId);
+        return new PrivateChannel('project.'.$this->projectUuid);
     }
 
     public function broadcastAs(): string

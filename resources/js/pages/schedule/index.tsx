@@ -113,7 +113,7 @@ export default function ScheduleIndex({
             task.last_status === 'failed' || task.last_status === 'missed',
     ).length;
 
-    useProjectLive(project.id, ['schedule.changed'], ['tasks', 'runs']);
+    useProjectLive(project.uuid, ['schedule.changed'], ['tasks', 'runs']);
 
     const select = (task: number | null) => {
         const query = Object.fromEntries(
