@@ -443,7 +443,7 @@ const periodMs: Record<string, number> = {
     '30d': 2_592_000_000,
 };
 
-/** Hover texts for plain values spread evenly over a period that ends now. */
+/** Hover texts for plain values in buckets over a period, the last one holding now. */
 export function spreadTips(
     values: number[],
     period: string,
@@ -451,7 +451,8 @@ export function spreadTips(
 ): string[] {
     const span = periodMs[period] ?? periodMs['24h'];
     const step = span / Math.max(1, values.length - 1);
-    const end = Date.now();
+    // The last bucket is the one now falls in.
+    const end = Math.floor(Date.now() / step) * step;
 
     return values.map(
         (v, i) =>

@@ -66,7 +66,8 @@ class IssueController
         $hourly = DB::table('occurrences')
             ->whereIn('issue_id', $ids)
             ->where('occurred_at', '>=', $since)
-            ->selectRaw('issue_id, FLOOR((EXTRACT(EPOCH FROM occurred_at) - ?) / 3600) AS h, COUNT(*) AS c', [$since->getTimestamp()])
+            // Clock hours, like every other chart: the first one holds the start of the day.
+            ->selectRaw('issue_id, FLOOR(EXTRACT(EPOCH FROM occurred_at) / 3600) - ? AS h, COUNT(*) AS c', [intdiv($since->getTimestamp(), 3600)])
             ->groupBy('issue_id', 'h')
             ->get()
             ->groupBy('issue_id');
@@ -90,7 +91,7 @@ class IssueController
             'releases' => (clone $base)->whereNotNull('last_release')->distinct()->orderByDesc('last_release')->limit(20)->pluck('last_release'),
             'issues' => $issues->through(fn (Issue $issue): array => [
                 ...$presenter->summary($issue),
-                'hourly' => collect(range(0, 23))->map(fn (int $h): int => (int) ($hourly->get($issue->id)?->firstWhere('h', $h)->c ?? 0))->all(),
+                'hourly' => collect(range(0, 24))->map(fn (int $h): int => (int) ($hourly->get($issue->id)?->firstWhere('h', $h)->c ?? 0))->all(),
             ]),
         ]);
     }
