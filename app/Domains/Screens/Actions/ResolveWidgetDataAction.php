@@ -416,7 +416,7 @@ class ResolveWidgetDataAction
      * {summary: {total, ok, degraded, down, recovering, stale, pending}, checks: [{uuid,
      * project, name, state, message}], check}: worst first. With exactly one check picked,
      * check is its detail: {uuid, name, state, last_message, last_result_at, duration_us,
-     * uptime, strip: [{t, s}], since}, else null.
+     * uptime, strip: [{t, s}], metrics (of the latest result), since}, else null.
      *
      * @param  Collection<int, Project>  $projects
      * @param  array<string, mixed>  $options
@@ -450,7 +450,7 @@ class ResolveWidgetDataAction
         if (count($picked) === 1 && count($checks) === 1) {
             $project = $projects->firstWhere('slug', $checks[0]['project']);
             $row = collect($this->health->rows($project, $scope->period, $scope->environment))->firstWhere('uuid', $picked[0]);
-            $detail = $row !== null ? [...array_intersect_key($row, array_flip(['uuid', 'name', 'state', 'last_message', 'last_result_at', 'duration_us', 'uptime', 'strip'])), 'since' => $checks[0]['since'] ?? null] : null;
+            $detail = $row !== null ? [...array_intersect_key($row, array_flip(['uuid', 'name', 'state', 'last_message', 'last_result_at', 'duration_us', 'uptime', 'strip', 'metrics'])), 'since' => $checks[0]['since'] ?? null] : null;
         }
 
         return ['summary' => $states, 'checks' => $checks, 'check' => $detail];
