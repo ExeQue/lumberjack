@@ -37,7 +37,10 @@ final readonly class MetricWindow
         $range = max(60, $to->getTimestamp() - $from->getTimestamp());
         $bucket = $bucketSeconds ?? self::step((int) ceil($range / self::AUTO_POINTS));
 
-        return new self($from, $to, max(60, $bucket, (int) ceil($range / self::MAX_POINTS)));
+        // Whole minutes, so interval() names the bucket exactly.
+        $bucket = max(60, $bucket, (int) ceil($range / self::MAX_POINTS));
+
+        return new self($from, $to, (int) ceil($bucket / 60) * 60);
     }
 
     /**

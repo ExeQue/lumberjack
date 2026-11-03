@@ -16,6 +16,7 @@ use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Shared\Enums\Period;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\Performance\CreatesRequestCounts;
 
 covers(MetricSeriesQuery::class, MetricWindow::class);
@@ -113,5 +114,27 @@ describe('issues and jobs', function () {
             ->and(collect($requests)->sum('value'))->toEqual(0)
             ->and($p95)->toBe([])
             ->and(($this->value)(Metric::P95))->toBeNull();
+    });
+});
+
+describe('web vitals', function () {
+    it('takes the 75th percentile of each vital', function (Metric $metric, string $column, array $values, float $expected) {
+        foreach ($values as $value) {
+            DB::table('web_vitals')->insert(['project_id' => $this->project->id, 'route' => '/', $column => $value, 'occurred_at' => now()->subHour()]);
+        }
+
+        expect(($this->value)($metric))->toEqual($expected);
+    })->with([
+        'LCP in ms' => [Metric::LcpP75, 'lcp_us', [1_000_000, 2_000_000, 3_000_000, 4_000_000], 3000.0],
+        'INP in ms' => [Metric::InpP75, 'inp_us', [100_000, 200_000, 300_000, 400_000], 300.0],
+        'CLS as is' => [Metric::ClsP75, 'cls', [0.1, 0.2, 0.3, 0.4], 0.3],
+    ]);
+});
+
+describe('windows', function () {
+    it('picks an automatic bucket from its steps, at most a day', function () {
+        expect(MetricWindow::between(now()->subHour(), now())->bucketSeconds)->toBe(60)
+            ->and(MetricWindow::between(now()->subDays(7), now())->interval())->toBe('1h')
+            ->and(MetricWindow::between(now()->subYears(2), now())->bucketSeconds)->toBe(86400);
     });
 });
