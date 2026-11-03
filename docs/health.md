@@ -126,7 +126,8 @@ took.
 
 **Uptime** is the share of the period (top of the page) the check was not down, counted
 from when the check was added. Degraded time counts as up, as on a status page;
-recovering counts as the outage it is part of. The
+recovering counts as the outage it is part of. While a check is down, its uptime keeps
+dropping on the page every second, not only when a new result comes in. The
 strip on each row has one segment per part of the period, colored by the worst the
 check was in it.
 

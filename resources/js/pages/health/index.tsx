@@ -1,4 +1,4 @@
-import { Relative } from '@/components/lj/relative';
+import { Relative, useNow } from '@/components/lj/relative';
 import { Head, router, usePage } from '@inertiajs/react';
 import { TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
@@ -86,6 +86,36 @@ function latency(metrics: Record<string, number>, durationUs: number | null) {
     return metrics.latency_ms !== undefined
         ? `${formatNumber(metrics.latency_ms, metrics.latency_ms < 10 ? 1 : 0)} ms`
         : formatDuration(durationUs);
+}
+
+/**
+ * Uptime that keeps counting between results: while a check is down, its share of the
+ * period drops every second, as the relative times move on.
+ */
+function LiveUptime({
+    check,
+}: {
+    check: {
+        uptime: number | null;
+        uptime_live: HealthCheckRow['uptime_live'];
+    };
+}) {
+    const now = useNow();
+    const basis = check.uptime_live;
+
+    if (check.uptime === null || basis === null) {
+        return '-';
+    }
+
+    const from = new Date(basis.from).getTime();
+    const total = (now - from) / 1000;
+    const open = basis.down_since
+        ? Math.max(0, (now - new Date(basis.down_since).getTime()) / 1000)
+        : 0;
+
+    return total > 0
+        ? formatPercent(Math.max(0, 1 - (basis.down_s + open) / total), 2)
+        : formatPercent(check.uptime, 2);
 }
 
 function When({ iso }: { iso: string | null }) {
@@ -267,9 +297,7 @@ function ChecksTable({
                                     : '-'}
                             </td>
                             <td className={cn(tdClass, numClass)}>
-                                {check.uptime !== null
-                                    ? formatPercent(check.uptime, 2)
-                                    : '-'}
+                                <LiveUptime check={check} />
                             </td>
                             <td className={tdClass}>
                                 <StatusStrip

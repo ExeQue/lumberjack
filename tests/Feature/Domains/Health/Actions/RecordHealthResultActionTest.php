@@ -226,6 +226,19 @@ describe('outages and uptime', function () {
         expect($row['uptime'])->toBe(round(1 - 12 / 1440, 5))
             ->and(collect($row['strip'])->pluck('s')->filter(fn ($s) => $s !== 'ok')->values()->all())->toBe(['down', 'degraded', 'degraded']);
     });
+
+    it('hands the page what uptime is counted from, so an open outage keeps counting', function () {
+        $this->travelTo(now()->startOfHour()->addMinutes(30));
+        $this->check->forceFill(['created_at' => now()->subDay()])->save();
+        HealthOutage::query()->create(['health_check_id' => $this->check->id, 'project_id' => $this->project->id, 'status' => HealthStatus::Down, 'started_at' => now()->subHours(6), 'ended_at' => now()->subHours(5)->subMinutes(48)]);
+        HealthOutage::query()->create(['health_check_id' => $this->check->id, 'project_id' => $this->project->id, 'status' => HealthStatus::Down, 'started_at' => now()->subMinutes(10)]);
+
+        $basis = app(HealthChecksQuery::class)->rows($this->project, Period::Day)[0]['uptime_live'];
+
+        expect($basis['down_s'])->toEqual(12 * 60)
+            ->and($basis['down_since'])->toBe(now()->subMinutes(10)->toIso8601String())
+            ->and($basis['from'])->toBe(now()->subDay()->toIso8601String());
+    });
 });
 
 describe('alerts', function () {
