@@ -41,6 +41,11 @@ A screen is a grid of 2 to 12 columns and 2 to 6 rows, and the TV shows exactly 
 grid, so a widget's size in cells is its size on the TV. Each widget sits on the cells
 you put it on; cells no widget covers simply stay empty on the TV.
 
+**Aspect** next to Columns and Rows is the shape of the display the screen is made for:
+16:9 (the default), 16:10, 4:3, 21:9 or 32:9, and the two buttons after it stand it
+landscape or portrait (a 16:9 portrait screen is 9:16). The grid in the designer takes
+that shape, as large as fits, so a widget's text reads as it will on that display.
+
 - **Add**: drag a widget type from the left onto any free cell, or click it to add it
   in the first free spot (row by row from the top left). The search field finds a type
   by what it can show, so "queue" finds Stat, Gauge, Chart and List.

@@ -9,7 +9,7 @@ use App\Domains\Screens\Models\Screen;
 class DuplicateScreenAction
 {
     /**
-     * A copy with the same grid, theme, scope and widgets, under a new uuid. Not shared:
+     * A copy with the same grid, aspect, theme, scope and widgets, under a new uuid. Not shared:
      * a share link belongs to the screen it was made for.
      */
     public function execute(Screen $screen): Screen

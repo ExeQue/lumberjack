@@ -46,11 +46,17 @@ export type WidgetScope = {
 
 export type ScreenTheme = 'dark' | 'light' | 'schedule';
 
+/** ScreenAspect: the display's shape, landscape; ScreenOrientation turns it on its side. */
+export type ScreenOrientation = 'landscape' | 'portrait';
+
 export type Screen = {
     uuid: string;
     name: string;
     cols: number;
     rows: number;
+    /** Such as 16:9; see ScreenAspect. */
+    aspect: string;
+    orientation: ScreenOrientation;
     theme: ScreenTheme;
     light_from: string;
     light_to: string;

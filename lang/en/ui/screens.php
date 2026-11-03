@@ -102,6 +102,9 @@ return [
         'count' => '{0} No widgets|{1} 1 widget|[2,*] :count widgets',
         'cols' => 'Columns',
         'rows' => 'Rows',
+        'aspect' => 'Aspect',
+        // The landscape and portrait buttons next to it.
+        'orientation' => 'Orientation',
         'theme' => 'Theme',
         'light_from' => 'Light from',
         'light_to' => 'until',
@@ -167,6 +170,19 @@ return [
         'no_checks' => 'The team has no health checks yet.',
         'checks_hint' => 'None picked: every check of the projects, new ones included. One picked: that check alone, with its uptime and timeline.',
         'empty_hint' => 'Keeps this space empty on the TV. Resize it to make a gap of any size.',
+    ],
+
+    // The display a screen is designed for: its shape, then which way it stands.
+    'aspect' => [
+        '16:9' => '16:9',
+        '16:10' => '16:10',
+        '4:3' => '4:3',
+        '21:9' => '21:9 (wide)',
+        '32:9' => '32:9 (ultrawide)',
+    ],
+    'orientation' => [
+        'landscape' => 'Landscape',
+        'portrait' => 'Portrait',
     ],
 
     'settings' => [

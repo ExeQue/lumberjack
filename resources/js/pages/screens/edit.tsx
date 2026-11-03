@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent, PointerEvent } from 'react';
+import { RectangleHorizontal, RectangleVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNow } from '@/components/lj/relative';
 import {
@@ -70,6 +71,8 @@ type Props = {
     };
     sharing: Sharing;
     tv: TvInstructionsProps;
+    /** The display shapes a screen can be designed for (ScreenAspect), landscape. */
+    aspects: string[];
     /** Ready layouts an empty screen can be filled from. */
     templates: {
         id: string;
@@ -172,11 +175,20 @@ function resized(
 
 type Settings = Pick<
     Screen,
-    'name' | 'theme' | 'light_from' | 'light_to' | 'timezone' | 'scope'
+    | 'name'
+    | 'aspect'
+    | 'orientation'
+    | 'theme'
+    | 'light_from'
+    | 'light_to'
+    | 'timezone'
+    | 'scope'
 >;
 
 const SETTINGS: (keyof Settings)[] = [
     'name',
+    'aspect',
+    'orientation',
     'theme',
     'light_from',
     'light_to',
@@ -775,6 +787,8 @@ export default function EditScreen(props: Props) {
         .sort((a, b) => a.y - b.y || a.x - b.x);
     const current = screen.widgets.find((w) => w.id === selected) ?? null;
     const theme = themeAt(screen, now);
+    const [aw, ah] = screen.aspect.split(':').map(Number);
+    const ratio = screen.orientation === 'portrait' ? [ah, aw] : [aw, ah];
     const statusText =
         status === 'saving'
             ? t('screens.designer.saving')
@@ -1025,6 +1039,71 @@ export default function EditScreen(props: Props) {
                                 </Select>
                             </label>
                             <label className="flex items-center gap-1.5">
+                                {t('screens.designer.aspect')}
+                                <Select
+                                    value={screen.aspect}
+                                    onChange={(e) =>
+                                        change((s) => ({
+                                            ...s,
+                                            aspect: e.target.value,
+                                        }))
+                                    }
+                                >
+                                    {props.aspects.map((a) => (
+                                        <option key={a} value={a}>
+                                            {t(`screens.aspect.${a}`)}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </label>
+                            <div
+                                role="group"
+                                aria-label={t('screens.designer.orientation')}
+                                className="flex"
+                            >
+                                {(['landscape', 'portrait'] as const).map(
+                                    (o) => (
+                                        <button
+                                            key={o}
+                                            type="button"
+                                            aria-pressed={
+                                                screen.orientation === o
+                                            }
+                                            aria-label={t(
+                                                `screens.orientation.${o}`,
+                                            )}
+                                            title={t(
+                                                `screens.orientation.${o}`,
+                                            )}
+                                            className={cn(
+                                                'flex h-8 w-8 items-center justify-center border border-line first:rounded-l-md last:rounded-r-md',
+                                                screen.orientation === o
+                                                    ? 'bg-amber text-amber-ink'
+                                                    : 'bg-rail text-ink-2 hover:text-ink',
+                                            )}
+                                            onClick={() =>
+                                                change((s) => ({
+                                                    ...s,
+                                                    orientation: o,
+                                                }))
+                                            }
+                                        >
+                                            {o === 'landscape' ? (
+                                                <RectangleHorizontal
+                                                    aria-hidden="true"
+                                                    className="size-4"
+                                                />
+                                            ) : (
+                                                <RectangleVertical
+                                                    aria-hidden="true"
+                                                    className="size-4"
+                                                />
+                                            )}
+                                        </button>
+                                    ),
+                                )}
+                            </div>
+                            <label className="flex items-center gap-1.5">
                                 {t('screens.designer.theme')}
                                 <Select
                                     value={screen.theme}
@@ -1160,7 +1239,7 @@ export default function EditScreen(props: Props) {
 
                     <div
                         ref={grid}
-                        className="lj-screen lj-grid grid aspect-video gap-[10px] overflow-hidden rounded-[10px] border border-(--s-line) p-[14px]"
+                        className="lj-screen lj-grid mx-auto grid gap-[10px] overflow-hidden rounded-[10px] border border-(--s-line) p-[14px]"
                         data-theme={theme}
                         onDragOver={onGridDragOver}
                         onDrop={onGridDrop}
@@ -1179,6 +1258,10 @@ export default function EditScreen(props: Props) {
                             }
                         }}
                         style={{
+                            // The display's shape, as large as fits: full width, or for a
+                            // tall shape the height of the window less the toolbar.
+                            aspectRatio: `${ratio[0]} / ${ratio[1]}`,
+                            width: `min(100%, calc((100dvh - 190px) * ${ratio[0] / ratio[1]}))`,
                             ['--lj-cols' as string]: screen.cols,
                             ['--lj-rows' as string]: screen.rows,
                             gridTemplateColumns: `repeat(${screen.cols}, minmax(0, 1fr))`,
