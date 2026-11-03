@@ -721,7 +721,7 @@ function QueuesCard({ stats, period }: { stats: QueueStat[]; period: string }) {
                                         {values.length > 0 && (
                                             <div className="flex items-center gap-2">
                                                 <div
-                                                    className="flex h-7 flex-col justify-between text-right font-mono text-[10px] leading-none text-ink-3"
+                                                    className="flex h-7 w-10 shrink-0 flex-col justify-between text-right font-mono text-[10px] leading-none text-ink-3"
                                                     aria-hidden="true"
                                                 >
                                                     <span>
