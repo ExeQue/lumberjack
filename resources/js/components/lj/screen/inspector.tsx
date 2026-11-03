@@ -518,6 +518,40 @@ export function WidgetInspector({
                 </div>
             )}
 
+            {(schema[widget.type] ?? []).some((section) =>
+                section.fields.some((f) => f.key === 'period'),
+            ) && (
+                <div className="flex flex-col gap-1.5">
+                    <span className="text-[13px] font-medium">
+                        {t('screens.inspector.period')}
+                    </span>
+                    <div
+                        role="radiogroup"
+                        aria-label={t('screens.inspector.period')}
+                        className="flex flex-wrap gap-1.5"
+                    >
+                        {['', ...catalog.periods].map((p) => {
+                            const on = (widget.scope.period ?? '') === p;
+
+                            return (
+                                <button
+                                    key={p || 'screen'}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={on}
+                                    className={chip(on)}
+                                    onClick={() => setScope('period', p)}
+                                >
+                                    {p === ''
+                                        ? t('screens.inspector.period_screen')
+                                        : t(`screens.period_short.${p}`)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             {ROTATING_KINDS.includes(widget.type) && (
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[13px] font-medium">

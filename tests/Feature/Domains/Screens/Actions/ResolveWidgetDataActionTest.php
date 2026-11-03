@@ -21,6 +21,7 @@ use App\Domains\Screens\Enums\ReleaseScope;
 use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Exceptions\UnknownWidgetSourceException;
 use App\Domains\Screens\Support\WidgetSources;
+use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Models\Team;
 use Tests\Support\Performance\CreatesRequestCounts;
 
@@ -228,6 +229,11 @@ describe('the edges of each type', function () {
         expect($rows['web-1'])->toMatchArray(['cpu_load' => 0.25, 'memory_used' => 0.95, 'disk_used' => 0.1, 'state' => 'red'])
             ->and($rows['web-2'])->toMatchArray(['cpu_load' => null, 'state' => 'red'])
             ->and(($this->resolve)(WidgetType::List, 'agents', ['only_problems' => true])['rows'])->toHaveCount(1);
+    });
+
+    it('says which period it covers, except for health which is now', function () {
+        expect(($this->resolve)(WidgetType::Stat, 'requests', scope: new WidgetScope(period: Period::Week))['period'])->toBe('7d')
+            ->and(($this->resolve)(WidgetType::Health, 'checks')['period'])->toBeNull();
     });
 
     it('judges a queue like its backlog alert, and says why', function () {
