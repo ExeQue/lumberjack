@@ -8,6 +8,7 @@ use App\Domains\Health\Enums\HealthResultStatus;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
+use App\Domains\Mcp\Http\Middleware\AuthenticateMcpToken;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Mcp\Servers\LumberjackServer;
 use App\Domains\Projects\Models\Project;
@@ -29,6 +30,14 @@ beforeEach(function () {
 describe('authentication', function () {
     it('rejects an unknown token', function () {
         $this->callTool('nope', 'list_projects')->assertUnauthorized();
+    });
+
+    it('turns an address away unchecked after many unknown tokens', function () {
+        foreach (range(1, AuthenticateMcpToken::FAILURES_PER_MINUTE) as $i) {
+            $this->callTool('nope-'.$i, 'list_projects')->assertUnauthorized();
+        }
+
+        $this->callTool('lj_mcp_secret', 'list_projects')->assertTooManyRequests();
     });
 
     it('rejects an expired token', function () {
