@@ -620,17 +620,30 @@ class ResolveWidgetDataAction
     private function asOf(WidgetSource $source, Collection $projects): ?string
     {
         $ids = $projects->modelKeys();
-        $at = match (true) {
-            in_array($source->id, ['queue_size', 'queues'], true) => QueueSample::query()->whereIn('project_id', $ids)->max('sampled_at'),
-            str_starts_with($source->id, 'host_') || $source->id === 'hosts' => HostSample::query()
-                ->whereIn('project_agent_id', ProjectAgent::query()->whereIn('project_id', $ids)->select('id'))->max('sampled_at'),
-            in_array($source->id, ['agents', 'agents_online'], true) => ProjectAgent::query()->whereIn('project_id', $ids)->max('last_seen_at'),
-            $source->type === WidgetType::Health => HealthCheckHost::query()
-                ->whereIn('health_check_id', HealthCheck::query()->whereIn('project_id', $ids)->select('id'))->max('last_result_at'),
-            str_starts_with($source->id, 'db_') => HealthCheckHost::query()
-                ->whereIn('health_check_id', HealthCheck::query()->whereIn('project_id', $ids)->whereReportsDatabase()->select('id'))->max('last_result_at'),
+        $kind = match (true) {
+            in_array($source->id, ['queue_size', 'queues'], true) => 'queues',
+            str_starts_with($source->id, 'host_') || $source->id === 'hosts' => 'hosts',
+            in_array($source->id, ['agents', 'agents_online'], true) => 'agents',
+            $source->type === WidgetType::Health => 'health',
+            str_starts_with($source->id, 'db_') => 'databases',
             default => null,
         };
+
+        if ($kind === null) {
+            return null;
+        }
+
+        // Every host widget of a screen asks the same: once per request.
+        $at = $this->memo->remember("as-of:{$kind}:".implode(',', $ids), fn (): mixed => match ($kind) {
+            'queues' => QueueSample::query()->whereIn('project_id', $ids)->max('sampled_at'),
+            'hosts' => HostSample::query()
+                ->whereIn('project_agent_id', ProjectAgent::query()->whereIn('project_id', $ids)->select('id'))->max('sampled_at'),
+            'agents' => ProjectAgent::query()->whereIn('project_id', $ids)->max('last_seen_at'),
+            'health' => HealthCheckHost::query()
+                ->whereIn('health_check_id', HealthCheck::query()->whereIn('project_id', $ids)->select('id'))->max('last_result_at'),
+            'databases' => HealthCheckHost::query()
+                ->whereIn('health_check_id', HealthCheck::query()->whereIn('project_id', $ids)->whereReportsDatabase()->select('id'))->max('last_result_at'),
+        });
 
         return $at !== null ? CarbonImmutable::parse((string) $at)->toIso8601String() : null;
     }
