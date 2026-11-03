@@ -4,10 +4,13 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+// Not modal by default: a modal menu locks scrolling with overflow: hidden on <body>,
+// which turns <body> into the scroll container and drops the sticky sidebar out of view.
 function DropdownMenu({
+  modal = false,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" modal={modal} {...props} />
 }
 
 function DropdownMenuPortal({
