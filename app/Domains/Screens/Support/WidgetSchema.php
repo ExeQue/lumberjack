@@ -271,7 +271,7 @@ final class WidgetSchema
             'stat' => [
                 $section('value', [
                     ...$limits,
-                    $select('compare', ['none', 'previous', 'yesterday', 'last_week'], 'previous', true),
+                    $select('compare', ['none', 'previous', 'yesterday', 'last_week'], 'previous', true, 2),
                     $select('decimals', ['auto', '0', '1', '2'], 'auto'),
                     $toggle('sparkline', true, true),
                     $text('prefix'),
