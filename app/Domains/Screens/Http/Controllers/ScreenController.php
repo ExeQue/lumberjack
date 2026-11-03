@@ -14,6 +14,7 @@ use App\Domains\Screens\Actions\UpdateScreenAction;
 use App\Domains\Screens\Actions\UpdateScreenLayoutAction;
 use App\Domains\Screens\Actions\UpdateScreenWidgetAction;
 use App\Domains\Screens\Broadcasting\ScreenChannel;
+use App\Domains\Screens\Broadcasting\TeamDisplaysChannel;
 use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenTemplate;
 use App\Domains\Screens\Exceptions\ReloadTooSoonException;
@@ -83,6 +84,8 @@ class ScreenController
             'screen' => $presenter->present($screen),
             'team' => ['name' => $screen->team->name],
             'displays' => $presenter->previewDisplays($screen),
+            // Where a TV reporting a new size says so, to refresh the list above.
+            'displays_channel' => TeamDisplaysChannel::name($screen->team),
             'projects' => $presenter->projects($screen->team),
             'data_url' => route('screens.data', $screen, absolute: false),
             'templates' => ScreenTemplate::forDesigner(),

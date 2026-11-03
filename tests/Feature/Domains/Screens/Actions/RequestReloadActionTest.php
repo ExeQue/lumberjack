@@ -43,7 +43,7 @@ describe('reloading what shows a screen', function () {
 describe('reloading one display', function () {
     it('tells the display\'s channel, for team admins only', function () {
         $this->actingAs($this->member)->post(route('displays.reload', $this->display))->assertForbidden();
-        $this->actingAs($this->admin)->post(route('displays.reload', $this->display))->assertSessionHas('status', 'Reload sent to Hall.');
+        $this->actingAs($this->admin)->post(route('displays.reload', $this->display))->assertSessionHas('status', 'Reload sent to Office TV, Hall.');
         $this->actingAs($this->admin)->post(route('displays.reload', $this->display))->assertSessionHas('status', fn (string $s): bool => str_starts_with($s, 'A reload went out moments ago'));
 
         Event::assertDispatchedTimes(ReloadRequested::class, 1);

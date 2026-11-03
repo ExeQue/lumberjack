@@ -19,32 +19,32 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A TV paired to a team, showing one of its screens. It proves itself with a display
- * token (a cookie on the TV) of which only the sha256 is stored.
+ * One window of a paired device (/tv/{slot}), showing one of its team's screens or several
+ * in turn. It proves itself with a display token (a cookie in that window) of which only
+ * the sha256 is stored. The team is the device's, kept here too for channel and screen
+ * checks.
  *
  * @property int $id
  * @property string $uuid
  * @property int $team_id
+ * @property int $device_id
  * @property int|null $screen_id
- * @property string $name
+ * @property string|null $name its own name, if it has one besides its window number
  * @property DisplayTheme $theme
  * @property string|null $token_hash
- * @property string|null $user_agent
- * @property string|null $ip
  * @property int|null $viewport_width the TV window's size in CSS pixels, as it last said
  * @property int|null $viewport_height
  * @property float|null $pixel_ratio
  * @property CarbonImmutable|null $last_seen_at
  * @property int $slot which window of its computer, /tv/{slot}
- * @property string|null $device_hash sha256 of the computer's device cookie, shared by its windows
  * @property list<int>|null $playlist screen ids shown in turn; empty shows screen_id alone
  * @property int $rotate_seconds
  * @property bool $hold_on_alert whether a screen with a red widget stays until it clears
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'screen_id', 'name', 'theme', 'token_hash', 'user_agent', 'ip', 'viewport_width', 'viewport_height', 'pixel_ratio', 'last_seen_at', 'slot', 'device_hash', 'playlist', 'rotate_seconds', 'hold_on_alert'])]
-#[Hidden(['token_hash', 'device_hash'])]
+#[Fillable(['team_id', 'device_id', 'screen_id', 'name', 'theme', 'token_hash', 'viewport_width', 'viewport_height', 'pixel_ratio', 'last_seen_at', 'slot', 'playlist', 'rotate_seconds', 'hold_on_alert'])]
+#[Hidden(['token_hash'])]
 #[UseEloquentBuilder(DisplayBuilder::class)]
 #[UseFactory(DisplayFactory::class)]
 class Display extends Model
@@ -96,6 +96,12 @@ class Display extends Model
         return $this->belongsTo(Team::class);
     }
 
+    /** @return BelongsTo<Device, $this> */
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class);
+    }
+
     /** @return BelongsTo<Screen, $this> */
     public function screen(): BelongsTo
     {
@@ -129,6 +135,20 @@ class Display extends Model
         $screens = Screen::query()->whereTeam($this->team)->whereIn('id', $ids)->with('team')->get()->keyBy('id');
 
         return array_values(array_filter(array_map(fn (int $id): ?Screen => $screens->get($id), $ids)));
+    }
+
+    /** "Window 2", or its own name when it has one. */
+    public function label(): string
+    {
+        return $this->name ?? __('screens.displays.window', ['slot' => $this->slot]);
+    }
+
+    /** "Office PC, window 2": which window of which device. */
+    public function fullName(): string
+    {
+        return $this->name === null
+            ? __('screens.displays.full_name', ['device' => $this->device->name, 'slot' => $this->slot])
+            : __('screens.displays.full_name_named', ['device' => $this->device->name, 'name' => $this->name]);
     }
 
     public function isOnline(): bool

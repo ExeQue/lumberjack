@@ -17,6 +17,7 @@ type Props = {
     code: string;
     pair_url: string;
     pair_base: string;
+    /** Where this window lives once paired, /tv/{slot}; also its start page. */
     tv_url: string;
     qr: string;
     /** Seconds the code has left; counted from here, so a TV's wrong clock does not matter. */
@@ -66,7 +67,8 @@ export default function TvPair({
                         // The cookie is enough; the copy is only a fallback.
                     }
 
-                    window.location.reload();
+                    // From the landing page too: the window lives at its own address.
+                    window.location.replace(tv_url);
                 } else if (json?.status === 'expired') {
                     window.location.reload();
                 }
@@ -93,7 +95,7 @@ export default function TvPair({
             void sendJson(urls.restore, 'POST', { token: kept }).then(
                 ({ status }) => {
                     if (status === 200) {
-                        window.location.reload();
+                        window.location.replace(tv_url);
                     } else if (status === 404) {
                         localStorage.removeItem(displayTokenKey(slot));
                     }

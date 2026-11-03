@@ -3,20 +3,25 @@
 declare(strict_types=1);
 
 use App\Domains\Screens\Actions\ClaimTvPairingAction;
+use App\Domains\Screens\Actions\ConfirmTvPairingAction;
 use App\Domains\Screens\Actions\StartTvPairingAction;
 use App\Domains\Screens\Actions\TouchDisplayAction;
 use App\Domains\Screens\Enums\DisplayTheme;
+use App\Domains\Screens\Events\DisplayUpdated;
 use App\Domains\Screens\Http\Controllers\TvController;
 use App\Domains\Screens\Http\Requests\RestoreDisplayRequest;
 use App\Domains\Screens\Http\Requests\TvHeartbeatRequest;
 use App\Domains\Screens\Http\Requests\ViewerDataRequest;
+use App\Domains\Screens\Models\Device;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Models\TvPairing;
 use App\Domains\Screens\Presenters\ScreenPresenter;
 use App\Domains\Screens\Providers\ScreensServiceProvider;
 use App\Domains\Screens\Support\TvCredentials;
+use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
+use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
 
 covers(
@@ -24,6 +29,7 @@ covers(
     TvCredentials::class,
     StartTvPairingAction::class,
     ClaimTvPairingAction::class,
+    DisplayUpdated::class,
     TouchDisplayAction::class,
     RestoreDisplayRequest::class,
     TvHeartbeatRequest::class,
@@ -138,7 +144,7 @@ describe('a paired TV', function () {
     });
 
     it('shows its screen in the kiosk, reading data and changes as a display', function () {
-        $response = ($this->tv)()->get(route('tv'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        $response = ($this->tv)()->get(route('tv', 1))->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('tv/show')
             ->where('display.uuid', $this->display->uuid)
             ->where('display_channel', 'display.'.$this->display->uuid)
@@ -152,6 +158,7 @@ describe('a paired TV', function () {
             ->where('rotate_seconds', 30)
             ->where('hold_on_alert', true)
             ->where('urls.heartbeat', '/tv/1/heartbeat')
+            ->where('display.name', 'Office TV, window 1')
             ->has('version'));
 
         // The cookie rolls: another year from today.
@@ -164,7 +171,7 @@ describe('a paired TV', function () {
     it('draws the screen in the theme the display forces', function () {
         $this->display->update(['theme' => DisplayTheme::Light]);
 
-        ($this->tv)()->get(route('tv'))->assertInertia(fn (Assert $page) => $page
+        ($this->tv)()->get(route('tv', 1))->assertInertia(fn (Assert $page) => $page
             ->where('screens.0.screen.theme', 'light')
             ->where('screens.0.screen.current_theme', 'light'));
         expect($this->screen->refresh()->theme->value)->toBe('dark');
@@ -173,7 +180,7 @@ describe('a paired TV', function () {
     it('says so when it shows no screen', function () {
         $this->display->update(['screen_id' => null]);
 
-        ($this->tv)()->get(route('tv'))->assertInertia(fn (Assert $page) => $page->component('tv/show')->where('screens', []));
+        ($this->tv)()->get(route('tv', 1))->assertInertia(fn (Assert $page) => $page->component('tv/show')->where('screens', []));
         ($this->tv)()->getJson(route('tv.data', 1))->assertOk()->assertJsonPath('data', []);
     });
 
@@ -194,7 +201,7 @@ describe('a paired TV', function () {
         $foreign = Screen::factory()->create();
         $this->display->update(['playlist' => [$second->id, $foreign->id, $this->screen->id]]);
 
-        ($this->tv)()->get(route('tv'))->assertInertia(fn (Assert $page) => $page
+        ($this->tv)()->get(route('tv', 1))->assertInertia(fn (Assert $page) => $page
             ->has('screens', 2)
             ->where('screens.0.screen.uuid', $second->uuid)
             ->where('screens.1.screen.uuid', $this->screen->uuid));
@@ -217,6 +224,49 @@ describe('a paired TV', function () {
         ($this->tv)()->getJson(route('tv.heartbeat', [1, 'w' => 5]))->assertUnprocessable();
 
         expect([$this->display->refresh()->viewport_width, $this->display->viewport_height, $this->display->pixel_ratio])->toBe([1920, 1080, 2.0]);
+    });
+
+    it('keeps its device\'s last seen, browser and address current', function () {
+        $this->display->device->update(['last_seen_at' => now()->subHour(), 'user_agent' => 'old', 'ip' => '10.0.0.1']);
+
+        ($this->tv)()->withHeader('User-Agent', 'Chromium kiosk')->getJson(route('tv.heartbeat', 1))->assertOk();
+
+        expect($this->display->device->refresh()->only('user_agent', 'ip'))->toBe(['user_agent' => 'Chromium kiosk', 'ip' => '127.0.0.1'])
+            ->and($this->display->device->last_seen_at->timestamp)->toBe(now()->timestamp);
+    });
+
+    it('tells the team\'s pages of its new size at once, but not on every step of a drag', function () {
+        Event::fake([DisplayUpdated::class]);
+        $this->display->update(['last_seen_at' => now()->subSeconds(10)]);
+
+        ($this->tv)()->getJson(route('tv.heartbeat', [1, 'w' => 1280, 'h' => 720, 'dpr' => 1]))->assertOk();
+
+        Event::assertDispatched(DisplayUpdated::class, fn (DisplayUpdated $e): bool => $e->broadcastAs() === 'display.updated'
+            && $e->broadcastOn()->name === 'private-team.'.$this->display->team->uuid.'.displays'
+            && $e->broadcastWith() === [
+                'uuid' => $this->display->uuid,
+                'device' => $this->display->device->uuid,
+                'name' => 'Office TV, window 1',
+                'viewport' => ['w' => 1280, 'h' => 720],
+                'last_seen_at' => now()->toIso8601String(),
+            ]);
+
+        foreach (range(1, TouchDisplayAction::RESIZES_PER_MINUTE + 5) as $width) {
+            ($this->tv)()->getJson(route('tv.heartbeat', [1, 'w' => 1300 + $width, 'h' => 720, 'dpr' => 1]))->assertOk();
+        }
+
+        Event::assertDispatchedTimes(DisplayUpdated::class, TouchDisplayAction::RESIZES_PER_MINUTE);
+        // Nothing new to say, nothing sent.
+        ($this->tv)()->getJson(route('tv.heartbeat', 1))->assertOk();
+        Event::assertDispatchedTimes(DisplayUpdated::class, TouchDisplayAction::RESIZES_PER_MINUTE);
+    });
+
+    it('takes the window its cookie is in as its window number', function () {
+        $this->display->update(['slot' => 2, 'last_seen_at' => now()]);
+
+        ($this->tv)()->getJson(route('tv.heartbeat', 1))->assertOk();
+
+        expect($this->display->refresh()->slot)->toBe(1);
     });
 
     it('writes last seen at most once a minute', function () {
@@ -265,11 +315,74 @@ describe('several windows of one computer', function () {
         expect($response->getCookie(TvCredentials::displayCookieName(2))->getValue())->toBe($response->json('token'));
 
         $this->withCookie(TvCredentials::displayCookieName(1), 'ljd_one')->get(route('tv', 2))->assertInertia(fn (Assert $page) => $page->component('tv/pair'));
-        $this->withCookie(TvCredentials::displayCookieName(1), 'ljd_one')->get(route('tv'))->assertInertia(fn (Assert $page) => $page->where('display.name', 'Window one'));
+        $this->withCookie(TvCredentials::displayCookieName(1), 'ljd_one')->get(route('tv', 1))->assertInertia(fn (Assert $page) => $page
+            ->where('display.label', 'Window one')
+            ->where('display.name', 'Office TV, Window one'));
     });
 
     it('knows windows 1 to 9 only', function () {
         $this->get('/tv/0')->assertNotFound();
         $this->get('/tv/10')->assertNotFound();
+    });
+});
+
+describe('choosing a window at /tv', function () {
+    beforeEach(function () {
+        $this->device = Device::factory()->create(['name' => 'Office PC']);
+        $ops = Screen::factory()->for($this->device->team)->create(['name' => 'Ops']);
+        $shop = Screen::factory()->for($this->device->team)->create(['name' => 'Shop on-call']);
+        Display::factory()->showing($ops)->onDevice($this->device, 1)->withToken('ljd_one')->create();
+        Display::factory()->showing($shop)->onDevice($this->device, 2)->withToken('ljd_two')->create(['playlist' => [$shop->id, $ops->id]]);
+        $this->both = fn () => $this->withCookie(TvCredentials::displayCookieName(1), 'ljd_one')->withCookie(TvCredentials::displayCookieName(2), 'ljd_two');
+    });
+
+    it('lets a browser with several windows pick which this one shows, or add another', function () {
+        ($this->both)()->get(route('tv'))->assertOk()->assertHeader('Cache-Control', 'no-store, private')->assertInertia(fn (Assert $page) => $page
+            ->component('tv/choose')
+            ->where('device', 'Office PC')
+            ->where('windows', [
+                ['slot' => 1, 'label' => 'Window 1', 'screens' => ['Ops'], 'url' => route('tv', 1)],
+                ['slot' => 2, 'label' => 'Window 2', 'screens' => ['Shop on-call', 'Ops'], 'url' => route('tv', 2)],
+            ])
+            ->where('add', ['slot' => 3, 'url' => route('tv', 3)]));
+
+        expect(TvPairing::query()->count())->toBe(0);
+    });
+
+    it('keeps /tv/{slot} as a direct address', function () {
+        ($this->both)()->get(route('tv', 2))->assertInertia(fn (Assert $page) => $page->component('tv/show')->where('slot', 2));
+    });
+
+    it('lands on the chooser with one window too, never forwarding by itself', function () {
+        $this->withCookie(TvCredentials::displayCookieName(2), 'ljd_two')->get(route('tv'))->assertInertia(fn (Assert $page) => $page
+            ->component('tv/choose')
+            ->where('windows.0.url', route('tv', 2))
+            ->where('add', ['slot' => 1, 'url' => route('tv', 1)]));
+    });
+
+    it('ignores cookies of windows that are no longer paired', function () {
+        $this->withCookie(TvCredentials::displayCookieName(1), 'ljd_one')->withCookie(TvCredentials::displayCookieName(3), 'ljd_gone')->get(route('tv'))
+            ->assertInertia(fn (Assert $page) => $page->component('tv/choose')->has('windows', 1)->where('add.slot', 2));
+    });
+
+    it('starts first setup as window 1 on a browser with none paired, which then lives at /tv/1', function () {
+        $this->withCookie(TvCredentials::displayCookieName(1), 'ljd_gone')->get(route('tv'))
+            ->assertInertia(fn (Assert $page) => $page->component('tv/pair')->where('slot', 1)->where('tv_url', route('tv', 1)));
+    });
+
+    it('pairs an added window into the same device', function () {
+        $admin = User::factory()->inTeam($this->device->team, TeamRole::Admin)->create();
+        $this->device->update(['device_hash' => TvCredentials::hash('device-cookie')]);
+
+        ($this->both)()->withCookie(TvCredentials::DEVICE_COOKIE, 'device-cookie')->get(route('tv', 3))
+            ->assertInertia(fn (Assert $page) => $page->component('tv/pair')->where('slot', 3));
+        $pairing = TvPairing::query()->sole();
+        expect($pairing->device_hash)->toBe($this->device->device_hash);
+
+        $display = app(ConfirmTvPairingAction::class)->execute($pairing, $admin, Screen::query()->where('name', 'Ops')->sole());
+
+        expect($display->device_id)->toBe($this->device->id)
+            ->and($display->slot)->toBe(3)
+            ->and($this->device->displays()->count())->toBe(3);
     });
 });

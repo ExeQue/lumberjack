@@ -32,6 +32,7 @@ use App\Domains\Releases\Http\Controllers\ReleaseController;
 use App\Domains\Repositories\Http\Controllers\RepositoryController;
 use App\Domains\Retention\Http\Controllers\RetentionController;
 use App\Domains\Schedule\Http\Controllers\ScheduleController;
+use App\Domains\Screens\Http\Controllers\DeviceController;
 use App\Domains\Screens\Http\Controllers\DisplayController;
 use App\Domains\Screens\Http\Controllers\PairController;
 use App\Domains\Screens\Http\Controllers\ScreenController;
@@ -187,6 +188,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('team/displays/{display:uuid}', [DisplayController::class, 'update'])->name('displays.update');
     Route::post('team/displays/{display:uuid}/reload', [DisplayController::class, 'reload'])->name('displays.reload');
     Route::delete('team/displays/{display:uuid}', [DisplayController::class, 'destroy'])->name('displays.destroy');
+    Route::put('team/devices/{device:uuid}', [DeviceController::class, 'update'])->name('devices.update');
+    Route::post('team/devices/{device:uuid}/reload', [DeviceController::class, 'reload'])->name('devices.reload');
+    Route::delete('team/devices/{device:uuid}', [DeviceController::class, 'destroy'])->name('devices.destroy');
 
     Route::get('team/alerts', [AlertController::class, 'index'])->name('alerts.index');
     Route::post('team/alerts/channels', [AlertController::class, 'storeChannel'])->name('alerts.channels.store');

@@ -8,6 +8,7 @@ use App\Domains\Screens\Actions\ConfirmTvPairingAction;
 use App\Domains\Screens\Events\TvPairingConfirmed;
 use App\Domains\Screens\Http\Controllers\PairController;
 use App\Domains\Screens\Http\Requests\ConfirmTvPairingRequest;
+use App\Domains\Screens\Models\Device;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Models\TvPairing;
@@ -56,6 +57,7 @@ describe('the confirm page', function () {
             ->has('screens', 1)
             ->where('screens.0.uuid', $this->screen->uuid)
             ->where('screens.0.team', $this->screen->team->name)
+            ->where('screens.0.device', null)
             ->where('paired', null));
     });
 
@@ -75,14 +77,19 @@ describe('the confirm page', function () {
 describe('confirming a code', function () {
     beforeEach(fn () => Event::fake([TvPairingConfirmed::class]));
 
-    it('pairs the TV as a display of the screen\'s team and tells the TV', function () {
+    it('pairs the TV as a new device of the screen\'s team, its first window showing the screen, and tells the TV', function () {
         $response = $this->actingAs($this->admin)->post(route('pair.confirm', 'K7QM2X'), ['screen' => $this->screen->uuid, 'name' => 'Office TV']);
 
         $display = Display::query()->sole();
+        $device = Device::query()->sole();
         $response->assertRedirect(route('pair', ['paired' => $display->uuid]));
         expect($display->team_id)->toBe($this->screen->team_id)
+            ->and($display->device_id)->toBe($device->id)
+            ->and($display->name)->toBeNull()
             ->and($display->screen_id)->toBe($this->screen->id)
-            ->and($display->user_agent)->toBe($this->pairing->user_agent)
+            ->and($device->only('team_id', 'name', 'user_agent', 'ip', 'created_by'))->toBe([
+                'team_id' => $this->screen->team_id, 'name' => 'Office TV', 'user_agent' => $this->pairing->user_agent, 'ip' => '10.0.0.20', 'created_by' => $this->admin->id,
+            ])
             // The TV fetches its token itself, with its pairing cookie.
             ->and($display->token_hash)->toBeNull()
             ->and($this->pairing->refresh()->display_id)->toBe($display->id)
@@ -91,7 +98,7 @@ describe('confirming a code', function () {
         Event::assertDispatched(TvPairingConfirmed::class, fn (TvPairingConfirmed $e): bool => $e->broadcastOn()->name === 'private-tv-pairing.'.$this->pairing->uuid
             && $e->broadcastAs() === 'pairing.confirmed' && $e->broadcastWith() === []);
 
-        $this->get(route('pair', ['paired' => $display->uuid]))->assertInertia(fn (Assert $page) => $page->where('paired', ['display' => 'Office TV', 'screen' => 'Ops', 'slot' => 1, 'next_url' => route('tv', 2)]));
+        $this->get(route('pair', ['paired' => $display->uuid]))->assertInertia(fn (Assert $page) => $page->where('paired', ['display' => 'Office TV', 'device' => 'Office TV', 'screen' => 'Ops', 'slot' => 1, 'next_url' => route('tv', 2)]));
         // Only for the team's members.
         $this->actingAs(User::factory()->inTeam()->create())->get(route('pair', ['paired' => $display->uuid]))->assertInertia(fn (Assert $page) => $page->where('paired', null));
         $this->get(route('pair', ['paired' => 'not-a-uuid']))->assertInertia(fn (Assert $page) => $page->where('paired', null));
@@ -104,7 +111,56 @@ describe('confirming a code', function () {
             ->where('pairing.slot', 9)->where('pairing.next_url', null));
         $this->actingAs($this->admin)->post(route('pair.confirm', 'K7QM2X'), ['screen' => $this->screen->uuid, 'name' => 'Office PC 9']);
 
-        expect(Display::query()->sole()->only('slot', 'device_hash'))->toBe(['slot' => 9, 'device_hash' => str_repeat('a', 64)]);
+        $display = Display::query()->sole();
+        expect($display->slot)->toBe(9)->and($display->device->device_hash)->toBe(str_repeat('a', 64));
+    });
+
+    it('adds a second window of the same browser to its device, asking only for its screen', function () {
+        $hash = str_repeat('d', 64);
+        $device = Device::factory()->for($this->screen->team)->create(['name' => 'Office PC', 'device_hash' => $hash]);
+        $first = Display::factory()->showing($this->screen)->onDevice($device)->create();
+        $shop = Screen::factory()->for($this->screen->team)->create(['name' => 'Shop']);
+        $this->pairing->update(['slot' => 2, 'device_hash' => $hash]);
+
+        $this->actingAs($this->admin)->get(route('pair.show', 'K7QM2X'))->assertInertia(fn (Assert $page) => $page
+            ->where('pairing.slot', 2)
+            ->where('screens.0.device', 'Office PC')
+            ->where('screens.1.device', 'Office PC'));
+        $response = $this->actingAs($this->admin)->post(route('pair.confirm', 'K7QM2X'), ['screen' => $shop->uuid])->assertSessionHasNoErrors();
+
+        $second = Display::query()->whereKeyNot($first->id)->sole();
+        $response->assertRedirect(route('pair', ['paired' => $second->uuid]));
+        expect(Device::query()->sole()->is($device))->toBeTrue()
+            ->and($second->only('device_id', 'slot', 'screen_id', 'name'))->toBe(['device_id' => $device->id, 'slot' => 2, 'screen_id' => $shop->id, 'name' => null])
+            ->and($device->refresh()->name)->toBe('Office PC')
+            ->and(AdminAuditEntry::query()->sole()->subject)->toBe('Office PC, window 2');
+        $this->get(route('pair', ['paired' => $second->uuid]))->assertInertia(fn (Assert $page) => $page
+            ->where('paired.display', 'Office PC, window 2')
+            ->where('paired.next_url', route('tv', 3)));
+    });
+
+    it('makes a device of its own in another team, even for the same browser', function () {
+        $hash = str_repeat('d', 64);
+        Device::factory()->create(['name' => 'Elsewhere', 'device_hash' => $hash]);
+        $this->pairing->update(['device_hash' => $hash]);
+
+        $this->actingAs($this->admin)->get(route('pair.show', 'K7QM2X'))->assertInertia(fn (Assert $page) => $page->where('screens.0.device', null));
+        $this->actingAs($this->admin)->post(route('pair.confirm', 'K7QM2X'), ['screen' => $this->screen->uuid])->assertSessionHasErrors(['name' => __('screens.pairing.name_required')]);
+        $this->actingAs($this->admin)->post(route('pair.confirm', 'K7QM2X'), ['screen' => $this->screen->uuid, 'name' => 'Lobby'])->assertSessionHasNoErrors();
+
+        expect(Device::query()->whereTeam($this->screen->team)->sole()->name)->toBe('Lobby')->and(Device::query()->count())->toBe(2);
+    });
+
+    it('gives a window paired again, that lost its cookie, its display back', function () {
+        $hash = str_repeat('d', 64);
+        $device = Device::factory()->for($this->screen->team)->create(['device_hash' => $hash]);
+        $display = Display::factory()->onDevice($device, 2)->create(['rotate_seconds' => 45]);
+        $this->pairing->update(['slot' => 2, 'device_hash' => $hash]);
+
+        $this->actingAs($this->admin)->post(route('pair.confirm', 'K7QM2X'), ['screen' => $this->screen->uuid])->assertSessionHasNoErrors();
+
+        expect(Display::query()->sole()->only('id', 'screen_id', 'rotate_seconds'))->toBe(['id' => $display->id, 'screen_id' => $this->screen->id, 'rotate_seconds' => 45])
+            ->and($this->pairing->refresh()->display_id)->toBe($display->id);
     });
 
     it('works once', function () {
@@ -134,9 +190,12 @@ describe('confirming a code', function () {
         expect(Display::query()->count())->toBe(0);
     })->with(['member', 'outsider']);
 
-    it('needs a screen and a name', function () {
-        $this->actingAs($this->admin)->post(route('pair.confirm', 'K7QM2X'), ['screen' => 'nope', 'name' => ''])
-            ->assertSessionHasErrors(['screen', 'name']);
+    it('needs a screen, and a name for a new device', function () {
+        $this->actingAs($this->admin)->post(route('pair.confirm', 'K7QM2X'), ['screen' => 'nope', 'name' => 'TV'])->assertSessionHasErrors('screen');
+        $this->actingAs($this->admin)->post(route('pair.confirm', 'K7QM2X'), ['screen' => $this->screen->uuid, 'name' => ''])
+            ->assertSessionHasErrors(['name' => __('screens.pairing.name_required')]);
+
+        expect(Display::query()->count())->toBe(0);
     });
 
     it('has the action refuse a user who does not administer the team', function () {

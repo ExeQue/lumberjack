@@ -18,12 +18,15 @@ class RemoveDisplayAction
     }
 
     /**
-     * Its token stops working at once, and the TV goes back to showing a pairing code.
+     * Its token stops working at once, and the window goes back to showing a pairing code.
+     * A device left without windows goes too.
      */
     public function execute(Display $display, User $user): void
     {
+        $name = $display->fullName();
         $display->delete();
-        $this->audit->execute($user, AdminAction::DisplayRemoved, $display->name, ['display' => $display->uuid]);
+        $display->device()->whereDoesntHave('displays')->delete();
+        $this->audit->execute($user, AdminAction::DisplayRemoved, $name, ['display' => $display->uuid]);
         DisplayChanged::dispatch($display, true);
     }
 }

@@ -40,7 +40,7 @@ class PairController
     {
         $pairing = TvPairing::query()->where('code', TvPairing::normalizeCode($code))->wherePending()->first();
         $screen = $request->screen();
-        $display = $pairing === null ? null : $action->execute($pairing, $request->user(), $screen, $request->string('name')->toString());
+        $display = $pairing === null ? null : $action->execute($pairing, $request->user(), $screen, $request->string('name')->trim()->toString());
 
         if ($display === null) {
             return back()->withErrors(['code' => $action->reasons[0] ?? __('screens.pairing.expired')]);
@@ -57,17 +57,24 @@ class PairController
         return $slot < Display::MAX_SLOT ? TvController::url($slot + 1) : null;
     }
 
-    /** @return array{display: string, screen: string|null, slot: int, next_url: string|null}|null */
+    /** @return array{display: string, device: string, screen: string|null, slot: int, next_url: string|null}|null */
     private function paired(Request $request, User $user): ?array
     {
         $uuid = $request->query('paired');
-        $display = is_string($uuid) && Str::isUuid($uuid) ? Display::query()->with('screen:id,name', 'team')->where('uuid', $uuid)->first() : null;
+        $display = is_string($uuid) && Str::isUuid($uuid) ? Display::query()->with('screen:id,name', 'team', 'device.displays')->where('uuid', $uuid)->first() : null;
 
-        return $display === null || ! $user->belongsToTeam($display->team) ? null : [
-            'display' => $display->name,
+        if ($display === null || ! $user->belongsToTeam($display->team)) {
+            return null;
+        }
+
+        $next = $display->device->nextSlot();
+
+        return [
+            'display' => $display->device->displays->count() > 1 ? $display->fullName() : $display->device->name,
+            'device' => $display->device->name,
             'screen' => $display->screen?->name,
             'slot' => $display->slot,
-            'next_url' => self::nextWindow($display->slot),
+            'next_url' => $next === null ? null : TvController::url($next),
         ];
     }
 
@@ -76,6 +83,7 @@ class PairController
         /** @var User $user */
         $user = $request->user();
         $teams = $user->teams->filter(fn (Team $team): bool => $user->canAdministerTeam($team));
+        $devices = $pairing === null ? [] : $teams->mapWithKeys(fn (Team $team): array => [$team->id => $pairing->existingDevice($team->id)?->name])->all();
 
         return Inertia::render('pair/show', [
             'code' => $code === null ? null : substr($code, 0, 3).(strlen($code) > 3 ? '-'.substr($code, 3) : ''),
@@ -87,9 +95,15 @@ class PairController
                 'slot' => $pairing->slot,
                 'next_url' => self::nextWindow($pairing->slot),
             ],
-            // The screens of every team the user administers: only admins pair.
+            // The screens of every team the user administers: only admins pair. With each, the
+            // device this browser already is in that team, which the window then joins.
             'screens' => Screen::query()->whereIn('team_id', $teams->modelKeys())->orderBy('name')->get(['id', 'uuid', 'name', 'team_id'])
-                ->map(fn (Screen $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'team' => $teams->find($s->team_id)?->name])->values()->all(),
+                ->map(fn (Screen $s): array => [
+                    'uuid' => $s->uuid,
+                    'name' => $s->name,
+                    'team' => $teams->find($s->team_id)?->name,
+                    'device' => $devices[$s->team_id] ?? null,
+                ])->values()->all(),
             'paired' => $this->paired($request, $user),
         ]);
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Screens\Http\Requests;
 
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Screens\Models\TvPairing;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -22,7 +23,8 @@ class ConfirmTvPairingRequest extends FormRequest
     {
         return [
             'screen' => ['required', 'uuid'],
-            'name' => ['required', 'string', 'max:60'],
+            // The device's name: asked for its first window only.
+            'name' => ['nullable', 'string', 'max:60'],
         ];
     }
 
@@ -44,6 +46,11 @@ class ConfirmTvPairingRequest extends FormRequest
                 }
 
                 $this->screen = $screen;
+                $pairing = TvPairing::query()->where('code', TvPairing::normalizeCode((string) $this->route('code')))->wherePending()->first();
+
+                if (! $this->filled('name') && $pairing?->existingDevice($screen->team_id) === null) {
+                    $validator->errors()->add('name', __('screens.pairing.name_required'));
+                }
             },
         ];
     }

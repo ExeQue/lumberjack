@@ -26,6 +26,7 @@ class ClaimTvPairingAction
 
             $token = TvCredentials::newDisplayToken();
             $display->update(['token_hash' => TvCredentials::hash($token), 'last_seen_at' => now()]);
+            $display->device()->update(['last_seen_at' => now()]);
             $locked->delete();
 
             return $token;

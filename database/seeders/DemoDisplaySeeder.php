@@ -5,23 +5,24 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Domains\Screens\Enums\DisplayTheme;
+use App\Domains\Screens\Models\Device;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Teams\Models\Team;
 use Illuminate\Database\Seeder;
 
 /**
  * The Local Team's TVs, the way Displays shows them in the docs: one online, one not
- * seen in days, and a computer driving two screens. None holds a token, so no browser
+ * seen in days, and a device driving two screens. None holds a token, so no browser
  * is paired by it. Run on its own (db:seed --class=DemoDisplaySeeder); it replaces the
- * displays it made before.
+ * devices it made before.
  */
 class DemoDisplaySeeder extends Seeder
 {
-    private const array DISPLAYS = [
-        ['name' => 'Office TV', 'slot' => 1, 'device' => 'office-tv', 'seen' => 0, 'theme' => DisplayTheme::Default, 'agent' => 'Mozilla/5.0 (Linux; Android 9; AFTMM) AppleWebKit/537.36 (KHTML, like Gecko) Silk/112.5.1 like Chrome/112.0.5615.213 Safari/537.36'],
-        ['name' => 'Kitchen', 'slot' => 1, 'device' => 'kitchen', 'seen' => 4320, 'theme' => DisplayTheme::Light, 'agent' => 'Mozilla/5.0 (Linux; Android 12; BRAVIA 4K VH2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'],
-        ['name' => 'Ops wall left', 'slot' => 1, 'device' => 'ops-pc', 'seen' => 0, 'theme' => DisplayTheme::Default, 'agent' => 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chromium/120.0.0.0 Chrome/120.0.0.0 Safari/537.36'],
-        ['name' => 'Ops wall right', 'slot' => 2, 'device' => 'ops-pc', 'seen' => 0, 'theme' => DisplayTheme::Default, 'agent' => 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chromium/120.0.0.0 Chrome/120.0.0.0 Safari/537.36'],
+    /** Each device with its windows: window number => screen seen how many minutes ago. */
+    private const array DEVICES = [
+        ['name' => 'Office TV', 'seen' => [1 => 0], 'theme' => DisplayTheme::Default, 'agent' => 'Mozilla/5.0 (Linux; Android 9; AFTMM) AppleWebKit/537.36 (KHTML, like Gecko) Silk/112.5.1 like Chrome/112.0.5615.213 Safari/537.36'],
+        ['name' => 'Kitchen', 'seen' => [1 => 4320], 'theme' => DisplayTheme::Light, 'agent' => 'Mozilla/5.0 (Linux; Android 12; BRAVIA 4K VH2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'],
+        ['name' => 'Ops wall', 'seen' => [1 => 0, 2 => 0], 'theme' => DisplayTheme::Default, 'agent' => 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chromium/120.0.0.0 Chrome/120.0.0.0 Safari/537.36'],
     ];
 
     public function run(): void
@@ -33,18 +34,25 @@ class DemoDisplaySeeder extends Seeder
             return;
         }
 
-        Display::query()->whereTeam($team)->whereIn('name', array_column(self::DISPLAYS, 'name'))->delete();
+        Device::query()->whereTeam($team)->whereIn('name', array_column(self::DEVICES, 'name'))->delete();
 
-        foreach (self::DISPLAYS as $display) {
-            Display::factory()->showing($screen)->create([
-                'name' => $display['name'],
-                'slot' => $display['slot'],
-                'device_hash' => hash('sha256', 'demo-'.$display['device']),
-                'theme' => $display['theme'],
-                'user_agent' => $display['agent'],
-                'last_seen_at' => now()->subMinutes($display['seen']),
-                'token_hash' => null,
+        foreach (self::DEVICES as $spec) {
+            $device = Device::factory()->for($team)->create([
+                'name' => $spec['name'],
+                'device_hash' => hash('sha256', 'demo-'.$spec['name']),
+                'user_agent' => $spec['agent'],
+                'last_seen_at' => now()->subMinutes(min($spec['seen'])),
             ]);
+
+            foreach ($spec['seen'] as $slot => $minutes) {
+                Display::factory()->showing($screen)->onDevice($device, $slot)->create([
+                    'theme' => $spec['theme'],
+                    'last_seen_at' => now()->subMinutes($minutes),
+                    'viewport_width' => 1920,
+                    'viewport_height' => 1080,
+                    'token_hash' => null,
+                ]);
+            }
         }
     }
 }

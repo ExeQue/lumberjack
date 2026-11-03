@@ -84,6 +84,33 @@ final class TvCredentials
         return $token !== null ? self::displayFor($token) : null;
     }
 
+    /**
+     * The paired windows of this browser, by the tokens their cookies carry: window number
+     * to display, in window order.
+     *
+     * @return array<int, Display>
+     */
+    public static function windows(Request $request): array
+    {
+        $hashes = [];
+
+        foreach (range(1, Display::MAX_SLOT) as $slot) {
+            $token = self::displayToken($request, $slot);
+
+            if ($token !== null) {
+                $hashes[$slot] = self::hash($token);
+            }
+        }
+
+        if ($hashes === []) {
+            return [];
+        }
+
+        $displays = Display::query()->whereIn('token_hash', array_values($hashes))->with('device')->get()->keyBy('token_hash');
+
+        return array_filter(array_map(fn (string $hash): ?Display => $displays->get($hash), $hashes));
+    }
+
     public static function displayFor(string $token): ?Display
     {
         $hash = self::hash($token);
