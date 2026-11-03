@@ -15,7 +15,7 @@ describe('the releases page', function () {
     it('lists the releases and the new issues of the selected one', function () {
         $project = Project::factory()->create();
         $user = User::factory()->inTeam($project->team)->create();
-        $issue = Issue::factory()->for($project)->create(['first_seen_at' => now()->subHour(), 'title' => 'Card declined']);
+        $issue = Issue::factory()->for($project)->create(['first_seen_at' => now()->subHour(), 'first_release' => 'v3', 'title' => 'Card declined']);
         Occurrence::factory()->for($issue)->create(['release' => 'v3', 'occurred_at' => now()->subHour()]);
 
         $this->actingAs($user)

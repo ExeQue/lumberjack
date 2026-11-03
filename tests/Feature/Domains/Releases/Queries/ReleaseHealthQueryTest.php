@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Domains\Issues\Actions\RecordOccurrenceAction;
+use App\Domains\Issues\Data\IssueSignal;
 use App\Domains\Issues\Enums\IssueEventType;
+use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\IssueEvent;
 use App\Domains\Issues\Models\Occurrence;
@@ -10,6 +13,7 @@ use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Releases\Queries\ReleaseHealthQuery;
 use App\Domains\Shared\Enums\Period;
+use Carbon\CarbonImmutable;
 
 covers(ReleaseHealthQuery::class);
 
@@ -45,7 +49,8 @@ describe('the release health', function () {
 
     it('counts an issue as new in the release of its earliest occurrence', function () {
         $project = Project::factory()->create();
-        $issue = Issue::factory()->for($project)->create(['first_seen_at' => now()->subHours(3), 'last_release' => 'v2']);
+        // The issue keeps the release of its first occurrence from when it is created.
+        $issue = Issue::factory()->for($project)->create(['first_seen_at' => now()->subHours(3), 'last_release' => 'v2', 'first_release' => 'v1', 'first_environment' => 'production']);
         Occurrence::factory()->for($issue)->create(['release' => 'v1', 'occurred_at' => now()->subHours(3)]);
         Occurrence::factory()->for($issue)->create(['release' => 'v2', 'occurred_at' => now()->subHour()]);
         $old = Issue::factory()->for($project)->create(['first_seen_at' => now()->subDays(3)]);
@@ -57,6 +62,30 @@ describe('the release health', function () {
         expect($releases['v1'])->toMatchArray(['new_issues' => 1, 'occurrences' => 1])
             ->and($releases['v2'])->toMatchArray(['new_issues' => 0, 'occurrences' => 2])
             ->and($query->newIssueIds($project->id, Period::Day, null, 'v1'))->toBe([$issue->id]);
+    });
+
+    it('counts an issue as new in the release of its earliest occurrence in the chosen environment', function () {
+        $project = Project::factory()->create();
+        $issue = Issue::factory()->for($project)->create(['first_seen_at' => now()->subHours(3), 'first_release' => 'v1', 'first_environment' => 'staging']);
+        Occurrence::factory()->for($issue)->create(['environment' => 'staging', 'release' => 'v1', 'occurred_at' => now()->subHours(3)]);
+        Occurrence::factory()->for($issue)->create(['environment' => 'production', 'release' => 'v2', 'occurred_at' => now()->subHours(2)]);
+        Occurrence::factory()->for($issue)->create(['environment' => 'production', 'release' => 'v3', 'occurred_at' => now()->subHour()]);
+
+        $query = app(ReleaseHealthQuery::class);
+
+        expect($query->newIssueIds($project->id, Period::Day, 'production', 'v2'))->toBe([$issue->id])
+            ->and($query->newIssueIds($project->id, Period::Day, 'production', 'v1'))->toBe([])
+            ->and($query->newIssueIds($project->id, Period::Day, null, 'v1'))->toBe([$issue->id]);
+    });
+
+    it('keeps the release and environment of an issue\'s first occurrence on the issue', function () {
+        $project = Project::factory()->create();
+        $signal = fn (string $release): IssueSignal => new IssueSignal(IssueSource::Server, 'RuntimeException', 'Boom', null, null, [], [], CarbonImmutable::now(), environment: 'staging', release: $release);
+
+        app(RecordOccurrenceAction::class)->execute($project, $signal('v1'));
+        $issue = app(RecordOccurrenceAction::class)->execute($project, $signal('v2'))->issue;
+
+        expect($issue->refresh())->first_release->toBe('v1')->first_environment->toBe('staging')->last_release->toBe('v2');
     });
 
     it('counts the regressions a release reopened', function () {
