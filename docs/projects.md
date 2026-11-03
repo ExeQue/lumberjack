@@ -9,6 +9,28 @@ owners and admins can change its settings.
 and job failures of the last 24 hours, its errors per hour, and a status: **3 open** or **Calm**. **Agent offline** and **Not seen: hosts** warn when the project's
 [agents](#agents) stopped checking in. **Search projects** filters the list.
 
+## Live updates
+
+Every page updates in place when what it shows changes, whoever changed it: another
+member, an MCP tool, a scheduled job or data arriving from the SDK. Your own changes
+show at once and are not loaded twice.
+
+- **Project pages**: the overview, issues and an issue, routes, queries, releases,
+  jobs, schedule, commands, logs and health, as data arrives (performance at most every
+  10 seconds), and when a health check, scheduled task, label or queue alert is changed.
+- **Sidebar**: the badge counts of issues, jobs, schedule, health and commands, and the
+  team's projects.
+- **Projects list**: new, renamed and removed projects, and each card's figures as its
+  issues, jobs and agents change. The day's figures may trail by up to a minute.
+- **Project settings**: keys, labels, log channels, agents, retention, alerts and the
+  repository, and what the project inherits from the team.
+- **Team**: members, invitations, MCP tokens, alert channels and rules, and retention.
+- **Administration**: teams, users, the audit log and retention.
+
+A settings page you are typing into is not changed under your hands: it says **This
+page changed elsewhere** with a **Reload** button, which loads the new state and drops
+your unsaved edits. Saving keeps your edits and brings in the rest.
+
 ## Creating a project
 
 Team owners and admins create projects. Give it a name and an issue prefix. The prefix
