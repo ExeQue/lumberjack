@@ -22,6 +22,9 @@ class RecordReportedHealthAction
 
     public const int MAX_THRESHOLD = 1000;
 
+    /** @var array<string, HealthCheck> checks of this ingest batch, by project, environment and slug */
+    private array $checks = [];
+
     public function __construct(
         private readonly RecordHealthResultAction $recordHealthResultAction,
     ) {
@@ -42,7 +45,8 @@ class RecordReportedHealthAction
         $identity = ['project_id' => $project->id, 'environment' => $envelope->environment ?? '', 'slug' => $slug];
 
         // firstOrCreate falls back to createOrFirst, so two hosts making it at once is fine.
-        $check = HealthCheck::query()->firstOrCreate($identity, ['source' => HealthCheckSource::Reported]);
+        // Looked up once per batch: the action is resolved per ingest job.
+        $check = $this->checks[implode("\0", $identity)] ??= HealthCheck::query()->firstOrCreate($identity, ['source' => HealthCheckSource::Reported]);
 
         if (! $check->thresholds_overridden) {
             $check->degrade_after = self::threshold($event['degrade_after'] ?? null, HealthCheck::DEFAULT_DEGRADE_AFTER);
@@ -51,9 +55,11 @@ class RecordReportedHealthAction
         }
 
         $check->archived_at = null;
+        // A no-op when nothing changed, as for every result after the first in a batch.
         $check->save();
 
-        return $this->recordHealthResultAction->execute($check, $result);
+        // The batch forgets the cached states and broadcasts once for all its results.
+        return $this->recordHealthResultAction->execute($check, $result, announce: false);
     }
 
     private static function threshold(mixed $value, int $default): int
