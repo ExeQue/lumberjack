@@ -70,6 +70,7 @@ return [
         'online' => 'Online',
         'offline' => 'Offline',
         'actions' => 'Actions',
+        'parts' => ['sdk' => 'SDK', 'agent' => 'Agent', 'runtime' => 'Runtime', 'framework' => 'Framework'],
         // Button
         'remove' => 'Remove',
         'remove_question' => 'Remove the agent on :host? It comes back if it checks in again.',

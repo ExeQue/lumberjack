@@ -58,7 +58,7 @@ class ProjectSettingsController
             ],
             'labels' => $project->labels()->withCount('issues')->get()->map(fn (Label $l): array => [...$l->toSummary(), 'issues' => (int) $l->issues_count])->all(),
             'agents' => $project->agents()->orderBy('host')->get()->map(fn (ProjectAgent $a): array => [
-                'id' => $a->id, 'host' => $a->host, 'name' => $a->name !== '' ? $a->name : null, 'client' => AgentClient::fromAgent($a)->label(), 'client_details' => AgentClient::fromAgent($a)->details(), 'last_seen_at' => $a->last_seen_at->toIso8601String(), 'online' => $a->isOnline(),
+                'id' => $a->id, 'host' => $a->host, 'name' => $a->name !== '' ? $a->name : null, 'client' => AgentClient::fromAgent($a)->label(), 'client_parts' => AgentClient::fromAgent($a)->parts(), 'last_seen_at' => $a->last_seen_at->toIso8601String(), 'online' => $a->isOnline(),
             ])->all(),
             'channels' => $project->logChannels()->orderByRaw('name = ? DESC', [LogChannel::DEFAULT])->orderBy('name')->get()->map(fn (LogChannel $c): array => [
                 'id' => $c->id,

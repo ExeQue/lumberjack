@@ -86,18 +86,18 @@ final readonly class AgentClient
     }
 
     /**
-     * Every part with its id, for a tooltip.
+     * Every part the agent named, with its id and version.
+     *
+     * @return list<array{part: string, name: string, version: string|null}>
      */
-    public function details(): ?string
+    public function parts(): array
     {
-        $parts = array_filter([
-            $this->sdk !== null ? "{$this->sdk} {$this->sdkVersion}" : null,
-            $this->agent !== null ? "{$this->agent} {$this->agentVersion}" : null,
-            $this->runtime !== null ? "{$this->runtime} {$this->runtimeVersion}" : null,
-            $this->framework !== null ? "{$this->framework} {$this->frameworkVersion}" : null,
-        ]);
-
-        return $parts === [] ? null : implode("\n", array_map('trim', $parts));
+        return array_values(array_filter([
+            $this->sdk !== null ? ['part' => 'sdk', 'name' => $this->sdk, 'version' => $this->sdkVersion] : null,
+            $this->agent !== null ? ['part' => 'agent', 'name' => $this->agent, 'version' => $this->agentVersion] : null,
+            $this->runtime !== null ? ['part' => 'runtime', 'name' => $this->runtime, 'version' => $this->runtimeVersion] : null,
+            $this->framework !== null ? ['part' => 'framework', 'name' => $this->framework, 'version' => $this->frameworkVersion] : null,
+        ]));
     }
 
     /**

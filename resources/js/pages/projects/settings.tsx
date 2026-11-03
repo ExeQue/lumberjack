@@ -8,6 +8,11 @@ import type {
     Rule as AlertRule,
 } from '@/components/lj/alerts';
 import { ConfirmButton } from '@/components/lj/confirm-button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { destroy as agentDestroy } from '@/routes/agents';
 import { LABEL_COLORS, LabelChip } from '@/components/lj/labels';
 import type { IssueLabel } from '@/components/lj/labels';
@@ -76,7 +81,7 @@ type Agent = {
     host: string;
     name: string | null;
     client: string | null;
-    client_details: string | null;
+    client_parts: { part: string; name: string; version: string | null }[];
     last_seen_at: string;
     online: boolean;
 };
@@ -837,14 +842,40 @@ function AgentsSection({ project, agents }: Props) {
                                             'font-mono text-xs',
                                         )}
                                     >
-                                        <span
-                                            title={
-                                                agent.client_details ??
-                                                undefined
-                                            }
-                                        >
-                                            {agent.client ?? '-'}
-                                        </span>
+                                        {agent.client_parts.length > 0 ? (
+                                            <Tooltip>
+                                                <TooltipTrigger className="cursor-help underline decoration-line-strong decoration-dotted underline-offset-4">
+                                                    {agent.client ?? '-'}
+                                                </TooltipTrigger>
+                                                <TooltipContent className="border border-line-strong bg-panel-2 px-3 py-2 text-ink shadow-lg [&_svg]:bg-panel-2 [&_svg]:fill-panel-2">
+                                                    <dl className="grid grid-cols-[auto_auto_auto] gap-x-3 gap-y-1 font-mono text-[11px]">
+                                                        {agent.client_parts.map(
+                                                            (p) => (
+                                                                <div
+                                                                    key={p.part}
+                                                                    className="contents"
+                                                                >
+                                                                    <dt className="font-sans text-ink-3">
+                                                                        {t(
+                                                                            `settings.agents.parts.${p.part}`,
+                                                                        )}
+                                                                    </dt>
+                                                                    <dd>
+                                                                        {p.name}
+                                                                    </dd>
+                                                                    <dd className="text-ink-2">
+                                                                        {p.version ??
+                                                                            '-'}
+                                                                    </dd>
+                                                                </div>
+                                                            ),
+                                                        )}
+                                                    </dl>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        ) : (
+                                            (agent.client ?? '-')
+                                        )}
                                     </td>
                                     <td className={tdClass}>
                                         {formatRelative(agent.last_seen_at)}
