@@ -13,6 +13,7 @@ use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Http\Concerns\ReadsDashboardFilters;
 use App\Domains\Shared\Support\Percentiles;
+use App\Domains\Shared\Support\StatisticsCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -83,21 +84,26 @@ class RouteController
             $hourly[] = ['t' => date(DATE_ATOM, $at), 'p50' => $byBucket[$at]['p50'] ?? null, 'p95' => $byBucket[$at]['p95'] ?? null];
         }
 
+        $slowest = RequestRun::query()->tap($scope)->orderByDesc('duration_us')->limit(10)->get();
+        // The queries of the slowest runs' traces in one go.
+        $queries = DB::table('query_runs')->where('project_id', $project->id)
+            ->whereIn('trace_id', $slowest->pluck('trace_id')->filter()->unique()->values())
+            ->groupBy('trace_id')->selectRaw('trace_id, COUNT(*) AS c')->pluck('c', 'trace_id');
+
         return [
             'method' => $method,
             'route' => $route,
             'domain' => $domain,
             'route_name' => RequestRun::query()->tap($scope)->whereNotNull('route_name')->latest('occurred_at')->value('route_name'),
             'hourly' => $hourly,
-            'slowest' => RequestRun::query()->tap($scope)->orderByDesc('duration_us')->limit(10)->get()
-                ->map(fn (RequestRun $r): array => [
+            'slowest' => $slowest->map(fn (RequestRun $r): array => [
                     'at' => $r->occurred_at->toIso8601String(),
                     'host' => $r->host,
                     'domain' => $r->domain,
                     'status' => $r->status_code,
                     'duration_us' => $r->duration_us,
                     'trace_id' => $r->trace_id,
-                    'queries' => $r->trace_id !== null ? DB::table('query_runs')->where('project_id', $project->id)->where('trace_id', $r->trace_id)->count() : null,
+                    'queries' => $r->trace_id !== null ? (int) ($queries[$r->trace_id] ?? 0) : null,
                 ])->all(),
         ];
     }
@@ -114,18 +120,20 @@ class RouteController
         $size = $period->bucketSeconds();
         $start = intdiv($period->since()->getTimestamp(), $size);
 
-        $counts = RequestTraffic::query($project->id, $period->since(), null, $environment, $domain)
+        // Cached like the table it belongs to, so a live reload does not group the period again.
+        $counts = collect(StatisticsCache::remember('routes-series', $period, [$project->id, $environment, $domain], fn (): array => RequestTraffic::query($project->id, $period->since(), null, $environment, $domain)
             ->selectRaw('method, route, domain, FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?) AS b, SUM(requests) AS c', [$size])
             ->groupByRaw('method, route, domain, b')
             ->get()
-            ->groupBy(fn (object $row): string => ((array) $row)['method'].' '.((array) $row)['route']);
+            ->map(fn (object $row): array => (array) $row)
+            ->all()))
+            ->groupBy(fn (array $row): string => $row['method'].' '.$row['route']);
 
         return array_map(function (array $route) use ($counts, $start, $period): array {
             $rows = $counts->get($route['method'].' '.$route['route']);
             $series = array_fill(0, $period->buckets() + 1, 0);
 
-            foreach ($rows ?? [] as $row) {
-                $values = (array) $row;
+            foreach ($rows ?? [] as $values) {
                 $index = (int) $values['b'] - $start;
 
                 if ($index >= 0 && $index < count($series) && ($route['domain'] === null || $route['domain'] === $values['domain'])) {
