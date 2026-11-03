@@ -12,6 +12,7 @@ use App\Domains\Screens\Broadcasting\DisplayChannel;
 use App\Domains\Screens\Broadcasting\ScreenChannel;
 use App\Domains\Screens\Broadcasting\TvPairingChannel;
 use App\Domains\Screens\Http\Requests\RestoreDisplayRequest;
+use App\Domains\Screens\Http\Requests\TvHeartbeatRequest;
 use App\Domains\Screens\Http\Requests\ViewerDataRequest;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
@@ -111,9 +112,9 @@ class TvController
      * Every minute: keeps last seen and the cookie current, and says what the display
      * should show, so a TV that missed a broadcast still follows within a minute.
      */
-    public function heartbeat(Request $request, int $slot): JsonResponse
+    public function heartbeat(TvHeartbeatRequest $request, int $slot): JsonResponse
     {
-        $display = $this->paired($request, $slot);
+        $display = $this->paired($request, $slot, $request->viewport());
 
         return response()->json(['version' => self::version($display)])
             ->withCookie(TvCredentials::displayCookie($slot, (string) TvCredentials::displayToken($request, $slot)));
@@ -172,11 +173,12 @@ class TvController
         return $response;
     }
 
-    private function paired(Request $request, int $slot): Display
+    /** @param  array{w: int, h: int, dpr: float}|null  $viewport */
+    private function paired(Request $request, int $slot, ?array $viewport = null): Display
     {
         $display = TvCredentials::display($request, $slot);
         abort_if($display === null, 401);
-        $this->touch->execute($display, $request->userAgent(), $request->ip());
+        $this->touch->execute($display, $request->userAgent(), $request->ip(), $viewport);
 
         return $display;
     }

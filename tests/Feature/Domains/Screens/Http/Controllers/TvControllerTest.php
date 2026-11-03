@@ -8,6 +8,7 @@ use App\Domains\Screens\Actions\TouchDisplayAction;
 use App\Domains\Screens\Enums\DisplayTheme;
 use App\Domains\Screens\Http\Controllers\TvController;
 use App\Domains\Screens\Http\Requests\RestoreDisplayRequest;
+use App\Domains\Screens\Http\Requests\TvHeartbeatRequest;
 use App\Domains\Screens\Http\Requests\ViewerDataRequest;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
@@ -25,6 +26,7 @@ covers(
     ClaimTvPairingAction::class,
     TouchDisplayAction::class,
     RestoreDisplayRequest::class,
+    TvHeartbeatRequest::class,
     ViewerDataRequest::class,
     ScreenPresenter::class,
     ScreensServiceProvider::class,
@@ -206,6 +208,15 @@ describe('a paired TV', function () {
         $this->display->update(['theme' => DisplayTheme::Light]);
 
         expect(($this->tv)()->getJson(route('tv.heartbeat', 1))->json('version'))->not->toBe($before);
+    });
+
+    it('keeps the size its window reports, at once when it changed, and refuses nonsense', function () {
+        $this->display->update(['last_seen_at' => now()->subSeconds(10)]);
+
+        ($this->tv)()->getJson(route('tv.heartbeat', [1, 'w' => 1920, 'h' => 1080, 'dpr' => 2]))->assertOk();
+        ($this->tv)()->getJson(route('tv.heartbeat', [1, 'w' => 5]))->assertUnprocessable();
+
+        expect([$this->display->refresh()->viewport_width, $this->display->viewport_height, $this->display->pixel_ratio])->toBe([1920, 1080, 2.0]);
     });
 
     it('writes last seen at most once a minute', function () {

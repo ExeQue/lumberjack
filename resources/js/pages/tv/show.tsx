@@ -67,11 +67,19 @@ export default function TvShow({
     useEcho(display_channel, '.display.removed', () => unpair());
 
     useEffect(() => {
+        // The window's size goes along, so the designer can preview a screen at it.
         const beat = () =>
-            fetch(urls.heartbeat, {
-                headers: { Accept: 'application/json' },
-                credentials: 'same-origin',
-            })
+            fetch(
+                `${urls.heartbeat}?${new URLSearchParams({
+                    w: String(window.innerWidth),
+                    h: String(window.innerHeight),
+                    dpr: String(window.devicePixelRatio || 1),
+                })}`,
+                {
+                    headers: { Accept: 'application/json' },
+                    credentials: 'same-origin',
+                },
+            )
                 .then(async (response) => {
                     if (response.status === 401) {
                         unpair();
@@ -91,8 +99,19 @@ export default function TvShow({
                     // Offline: the kiosk says so; try again next minute.
                 });
         const timer = window.setInterval(beat, HEARTBEAT_MS);
+        // Its size right away, and again whenever the window changes.
+        const resized = () => {
+            window.clearTimeout(settle);
+            settle = window.setTimeout(beat, 2_000);
+        };
+        let settle = window.setTimeout(beat, 2_000);
+        window.addEventListener('resize', resized);
 
-        return () => window.clearInterval(timer);
+        return () => {
+            window.clearInterval(timer);
+            window.clearTimeout(settle);
+            window.removeEventListener('resize', resized);
+        };
     }, [version, urls.heartbeat, unpair]);
 
     // In turn: the next screen every so many seconds, unless this one is red and holds.

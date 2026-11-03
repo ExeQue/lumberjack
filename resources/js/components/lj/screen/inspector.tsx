@@ -1457,6 +1457,25 @@ export function ScreenSettings({
                     {t('screens.settings.timezone_hint')}
                 </span>
             </div>
+            <div className="flex flex-col gap-1.5">
+                <Label htmlFor="screen-fit">{t('screens.settings.fit')}</Label>
+                <Select
+                    id="screen-fit"
+                    value={screen.fit}
+                    onChange={(e) =>
+                        onChange({ fit: e.target.value as Screen['fit'] })
+                    }
+                >
+                    {(['keep', 'fill'] as const).map((f) => (
+                        <option key={f} value={f}>
+                            {t(`screens.fit.${f}`)}
+                        </option>
+                    ))}
+                </Select>
+                <span className="text-xs text-ink-3">
+                    {t('screens.settings.fit_hint')}
+                </span>
+            </div>
         </div>
     );
 }

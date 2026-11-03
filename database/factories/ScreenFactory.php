@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Domains\Screens\Enums\ScreenAspect;
+use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Screen;
@@ -25,6 +26,7 @@ class ScreenFactory extends Factory
             'rows' => 4,
             'aspect' => ScreenAspect::Wide,
             'orientation' => ScreenOrientation::Landscape,
+            'fit' => ScreenFit::Keep,
             'theme' => ScreenTheme::Dark,
             'timezone' => 'Europe/Copenhagen',
             'scope' => ['projects' => [], 'environment' => null, 'period' => '24h'],

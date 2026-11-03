@@ -105,6 +105,12 @@ return [
         'aspect' => 'Aspect',
         // The landscape and portrait buttons next to it.
         'orientation' => 'Orientation',
+        // The designer's preview: as large as fits, or the TV's layout at a resolution.
+        'preview_at' => 'Preview at',
+        'preview_fit' => 'Fit',
+        'preview_custom' => 'Custom',
+        'preview_w' => 'Width in pixels',
+        'preview_h' => 'Height in pixels',
         'theme' => 'Theme',
         'light_from' => 'Light from',
         'light_to' => 'until',
@@ -184,6 +190,11 @@ return [
         'landscape' => 'Landscape',
         'portrait' => 'Portrait',
     ],
+    // On a display of another shape than the screen's.
+    'fit' => [
+        'keep' => 'Keep its shape',
+        'fill' => 'Fill the display',
+    ],
 
     'settings' => [
         'title' => 'Screen settings',
@@ -193,6 +204,8 @@ return [
         'projects_hint' => 'None ticked: every project of the team, new ones included.',
         'timezone' => 'Time zone',
         'timezone_hint' => 'For the clock and for switching between light and dark.',
+        'fit' => 'On a different screen',
+        'fit_hint' => 'A display of another shape than the screen\'s shows it as designed, centered with bars around it, or stretched to fill it.',
     ],
 
     'sections' => [

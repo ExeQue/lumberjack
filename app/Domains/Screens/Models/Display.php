@@ -31,6 +31,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $token_hash
  * @property string|null $user_agent
  * @property string|null $ip
+ * @property int|null $viewport_width the TV window's size in CSS pixels, as it last said
+ * @property int|null $viewport_height
+ * @property float|null $pixel_ratio
  * @property CarbonImmutable|null $last_seen_at
  * @property int $slot which window of its computer, /tv/{slot}
  * @property string|null $device_hash sha256 of the computer's device cookie, shared by its windows
@@ -40,7 +43,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'screen_id', 'name', 'theme', 'token_hash', 'user_agent', 'ip', 'last_seen_at', 'slot', 'device_hash', 'playlist', 'rotate_seconds', 'hold_on_alert'])]
+#[Fillable(['team_id', 'screen_id', 'name', 'theme', 'token_hash', 'user_agent', 'ip', 'viewport_width', 'viewport_height', 'pixel_ratio', 'last_seen_at', 'slot', 'device_hash', 'playlist', 'rotate_seconds', 'hold_on_alert'])]
 #[Hidden(['token_hash', 'device_hash'])]
 #[UseEloquentBuilder(DisplayBuilder::class)]
 #[UseFactory(DisplayFactory::class)]
@@ -81,6 +84,9 @@ class Display extends Model
             'playlist' => 'array',
             'rotate_seconds' => 'integer',
             'hold_on_alert' => 'boolean',
+            'viewport_width' => 'integer',
+            'viewport_height' => 'integer',
+            'pixel_ratio' => 'float',
         ];
     }
 

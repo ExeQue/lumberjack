@@ -10,6 +10,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Projects\Queries\ProjectEnvironmentsQuery;
 use App\Domains\Screens\Enums\ScreenTheme;
+use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Support\ScreenLayout;
 use App\Domains\Screens\Support\ScreenQr;
@@ -39,6 +40,7 @@ class ScreenPresenter
             'rows' => $screen->rows,
             'aspect' => $screen->aspect->value,
             'orientation' => $screen->orientation->value,
+            'fit' => $screen->fit->value,
             'theme' => $screen->theme->value,
             'light_from' => $screen->light_from,
             'light_to' => $screen->light_to,
@@ -162,6 +164,9 @@ class ScreenPresenter
                 'check' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->whereReportsDatabase()
                     ->distinct()->orderBy('slug')->pluck('slug')->all(),
             ],
+            // The sizes the team's TVs report, to preview a screen at.
+            'displays' => Display::query()->whereTeam($team)->whereNotNull('viewport_width')->orderBy('name')->get()
+                ->map(fn (Display $d): array => ['name' => $d->name, 'w' => $d->viewport_width, 'h' => $d->viewport_height])->values()->all(),
             'limits' => ['min_cols' => Screen::MIN_COLS, 'max_cols' => Screen::MAX_COLS, 'min_rows' => Screen::MIN_ROWS, 'max_rows' => Screen::MAX_ROWS, 'max_widgets' => WidgetSchema::MAX_WIDGETS],
         ];
     }
