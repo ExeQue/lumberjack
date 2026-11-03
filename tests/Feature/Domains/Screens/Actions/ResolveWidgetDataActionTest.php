@@ -231,6 +231,18 @@ describe('the edges of each type', function () {
             ->and(($this->resolve)(WidgetType::List, 'agents', ['only_problems' => true])['rows'])->toHaveCount(1);
     });
 
+    it('sorts issues newest, most important or last reported first', function () {
+        $plain = Issue::factory()->for($this->project)->create(['title' => 'plain', 'surfaced_at' => now()->subMinute(), 'last_seen_at' => now()->subHours(3)]);
+        Issue::factory()->for($this->project)->create(['title' => 'regressed', 'surfaced_at' => now()->subHours(2), 'regressed_at' => now()->subHour(), 'last_seen_at' => now()->subHours(2)]);
+        Issue::factory()->for($this->project)->create(['title' => 'escalating', 'surfaced_at' => now()->subHours(3), 'escalated_at' => now()->subMinutes(5), 'last_seen_at' => now()->subHour()]);
+        Issue::factory()->for($this->project)->create(['title' => 'recent', 'surfaced_at' => now()->subHours(4), 'last_seen_at' => now()]);
+        $titles = fn (string $sort): array => array_column(($this->resolve)(WidgetType::List, 'latest_issues', ['sort' => $sort])['rows'], 'title');
+
+        expect($titles('newest'))->toBe(['plain', 'regressed', 'escalating', 'recent'])
+            ->and($titles('worst'))->toBe(['escalating', 'regressed', 'plain', 'recent'])
+            ->and($titles('last_seen'))->toBe(['recent', 'escalating', 'regressed', 'plain']);
+    });
+
     it('says which period it covers, except for health which is now', function () {
         expect(($this->resolve)(WidgetType::Stat, 'requests', scope: new WidgetScope(period: Period::Week))['period'])->toBe('7d')
             ->and(($this->resolve)(WidgetType::Health, 'checks')['period'])->toBeNull();
