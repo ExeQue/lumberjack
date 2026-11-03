@@ -5,7 +5,6 @@ import type {
     KeyboardEvent,
     MouseEvent as ReactMouseEvent,
     PointerEvent,
-    RefObject,
 } from 'react';
 import { RectangleHorizontal, RectangleVertical } from 'lucide-react';
 import { toast } from 'sonner';
@@ -32,7 +31,6 @@ import {
     newWidgetId,
     regrid,
     themeAt,
-    transposed,
 } from '@/components/lj/screen/lib';
 import type {
     Schema,
@@ -197,6 +195,7 @@ type Settings = Pick<
     | 'aspect'
     | 'orientation'
     | 'fit'
+    | 'show_header'
     | 'theme'
     | 'light_from'
     | 'light_to'
@@ -255,6 +254,7 @@ const SETTINGS: (keyof Settings)[] = [
     'aspect',
     'orientation',
     'fit',
+    'show_header',
     'theme',
     'light_from',
     'light_to',
@@ -879,8 +879,6 @@ export default function EditScreen(props: Props) {
     const theme = themeAt(screen, now);
     const [aw, ah] = screen.aspect.split(':').map(Number);
     const ratio = screen.orientation === 'portrait' ? [ah, aw] : [aw, ah];
-    // Columns and rows swapped with the widgets, when everything still fits.
-    const flipped = transposed(screen, props.limits);
     const turn = ([w, h]: number[]) =>
         screen.orientation === 'portrait' ? [h, w] : [w, h];
     const presets = (PRESETS[screen.aspect] ?? []).map(turn);
@@ -1446,25 +1444,6 @@ export default function EditScreen(props: Props) {
                                     ),
                                 )}
                             </div>
-                            <Button
-                                variant="ghost"
-                                className="h-8 px-2 text-xs"
-                                disabled={!flipped}
-                                title={t(
-                                    flipped
-                                        ? 'screens.designer.swap_hint'
-                                        : 'screens.designer.swap_refused',
-                                )}
-                                onClick={() =>
-                                    flipped &&
-                                    change((s) => ({
-                                        ...s,
-                                        ...transposed(s, props.limits),
-                                    }))
-                                }
-                            >
-                                {t('screens.designer.swap')}
-                            </Button>
                             <label className="flex items-center gap-1.5">
                                 {t('screens.designer.preview_at')}
                                 <Select
@@ -1574,6 +1553,19 @@ export default function EditScreen(props: Props) {
                                     ))}
                                 </span>
                             )}
+                            <label className="flex items-center gap-1.5">
+                                <input
+                                    type="checkbox"
+                                    checked={screen.show_header}
+                                    onChange={(e) =>
+                                        change((s) => ({
+                                            ...s,
+                                            show_header: e.target.checked,
+                                        }))
+                                    }
+                                />
+                                {t('screens.designer.show_header')}
+                            </label>
                             <label className="flex items-center gap-1.5">
                                 {t('screens.designer.theme')}
                                 <Select
@@ -1708,12 +1700,16 @@ export default function EditScreen(props: Props) {
                         </div>
                     )}
 
-                    {previewSize ? (
-                        // The TV's own layout at that size, scaled down to fit here.
-                        <PreviewScale size={previewSize}>
+                    {/* The TV's own layout: at Fit as large as fits, else at the
+                        previewed size scaled down to fit here. */}
+                    <PreviewScale
+                        size={previewSize}
+                        ratio={ratio[0] / ratio[1]}
+                    >
+                        {(view) => (
                             <KioskFrame
                                 screen={screen}
-                                view={previewSize}
+                                view={view}
                                 theme={theme}
                                 header={{
                                     title: screen.name,
@@ -1736,28 +1732,8 @@ export default function EditScreen(props: Props) {
                             >
                                 {gridContent}
                             </KioskFrame>
-                        </PreviewScale>
-                    ) : (
-                        <div
-                            ref={grid as RefObject<HTMLDivElement>}
-                            className="lj-screen lj-grid mx-auto grid gap-[10px] overflow-hidden rounded-[10px] border border-(--s-line) p-[14px]"
-                            data-theme={theme}
-                            {...gridHandlers}
-                            style={{
-                                // The display's shape, as large as fits: full width, or for a
-                                // tall shape the height of the window less the toolbar.
-                                aspectRatio: `${ratio[0]} / ${ratio[1]}`,
-                                width: `min(100%, calc((100dvh - 190px) * ${ratio[0] / ratio[1]}))`,
-                                ['--lj-cols' as string]: screen.cols,
-                                ['--lj-rows' as string]: screen.rows,
-                                gridTemplateColumns: `repeat(${screen.cols}, minmax(0, 1fr))`,
-                                gridTemplateRows: `repeat(${screen.rows}, minmax(0, 1fr))`,
-                                gridAutoRows: 'minmax(0, 1fr)',
-                            }}
-                        >
-                            {gridContent}
-                        </div>
-                    )}
+                        )}
+                    </PreviewScale>
                     <p className="text-xs text-ink-3">
                         {t('screens.designer.help')}
                     </p>

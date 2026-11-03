@@ -47,17 +47,19 @@ you put it on; cells no widget covers simply stay empty on the TV.
 
 **Aspect** next to Columns and Rows is the shape of the display the screen is made for:
 16:9 (the default), 16:10, 4:3, 21:9 or 32:9, and the two buttons after it stand it
-landscape or portrait (a 16:9 portrait screen is 9:16). **Swap columns and rows** next to them turns
-the layout with it: columns become rows and every widget's place and size turn too, so a
-landscape layout becomes a portrait one in one click (only while every widget is on the
-grid). The grid in the designer takes
+landscape or portrait (a 16:9 portrait screen is 9:16). The grid in the designer takes
 that shape, as large as fits, so a widget's text reads as it will on that display.
 
-**Preview at** shows the screen as a TV of that resolution shows it, header, gaps and
-type sizes included, scaled down to fit the designer: **Fit** (the default) draws the
-grid as large as fits; the resolutions of the screen's aspect (1920 x 1080 and 3840 x 2160
-for 16:9, turned for portrait), the size each of the team's TVs reports for its window
-("Office TV, 1920 x 1080"), or **Custom** with a width and height of your own. Moving,
+The designer draws the screen as the TV does, header, gaps and type sizes included.
+**Show header** turns the TV's header (the screen's name, its projects and period, how
+many widgets need attention, live or offline, and the clock) on or off; without it the
+grid takes the whole screen, and the offline notice lies over its top.
+
+**Preview at** shows the screen as a TV of that resolution shows it, scaled down to fit
+the designer: **Fit** (the default) draws it as large as fits; first the size each TV
+showing this screen reports for its window ("Office TV, 1920 x 1080"), then the common
+resolutions of the screen's aspect (1920 x 1080 and 3840 x 2160 for 16:9, turned for
+portrait), or **Custom** with a width and height of your own. Moving,
 resizing and selecting widgets work the same in the preview. It is a view setting of
 this browser, kept per screen, not part of the screen.
 

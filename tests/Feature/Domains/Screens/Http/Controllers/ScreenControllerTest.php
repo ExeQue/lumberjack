@@ -132,7 +132,7 @@ describe('the screens of a team', function () {
 
         expect($copy->uuid)->not->toBe($this->screen->uuid)
             ->and($copy->widgets)->toBe($this->screen->widgets)
-            ->and([$copy->aspect, $copy->orientation])->toBe([$this->screen->aspect, $this->screen->orientation])
+            ->and([$copy->aspect, $copy->orientation, $copy->fit, $copy->show_header])->toBe([$this->screen->aspect, $this->screen->orientation, $this->screen->fit, $this->screen->show_header])
             ->and(Screen::query()->whereKey($this->screen->id)->exists())->toBeFalse();
         Event::assertDispatchedTimes(ScreenChanged::class, 2);
         Event::assertDispatched(ScreenChanged::class, fn (ScreenChanged $e): bool => $e->broadcastAs() === 'screen.deleted');
@@ -166,6 +166,7 @@ describe('the pages', function () {
             ->where('screen.current_theme', 'dark')
             ->where('screen.aspect', '16:9')
             ->where('screen.orientation', 'landscape')
+            ->where('screen.show_header', true)
             ->where('channel', 'screen.'.$this->screen->uuid)
             ->where('data_url', '/screens/'.$this->screen->uuid.'/data')
             ->has('schema.stat')
@@ -301,14 +302,15 @@ describe('saving from the designer', function () {
     });
 
     it('saves the display\'s aspect and orientation, and refuses others', function () {
-        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '32:9', 'orientation' => 'portrait', 'fit' => 'fill'])->assertOk();
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '32:9', 'orientation' => 'portrait', 'fit' => 'fill', 'show_header' => false])->assertOk();
 
         expect($this->screen->refresh()->aspect)->toBe(ScreenAspect::SuperUltrawide)
             ->and($this->screen->orientation)->toBe(ScreenOrientation::Portrait)
-            ->and($this->screen->fit)->toBe(ScreenFit::Fill);
+            ->and($this->screen->fit)->toBe(ScreenFit::Fill)
+            ->and($this->screen->show_header)->toBeFalse();
 
-        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '9:16', 'orientation' => 'upside-down', 'fit' => 'zoom'])
-            ->assertJsonValidationErrors(['aspect', 'orientation', 'fit']);
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '9:16', 'orientation' => 'upside-down', 'fit' => 'zoom', 'show_header' => 'maybe'])
+            ->assertJsonValidationErrors(['aspect', 'orientation', 'fit', 'show_header']);
     });
 });
 

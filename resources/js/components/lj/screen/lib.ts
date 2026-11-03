@@ -437,46 +437,6 @@ export function incident(
     }
 }
 
-/**
- * The screen turned on its side: columns become rows and every widget's x and y, w and
- * h swap, so a landscape layout becomes the portrait one. Null when a widget waits
- * outside the grid or the grid would leave the limits, as that would not fit.
- */
-export function transposed(
-    screen: Pick<Screen, 'cols' | 'rows' | 'widgets'>,
-    limits: {
-        min_cols: number;
-        max_cols: number;
-        min_rows: number;
-        max_rows: number;
-    },
-): Pick<Screen, 'cols' | 'rows' | 'widgets'> | null {
-    const cols = screen.rows;
-    const rows = screen.cols;
-
-    if (
-        cols < limits.min_cols ||
-        cols > limits.max_cols ||
-        rows < limits.min_rows ||
-        rows > limits.max_rows ||
-        screen.widgets.some((w) => !fits(w, screen.cols, screen.rows))
-    ) {
-        return null;
-    }
-
-    return {
-        cols,
-        rows,
-        widgets: screen.widgets.map((w) => ({
-            ...w,
-            x: w.y,
-            y: w.x,
-            w: w.h,
-            h: w.w,
-        })),
-    };
-}
-
 /** A short random widget id. */
 export function newWidgetId(): string {
     return 'w' + Math.random().toString(36).slice(2, 10);

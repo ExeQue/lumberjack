@@ -105,15 +105,11 @@ return [
         'aspect' => 'Aspect',
         // The landscape and portrait buttons next to it.
         'orientation' => 'Orientation',
-        // Button: columns become rows, and every widget turns with them.
-        'swap' => 'Swap columns and rows',
-        'swap_hint' => 'Turns the layout on its side, for a display turned to portrait or back.',
-        'swap_refused' => 'Only when every widget is on the grid and both counts stay within 2 to 12.',
-        // The designer's preview: as large as fits, or the TV's layout at a resolution.
         // Button in the top bar: every TV showing the screen loads its page afresh.
         'reload' => 'Reload TVs',
         'reload_hint' => 'Every TV, kiosk and share link showing this screen loads its page afresh, within a few seconds.',
         'reload_failed' => 'The reload could not be sent.',
+        // The designer's preview: as large as fits, or the TV's layout at a resolution.
         'preview_at' => 'Preview at',
         'preview_fit' => 'Fit',
         'preview_tvs' => 'On a TV now',
@@ -122,6 +118,8 @@ return [
         'preview_w' => 'Width in pixels',
         'preview_h' => 'Height in pixels',
         'theme' => 'Theme',
+        // Toggle: the TV's name, scope, live state and clock above the grid.
+        'show_header' => 'Show header',
         'light_from' => 'Light from',
         'light_to' => 'until',
         'now_theme' => 'now :theme',

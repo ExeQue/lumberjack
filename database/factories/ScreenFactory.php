@@ -27,6 +27,7 @@ class ScreenFactory extends Factory
             'aspect' => ScreenAspect::Wide,
             'orientation' => ScreenOrientation::Landscape,
             'fit' => ScreenFit::Keep,
+            'show_header' => true,
             'theme' => ScreenTheme::Dark,
             'timezone' => 'Europe/Copenhagen',
             'scope' => ['projects' => [], 'environment' => null, 'period' => '24h'],

@@ -37,6 +37,7 @@ class UpdateScreenRequest extends FormRequest
             'aspect' => ['sometimes', 'required', Rule::enum(ScreenAspect::class)],
             'orientation' => ['sometimes', 'required', Rule::enum(ScreenOrientation::class)],
             'fit' => ['sometimes', 'required', Rule::enum(ScreenFit::class)],
+            'show_header' => ['sometimes', 'required', 'boolean'],
             'light_from' => ['sometimes', 'required', ...$time],
             'light_to' => ['sometimes', 'required', ...$time],
             'timezone' => ['sometimes', 'required', 'timezone:all'],
@@ -49,7 +50,7 @@ class UpdateScreenRequest extends FormRequest
     }
 
     /**
-     * @return array{name?: string, theme?: ScreenTheme, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, light_from?: string, light_to?: string, timezone?: string, scope?: array{projects: list<string>, environment: string|null, period: string}}
+     * @return array{name?: string, theme?: ScreenTheme, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, show_header?: bool, light_from?: string, light_to?: string, timezone?: string, scope?: array{projects: list<string>, environment: string|null, period: string}}
      */
     public function settings(): array
     {
@@ -65,6 +66,10 @@ class UpdateScreenRequest extends FormRequest
 
         if ($this->has('orientation')) {
             $settings['orientation'] = ScreenOrientation::from($this->string('orientation')->toString());
+        }
+
+        if ($this->has('show_header')) {
+            $settings['show_header'] = $this->boolean('show_header');
         }
 
         if ($this->has('fit')) {
