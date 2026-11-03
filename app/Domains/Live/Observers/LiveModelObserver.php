@@ -23,6 +23,7 @@ use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Repositories\Models\ProjectRepository;
 use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Schedule\Models\ScheduledTask;
+use App\Domains\Screens\Models\Screen;
 use App\Domains\Teams\Models\Membership;
 use App\Domains\Teams\Models\Team;
 use App\Domains\Teams\Models\TeamInvitation;
@@ -52,6 +53,7 @@ class LiveModelObserver
         QueueAlertThreshold::class,
         RetentionPolicy::class,
         ScheduledTask::class,
+        Screen::class,
         Team::class,
         TeamInvitation::class,
         User::class,
@@ -118,6 +120,7 @@ class LiveModelObserver
             $model instanceof ProjectAgent => $deleted ? $this->project->execute($model->project_id, ChangeKind::Agents) : null,
             $model instanceof McpToken => $this->team->execute($model->team_id, TeamChangeKind::Tokens),
             $model instanceof TeamInvitation => $this->team->execute($model->team_id, TeamChangeKind::Invitations),
+            $model instanceof Screen => $this->team->execute($model->team_id, TeamChangeKind::Screens),
             $model instanceof RetentionPolicy => $this->retention($model),
             $model instanceof Project => $this->projectChanged($model, $created || $deleted),
             $model instanceof Membership => $this->membershipChanged($model->team_id),
