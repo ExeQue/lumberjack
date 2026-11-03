@@ -44,7 +44,7 @@ class RecordOccurrenceAction
         }
 
         if ($occurrence->issue !== null) {
-            $this->detectEscalation->execute($occurrence->issue, $signal->environment);
+            $this->detectEscalation->execute($occurrence->issue, $signal->environment, $signal->occurredAt);
             // The issue's own page listens for this; the project-wide issues.changed only reloads lists.
             $this->broadcast->issueTouched($project->id, $occurrence->issue->uuid, $project->uuid);
         }

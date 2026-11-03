@@ -9,6 +9,8 @@ use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Events\IssueEscalated;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Occurrence;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -32,10 +34,18 @@ class DetectEscalationAction
 
     public const int ACTIVE_MINUTES = 60;
 
-    // ponytail: one count per issue every 30 seconds, so a flood does not cost a query per occurrence.
-    public const int CHECK_EVERY_SECONDS = 30;
+    /** Seconds the occurrence count of the day before the window is reused. */
+    public const int BASELINE_SECONDS = 300;
 
-    public function execute(Issue $issue, ?string $environment): bool
+    /**
+     * Seconds between two recounts of the window from the database. In between, each
+     * occurrence only bumps a counter per issue and minute in the cache, so a flood costs
+     * no query per occurrence. The recount also catches anything the counters missed (an
+     * issue that was resolved or escalating is not counted while it is).
+     */
+    public const int RESYNC_SECONDS = (self::WINDOW_MINUTES + 1) * 60;
+
+    public function execute(Issue $issue, ?string $environment, ?CarbonInterface $occurredAt = null): bool
     {
         $waiting = $issue->status === IssueStatus::Ignored && $issue->ignore_until_escalation;
 
@@ -45,20 +55,17 @@ class DetectEscalationAction
 
         $now = now();
         $windowStart = $now->copy()->subMinutes(self::WINDOW_MINUTES);
-        $burst = Occurrence::query()->where('issue_id', $issue->id)->where('occurred_at', '>=', $windowStart)->count();
+        $burst = $this->burst($issue, $windowStart, $occurredAt ?? $now);
 
         if ($burst < self::MIN) {
             return false;
         }
 
-        // Throttled only once a burst is big enough: a throttle taken by the first of 30
-        // errors in one request would skip the other 29 and never see the burst.
-        if (! Cache::add('issues:escalation-check:'.$issue->id, true, self::CHECK_EVERY_SECONDS)) {
-            return false;
-        }
-
-        $before = Occurrence::query()->where('issue_id', $issue->id)
-            ->where('occurred_at', '>=', $now->copy()->subDay())->where('occurred_at', '<', $windowStart)->count();
+        $before = (int) Cache::remember('issues:escalation-baseline:'.$issue->id, self::BASELINE_SECONDS, fn (): int => Occurrence::query()
+            ->where('issue_id', $issue->id)
+            ->where('occurred_at', '>=', $now->copy()->subDay())
+            ->where('occurred_at', '<', $windowStart)
+            ->count());
         $usual = $before / ((24 * 60 - self::WINDOW_MINUTES) / self::WINDOW_MINUTES);
 
         if ($burst < self::FACTOR * $usual) {
@@ -78,5 +85,40 @@ class DetectEscalationAction
         IssueEscalated::dispatch($issue, $environment, $burst);
 
         return true;
+    }
+
+    /**
+     * Occurrences of the issue since the window start, counted per minute in the cache. The
+     * minute the window starts in counts whole, so the window is up to a minute longer.
+     */
+    private function burst(Issue $issue, CarbonInterface $windowStart, CarbonInterface $occurredAt): int
+    {
+        $prefix = 'issues:burst:'.$issue->id.':';
+        $first = intdiv($windowStart->getTimestamp(), 60);
+        $last = intdiv(now()->getTimestamp(), 60);
+        $ttl = self::RESYNC_SECONDS + 60;
+
+        if (Cache::add($prefix.'synced', true, self::RESYNC_SECONDS)) {
+            // The occurrence just stored is in the database, so the recount includes it.
+            $counts = Occurrence::query()
+                ->where('issue_id', $issue->id)
+                ->where('occurred_at', '>=', CarbonImmutable::createFromTimestamp($first * 60))
+                ->selectRaw('floor(extract(epoch from occurred_at) / 60)::bigint as minute, count(*) as n')
+                ->groupBy('minute')
+                ->pluck('n', 'minute');
+
+            Cache::putMany(collect(range($first, $last))
+                ->mapWithKeys(fn (int $minute): array => [$prefix.$minute => (int) ($counts[$minute] ?? 0)])
+                ->all(), $ttl);
+        } else {
+            $minute = min($last, intdiv($occurredAt->getTimestamp(), 60));
+
+            if ($minute >= $first) {
+                Cache::add($prefix.$minute, 0, $ttl);
+                Cache::increment($prefix.$minute);
+            }
+        }
+
+        return (int) array_sum(array_map(intval(...), Cache::many(array_map(fn (int $minute): string => $prefix.$minute, range($first, $last)))));
     }
 }
