@@ -25,6 +25,20 @@ describe('opening a project in another team', function () {
         expect($user->fresh()->current_team_id)->toBe($other->id);
     });
 
+    it('leaves the current team alone when another site loads the page as an image', function () {
+        $other = Team::factory()->create();
+        $user = User::factory()->inTeam()->inTeam($other, TeamRole::Member)->create();
+        $project = Project::factory()->create(['team_id' => $other->id]);
+        $current = $user->teams()->whereKeyNot($other->id)->value('teams.id');
+        $user->forceFill(['current_team_id' => $current])->save();
+
+        $this->actingAs($user)->get(route('projects.show', $project), ['Sec-Fetch-Dest' => 'image', 'Sec-Fetch-Site' => 'cross-site', 'Sec-Fetch-Mode' => 'no-cors']);
+        expect($user->fresh()->current_team_id)->toBe($current);
+
+        $this->actingAs($user)->get(route('projects.show', $project), ['Sec-Fetch-Dest' => 'document', 'Sec-Fetch-Site' => 'cross-site', 'Sec-Fetch-Mode' => 'navigate']);
+        expect($user->fresh()->current_team_id)->toBe($other->id);
+    });
+
     it('leaves the current team alone for a project the user cannot see', function () {
         $user = User::factory()->inTeam()->create();
         $current = $user->current_team_id;
