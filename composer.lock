@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9669320bf2308fff1ce0cdd87c3b9351",
+    "content-hash": "a82fc02e8e663442b9c5d159f3290e2e",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -851,6 +851,82 @@
             },
             "time": "2023-08-08T05:53:35+00:00",
             "published-time": "2023-08-08T08:34:49+00:00"
+        },
+        {
+            "name": "exeque/laravel-qr",
+            "version": "v0.10.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/ExeQue/laravel-qr.git",
+                "reference": "a83da079e708f5503dc917a6a5c146738245bc31"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/ExeQue/laravel-qr/zipball/a83da079e708f5503dc917a6a5c146738245bc31",
+                "reference": "a83da079e708f5503dc917a6a5c146738245bc31",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "guzzlehttp/psr7": "^2.9 || ^3.0",
+                "laravel/framework": "^13.0",
+                "php": "^8.5",
+                "psr/http-message": "^2.0"
+            },
+            "require-dev": {
+                "enshrined/svg-sanitize": "^1.1",
+                "exeque/laravel-monocle": "^0.12",
+                "larastan/larastan": "^3.13",
+                "laravel/pint": "^1.21",
+                "livewire/livewire": "^4.4",
+                "orchestra/testbench": "^11.3",
+                "pestphp/pest": "^5.0",
+                "pestphp/pest-plugin-type-coverage": "^5.0"
+            },
+            "suggest": {
+                "enshrined/svg-sanitize": "Sanitizes SVG logos with a dedicated sanitizer instead of the package's own.",
+                "exeque/laravel-monocle": "Shows the codes each request rendered, with timings and advice, in the Monocle profiler.",
+                "ext-gd": "Draws PNG, JPEG and WebP codes without Imagick.",
+                "ext-imagick": "Draws PNG, JPEG and WebP codes faster than GD, and SVG logos on them."
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Qr": "ExeQue\\Qr\\Facades\\Qr"
+                    },
+                    "providers": [
+                        "ExeQue\\Qr\\QrServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "ExeQue\\Qr\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Morten Harders",
+                    "email": "mmh@harders-it.dk"
+                }
+            ],
+            "description": "QR codes for Laravel.",
+            "keywords": [
+                "laravel",
+                "qr",
+                "qrcode"
+            ],
+            "support": {
+                "issues": "https://github.com/ExeQue/laravel-qr/issues",
+                "source": "https://github.com/ExeQue/laravel-qr/tree/v0.10.2"
+            },
+            "time": "2026-10-28T05:52:04+00:00",
+            "published-time": "2026-10-28T05:52:17+00:00"
         },
         {
             "name": "fruitcake/php-cors",
