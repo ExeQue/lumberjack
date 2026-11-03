@@ -53,7 +53,7 @@ describe('application level', function () {
 
         expect($this->storedDays($this->team->id, null, RetentionCategory::Logs))->toBe(60);
 
-        $this->actingAs($this->owner)->get(route('team.show'))
+        $this->actingAs($this->owner)->get(route('team.retention.show'))
             ->assertInertia(fn (Assert $page) => $page->where('retention.8.category', 'logs')
                 ->where('retention.8.effective.days', 10)
                 ->where('retention.8.effective.capped', true)
@@ -80,11 +80,25 @@ describe('team level', function () {
     });
 
     it('allows forever only when the application does', function () {
+        // Unset at the application: the built-in default is not forever, so neither is the team.
+        $this->actingAs($this->owner)->put(route('team.retention'), ['forever' => ['alert_sends']])->assertSessionHasErrors('days.alert_sends');
+
+        RetentionPolicy::factory()->create(['category' => RetentionCategory::AlertSends, 'days' => null]);
         $this->actingAs($this->owner)->put(route('team.retention'), ['forever' => ['alert_sends']])->assertSessionHasNoErrors();
         expect($this->storedDays($this->team->id, null, RetentionCategory::AlertSends))->toBeNull();
 
         RetentionPolicy::factory()->create(['category' => RetentionCategory::HealthOutages, 'days' => 400]);
         $this->actingAs($this->owner)->put(route('team.retention'), ['forever' => ['health_outages']])->assertSessionHasErrors('days.health_outages');
+    });
+
+    it('lists retention on its own page, read only for members', function () {
+        ['user' => $member] = $this->memberWithProject(TeamRole::Member);
+
+        $this->actingAs($member)->get(route('team.retention.show'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('team/retention')
+                ->has('retention')
+                ->where('retention.0.effective.forever_allowed', false));
     });
 
     it('cannot set the audit log', function () {

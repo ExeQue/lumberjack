@@ -19,6 +19,8 @@ final readonly class ResolvedRetention
         /** The most the levels above allow; null days with a null level means no cap. */
         public ?int $capDays = null,
         public ?RetentionLevel $capLevel = null,
+        /** The scope may keep this data forever: only when the application does. */
+        public bool $foreverAllowed = true,
     ) {
     }
 
@@ -27,7 +29,7 @@ final readonly class ResolvedRetention
         return $this->days === null;
     }
 
-    /** @return array{days: int|null, source: string, capped: bool, cap_days: int|null, cap_level: string|null} */
+    /** @return array{days: int|null, source: string, capped: bool, cap_days: int|null, cap_level: string|null, forever_allowed: bool} */
     public function toArray(): array
     {
         return [
@@ -36,6 +38,7 @@ final readonly class ResolvedRetention
             'capped' => $this->capped,
             'cap_days' => $this->capDays,
             'cap_level' => $this->capLevel?->value,
+            'forever_allowed' => $this->foreverAllowed,
         ];
     }
 }

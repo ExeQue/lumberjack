@@ -74,8 +74,19 @@ describe('pruning', function () {
     });
 
     it('never deletes what is kept forever', function () {
+        RetentionPolicy::factory()->create(['category' => RetentionCategory::HealthOutages, 'days' => null]);
         RetentionPolicy::factory()->create(['project_id' => $this->project->id, 'category' => RetentionCategory::HealthOutages, 'days' => null]);
         $this->seedRetentionRow(RetentionCategory::HealthOutages, $this->project, now()->subYears(20));
+
+        app(PruneProjectTelemetryAction::class)->execute($this->project);
+
+        expect($this->retentionRows(RetentionCategory::HealthOutages))->toBe(1);
+    });
+
+    it('keeps a project forever only when the application does', function () {
+        RetentionPolicy::factory()->create(['project_id' => $this->project->id, 'category' => RetentionCategory::HealthOutages, 'days' => null]);
+        $this->seedRetentionRow(RetentionCategory::HealthOutages, $this->project, now()->subYears(20));
+        $this->seedRetentionRow(RetentionCategory::HealthOutages, $this->project, now()->subDays(30));
 
         app(PruneProjectTelemetryAction::class)->execute($this->project);
 

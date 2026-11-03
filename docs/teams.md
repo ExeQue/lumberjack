@@ -24,7 +24,8 @@ every team (see [Setup and system administration](./administration)).
 - **Invite by email:** as Admin or Member. Open invitations show when they expire
   (after 7 days), and can be sent again or revoked.
 - **API and MCP tokens:** see [MCP](./mcp#tokens) and the [metrics API](./metrics-api#authentication).
-- **Retention:** the team's [retention](./projects#retention), read only for members.
+- **Retention:** its own page in the sidebar: the team's [retention](./projects#retention),
+  read only for members.
 
 Anyone can **Create a team**: it starts empty, with them as the owner. The team switcher
 at the top of the sidebar moves between teams.

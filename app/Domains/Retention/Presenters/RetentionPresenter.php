@@ -40,7 +40,7 @@ class RetentionPresenter
                 'default_days' => $c->defaultDays(),
                 'stored' => $stored === null ? null : ['days' => $stored->days],
                 'inherited' => $scope === null
-                    ? ['days' => $c->defaultDays(), 'source' => RetentionLevel::Default->value, 'capped' => false, 'cap_days' => null, 'cap_level' => null]
+                    ? ['days' => $c->defaultDays(), 'source' => RetentionLevel::Default->value, 'capped' => false, 'cap_days' => null, 'cap_level' => null, 'forever_allowed' => true]
                     : $this->resolve->execute($c, $parent, policies: $policies)->toArray(),
                 'effective' => $this->resolve->execute($c, $scope, policies: $policies)->toArray(),
             ];

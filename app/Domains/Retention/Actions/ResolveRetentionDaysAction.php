@@ -16,7 +16,9 @@ use Illuminate\Database\Eloquent\Collection;
  * The one place retention is decided. The most specific stored value wins (job class or log
  * channel, project, team, application, built-in default), but never above what a stored value
  * of a level above allows: the application caps teams, the team caps its projects and their
- * job classes and channels. A capped value stays stored, so raising the cap restores it.
+ * job classes and channels. Forever below the application needs the application to keep that
+ * data forever too; otherwise a stored forever falls back to the application's days. A capped
+ * value stays stored, so raising the cap restores it.
  */
 class ResolveRetentionDaysAction
 {
@@ -51,6 +53,10 @@ class ResolveRetentionDaysAction
         $capped = false;
         $capDays = null;
         $capLevel = null;
+        // Below the application, forever is only for data the application itself keeps forever.
+        $application = $levels[0][1];
+        $applicationForever = $application !== null && $application->days === null;
+        $foreverAllowed = $scope === null || $applicationForever;
 
         foreach ($levels as [$level, $row]) {
             if ($row === null) {
@@ -62,6 +68,11 @@ class ResolveRetentionDaysAction
             $days = $capped ? $capDays : $row->days;
             $source = $level;
 
+            if ($days === null && $level !== RetentionLevel::Application && ! $applicationForever) {
+                $days = $application->days ?? $category->defaultDays();
+                $capped = true;
+            }
+
             // A project's own value does not cap its job classes and channels.
             if (in_array($level, [RetentionLevel::Application, RetentionLevel::Team], true) && $days !== null && ! $this->isOwnLevel($level, $scope)) {
                 $capDays = $days;
@@ -69,7 +80,10 @@ class ResolveRetentionDaysAction
             }
         }
 
-        return new ResolvedRetention($days, $source, $capped, $capDays, $capLevel);
+        // A team that caps in days rules forever out for its projects.
+        $foreverAllowed = $foreverAllowed && $capDays === null;
+
+        return new ResolvedRetention($days, $source, $capped, $capDays, $capLevel, $foreverAllowed);
     }
 
     /**

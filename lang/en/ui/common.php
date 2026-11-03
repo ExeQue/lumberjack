@@ -37,6 +37,7 @@ return [
         'all_projects' => 'All projects',
         'team' => 'Members and tokens',
         'alerts' => 'Alerts',
+        'retention' => 'Retention',
     ],
     'breadcrumb' => 'Breadcrumb',
     'teams' => 'Teams',

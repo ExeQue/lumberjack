@@ -28,5 +28,6 @@ return [
         'override' => 'override',
     ],
     'above_cap' => 'At most :days days: the :level allows no more.',
+    'forever_not_allowed' => 'Forever is only possible when Lumberjack itself keeps this data forever.',
     'saved' => 'Retention saved.',
 ];

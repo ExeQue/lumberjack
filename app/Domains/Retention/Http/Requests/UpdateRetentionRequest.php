@@ -61,6 +61,13 @@ class UpdateRetentionRequest extends FormRequest
             foreach ($this->categories() as $category) {
                 $forever = $this->isForever($category);
                 $days = $this->input('days.'.$category->value);
+
+                if ($forever && $scope !== null && ! $resolve->execute($category, $scope, policies: $policies)->foreverAllowed) {
+                    $validator->errors()->add('days.'.$category->value, __('retention.forever_not_allowed'));
+
+                    continue;
+                }
+
                 $this->checkCap($validator, 'days.'.$category->value, $category, $scope, $policies, $forever ? null : $days, $forever || $days !== null, $resolve);
             }
 

@@ -129,13 +129,17 @@ default for the one below it and the most it may keep:
 
 1. **Application**, the whole Lumberjack: **Administration > Retention**, for system
    administrators. Empty uses the built-in default and sets no maximum.
-2. **Team**: the team page, for team owners and admins. At most the application value.
+2. **Team**: **Retention** in the sidebar, for team owners and admins (members can read
+   it). At most the application value.
 3. **Project**: the project's settings, for whoever administers the project. At most
    the team value; job classes and log channels can have their own, also at most the
    team value.
 
-Each value is a number of days (1 to 3650), empty to inherit, or **forever**. Forever
-can only be chosen where no level above sets a number.
+Each value is a number of days (1 to 3650), empty to inherit, or **forever**. A team or
+project can only choose forever when the application keeps that data forever itself
+(and the team sets no number for its projects); the built-in defaults are never forever.
+A team or project value of forever stored earlier falls back to the application value
+(or the built-in default) until the application keeps it forever.
 
 Saving more than a level above allows is refused, naming the limit. Lowering a level
 does not change what the levels below store: their values are capped right away, shown

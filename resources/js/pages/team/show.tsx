@@ -1,11 +1,6 @@
 import { Relative, WithRelative } from '@/components/lj/relative';
-import { Form, Head, router, useForm, usePage } from '@inertiajs/react';
+import { Form, Head, router, usePage } from '@inertiajs/react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
-import {
-    RetentionTable,
-    retentionFormData,
-    retentionPayload,
-} from '@/components/lj/retention-table';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
@@ -40,13 +35,8 @@ import {
     transfer as memberTransfer,
     update as memberUpdate,
 } from '@/routes/members';
-import { retention as teamRetention } from '@/routes/team';
 import { store as teamStore } from '@/routes/teams';
-import type {
-    RetentionRow,
-    RetentionStats,
-    TeamShared,
-} from '@/types/lumberjack';
+import type { TeamShared } from '@/types/lumberjack';
 
 const firstError = (
     errors: Record<string, string>,
@@ -87,9 +77,6 @@ type Props = {
     invitations: Invitation[];
     tokens: Token[];
     scopes: string[];
-    retention: RetentionRow[];
-    /** Deferred: counted after the page shows. */
-    retention_stats?: RetentionStats;
     mcp_url: string;
     api_url: string;
     can_create_team: boolean;
@@ -100,8 +87,6 @@ export default function TeamShow({
     invitations,
     tokens,
     scopes,
-    retention,
-    retention_stats,
     mcp_url,
     api_url,
     can_create_team,
@@ -824,12 +809,6 @@ export default function TeamShow({
                     </div>
                 </Card>
 
-                <TeamRetention
-                    retention={retention}
-                    stats={retention_stats}
-                    admin={admin}
-                />
-
                 {can_create_team && (
                     <Card aria-labelledby="h-new-team">
                         <CardHeader
@@ -871,58 +850,5 @@ export default function TeamShow({
                 )}
             </PageBody>
         </>
-    );
-}
-
-function TeamRetention({
-    retention,
-    stats,
-    admin,
-}: {
-    retention: RetentionRow[];
-    stats: RetentionStats | undefined;
-    admin: boolean;
-}) {
-    const t = useT();
-    const form = useForm(retentionFormData(retention));
-    const errors = form.errors as Record<string, string>;
-
-    return (
-        <Card aria-labelledby="h-retention">
-            <CardHeader
-                id="h-retention"
-                title={t('team.retention.title')}
-                description={t('team.retention.description')}
-            />
-            <form
-                className="flex flex-col gap-4 p-4"
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    form.transform(retentionPayload);
-                    form.submit(teamRetention(), { preserveScroll: true });
-                }}
-            >
-                <RetentionTable
-                    level="team"
-                    rows={retention}
-                    stats={stats}
-                    data={form.data}
-                    setData={(next) => form.setData(next)}
-                    errors={errors}
-                    readOnly={!admin}
-                />
-                {admin && (
-                    <div>
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            disabled={form.processing}
-                        >
-                            {t('common.save')}
-                        </Button>
-                    </div>
-                )}
-            </form>
-        </Card>
     );
 }
