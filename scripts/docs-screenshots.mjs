@@ -259,6 +259,12 @@ const shots = {
                 await new Promise((r) => setTimeout(r, 100));
             }),
     },
+    // The first widget's inspector on a value of its rotation other than the first.
+    'screen-designer-rotation': {
+        path: screen,
+        before: () => click('aside [role=tab]:last-child'),
+        element: 'aside:has([role=tablist])',
+    },
     'screen-designer-incident': {
         path: screen,
         before: () => click('::-p-text(Show an incident)'),

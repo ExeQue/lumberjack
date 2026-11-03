@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Button, Input, Label, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { itemFieldsOf, option, rotationOf } from './lib';
+import { fieldsOf, option, rotationOf } from './lib';
 import type {
     RotateItem,
     Schema,
@@ -72,7 +72,40 @@ type Target = {
     prefix: string;
 };
 
-/** The selected widget's settings, drawn from its type's option schema. */
+/** Options that belong to one source: a new source starts from its own limits and scale. */
+const SOURCE_BOUND = ['amber', 'red', 'low_is_bad', 'min', 'max'];
+
+// ponytail: mirrors WidgetSchema::MAX_ROTATE; the server trims past it anyway.
+const MAX_ROTATE = 12;
+
+/** A rotated value as stored: its empty settings dropped, and a plain id when none are left. */
+function compact(item: RotateItem): string | RotateItem {
+    const out: Record<string, unknown> = { ...item };
+
+    for (const key of Object.keys(out)) {
+        const v = out[key];
+
+        if (
+            v === undefined ||
+            v === null ||
+            v === '' ||
+            (typeof v === 'object' && Object.keys(v).length === 0)
+        ) {
+            delete out[key];
+        }
+    }
+
+    return Object.keys(out).length === 1 ? item.source : (out as RotateItem);
+}
+
+/** One value as the drag of a tab carries it, apart from the designer's own drags. */
+const TAB_DRAG = 'application/x-lj-rotate-value';
+
+/**
+ * The selected widget's settings, drawn from its type's option schema. A rotating type
+ * shows one tab per value it shows in turn, the widget's own source first; below them
+ * what applies to the whole widget.
+ */
 export function WidgetInspector({
     widget,
     catalog,
@@ -80,6 +113,8 @@ export function WidgetInspector({
     onRemove,
     cols,
     canResize,
+    tab = 0,
+    onTab = () => {},
 }: {
     widget: Widget;
     catalog: Catalog;
@@ -88,6 +123,9 @@ export function WidgetInspector({
     cols: number;
     /** Whether the widget has room for that size where it is. */
     canResize: (w: number, h: number) => boolean;
+    /** The value of the rotation open in the tabs, which the designer's tile shows. */
+    tab?: number;
+    onTab?: (index: number) => void;
 }) {
     const t = useT();
     const { schema, sources } = catalog;
@@ -119,44 +157,19 @@ export function WidgetInspector({
         onChange({ ...widget, scope: scope as WidgetScope });
     };
 
-    const rotated = rotationOf(widget).slice(1);
-    const setRotate = (items: RotateItem[]) =>
-        onChange({
-            ...widget,
-            // A value without settings of its own stays a plain id, as the server stores it.
-            rotate: items.map((item) =>
-                Object.keys(item).length === 1 ? item.source : item,
-            ),
-        });
-    const setItem = (index: number, changes: Partial<RotateItem>) => {
-        const item: Record<string, unknown> = {
-            ...rotated[index],
-            ...changes,
-        };
+    const rotating = ROTATING_KINDS.includes(widget.type);
+    const items = rotating ? rotationOf(widget) : [];
+    const rotated = items.slice(1);
+    const active = Math.min(tab, Math.max(0, items.length - 1));
+    const first = active === 0;
+    const item = items[active];
 
-        for (const key of Object.keys(item)) {
-            const v = item[key];
-
-            if (
-                v === undefined ||
-                v === null ||
-                v === '' ||
-                (typeof v === 'object' && Object.keys(v).length === 0)
-            ) {
-                delete item[key];
-            }
-        }
-
+    const setRotate = (entries: RotateItem[]) =>
+        onChange({ ...widget, rotate: entries.map(compact) });
+    const setItem = (index: number, changes: Partial<RotateItem>) =>
         setRotate(
-            rotated.map((r, i) => (i === index ? (item as RotateItem) : r)),
+            rotated.map((r, i) => (i === index ? { ...r, ...changes } : r)),
         );
-    };
-    const moveItem = (index: number, by: number) => {
-        const items = [...rotated];
-        const [item] = items.splice(index, 1);
-        items.splice(index + by, 0, item);
-        setRotate(items);
-    };
     const without = (
         values: Record<string, unknown> | undefined,
         key: string,
@@ -173,22 +186,112 @@ export function WidgetInspector({
         return next;
     };
 
-    const pickSource = (next: string) =>
+    /**
+     * The widget with its values in this order. A value that becomes the first carries
+     * its settings into the widget's; every other value keeps what it showed by taking
+     * the widget's old setting as its own wherever the new first value overrode it.
+     */
+    const arrange = (order: RotateItem[]) => {
+        const [lead, ...rest] = order;
+
+        if (lead.source === widget.source) {
+            setRotate(rest);
+
+            return;
+        }
+
+        const fields = fieldsOf(schema, widget.type);
+        const options: Record<string, unknown> = {
+            ...widget.options,
+            ...lead.options,
+        };
+        delete options.source_seconds;
+
+        if (lead.seconds) {
+            options.source_seconds = lead.seconds;
+        }
+
+        // What a value showed for a key it did not set itself, before the reorder.
+        const before = (r: RotateItem, key: string) =>
+            widget.options[key] ??
+            (['amber', 'red', 'low_is_bad'].includes(key)
+                ? pool.find((s) => s.id === r.source)?.[
+                      key as 'amber' | 'red' | 'low_is_bad'
+                  ]
+                : fields[key]?.default) ??
+            undefined;
+
         onChange({
             ...widget,
-            source: next,
-            title: null,
-            rotate: rotated.filter((r) => r.source !== next),
-            // The new source's own limits and scale apply.
-            options: Object.fromEntries(
-                Object.entries(widget.options).filter(
-                    ([key]) =>
-                        !['amber', 'red', 'low_is_bad', 'min', 'max'].includes(
-                            key,
+            source: lead.source,
+            title: lead.title ?? null,
+            options,
+            scope: { ...widget.scope, ...lead.scope },
+            rotate: rest
+                .map((r) => ({
+                    ...r,
+                    // ponytail: "the screen's period", an automatic scale and a source
+                    // without a default limit have no stored form, so a value that
+                    // followed them follows the new first one instead.
+                    scope:
+                        r.scope?.period || !lead.scope?.period
+                            ? r.scope
+                            : widget.scope.period
+                              ? { period: widget.scope.period }
+                              : undefined,
+                    options: {
+                        ...Object.fromEntries(
+                            Object.keys(lead.options ?? {})
+                                .map((key) => [key, before(r, key)])
+                                .filter(([, v]) => v !== undefined),
                         ),
-                ),
-            ),
+                        ...r.options,
+                    },
+                }))
+                .map(compact),
         });
+    };
+    const move = (from: number, to: number) => {
+        const order = [...items];
+        const [moved] = order.splice(from, 1);
+        order.splice(to, 0, moved);
+        arrange(order);
+        onTab(to);
+    };
+    const removeValue = (index: number) => {
+        arrange(items.filter((_, i) => i !== index));
+        onTab(Math.min(index, items.length - 2));
+    };
+    const unused = pool.find((s) => !items.some((i) => i.source === s.id));
+    const addValue = () => {
+        if (unused) {
+            setRotate([...rotated, { source: unused.id }]);
+            onTab(items.length);
+        }
+    };
+
+    const pickSource = (next: string) =>
+        first
+            ? onChange({
+                  ...widget,
+                  source: next,
+                  title: null,
+                  rotate: rotated.filter((r) => r.source !== next),
+                  options: Object.fromEntries(
+                      Object.entries(widget.options).filter(
+                          ([key]) => !SOURCE_BOUND.includes(key),
+                      ),
+                  ),
+              })
+            : setItem(active - 1, {
+                  source: next,
+                  title: undefined,
+                  options: Object.fromEntries(
+                      Object.entries(item.options ?? {}).filter(
+                          ([key]) => !SOURCE_BOUND.includes(key),
+                      ),
+                  ),
+              });
 
     const fieldLabel = (key: string) => t(`screens.fields.${key}.label`);
     const same = (value: string) =>
@@ -621,64 +724,90 @@ export function WidgetInspector({
         [2, 2],
         [Math.min(4, cols), 2],
     ];
+
+    // The open value: the widget itself on the first tab, else its rotate entry.
+    const valueSource = first
+        ? source
+        : pool.find((s) => s.id === item?.source);
+    const target: Target = first
+        ? own
+        : {
+              values: item.options ?? {},
+              set: (key, value) =>
+                  setItem(active - 1, {
+                      options: without(item.options, key, value),
+                  }),
+              source: valueSource,
+              inherited: widget.options,
+              prefix: `r${active}-`,
+          };
+    const vid = (key: string) => id(`${target.prefix}${key}`);
     const lowIsBad =
+        (target.values.low_is_bad as boolean | undefined) ??
         (widget.options.low_is_bad as boolean | undefined) ??
-        source?.low_is_bad;
+        valueSource?.low_is_bad;
+    const label = (r: RotateItem) =>
+        r.title ?? pool.find((s) => s.id === r.source)?.label ?? r.source;
+    const sections = schema[widget.type] ?? [];
+    const [valueSection, ...rest] = sections;
+    const whole = rest.filter((s) => s.id !== 'rotation' || items.length > 1);
 
-    return (
-        <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-[11px] font-semibold tracking-wide text-ink-3 uppercase">
-                    {t(`screens.kinds.${widget.type}`)}
-                </h2>
-                <Button variant="ghost" className="text-err" onClick={onRemove}>
-                    {t('screens.inspector.remove')}
-                </Button>
-            </div>
-
+    const value = (
+        <>
             {widget.type === 'empty' && (
                 <p className="text-[13px] text-ink-2">
                     {t('screens.inspector.empty_hint')}
                 </p>
             )}
 
-            {widget.type !== 'empty' && (
-                <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={id('title')}>
-                        {t('screens.inspector.title')}
-                    </Label>
-                    <Input
-                        id={id('title')}
-                        value={widget.title ?? ''}
-                        placeholder={
-                            source?.label ?? t(`screens.kinds.${widget.type}`)
-                        }
-                        onChange={(e) =>
-                            onChange({
-                                ...widget,
-                                title: e.target.value || null,
-                            })
-                        }
-                    />
-                </div>
-            )}
-
             {pool.length > 1 && (
                 <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={id('source')}>
+                    <Label htmlFor={vid('source')}>
                         {t('screens.inspector.shows')}
                     </Label>
                     <Select
-                        id={id('source')}
-                        value={widget.source ?? ''}
+                        id={vid('source')}
+                        value={(first ? widget.source : item.source) ?? ''}
                         onChange={(e) => pickSource(e.target.value)}
                     >
-                        {pool.map((s) => (
-                            <option key={s.id} value={s.id}>
-                                {s.label}
-                            </option>
-                        ))}
+                        {pool
+                            .filter(
+                                (s) =>
+                                    s.id === valueSource?.id ||
+                                    !items.some((i) => i.source === s.id),
+                            )
+                            .map((s) => (
+                                <option key={s.id} value={s.id}>
+                                    {s.label}
+                                </option>
+                            ))}
                     </Select>
+                </div>
+            )}
+
+            {widget.type !== 'empty' && (
+                <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={vid('title')}>
+                        {t('screens.inspector.title')}
+                    </Label>
+                    <Input
+                        id={vid('title')}
+                        value={(first ? widget.title : item.title) ?? ''}
+                        placeholder={
+                            valueSource?.label ??
+                            t(`screens.kinds.${widget.type}`)
+                        }
+                        onChange={(e) =>
+                            first
+                                ? onChange({
+                                      ...widget,
+                                      title: e.target.value || null,
+                                  })
+                                : setItem(active - 1, {
+                                      title: e.target.value || undefined,
+                                  })
+                        }
+                    />
                 </div>
             )}
 
@@ -693,20 +822,33 @@ export function WidgetInspector({
                         className="flex flex-wrap gap-1.5"
                     >
                         {['', ...catalog.periods].map((p) => {
-                            const on = (widget.scope.period ?? '') === p;
+                            const on =
+                                ((first
+                                    ? widget.scope.period
+                                    : item.scope?.period) ?? '') === p;
 
                             return (
                                 <button
-                                    key={p || 'screen'}
+                                    key={p || 'default'}
                                     type="button"
                                     role="radio"
                                     aria-checked={on}
                                     className={chip(on)}
-                                    onClick={() => setScope('period', p)}
+                                    onClick={() =>
+                                        first
+                                            ? setScope('period', p)
+                                            : setItem(active - 1, {
+                                                  scope: p
+                                                      ? { period: p }
+                                                      : undefined,
+                                              })
+                                    }
                                 >
-                                    {p === ''
-                                        ? t('screens.inspector.period_screen')
-                                        : t(`screens.period_short.${p}`)}
+                                    {p !== ''
+                                        ? t(`screens.period_short.${p}`)
+                                        : first
+                                          ? t('screens.inspector.period_screen')
+                                          : same(widgetPeriod)}
                                 </button>
                             );
                         })}
@@ -714,275 +856,34 @@ export function WidgetInspector({
                 </div>
             )}
 
-            {ROTATING_KINDS.includes(widget.type) && (
+            {items.length > 1 && (
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[13px] font-medium">
-                        {t('screens.inspector.rotate')}
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                        {pool
-                            .filter((s) => s.id !== widget.source)
-                            .map((s) => {
-                                const on = rotated.some(
-                                    (r) => r.source === s.id,
-                                );
+                    <Label htmlFor={vid('seconds')}>
+                        {t('screens.inspector.rotate_seconds')}
+                    </Label>
+                    <Input
+                        id={vid('seconds')}
+                        type="number"
+                        min={1}
+                        value={String(
+                            (first
+                                ? (widget.options.source_seconds as
+                                      | number
+                                      | undefined)
+                                : item.seconds) ?? '',
+                        )}
+                        placeholder={`${every} s`}
+                        onChange={(e) => {
+                            const seconds =
+                                e.target.value === ''
+                                    ? undefined
+                                    : Number(e.target.value);
 
-                                return (
-                                    <button
-                                        key={s.id}
-                                        type="button"
-                                        aria-pressed={on}
-                                        className={chip(on)}
-                                        onClick={() =>
-                                            setRotate(
-                                                on
-                                                    ? rotated.filter(
-                                                          (r) =>
-                                                              r.source !== s.id,
-                                                      )
-                                                    : [
-                                                          ...rotated,
-                                                          { source: s.id },
-                                                      ],
-                                            )
-                                        }
-                                    >
-                                        {s.label}
-                                    </button>
-                                );
-                            })}
-                    </div>
-                    <span className="text-xs text-ink-3">
-                        {rotated.length > 0
-                            ? t('screens.inspector.rotate_on', {
-                                  count: rotated.length + 1,
-                              })
-                            : t('screens.inspector.rotate_off')}
-                    </span>
-                    {rotated.length > 0 && (
-                        <ol className="flex flex-col gap-1">
-                            <li className="flex items-center gap-2 rounded-md border border-line px-2 py-1.5 text-[13px]">
-                                <span className="min-w-0 flex-1 truncate">
-                                    {source?.label}
-                                    <span className="ml-1.5 text-xs text-ink-3">
-                                        {t('screens.inspector.rotate_first')}
-                                    </span>
-                                </span>
-                                <Input
-                                    aria-label={t(
-                                        'screens.fields.source_seconds.label',
-                                    )}
-                                    type="number"
-                                    min={1}
-                                    className="h-7 w-20"
-                                    value={String(
-                                        (widget.options.source_seconds as
-                                            | number
-                                            | undefined) ?? '',
-                                    )}
-                                    placeholder={`${every} s`}
-                                    onChange={(e) =>
-                                        setOption(
-                                            'source_seconds',
-                                            e.target.value === ''
-                                                ? null
-                                                : Number(e.target.value),
-                                        )
-                                    }
-                                />
-                            </li>
-                            {rotated.map((item, i) => {
-                                const itemSource = pool.find(
-                                    (s) => s.id === item.source,
-                                );
-                                const target: Target = {
-                                    values: item.options ?? {},
-                                    set: (key, value) =>
-                                        setItem(i, {
-                                            options: without(
-                                                item.options,
-                                                key,
-                                                value,
-                                            ),
-                                        }),
-                                    source: itemSource,
-                                    inherited: widget.options,
-                                    prefix: `r${i}-`,
-                                };
-                                const rid = (key: string) =>
-                                    `w-${widget.id}-r${i}-${key}`;
-
-                                return (
-                                    <li
-                                        key={item.source}
-                                        className="rounded-md border border-line text-[13px]"
-                                    >
-                                        <details>
-                                            <summary className="flex cursor-pointer items-center gap-1.5 px-2 py-1.5">
-                                                <span className="min-w-0 flex-1 truncate">
-                                                    {item.title ??
-                                                        itemSource?.label ??
-                                                        item.source}
-                                                </span>
-                                                <span className="text-xs text-ink-3">
-                                                    {`${item.seconds ?? every} s`}
-                                                </span>
-                                                {[-1, 1].map((by) => (
-                                                    <button
-                                                        key={by}
-                                                        type="button"
-                                                        disabled={
-                                                            i + by < 0 ||
-                                                            i + by >=
-                                                                rotated.length
-                                                        }
-                                                        aria-label={t(
-                                                            by < 0
-                                                                ? 'screens.inspector.move_up'
-                                                                : 'screens.inspector.move_down',
-                                                        )}
-                                                        className="rounded px-1 text-ink-3 hover:text-ink disabled:opacity-30"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            moveItem(i, by);
-                                                        }}
-                                                    >
-                                                        {by < 0 ? '↑' : '↓'}
-                                                    </button>
-                                                ))}
-                                            </summary>
-                                            <div className="grid grid-cols-2 gap-2.5 border-t border-line p-2">
-                                                <div className="flex flex-col gap-1">
-                                                    <Label
-                                                        htmlFor={rid('seconds')}
-                                                        className="text-xs text-ink-2"
-                                                    >
-                                                        {t(
-                                                            'screens.inspector.rotate_seconds',
-                                                        )}
-                                                    </Label>
-                                                    <Input
-                                                        id={rid('seconds')}
-                                                        type="number"
-                                                        min={1}
-                                                        value={String(
-                                                            item.seconds ?? '',
-                                                        )}
-                                                        placeholder={`${every} s`}
-                                                        onChange={(e) =>
-                                                            setItem(i, {
-                                                                seconds:
-                                                                    e.target
-                                                                        .value ===
-                                                                    ''
-                                                                        ? undefined
-                                                                        : Number(
-                                                                              e
-                                                                                  .target
-                                                                                  .value,
-                                                                          ),
-                                                            })
-                                                        }
-                                                    />
-                                                </div>
-                                                <div className="flex flex-col gap-1">
-                                                    <Label
-                                                        htmlFor={rid('title')}
-                                                        className="text-xs text-ink-2"
-                                                    >
-                                                        {t(
-                                                            'screens.inspector.title',
-                                                        )}
-                                                    </Label>
-                                                    <Input
-                                                        id={rid('title')}
-                                                        value={item.title ?? ''}
-                                                        placeholder={
-                                                            itemSource?.label
-                                                        }
-                                                        onChange={(e) =>
-                                                            setItem(i, {
-                                                                title:
-                                                                    e.target
-                                                                        .value ||
-                                                                    undefined,
-                                                            })
-                                                        }
-                                                    />
-                                                </div>
-                                                {hasPeriod && (
-                                                    <div
-                                                        role="radiogroup"
-                                                        aria-label={t(
-                                                            'screens.inspector.period',
-                                                        )}
-                                                        className="col-span-2 flex flex-wrap gap-1.5"
-                                                    >
-                                                        {[
-                                                            '',
-                                                            ...catalog.periods,
-                                                        ].map((p) => {
-                                                            const on =
-                                                                (item.scope
-                                                                    ?.period ??
-                                                                    '') === p;
-
-                                                            return (
-                                                                <button
-                                                                    key={
-                                                                        p ||
-                                                                        'widget'
-                                                                    }
-                                                                    type="button"
-                                                                    role="radio"
-                                                                    aria-checked={
-                                                                        on
-                                                                    }
-                                                                    className={chip(
-                                                                        on,
-                                                                    )}
-                                                                    onClick={() =>
-                                                                        setItem(
-                                                                            i,
-                                                                            {
-                                                                                scope: p
-                                                                                    ? {
-                                                                                          period: p,
-                                                                                      }
-                                                                                    : undefined,
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {p === ''
-                                                                        ? same(
-                                                                              widgetPeriod,
-                                                                          )
-                                                                        : t(
-                                                                              `screens.period_short.${p}`,
-                                                                          )}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                                {itemFieldsOf(
-                                                    schema,
-                                                    widget.type,
-                                                ).map((field) =>
-                                                    renderField(
-                                                        field,
-                                                        false,
-                                                        target,
-                                                    ),
-                                                )}
-                                            </div>
-                                        </details>
-                                    </li>
-                                );
-                            })}
-                        </ol>
-                    )}
+                            return first
+                                ? setOption('source_seconds', seconds)
+                                : setItem(active - 1, { seconds });
+                        }}
+                    />
                 </div>
             )}
 
@@ -993,58 +894,253 @@ export function WidgetInspector({
                             ? 'screens.inspector.limits_below'
                             : 'screens.inspector.limits_above',
                     )}
-                    {source?.unit === 'ratio' &&
+                    {valueSource?.unit === 'ratio' &&
                         ' ' + t('screens.inspector.ratio_hint')}
-                    {source?.unit === 'ms' &&
+                    {valueSource?.unit === 'ms' &&
                         ' ' + t('screens.inspector.ms_hint')}
                 </p>
             )}
 
-            {(schema[widget.type] ?? []).map((section, i) => (
+            {valueSection && (
                 <Section
-                    key={section.id}
-                    title={t(`screens.sections.${section.id}`)}
-                    open={i === 0}
+                    key={valueSection.id}
+                    title={t(`screens.sections.${valueSection.id}`)}
+                    open
                 >
-                    {section.fields
-                        // Set on the source's row under Rotate through.
-                        .filter((field) => field.key !== 'source_seconds')
-                        .map((field) =>
-                            renderField(field, section.id === 'scope'),
-                        )}
+                    {valueSection.fields.map((field) =>
+                        renderField(field, valueSection.id === 'scope', target),
+                    )}
                 </Section>
-            ))}
+            )}
+        </>
+    );
 
-            <div className="flex flex-col gap-1.5">
-                <span className="text-[13px] font-medium">
-                    {t('screens.inspector.size')}
-                </span>
-                <div
-                    role="group"
-                    aria-label={t('screens.inspector.size')}
-                    className="grid grid-cols-4 gap-1.5"
-                >
-                    {sizes.map(([w, h]) => {
-                        const on = widget.w === w && widget.h === h;
+    return (
+        <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+                <h2 className="text-[11px] font-semibold tracking-wide text-ink-3 uppercase">
+                    {t(`screens.kinds.${widget.type}`)}
+                </h2>
+                <Button variant="ghost" className="text-err" onClick={onRemove}>
+                    {t('screens.inspector.remove')}
+                </Button>
+            </div>
 
-                        return (
-                            <button
-                                key={`${w}x${h}`}
-                                type="button"
-                                aria-pressed={on}
-                                disabled={!on && !canResize(w, h)}
-                                className={cn(
-                                    'h-8 rounded-md border border-line text-[13px] disabled:opacity-40',
-                                    on
-                                        ? 'bg-amber text-amber-ink'
-                                        : 'bg-rail text-ink-2',
-                                )}
-                                onClick={() => onChange({ ...widget, w, h })}
-                            >
-                                {`${w} × ${h}`}
-                            </button>
-                        );
-                    })}
+            {rotating ? (
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-end gap-1 border-b border-line">
+                        <div
+                            role="tablist"
+                            aria-label={t('screens.inspector.values')}
+                            className="flex min-w-0 flex-1 [scrollbar-width:thin] gap-0.5 overflow-x-auto"
+                            onKeyDown={(e) => {
+                                const to = (
+                                    {
+                                        ArrowLeft: active - 1,
+                                        ArrowRight: active + 1,
+                                        Home: 0,
+                                        End: items.length - 1,
+                                    } as Record<string, number>
+                                )[e.key];
+
+                                if (to === undefined) {
+                                    return;
+                                }
+
+                                e.preventDefault();
+                                const i = (to + items.length) % items.length;
+                                onTab(i);
+                                e.currentTarget
+                                    .querySelectorAll<HTMLElement>(
+                                        '[role="tab"]',
+                                    )
+                                    [i]?.focus();
+                            }}
+                        >
+                            {items.map((r, i) => (
+                                <button
+                                    key={r.source}
+                                    type="button"
+                                    role="tab"
+                                    id={id(`tab-${i}`)}
+                                    aria-selected={i === active}
+                                    aria-controls={id('panel')}
+                                    tabIndex={i === active ? 0 : -1}
+                                    title={label(r)}
+                                    draggable={items.length > 1}
+                                    onDragStart={(e) => {
+                                        e.dataTransfer.setData(
+                                            TAB_DRAG,
+                                            String(i),
+                                        );
+                                        e.dataTransfer.effectAllowed = 'move';
+                                    }}
+                                    onDragOver={(e) => {
+                                        if (
+                                            e.dataTransfer.types.includes(
+                                                TAB_DRAG,
+                                            )
+                                        ) {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                    onDrop={(e) => {
+                                        const from = Number(
+                                            e.dataTransfer.getData(TAB_DRAG),
+                                        );
+                                        e.preventDefault();
+
+                                        if (from !== i) {
+                                            move(from, i);
+                                        }
+                                    }}
+                                    onClick={() => onTab(i)}
+                                    className={cn(
+                                        'max-w-32 flex-none truncate border-b-2 px-2.5 py-1.5 text-xs',
+                                        i === active
+                                            ? 'border-amber font-medium text-ink'
+                                            : 'border-transparent text-ink-3 hover:text-ink',
+                                    )}
+                                >
+                                    {label(r)}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            type="button"
+                            aria-label={t('screens.inspector.add_value')}
+                            title={t('screens.inspector.add_value')}
+                            disabled={!unused || rotated.length >= MAX_ROTATE}
+                            className="mb-0.5 flex-none rounded px-2 py-1 text-sm text-ink-3 hover:text-ink disabled:opacity-30"
+                            onClick={addValue}
+                        >
+                            +
+                        </button>
+                    </div>
+
+                    <p className="text-xs text-ink-3">
+                        {items.length > 1
+                            ? t('screens.inspector.rotate_on', {
+                                  count: items.length,
+                              })
+                            : t('screens.inspector.rotate_off')}
+                    </p>
+
+                    <div
+                        role="tabpanel"
+                        id={id('panel')}
+                        aria-labelledby={id(`tab-${active}`)}
+                        className="flex flex-col gap-4"
+                    >
+                        {items.length > 1 && (
+                            <div className="flex items-center gap-1">
+                                {[-1, 1].map((by) => (
+                                    <button
+                                        key={by}
+                                        type="button"
+                                        disabled={
+                                            active + by < 0 ||
+                                            active + by >= items.length
+                                        }
+                                        aria-label={t(
+                                            by < 0
+                                                ? 'screens.inspector.move_earlier'
+                                                : 'screens.inspector.move_later',
+                                        )}
+                                        title={t(
+                                            by < 0
+                                                ? 'screens.inspector.move_earlier'
+                                                : 'screens.inspector.move_later',
+                                        )}
+                                        className="rounded border border-line px-2 py-0.5 text-xs text-ink-2 hover:text-ink disabled:opacity-30"
+                                        onClick={() =>
+                                            move(active, active + by)
+                                        }
+                                    >
+                                        {by < 0 ? '←' : '→'}
+                                    </button>
+                                ))}
+                                <Button
+                                    variant="ghost"
+                                    className="ml-auto text-xs text-err"
+                                    onClick={() => removeValue(active)}
+                                >
+                                    {t('screens.inspector.remove_value')}
+                                </Button>
+                            </div>
+                        )}
+                        {value}
+                    </div>
+                </div>
+            ) : (
+                value
+            )}
+
+            <div
+                className={cn(
+                    'flex flex-col gap-4',
+                    rotating && 'rounded-md border border-line bg-rail/40 p-3',
+                )}
+            >
+                {rotating && (
+                    <div className="flex flex-col gap-0.5">
+                        <h3 className="text-[13px] font-semibold">
+                            {t('screens.inspector.whole_widget')}
+                        </h3>
+                        <span className="text-xs text-ink-3">
+                            {t('screens.inspector.whole_widget_hint')}
+                        </span>
+                    </div>
+                )}
+
+                {whole.map((section) => (
+                    <Section
+                        key={section.id}
+                        title={t(`screens.sections.${section.id}`)}
+                        open={false}
+                    >
+                        {section.fields
+                            // Set per value, on its tab.
+                            .filter((field) => field.key !== 'source_seconds')
+                            .map((field) =>
+                                renderField(field, section.id === 'scope'),
+                            )}
+                    </Section>
+                ))}
+
+                <div className="flex flex-col gap-1.5">
+                    <span className="text-[13px] font-medium">
+                        {t('screens.inspector.size')}
+                    </span>
+                    <div
+                        role="group"
+                        aria-label={t('screens.inspector.size')}
+                        className="grid grid-cols-4 gap-1.5"
+                    >
+                        {sizes.map(([w, h]) => {
+                            const on = widget.w === w && widget.h === h;
+
+                            return (
+                                <button
+                                    key={`${w}x${h}`}
+                                    type="button"
+                                    aria-pressed={on}
+                                    disabled={!on && !canResize(w, h)}
+                                    className={cn(
+                                        'h-8 rounded-md border border-line text-[13px] disabled:opacity-40',
+                                        on
+                                            ? 'bg-amber text-amber-ink'
+                                            : 'bg-rail text-ink-2',
+                                    )}
+                                    onClick={() =>
+                                        onChange({ ...widget, w, h })
+                                    }
+                                >
+                                    {`${w} × ${h}`}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>

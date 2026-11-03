@@ -233,8 +233,8 @@ export type TileProps = {
     sources: Sources;
     data: WidgetData | undefined;
     now: number;
-    /** The designer pauses rotation on the selected tile. */
-    paused?: boolean;
+    /** The designer holds the selected tile on the value its inspector has open. */
+    pinned?: number;
     incident?: boolean;
     designer?: boolean;
     flash?: boolean;
@@ -254,7 +254,7 @@ export function WidgetTile({
     sources,
     data,
     now,
-    paused = false,
+    pinned,
     incident = false,
     designer = false,
     flash = false,
@@ -273,16 +273,17 @@ export function WidgetTile({
     const previewData: WidgetData | undefined = data
         ? Object.fromEntries(shown.map((id) => [id, preview(id) ?? null]))
         : undefined;
-    const index = paused
-        ? 0
-        : rotationIndex(
-              stored.type,
-              shown,
-              previewData,
-              items.map((item) => item.seconds ?? every),
-              option<boolean>(schema, stored, 'hold_problem') !== false,
-              now,
-          );
+    const index =
+        pinned !== undefined
+            ? Math.min(pinned, Math.max(0, items.length - 1))
+            : rotationIndex(
+                  stored.type,
+                  shown,
+                  previewData,
+                  items.map((item) => item.seconds ?? every),
+                  option<boolean>(schema, stored, 'hold_problem') !== false,
+                  now,
+              );
     // The value shown now draws with its own settings over the widget's.
     const widget = shownAs(stored, items[index]);
     const opt = <T,>(key: string) => option<T>(schema, widget, key);

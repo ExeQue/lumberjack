@@ -250,6 +250,9 @@ export default function EditScreen(props: Props) {
     const [selected, setSelected] = useState<string | null>(
         props.screen.widgets[0]?.id ?? null,
     );
+    // The value of the selected widget's rotation its inspector has open; the tile shows it.
+    const [tab, setTab] = useState({ id: '', index: 0 });
+    const pinned = tab.id === selected ? tab.index : 0;
     const [status, setStatus] = useState<'saved' | 'saving' | 'error'>('saved');
     const [viewers, setViewers] = useState<number | null>(null);
     const [incident, setIncident] = useState(false);
@@ -1195,7 +1198,9 @@ export default function EditScreen(props: Props) {
                                 sources={sources}
                                 data={data[widget.id]}
                                 now={now}
-                                paused={widget.id === selected}
+                                pinned={
+                                    widget.id === selected ? pinned : undefined
+                                }
                                 incident={incident}
                                 designer
                                 tabIndex={0}
@@ -1347,6 +1352,8 @@ export default function EditScreen(props: Props) {
                             }
                             onChange={(widget) => patch(widget.id, widget)}
                             onRemove={() => remove(current.id)}
+                            tab={pinned}
+                            onTab={(index) => setTab({ id: current.id, index })}
                         />
                     ) : (
                         <ScreenSettings
