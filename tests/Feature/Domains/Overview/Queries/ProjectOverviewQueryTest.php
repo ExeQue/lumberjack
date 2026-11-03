@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Domains\Issues\Enums\IssueStatus;
+use App\Domains\Issues\Models\Issue;
 use App\Domains\Overview\Queries\ProjectOverviewQuery;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\Project;
@@ -36,5 +38,21 @@ describe('response times', function () {
 
         expect($bucket)->toMatchArray(['p50' => 30_000, 'p95' => 1_000_000])
             ->and($series->firstWhere('t', $at->copy()->startOfHour()->subHour()->toAtomString()))->toMatchArray(['p50' => null, 'p95' => null]);
+    });
+});
+
+describe('what people change', function () {
+    it('shows an issue resolved after the figures were cached', function () {
+        $project = Project::factory()->create();
+        $issue = Issue::factory()->for($project)->create();
+        $query = app(ProjectOverviewQuery::class);
+
+        expect($query->get($project, Period::Day)['open_issues'])->toBe(1);
+
+        $issue->forceFill(['status' => IssueStatus::Resolved, 'resolved_at' => now()])->save();
+        $overview = $query->get($project, Period::Day);
+
+        expect($overview['open_issues'])->toBe(0)
+            ->and($overview['latest_issues'])->toBe([]);
     });
 });
