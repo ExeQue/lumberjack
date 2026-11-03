@@ -32,7 +32,15 @@ class ProjectOverviewQuery
      */
     public function get(Project $project, Period $period, ?string $environment = null): array
     {
-        return StatisticsCache::remember('overview', $period, [$project->id, $environment], fn (): array => $this->compute($project, $period, $environment));
+        return [
+            ...StatisticsCache::remember('overview', $period, [$project->id, $environment], fn (): array => $this->compute($project, $period, $environment)),
+            // State a person changes (an issue resolved, a check muted) is read fresh: the
+            // live reload it causes must show it, not the cached figures from before.
+            'health' => $this->health->summary($project, $environment),
+            'open_issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->count(),
+            'latest_issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->with('assignee')
+                ->latest('surfaced_at')->limit(5)->get()->map(fn (Issue $i): array => $this->presenter->summary($i))->all(),
+        ];
     }
 
     /**
@@ -82,14 +90,10 @@ class ProjectOverviewQuery
             'job_runs' => $jobRuns,
             'failed_jobs' => $failedJobs,
             'stuck_jobs' => $stuckJobs,
-            'health' => $this->health->summary($project, $environment),
-            'open_issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->count(),
             'request_series' => array_map(fn (array $point): array => [...$point, 'v' => round((float) $point['v'])], TimeSeries::count($traffic, $period, aggregate: 'SUM(requests)')),
             'sample_rate' => $this->routes->sampleRate($project->id, $period, $environment),
             'latency_series' => $this->latencySeries($project, $period, $environment),
             'error_series' => TimeSeries::count($errors, $period),
-            'latest_issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->with('assignee')
-                ->latest('surfaced_at')->limit(5)->get()->map(fn (Issue $i): array => $this->presenter->summary($i))->all(),
             'slowest_routes' => array_slice($this->routes->get($project->id, $period, $environment, 'p95', limit: 5), 0, 5),
             'failed_job_runs' => (clone $jobs)->whereStatus(JobRunStatus::Failed, JobRunStatus::Stuck, JobRunStatus::Released)
                 ->latest('updated_at')->limit(5)->get()
