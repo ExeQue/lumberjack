@@ -68,7 +68,19 @@ describe('validating a widget', function () {
         'an unknown time zone' => [['id' => 'f', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['timezone' => 'Nowhere']], 'w.options.timezone'],
         'a gauge source on a stat' => [['id' => 'a', 'type' => 'stat', 'source' => 'host_disk', 'w' => 1, 'h' => 1], 'w.source'],
         'a widget that is no object' => [[], 'w'],
+        'a rotated value of another type' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'host_disk']], 'w' => 1, 'h' => 1], 'w.rotate.0'],
+        'a rotated value without a source' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['seconds' => 5]], 'w' => 1, 'h' => 1], 'w.rotate.0'],
+        'a rotated value shown for no time' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'seconds' => 0]], 'w' => 1, 'h' => 1], 'w.rotate.0.seconds'],
+        'a rotated value with a limit that is no number' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'options' => ['red' => 'high']]], 'w' => 1, 'h' => 1], 'w.rotate.0.options.red'],
+        'a rotated value over an unknown period' => [['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'rotate' => [['source' => 'apdex', 'scope' => ['period' => '2y']]], 'w' => 1, 'h' => 1], 'w.rotate.0.scope.period'],
     ]);
+
+    it('takes rotated values as ids and as objects with settings of their own', function () use ($validate) {
+        expect($validate(['id' => 'a', 'type' => 'stat', 'source' => 'p95', 'w' => 1, 'h' => 1, 'options' => ['source_seconds' => 20], 'rotate' => [
+            'apdex',
+            ['source' => 'requests', 'seconds' => 30, 'title' => 'Traffic', 'options' => ['amber' => 100, 'red' => 200, 'low_is_bad' => true, 'suffix' => ' rpm'], 'scope' => ['period' => '24h']],
+        ]]))->toBe([]);
+    });
 });
 
 describe('storing a widget', function () {
@@ -85,6 +97,31 @@ describe('storing a widget', function () {
             'options' => ['amber' => 400.0, 'decimals' => '1', 'sparkline' => false],
             'scope' => ['projects' => [], 'period' => '7d'],
         ]);
+    });
+
+    it('keeps a rotated value\'s own settings that its type takes, and a plain id for one without', function () {
+        $clean = WidgetSchema::clean([
+            'id' => 'a', 'type' => 'stat', 'source' => 'p95', 'w' => 1, 'h' => 1, 'options' => ['source_seconds' => '20'],
+            'rotate' => [
+                'apdex',
+                ['source' => 'requests', 'seconds' => '30', 'title' => ' Traffic ', 'options' => ['red' => '200', 'show_title' => false, 'rotate_every' => '5'], 'scope' => ['period' => '24h', 'projects' => ['x']], 'extra' => 1],
+                ['source' => 'users_affected', 'seconds' => '', 'title' => '', 'options' => [], 'scope' => []],
+                ['source' => 'apdex', 'seconds' => 5],
+                ['source' => 'p95', 'seconds' => 5],
+            ],
+        ], 4, 4);
+
+        expect($clean['rotate'])->toBe([
+            'apdex',
+            ['source' => 'requests', 'seconds' => 30, 'title' => 'Traffic', 'options' => ['red' => 200.0], 'scope' => ['period' => '24h']],
+            'users_affected',
+        ])->and($clean['options'])->toBe(['source_seconds' => 20.0])
+            ->and(WidgetSchema::rotation($clean))->toBe([
+                ['source' => 'p95', 'seconds' => 20, 'title' => null, 'options' => [], 'scope' => []],
+                ['source' => 'apdex', 'seconds' => null, 'title' => null, 'options' => [], 'scope' => []],
+                ['source' => 'requests', 'seconds' => 30, 'title' => 'Traffic', 'options' => ['red' => 200.0], 'scope' => ['period' => '24h']],
+                ['source' => 'users_affected', 'seconds' => null, 'title' => null, 'options' => [], 'scope' => []],
+            ]);
     });
 
     it('gives layout widgets no source, rotation or scope', function () {

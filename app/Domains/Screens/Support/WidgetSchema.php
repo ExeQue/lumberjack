@@ -23,6 +23,12 @@ use Illuminate\Validation\Rule;
  * (health check uuids). A field marked data is read by ResolveWidgetDataAction, so a
  * change to it refetches the widget; the rest only change how it draws. Scope fields are
  * stored in the widget's scope, not its options; absent means the screen's default.
+ *
+ * A rotating widget's rotate entries are source ids, or {source, seconds, title, options,
+ * scope} where a value of the rotation has settings of its own: options only from the
+ * type's first section (ITEM_SECTION: value, scale, chart or rows) and only the period in
+ * scope, each over the widget's. The widget's source is the rotation's first value; its
+ * own time on screen is the source_seconds option.
  */
 final class WidgetSchema
 {
@@ -35,6 +41,9 @@ final class WidgetSchema
     public const int MAX_WIDGETS = 48;
 
     public const int MAX_ROTATE = 12;
+
+    /** Longest a rotated value may stay on screen, in seconds. */
+    public const int MAX_ROTATE_SECONDS = 3600;
 
     /** Rows a list asks for when it fits them to its tile. */
     public const int LIST_FIT_LIMIT = 20;
@@ -97,6 +106,49 @@ final class WidgetSchema
     }
 
     /**
+     * The option fields a rotated value can set for itself: its type's first section.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function itemFields(string $type): array
+    {
+        return array_column(self::sections($type)[0]['fields'] ?? [], null, 'key');
+    }
+
+    /**
+     * What a rotating widget shows in turn, the source first: each value with its own
+     * seconds (null for the widget's rotate_every), title, options and scope over the
+     * widget's. A widget that does not rotate shows its source alone.
+     *
+     * @param  array<string, mixed>  $widget  as stored
+     * @return list<array{source: string, seconds: int|null, title: string|null, options: array<string, mixed>, scope: array<string, mixed>}>
+     */
+    public static function rotation(array $widget): array
+    {
+        $source = (string) ($widget['source'] ?? '');
+        $seconds = $widget['options']['source_seconds'] ?? null;
+        $items = [['source' => $source, 'seconds' => $seconds !== null ? (int) $seconds : null, 'title' => null, 'options' => [], 'scope' => []]];
+
+        foreach (in_array($widget['type'] ?? null, self::ROTATING_TYPES, true) ? (array) ($widget['rotate'] ?? []) : [] as $entry) {
+            $entry = is_array($entry) ? $entry : ['source' => (string) $entry];
+
+            if (($entry['source'] ?? $source) === $source || in_array($entry['source'], array_column($items, 'source'), true)) {
+                continue;
+            }
+
+            $items[] = [
+                'source' => (string) $entry['source'],
+                'seconds' => isset($entry['seconds']) ? (int) $entry['seconds'] : null,
+                'title' => $entry['title'] ?? null,
+                'options' => (array) ($entry['options'] ?? []),
+                'scope' => (array) ($entry['scope'] ?? []),
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
      * The options a widget is resolved with: the stored ones over the defaults.
      *
      * @param  array<string, mixed>  $options
@@ -122,6 +174,8 @@ final class WidgetSchema
         $source = fn (string $attribute, mixed $value, Closure $fail) => $data !== null && is_string($value) && WidgetSources::has($data, $value)
             ? null
             : $fail(__('ui/screens.validation.source'));
+        // A rotated value is a source id, or an object naming one with its own settings.
+        $item = fn (string $attribute, mixed $value, Closure $fail) => $source($attribute, is_array($value) ? ($value['source'] ?? null) : $value, $fail);
 
         $rules = [
             "{$prefix}" => ['required', 'array'],
@@ -129,7 +183,12 @@ final class WidgetSchema
             "{$prefix}.type" => ['required', 'string', Rule::in(self::types())],
             "{$prefix}.source" => $data !== null ? ['required', 'string', $source] : ['nullable'],
             "{$prefix}.rotate" => ['nullable', 'array', 'max:'.self::MAX_ROTATE],
-            "{$prefix}.rotate.*" => ['string', $source],
+            "{$prefix}.rotate.*" => [$item],
+            "{$prefix}.rotate.*.seconds" => ['nullable', 'integer', 'min:1', 'max:'.self::MAX_ROTATE_SECONDS],
+            "{$prefix}.rotate.*.title" => ['nullable', 'string', 'max:100'],
+            "{$prefix}.rotate.*.options" => ['nullable', 'array'],
+            "{$prefix}.rotate.*.scope" => ['nullable', 'array'],
+            "{$prefix}.rotate.*.scope.period" => ['nullable', Rule::enum(Period::class)],
             // Without a position (an older designer) it flows like before; see ScreenLayout.
             "{$prefix}.x" => ['nullable', 'integer', 'min:0', 'max:'.(Screen::MAX_COLS - 1)],
             "{$prefix}.y" => ['nullable', 'integer', 'min:0', 'max:'.ScreenLayout::MAX_Y],
@@ -146,13 +205,16 @@ final class WidgetSchema
             "{$prefix}.scope.filter" => ['nullable', 'string', 'max:200'],
         ];
 
-        foreach (self::fields($type) as $key => $field) {
-            $attribute = "{$prefix}.options.{$key}";
+        $fields = [
+            ...array_map(fn (array $field): array => [$field, "{$prefix}.options.{$field['key']}"], array_values(self::fields($type))),
+            ...array_map(fn (array $field): array => [$field, "{$prefix}.rotate.*.options.{$field['key']}"], in_array($type, self::ROTATING_TYPES, true) ? array_values(self::itemFields($type)) : []),
+        ];
 
+        foreach ($fields as [$field, $attribute]) {
             $rules[$attribute] = match ($field['type']) {
                 'select' => ['nullable', Rule::in($field['options'])],
                 'toggle' => ['nullable', 'boolean'],
-                'number' => ['nullable', 'numeric'],
+                'number' => ['nullable', 'numeric', ...(isset($field['min']) ? ['min:'.$field['min'], 'max:'.$field['max']] : [])],
                 'checks' => ['nullable', 'array', 'max:50'],
                 'timezone' => ['nullable', 'timezone:all'],
                 default => ['nullable', 'string', 'max:200'],
@@ -171,32 +233,34 @@ final class WidgetSchema
      * what its type takes, empty values left out so the defaults apply.
      *
      * @param  array<string, mixed>  $widget  positioned (ScreenLayout::positioned())
-     * @return array{id: string, type: string, source: string|null, rotate: list<string>, x: int, y: int, w: int, h: int, title: string|null, options: array<string, mixed>, scope: array<string, mixed>}
+     * @return array{id: string, type: string, source: string|null, rotate: list<string|array<string, mixed>>, x: int, y: int, w: int, h: int, title: string|null, options: array<string, mixed>, scope: array<string, mixed>}
      */
     public static function clean(array $widget, int $cols, int $rows): array
     {
         $type = (string) $widget['type'];
         $source = self::isDataType($type) ? (string) $widget['source'] : null;
-        $rotate = in_array($type, self::ROTATING_TYPES, true)
-            ? array_values(array_unique(array_filter(array_map('strval', (array) ($widget['rotate'] ?? [])), fn (string $s): bool => $s !== $source)))
-            : [];
-        $options = [];
-        $given = (array) ($widget['options'] ?? []);
+        $rotate = [];
 
-        foreach (self::fields($type) as $key => $field) {
-            $value = $given[$key] ?? null;
+        foreach (in_array($type, self::ROTATING_TYPES, true) ? (array) ($widget['rotate'] ?? []) : [] as $entry) {
+            $entry = is_array($entry) ? $entry : ['source' => $entry];
+            $id = (string) ($entry['source'] ?? '');
 
-            if ($value === null || $value === '' || $value === []) {
+            if ($id === '' || $id === $source || in_array($id, array_map(fn (string|array $r): string => is_array($r) ? $r['source'] : $r, $rotate), true)) {
                 continue;
             }
 
-            $options[$key] = match ($field['type']) {
-                'toggle' => (bool) $value,
-                'number' => (float) $value,
-                'checks' => array_values(array_unique(array_map('strval', (array) $value))),
-                default => (string) $value,
-            };
+            $own = array_filter([
+                'seconds' => isset($entry['seconds']) && $entry['seconds'] !== '' ? max(1, min(self::MAX_ROTATE_SECONDS, (int) $entry['seconds'])) : null,
+                'title' => is_string($entry['title'] ?? null) && trim($entry['title']) !== '' ? trim($entry['title']) : null,
+                'options' => self::cleanOptions(self::itemFields($type), (array) ($entry['options'] ?? [])),
+                'scope' => isset($entry['scope']['period']) && $entry['scope']['period'] !== '' ? ['period' => (string) $entry['scope']['period']] : null,
+            ], fn (mixed $v): bool => $v !== null && $v !== []);
+
+            // ponytail: a value without settings of its own stays a plain id, as before.
+            $rotate[] = $own === [] ? $id : ['source' => $id, ...$own];
         }
+
+        $options = self::cleanOptions(self::fields($type), (array) ($widget['options'] ?? []));
 
         $scope = [];
 
@@ -227,6 +291,35 @@ final class WidgetSchema
             'options' => $options,
             'scope' => $scope,
         ];
+    }
+
+    /**
+     * Options as stored: the given fields only, typed, empty values left out.
+     *
+     * @param  array<string, array<string, mixed>>  $fields
+     * @param  array<mixed>  $given
+     * @return array<string, mixed>
+     */
+    private static function cleanOptions(array $fields, array $given): array
+    {
+        $options = [];
+
+        foreach ($fields as $key => $field) {
+            $value = $given[$key] ?? null;
+
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+
+            $options[$key] = match ($field['type']) {
+                'toggle' => (bool) $value,
+                'number' => (float) $value,
+                'checks' => array_values(array_unique(array_map('strval', (array) $value))),
+                default => (string) $value,
+            };
+        }
+
+        return $options;
     }
 
     /**
@@ -273,6 +366,8 @@ final class WidgetSchema
             $select('transition', ['fade', 'slide', 'none'], 'fade'),
             $toggle('hold_problem', true),
             $toggle('dots', true),
+            // How long the widget's own source shows; set on its row under Rotate through.
+            ['key' => 'source_seconds', 'type' => 'number', 'default' => null, 'data' => false, 'span' => 1, 'min' => 1, 'max' => self::MAX_ROTATE_SECONDS],
         ]);
         $limits = [$number('amber'), $number('red'), $toggle('low_is_bad', null, true)];
 

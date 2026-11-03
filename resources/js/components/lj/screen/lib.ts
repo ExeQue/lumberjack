@@ -1,5 +1,6 @@
 import { formatCompact, formatNumber, formatPercent } from '@/lib/format';
 import type {
+    RotateItem,
     Schema,
     SchemaField,
     Screen,
@@ -51,24 +52,73 @@ export function dataKey(schema: Schema, widget: Widget): string {
         .sort()
         .map((key) => [key, widget.options[key]]);
 
-    return JSON.stringify([
-        widget.type,
-        widget.source,
-        widget.rotate,
-        widget.scope,
-        options,
+    // A rotated value's seconds and title only change how it draws.
+    const rotation = rotationOf(widget).map((item) => [
+        item.source,
+        item.scope?.period ?? null,
+        Object.keys(item.options ?? {})
+            .filter((key) => fields[key]?.data)
+            .sort()
+            .map((key) => [key, item.options?.[key]]),
     ]);
+
+    return JSON.stringify([widget.type, rotation, widget.scope, options]);
 }
 
-/** The sources a tile shows in turn: the picked one first, then those it rotates through. */
-export function sourcesOf(widget: Widget): string[] {
+/**
+ * What a tile shows in turn: its source first, with the widget's title and its
+ * source_seconds, then the values it rotates through, each a RotateItem.
+ */
+export function rotationOf(widget: Widget): RotateItem[] {
     if (widget.source === null) {
         return [];
     }
 
-    return ROTATING_KINDS.includes(widget.type)
-        ? [widget.source, ...widget.rotate.filter((id) => id !== widget.source)]
-        : [widget.source];
+    const seconds = widget.options.source_seconds;
+    const items: RotateItem[] = [
+        {
+            source: widget.source,
+            seconds: typeof seconds === 'number' ? seconds : undefined,
+            title: widget.title ?? undefined,
+        },
+    ];
+
+    if (ROTATING_KINDS.includes(widget.type)) {
+        for (const entry of widget.rotate ?? []) {
+            const item = typeof entry === 'string' ? { source: entry } : entry;
+
+            if (!items.some((i) => i.source === item.source)) {
+                items.push(item);
+            }
+        }
+    }
+
+    return items;
+}
+
+/** The sources a tile shows in turn: the picked one first, then those it rotates through. */
+export function sourcesOf(widget: Widget): string[] {
+    return rotationOf(widget).map((item) => item.source);
+}
+
+/** The option fields a rotated value can set for itself: its type's first section. */
+export function itemFieldsOf(schema: Schema, kind: WidgetKind): SchemaField[] {
+    return schema[kind]?.[0]?.fields ?? [];
+}
+
+/** The widget as it shows one value of its rotation: that value's settings over its own. */
+export function shownAs(widget: Widget, item: RotateItem | undefined): Widget {
+    if (!item || item.source === widget.source) {
+        return widget;
+    }
+
+    return {
+        ...widget,
+        source: item.source,
+        title: item.title ?? null,
+        options: { ...widget.options, ...item.options },
+        scope: { ...widget.scope, ...item.scope },
+    };
 }
 
 type Payload = Record<string, unknown>;
@@ -147,14 +197,15 @@ export function needsAttention(status: Status): boolean {
 }
 
 /**
- * Which source a rotating tile shows at this moment. Every tile and every kiosk counts
- * from the same clock, so tiles switch together; one that needs attention holds.
+ * Which source a rotating tile shows at this moment, each for its own seconds. Every
+ * tile and every kiosk counts from the same clock, so tiles with the same timing switch
+ * together; one that needs attention holds.
  */
 export function rotationIndex(
     kind: WidgetKind,
     sources: string[],
     data: WidgetData | undefined,
-    everySeconds: number,
+    seconds: number[],
     hold: boolean,
     now: number,
 ): number {
@@ -172,7 +223,19 @@ export function rotationIndex(
         }
     }
 
-    return Math.floor(now / 1000 / Math.max(1, everySeconds)) % sources.length;
+    // Each value shows for its own seconds; a cycle is their sum.
+    const spans = sources.map((_, i) => Math.max(1, seconds[i] ?? 10));
+    let at = (now / 1000) % spans.reduce((sum, s) => sum + s, 0);
+
+    for (let i = 0; i < spans.length; i++) {
+        if (at < spans[i]) {
+            return i;
+        }
+
+        at -= spans[i];
+    }
+
+    return 0;
 }
 
 /** A value in its unit: counts compact, shares as percent, durations in ms or s. */

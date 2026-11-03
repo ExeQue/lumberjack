@@ -13,7 +13,8 @@ import {
     incident as incidentPreview,
     option,
     rotationIndex,
-    sourcesOf,
+    rotationOf,
+    shownAs,
     statusOf,
 } from './lib';
 import type { Schema, Sources, Status, Widget, WidgetData } from './types';
@@ -248,7 +249,7 @@ export type TileProps = {
  * of the source it shows now; its state colors it.
  */
 export function WidgetTile({
-    widget,
+    widget: stored,
     schema,
     sources,
     data,
@@ -264,23 +265,27 @@ export function WidgetTile({
     ...props
 }: TileProps) {
     const t = useT();
-    const opt = <T,>(key: string) => option<T>(schema, widget, key);
-    const shown = sourcesOf(widget);
+    const items = rotationOf(stored);
+    const shown = items.map((item) => item.source);
+    const every = Number(option<string>(schema, stored, 'rotate_every') ?? 10);
     const preview = (id: string) =>
-        incident ? incidentPreview(widget.type, data?.[id]) : data?.[id];
+        incident ? incidentPreview(stored.type, data?.[id]) : data?.[id];
     const previewData: WidgetData | undefined = data
         ? Object.fromEntries(shown.map((id) => [id, preview(id) ?? null]))
         : undefined;
     const index = paused
         ? 0
         : rotationIndex(
-              widget.type,
+              stored.type,
               shown,
               previewData,
-              Number(opt<string>('rotate_every') ?? 10),
-              opt<boolean>('hold_problem') !== false,
+              items.map((item) => item.seconds ?? every),
+              option<boolean>(schema, stored, 'hold_problem') !== false,
               now,
           );
+    // The value shown now draws with its own settings over the widget's.
+    const widget = shownAs(stored, items[index]);
+    const opt = <T,>(key: string) => option<T>(schema, widget, key);
     const sourceId = shown[index] ?? null;
     const payload = sourceId ? previewData?.[sourceId] : undefined;
     const source = sources[widget.type]?.find((s) => s.id === sourceId);
@@ -291,7 +296,7 @@ export function WidgetTile({
         ?.name;
     const title =
         shown.length > 1
-            ? (source?.label ?? '')
+            ? (items[index]?.title ?? source?.label ?? '')
             : (widget.title ??
               single ??
               source?.label ??
