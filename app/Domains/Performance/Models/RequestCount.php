@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Every request of one minute, method, route and status, sampled or not.
+ * Every request of one minute, method, domain, route and status, sampled or not.
  *
  * @property int $id
  * @property int $project_id
@@ -22,11 +22,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable $minute
  * @property string $method
  * @property string $route
+ * @property string $domain empty when the SDK sent none
  * @property int $status_code
  * @property int $count
  * @property int $duration_us summed over the counted requests
  */
-#[Fillable(['project_id', 'environment', 'minute', 'method', 'route', 'status_code', 'count', 'duration_us'])]
+#[Fillable(['project_id', 'environment', 'minute', 'method', 'domain', 'route', 'status_code', 'count', 'duration_us'])]
 #[WithoutTimestamps]
 #[UseEloquentBuilder(RequestCountBuilder::class)]
 class RequestCount extends Model

@@ -103,6 +103,22 @@ describe('server ingest', function () {
         expect(RequestRun::sole()->url)->toBe('https://x.test/files?signature=[filtered]&page=2');
     });
 
+    it('stores the domain and route name a request event carries, else the domain of its URL', function () {
+        $request = ['type' => 'request', 'timestamp' => now()->getTimestamp(), 'method' => 'GET', 'route' => '/orders', 'status' => 200, 'duration_ms' => 5];
+
+        $this->postJson('/api/ingest', $this->batch([
+            [...$request, 'url' => 'https://shop.example.com/orders', 'domain' => 'Shop.Example.com', 'route_name' => 'orders.index'],
+            [...$request, 'url' => 'https://user:secret@API.example.com:8443/orders?page=2'],
+            [...$request, 'url' => '/orders'],
+        ]), $this->auth)->assertStatus(202);
+
+        expect(RequestRun::query()->orderBy('id')->get(['domain', 'route_name'])->toArray())->toBe([
+            ['domain' => 'shop.example.com', 'route_name' => 'orders.index'],
+            ['domain' => 'api.example.com:8443', 'route_name' => null],
+            ['domain' => null, 'route_name' => null],
+        ]);
+    });
+
     it('accepts a gzip compressed body', function () {
         $body = gzencode(json_encode($this->batch([$this->exceptionEvent()])));
 

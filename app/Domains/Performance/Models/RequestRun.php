@@ -24,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $host
  * @property string $method
  * @property string|null $route
+ * @property string|null $route_name the Laravel route name, when the route has one
+ * @property string|null $domain the host the request was made to
  * @property string $url
  * @property int $status_code
  * @property int $duration_us
@@ -32,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $memory_peak
  * @property CarbonImmutable $occurred_at
  */
-#[Fillable(['project_id', 'trace_id', 'environment', 'release', 'host', 'method', 'route', 'url', 'status_code', 'duration_us', 'memory_peak', 'sample_rate', 'sampled', 'occurred_at'])]
+#[Fillable(['project_id', 'trace_id', 'environment', 'release', 'host', 'method', 'route', 'route_name', 'domain', 'url', 'status_code', 'duration_us', 'memory_peak', 'sample_rate', 'sampled', 'occurred_at'])]
 #[WithoutTimestamps]
 #[DateFormat('Y-m-d H:i:s.v')]
 #[UseFactory(RequestRunFactory::class)]
