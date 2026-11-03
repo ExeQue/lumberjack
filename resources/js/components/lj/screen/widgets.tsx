@@ -746,7 +746,12 @@ function Chart({ widget, schema, data, t }: BodyProps) {
                       (previous === undefined || day(previous) !== day(iso)),
               )
             : '';
-    const yTicks = [top, (top + bottom) / 2, bottom];
+    // Four bands on a tile two rows or taller, two on a one row tile.
+    const bands = widget.h >= 2 ? 4 : 2;
+    const yTicks = Array.from(
+        { length: bands + 1 },
+        (_, k) => top - ((top - bottom) * k) / bands,
+    );
     // Room for a label every column or so: three ticks on a narrow chart, five on a wide one.
     const xTicks = Math.min(widget.w >= 3 ? 5 : 3, points.length);
     const xAt = Array.from({ length: xTicks }, (_, k) =>
@@ -762,13 +767,15 @@ function Chart({ widget, schema, data, t }: BodyProps) {
             <div className="flex min-h-0 flex-1 flex-col gap-[0.25em]">
                 <div className="relative min-h-0 flex-1">
                     {showY &&
-                        yTicks.slice(0, 2).map((v, i) => (
+                        yTicks.slice(0, -1).map((v, i) => (
                             // Each label sits just under its grid line, out of the bars' way.
                             <span
                                 key={i}
                                 aria-hidden="true"
                                 className="lj-tile-small pointer-events-none absolute left-0 font-mono leading-none"
-                                style={{ top: `calc(${i * 50}% + 0.2em)` }}
+                                style={{
+                                    top: `calc(${(i * 100) / bands}% + 0.2em)`,
+                                }}
                             >
                                 {formatValue(v, String(data.unit))}
                             </span>
@@ -784,18 +791,20 @@ function Chart({ widget, schema, data, t }: BodyProps) {
                         })}
                     >
                         {showGrid &&
-                            [0, 20, 40].map((gy) => (
-                                <line
-                                    key={gy}
-                                    x1="0"
-                                    x2="100"
-                                    y1={gy}
-                                    y2={gy}
-                                    stroke="var(--s-line)"
-                                    strokeWidth="1"
-                                    vectorEffect="non-scaling-stroke"
-                                />
-                            ))}
+                            yTicks
+                                .map((_, k) => (40 * k) / bands)
+                                .map((gy) => (
+                                    <line
+                                        key={gy}
+                                        x1="0"
+                                        x2="100"
+                                        y1={gy}
+                                        y2={gy}
+                                        stroke="var(--s-line)"
+                                        strokeWidth="1"
+                                        vectorEffect="non-scaling-stroke"
+                                    />
+                                ))}
                         {style === 'bars' &&
                             points.map((p, i) => {
                                 const err = stacked
