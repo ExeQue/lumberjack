@@ -170,7 +170,7 @@ describe('the pages', function () {
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
             ->component('screens/edit')
             ->has('schema.health')
-            ->has('sources.stat', 12)
+            ->has('sources.stat', 14)
             ->has('environments')
             ->has('checks')
             ->where('limits.max_cols', Screen::MAX_COLS));
