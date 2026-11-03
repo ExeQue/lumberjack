@@ -8,6 +8,7 @@ import type {
     Rule as AlertRule,
 } from '@/components/lj/alerts';
 import { ConfirmButton } from '@/components/lj/confirm-button';
+import { CopyButton } from '@/components/lj/copy-text';
 import {
     Tooltip,
     TooltipContent,
@@ -698,7 +699,6 @@ composer require exeque/laravel-lumberjack`}
 
 function KeysSection({ project, settings }: Props) {
     const t = useT();
-    const [copied, setCopied] = useState(false);
 
     return (
         <Section id="keys" title={t('settings.keys.title')}>
@@ -743,16 +743,7 @@ function KeysSection({ project, settings }: Props) {
                         value={settings.public_key}
                         onFocus={(e) => e.currentTarget.select()}
                     />
-                    <Button
-                        onClick={() => {
-                            void navigator.clipboard.writeText(
-                                settings.public_key,
-                            );
-                            setCopied(true);
-                        }}
-                    >
-                        {copied ? t('common.copied') : t('common.copy')}
-                    </Button>
+                    <CopyButton text={settings.public_key} />
                     <ConfirmButton
                         variant="default"
                         question={t('settings.keys.rotate_public_question')}
@@ -761,10 +752,7 @@ function KeysSection({ project, settings }: Props) {
                             router.post(
                                 rotatePublicKey(project.uuid).url,
                                 {},
-                                {
-                                    preserveScroll: true,
-                                    onSuccess: () => setCopied(false),
-                                },
+                                { preserveScroll: true },
                             )
                         }
                     >
@@ -1627,34 +1615,38 @@ function CopyBlock({
     hint?: string;
     text: string;
 }) {
-    const t = useT();
-    const [copied, setCopied] = useState(false);
-
     return (
         <div className="flex flex-col gap-1.5">
             <span className="text-[13px] font-medium">{label}</span>
-            <div className="flex items-start gap-2">
-                <pre className="min-w-0 flex-1 overflow-x-auto rounded-md border border-line bg-ground px-3.5 py-3 font-mono text-xs leading-5 text-ink-2">
-                    {text}
-                </pre>
-                <Button
-                    onClick={() => {
-                        void navigator.clipboard.writeText(text);
-                        setCopied(true);
-                        window.setTimeout(() => setCopied(false), 2000);
-                    }}
-                >
-                    {copied ? t('common.copied') : t('common.copy')}
-                </Button>
-            </div>
+            <CodeWithCopy text={text} />
             {hint && <span className="text-xs text-ink-3">{hint}</span>}
+        </div>
+    );
+}
+
+/** A code block with its Copy button in the corner, full width like every other. */
+function CodeWithCopy({ text, tall }: { text: string; tall?: boolean }) {
+    return (
+        <div className="relative">
+            <pre
+                className={cn(
+                    'overflow-auto rounded-md border border-line bg-ground py-3 pr-24 pl-3.5 font-mono text-xs leading-5 text-ink-2',
+                    // One command wraps; a file keeps its lines and scrolls.
+                    tall ? 'max-h-96' : 'break-all whitespace-pre-wrap',
+                )}
+            >
+                {text}
+            </pre>
+            <CopyButton
+                text={text}
+                className="absolute top-2 right-2 bg-panel shadow-sm"
+            />
         </div>
     );
 }
 
 function TriageProviderBlock({ provider }: { provider: TriageProvider }) {
     const t = useT();
-    const [copied, setCopied] = useState(false);
 
     return (
         <section
@@ -1699,21 +1691,7 @@ function TriageProviderBlock({ provider }: { provider: TriageProvider }) {
                 })}
                 text={provider.local}
             />
-            <div className="relative">
-                <pre className="max-h-96 overflow-auto rounded-md border border-line bg-ground px-3.5 py-3 font-mono text-xs leading-5 text-ink-2">
-                    {provider.workflow}
-                </pre>
-                <Button
-                    className="absolute top-2 right-2"
-                    onClick={() => {
-                        void navigator.clipboard.writeText(provider.workflow);
-                        setCopied(true);
-                        window.setTimeout(() => setCopied(false), 2000);
-                    }}
-                >
-                    {copied ? t('common.copied') : t('common.copy')}
-                </Button>
-            </div>
+            <CodeWithCopy text={provider.workflow} tall />
         </section>
     );
 }

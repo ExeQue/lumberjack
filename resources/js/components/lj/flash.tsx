@@ -2,6 +2,7 @@ import { usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button, Input } from '@/components/lj/ui';
+import { CopyButton } from '@/components/lj/copy-text';
 import {
     Dialog,
     DialogContent,
@@ -27,7 +28,6 @@ export function FlashMessages() {
         errors: Record<string, string>;
     }>().props;
     const [secret, setSecret] = useState<Flash['secret']>(null);
-    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         if (flash?.status) {
@@ -39,7 +39,6 @@ export function FlashMessages() {
 
         if (flash?.secret) {
             setSecret(flash.secret);
-            setCopied(false);
         }
     }, [flash]);
 
@@ -86,16 +85,7 @@ export function FlashMessages() {
                     onFocus={(e) => e.currentTarget.select()}
                 />
                 <DialogFooter>
-                    <Button
-                        onClick={() => {
-                            void navigator.clipboard.writeText(
-                                secret?.value ?? '',
-                            );
-                            setCopied(true);
-                        }}
-                    >
-                        {copied ? t('common.copied') : t('common.copy')}
-                    </Button>
+                    <CopyButton text={secret?.value ?? ''} />
                     <Button variant="primary" onClick={() => setSecret(null)}>
                         {t('common.done')}
                     </Button>

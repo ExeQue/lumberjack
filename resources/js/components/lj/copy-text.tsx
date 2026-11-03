@@ -1,5 +1,6 @@
 import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/lj/ui';
 import { toast } from 'sonner';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -44,5 +45,32 @@ export function CopyText({
                 />
             )}
         </button>
+    );
+}
+
+/**
+ * A Copy button for a token, command or file; says so in a toast.
+ */
+export function CopyButton({
+    text,
+    className,
+}: {
+    text: string;
+    className?: string;
+}) {
+    const t = useT();
+
+    return (
+        <Button
+            className={className}
+            onClick={() => {
+                void navigator.clipboard
+                    .writeText(text)
+                    .then(() => toast.success(t('common.copied')));
+            }}
+        >
+            <Copy className="size-3.5" aria-hidden="true" />
+            {t('common.copy')}
+        </Button>
     );
 }
