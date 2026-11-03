@@ -14,6 +14,7 @@ import {
     show as projectShow,
 } from '@/routes/projects';
 import { index as queriesIndex } from '@/routes/queries';
+import { index as releasesIndex } from '@/routes/releases';
 import { index as routesIndex } from '@/routes/routes';
 import { index as scheduleIndex } from '@/routes/schedule';
 import { show as teamShow } from '@/routes/team';
@@ -62,6 +63,11 @@ export function useNavigation(
                   label: t('common.nav.queries'),
                   href: queriesIndex(project.uuid).url,
                   active: isAt(queriesIndex(project.uuid).url),
+              },
+              {
+                  label: t('common.nav.releases'),
+                  href: releasesIndex(project.uuid).url,
+                  active: isAt(releasesIndex(project.uuid).url),
               },
               {
                   label: t('common.nav.jobs'),
@@ -143,6 +149,7 @@ const sections: Record<string, (project: string) => { url: string }> = {
     issues: issuesIndex,
     routes: routesIndex,
     queries: queriesIndex,
+    releases: releasesIndex,
     jobs: jobsIndex,
     schedule: scheduleIndex,
     commands: commandsIndex,

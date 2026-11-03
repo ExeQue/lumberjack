@@ -22,6 +22,7 @@ return [
         'issues' => 'Issues',
         'routes' => 'Routes',
         'queries' => 'Queries',
+        'releases' => 'Releases',
         'jobs' => 'Jobs',
         'schedule' => 'Schedule',
         'commands' => 'Commands',

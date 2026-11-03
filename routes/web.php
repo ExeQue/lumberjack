@@ -25,6 +25,7 @@ use App\Domains\Projects\Http\Controllers\ProjectAgentController;
 use App\Domains\Projects\Http\Controllers\ProjectController;
 use App\Domains\Projects\Http\Controllers\ProjectSettingsController;
 use App\Domains\Projects\Http\Middleware\FollowProjectTeam;
+use App\Domains\Releases\Http\Controllers\ReleaseController;
 use App\Domains\Repositories\Http\Controllers\RepositoryController;
 use App\Domains\Retention\Http\Controllers\RetentionController;
 use App\Domains\Schedule\Http\Controllers\ScheduleController;
@@ -64,6 +65,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('routes', RouteController::class)->name('routes.index');
         Route::get('queries', QueryController::class)->name('queries.index');
+        Route::get('releases', ReleaseController::class)->name('releases.index');
         Route::get('traces/{trace}', TraceController::class)->where('trace', '[A-Za-z0-9._:-]{1,64}')->name('traces.show');
         Route::get('jobs', JobController::class)->name('jobs.index');
         Route::get('schedule', [ScheduleController::class, 'index'])->name('schedule.index');

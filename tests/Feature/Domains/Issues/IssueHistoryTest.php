@@ -44,6 +44,7 @@ describe('the issue history', function () {
         $history = app(IssuePresenter::class)->history($issue->refresh());
 
         expect(array_column($history, 'type'))->toBe(['regressed', 'status_changed', 'note', 'assigned', 'labels_changed', 'created'])
+            ->and($history[0]['data'])->toEqual(['release' => null, 'environment' => 'production'])
             ->and($history[1]['data'])->toEqual(['from' => 'open', 'to' => 'resolved'])
             ->and($history[2])->toMatchArray(['actor' => 'Morten', 'data' => ['body' => 'Fixed in #482.', 'status' => 'resolved']])
             ->and($history[3]['data'])->toEqual(['from' => null, 'to' => 'Morten'])

@@ -107,7 +107,8 @@ class RecordOccurrenceAction
                 $issue->save();
 
                 if ($regressed) {
-                    $this->history->execute($issue, IssueEventType::Regressed);
+                    // The release page counts regressions per release and environment.
+                    $this->history->execute($issue, IssueEventType::Regressed, data: ['release' => $signal->release, 'environment' => $signal->environment]);
                     IssueRegressed::dispatch($issue, $signal->environment);
                 }
 

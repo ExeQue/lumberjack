@@ -69,6 +69,7 @@ export default defineConfig({
                         text: 'Performance and traces',
                         link: '/docs/performance',
                     },
+                    { text: 'Releases', link: '/docs/releases' },
                     { text: 'Finding things', link: '/docs/finding-things' },
                     { text: 'MCP', link: '/docs/mcp' },
                 ],
