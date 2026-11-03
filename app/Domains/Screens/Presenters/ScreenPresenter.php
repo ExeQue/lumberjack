@@ -47,7 +47,13 @@ class ScreenPresenter
                 'environment' => $screen->scope['environment'] ?? null,
                 'period' => $screen->scope['period'] ?? '24h',
             ],
-            'widgets' => ScreenLayout::positioned($screen->widgets, $screen->cols, $screen->rows),
+            // Empty options and scope go out as {} rather than [], so the designer reads
+            // a missing key as missing, not as an array method of the same name.
+            'widgets' => array_map(fn (array $w): array => [
+                ...$w,
+                'options' => (object) ($w['options'] ?? []),
+                'scope' => (object) ($w['scope'] ?? []),
+            ], ScreenLayout::positioned($screen->widgets, $screen->cols, $screen->rows)),
             'updated_at' => $screen->updated_at?->toIso8601String(),
         ];
     }
