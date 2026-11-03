@@ -64,3 +64,11 @@ issue.
 
 GitHub has to reach your Lumberjack, so it must be on a public URL. The settings also
 show how to run the same triage once in a local Claude Code session.
+
+The workflow runs as "Lumberjack Triage" in the Actions tab, with the GitHub issue
+number in the run's title, and commits as "Lumberjack". GitHub shows a commit's avatar
+from the account its email belongs to, so to put the Lumberjack logo on those commits,
+create a GitHub App (or account) with the logo as its avatar and set the repository
+variable `LUMBERJACK_GIT_EMAIL` to its email. For an app that is
+`<bot user id>+<app slug>[bot]@users.noreply.github.com`; the bot user id comes from
+`gh api /users/<app slug>[bot] --jq .id`.

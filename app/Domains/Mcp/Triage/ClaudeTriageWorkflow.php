@@ -90,7 +90,7 @@ final class ClaudeTriageWorkflow
     }
 
     private const string TEMPLATE = <<<'YAML'
-# Lumberjack triage for {project}. Claude works through Lumberjack's MCP server,
+# Lumberjack Triage for {project}. Claude works through Lumberjack's MCP server,
 # with this repository checked out so it can read the code:
 #   - every 15 minutes it triages the new and regressed issues, and answers the
 #     notes in Lumberjack that tag it;
@@ -106,7 +106,12 @@ final class ClaudeTriageWorkflow
 # and CLAUDE_CODE_OAUTH_TOKEN, which runs on your Claude subscription: create it
 # with `claude setup-token`. To pay per use instead, set ANTHROPIC_API_KEY and
 # swap the two lines in each step below.
-name: Lumberjack triage
+#
+# Commits are by "Lumberjack". To show a logo on them, set the repository variable
+# LUMBERJACK_GIT_EMAIL to the email of a GitHub account or app with that avatar, such
+# as a GitHub App's bot: <bot user id>+<app slug>[bot]@users.noreply.github.com.
+name: Lumberjack Triage
+run-name: "Lumberjack Triage${{ github.event.issue && format(' · #{0}', github.event.issue.number) || '' }}"
 
 on:
   schedule:
@@ -146,8 +151,8 @@ jobs:
 
       - name: Commit as the triage agent
         run: |
-          git config user.name "Lumberjack triage"
-          git config user.email "lumberjack-triage@users.noreply.github.com"
+          git config user.name "Lumberjack"
+          git config user.email "${{ vars.LUMBERJACK_GIT_EMAIL || 'lumberjack@noreply.invalid' }}"
 
       - name: Triage the Lumberjack inbox
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
