@@ -17,9 +17,9 @@ covers(RecordOccurrenceAction::class);
 
 describe('after the commit', function () {
     it('queues the new issue alert and broadcasts only once the issue is committed', function () {
+        $project = Project::factory()->create();
         Queue::fake([SendIssueAlerts::class]);
         Event::fake([ProjectChanged::class]);
-        $project = Project::factory()->create();
 
         DB::transaction(function () use ($project): void {
             app(RecordOccurrenceAction::class)->execute($project, new IssueSignal(IssueSource::Server, 'RuntimeException', 'Boom', null, null, [], [], CarbonImmutable::now()));

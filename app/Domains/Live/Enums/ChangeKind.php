@@ -14,4 +14,6 @@ enum ChangeKind: string
     case Performance = 'performance.changed';
     case Agents = 'agents.changed';
     case Health = 'health.changed';
+    /** Anything the project's settings page shows: keys, labels, log channels, retention, repository. */
+    case Settings = 'settings.changed';
 }
