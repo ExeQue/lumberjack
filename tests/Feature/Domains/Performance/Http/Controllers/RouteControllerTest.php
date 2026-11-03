@@ -29,6 +29,24 @@ describe('the routes page', function () {
                 ->has('detail.slowest', 3));
     });
 
+    it('shows a url no route matched in detail, with its percentiles per bucket', function () {
+        $project = Project::factory()->create();
+        $user = User::factory()->inTeam($project->team)->create();
+
+        foreach ([100, 200, 300, 400] as $ms) {
+            RequestRun::factory()->for($project)->create(['method' => 'GET', 'route' => null, 'url' => '/legacy.php', 'duration_us' => $ms * 1000, 'occurred_at' => now()->subMinutes(5)]);
+        }
+
+        RequestRun::factory()->for($project)->create(['method' => 'GET', 'route' => '/other', 'url' => '/legacy.php', 'duration_us' => 9_000_000, 'occurred_at' => now()->subMinutes(5)]);
+
+        $this->actingAs($user)
+            ->get(route('routes.index', ['project' => $project, 'route' => '/legacy.php', 'method' => 'GET']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('detail.slowest', 4)
+                ->where('detail.hourly', fn ($hourly) => collect($hourly)->contains(fn (array $b): bool => $b['p50'] === 200_000 && $b['p95'] === 400_000)));
+    });
+
     it('scores each route by Apdex and splits its status codes', function () {
         $project = Project::factory()->create();
         $user = User::factory()->inTeam($project->team)->create();

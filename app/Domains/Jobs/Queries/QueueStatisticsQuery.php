@@ -42,14 +42,8 @@ class QueueStatisticsQuery
         }
 
         $waits = collect(DB::select("
-            WITH w AS (
-                SELECT connection, queue, EXTRACT(EPOCH FROM (started_at - queued_at)) * 1000000 AS wait_us,
-                    ROW_NUMBER() OVER (PARTITION BY connection, queue ORDER BY started_at - queued_at) AS rn,
-                    COUNT(*) OVER (PARTITION BY connection, queue) AS cnt
-                FROM job_runs WHERE {$where}
-            )
-            SELECT connection, queue, ".Percentiles::select('wait_us', 0.95, 'p95_wait').'
-            FROM w GROUP BY connection, queue ORDER BY connection, queue LIMIT '.self::LIMIT, $bindings))
+            SELECT connection, queue, ".Percentiles::select('EXTRACT(EPOCH FROM (started_at - queued_at)) * 1000000', 0.95, 'p95_wait')."
+            FROM job_runs WHERE {$where} GROUP BY connection, queue ORDER BY connection, queue LIMIT ".self::LIMIT, $bindings))
             ->map(fn (object $r): array => (array) $r)->keyBy($key);
 
         return array_values($latest->keys()->merge($waits->keys())->unique()->sort()->take(self::LIMIT)->map(function (string $key) use ($latest, $waits, $projectId, $period): array {

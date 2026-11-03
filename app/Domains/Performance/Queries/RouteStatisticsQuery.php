@@ -48,23 +48,18 @@ class RouteStatisticsQuery
         $tolerated = 4 * $target;
 
         $rows = DB::select("
-            WITH ranked AS (
-                SELECT method, COALESCE(route, url) AS route, duration_us, status_code,
-                    ROW_NUMBER() OVER (PARTITION BY method, COALESCE(route, url) ORDER BY duration_us) AS rn,
-                    COUNT(*) OVER (PARTITION BY method, COALESCE(route, url)) AS cnt
-                FROM request_runs WHERE {$where}
-            )
-            SELECT method, route, MAX(cnt) AS requests, {$p50}, {$p95}, {$p99},
-                COUNT(*) FILTER (WHERE status_code >= 500)::float / MAX(cnt) AS error_rate,
+            SELECT method, COALESCE(route, url) AS route, COUNT(*) AS requests, {$p50}, {$p95}, {$p99},
+                COUNT(*) FILTER (WHERE status_code >= 500)::float / COUNT(*) AS error_rate,
                 SUM(duration_us) AS total_us,
                 COUNT(*) FILTER (WHERE status_code < 500 AND duration_us <= {$target}) AS satisfied,
                 COUNT(*) FILTER (WHERE status_code < 500 AND duration_us > {$target} AND duration_us <= {$tolerated}) AS tolerating,
-                1 - (COUNT(*) FILTER (WHERE status_code < 500 AND duration_us <= {$target}) + COUNT(*) FILTER (WHERE status_code < 500 AND duration_us > {$target} AND duration_us <= {$tolerated}) / 2.0) / MAX(cnt) AS frustration,
+                1 - (COUNT(*) FILTER (WHERE status_code < 500 AND duration_us <= {$target}) + COUNT(*) FILTER (WHERE status_code < 500 AND duration_us > {$target} AND duration_us <= {$tolerated}) / 2.0) / COUNT(*) AS frustration,
                 COUNT(*) FILTER (WHERE status_code BETWEEN 200 AND 299) AS s2xx,
                 COUNT(*) FILTER (WHERE status_code BETWEEN 300 AND 399) AS s3xx,
                 COUNT(*) FILTER (WHERE status_code BETWEEN 400 AND 499) AS s4xx,
                 COUNT(*) FILTER (WHERE status_code >= 500) AS s5xx
-            FROM ranked GROUP BY method, route ORDER BY {$order} DESC LIMIT {$limit}", $bindings);
+            FROM request_runs WHERE {$where}
+            GROUP BY method, COALESCE(route, url) ORDER BY {$order} DESC LIMIT {$limit}", $bindings);
 
         return array_values(array_map(function (object $row): array {
             $r = (array) $row;
