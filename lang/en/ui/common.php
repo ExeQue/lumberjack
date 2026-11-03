@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 return [
     'loading' => 'Loading…',
+    'sampling' => [
+        'estimated' => 'Estimated from a :rate sample',
+        'help' => 'Runs were sampled down to :rate. Totals count every request the SDK reports; percentiles come from the sampled runs only.',
+    ],
     'sound_on' => 'Sound for new errors: on',
     'sound_off' => 'Sound for new errors: off',
     'toasts' => [

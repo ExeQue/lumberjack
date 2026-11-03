@@ -110,6 +110,32 @@ fields. **Manage channels** opens the project's [log channels](./projects#settin
 New lines appear by themselves while you are at the top. When you have scrolled down
 or selected text, the page holds them back and offers **Show new lines** instead.
 
+## Sampling
+
+A busy app's SDK may record only a share of its runs (see its own docs). The pages then
+show estimates, marked **Estimated from a 10% sample** (the lowest rate in the period),
+and work them out like this:
+
+- **Requests, throughput, error rate and status codes** come from the request counts the
+  SDK sends for every request, sampled or not, so they are exact. Where an environment
+  has no counts yet (an SDK that does not send them), its request runs are weighed
+  instead: a sampled run stands for `1 / sample_rate` requests, a run kept only for being
+  slow counts once. From the first counted minute in the period on, an environment uses
+  its counts only, so a host left on an older SDK next to one that counts goes uncounted.
+- **p50, p95 and p99** come only from sampled runs: runs kept for being slow would pull
+  them up. A route whose requests were counted but none sampled shows no percentiles.
+- **Apdex** takes the share of satisfied and tolerated requests from the sampled runs and
+  applies it to the counted requests that were not a 5xx.
+- **Queries** weigh calls and total time the same way: a query of a sampled run stands
+  for `1 / sample_rate` calls, one of a run kept for being slow or failed, or a slow query
+  kept on its own, counts once. A slow run that was also sampled counts `1 / sample_rate`,
+  so slow queries are overcounted by up to `1 - sample_rate` of themselves: a small share
+  of the calls. The p95 only reads sampled queries; the max reads all.
+- **Releases** have no counts per release, so their requests and error rate weigh the
+  request runs; their p95 reads sampled runs only.
+- **Jobs, commands and scheduled tasks** are recorded on every run, sampled or not (only
+  their queries are sampled), so their counts, failure rates and durations stay exact.
+
 ## Apdex
 
 Apdex scores a route from 0 to 1 by how its requests felt. A request within 500 ms is

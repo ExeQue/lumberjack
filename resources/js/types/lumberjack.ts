@@ -82,12 +82,13 @@ export type RouteStat = {
     method: string;
     route: string;
     requests: number;
-    p50: number;
-    p95: number;
-    p99: number;
+    /** Null where no request of the route was sampled. */
+    p50: number | null;
+    p95: number | null;
+    p99: number | null;
     error_rate: number;
     total_us: number;
-    apdex: number;
+    apdex: number | null;
     statuses: Record<'2xx' | '3xx' | '4xx' | '5xx', number>;
     series?: number[];
 };
@@ -99,7 +100,8 @@ export type QueryStat = {
     calls: number;
     total_us: number;
     share: number;
-    p95: number;
+    /** Null when every call was kept only for being slow. */
+    p95: number | null;
     max: number;
     most_from: string | null;
     location: string | null;

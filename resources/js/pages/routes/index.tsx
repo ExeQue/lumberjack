@@ -18,6 +18,7 @@ import {
     Sparkline,
     spreadTips,
 } from '@/components/lj/ui';
+import { SampleNote } from '@/components/lj/sample-note';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import {
     formatDuration,
@@ -66,6 +67,8 @@ type Props = {
     routes: RouteStat[];
     vitals: WebVitalStat[];
     detail: Detail | null;
+    /** The lowest sample rate of the period's requests; null when none was sampled. */
+    sample_rate: number | null;
 };
 
 export default function RoutesIndex({
@@ -74,6 +77,7 @@ export default function RoutesIndex({
     routes,
     vitals,
     detail,
+    sample_rate,
 }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
@@ -82,7 +86,7 @@ export default function RoutesIndex({
     useProjectLive(
         project.uuid,
         ['performance.changed'],
-        ['routes', 'vitals', 'detail'],
+        ['routes', 'vitals', 'detail', 'sample_rate'],
     );
 
     const apply = (changes: Partial<Filters>, only?: string[]) => {
@@ -144,11 +148,16 @@ export default function RoutesIndex({
             <PageBody wide>
                 <PageTitle
                     title={t('routes.title')}
-                    description={t(
-                        'routes.description',
-                        { requests: formatNumber(totalRequests) },
-                        routes.length,
-                    )}
+                    description={
+                        <>
+                            {t(
+                                'routes.description',
+                                { requests: formatNumber(totalRequests) },
+                                routes.length,
+                            )}{' '}
+                            <SampleNote rate={sample_rate} />
+                        </>
+                    }
                     actions={
                         <>
                             <label className="sr-only" htmlFor="route-search">
@@ -313,13 +322,16 @@ export default function RoutesIndex({
                                                 className={cn(
                                                     tdClass,
                                                     numClass,
-                                                    r.apdex < 0.7
-                                                        ? 'text-err'
-                                                        : r.apdex < 0.85 &&
-                                                              'text-warn',
+                                                    r.apdex !== null &&
+                                                        (r.apdex < 0.7
+                                                            ? 'text-err'
+                                                            : r.apdex < 0.85 &&
+                                                              'text-warn'),
                                                 )}
                                             >
-                                                {r.apdex.toFixed(2)}
+                                                {r.apdex === null
+                                                    ? '-'
+                                                    : r.apdex.toFixed(2)}
                                             </td>
                                             <td className={tdClass}>
                                                 <Sparkline

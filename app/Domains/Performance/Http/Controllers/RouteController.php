@@ -7,6 +7,7 @@ namespace App\Domains\Performance\Http\Controllers;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Performance\Queries\RouteStatisticsQuery;
 use App\Domains\Performance\Queries\WebVitalsQuery;
+use App\Domains\Performance\Support\RequestTraffic;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Shared\Enums\Period;
@@ -38,6 +39,7 @@ class RouteController
             'filters' => [...$this->filters($request), 'sort' => $sort, 'search' => $search, 'route' => $selected, 'method' => $method],
             'routes' => fn (): array => $this->withSeries($project, $period, $environment, $query->get($project->id, $period, $environment, $sort, $search)),
             'vitals' => fn (): array => $vitals->get($project->id, $period, $environment),
+            'sample_rate' => fn (): ?float => $query->sampleRate($project->id, $period, $environment),
             'detail' => fn (): ?array => $selected === '' ? null : $this->detail($project, $period, $environment, $method, $selected),
         ]);
     }
@@ -58,7 +60,8 @@ class RouteController
             ->when(! $named)->where('url', $route)
             ->when($environment !== null)->where('environment', $environment);
 
-        $byBucket = DB::table('request_runs')->tap($scope)
+        // Percentiles from the runs the SDK picked; a run kept only for being slow would skew them.
+        $byBucket = DB::table('request_runs')->tap($scope)->where('sampled', true)
             ->selectRaw("FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?) * ? AS bucket, ".Percentiles::select('duration_us', '0.50', 'p50').', '.Percentiles::select('duration_us', '0.95', 'p95'), [$size, $size])
             ->groupByRaw('1')
             ->get()
@@ -100,12 +103,9 @@ class RouteController
         $size = $period->bucketSeconds();
         $start = intdiv($period->since()->getTimestamp(), $size);
 
-        $counts = DB::table('request_runs')
-            ->where('project_id', $project->id)
-            ->where('occurred_at', '>=', $period->since())
-            ->when($environment !== null)->where('environment', $environment)
-            ->selectRaw('method, COALESCE(route, url) AS route, FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?) AS b, COUNT(*) AS c', [$size])
-            ->groupByRaw('method, COALESCE(route, url), b')
+        $counts = RequestTraffic::query($project->id, $period->since(), null, $environment)
+            ->selectRaw('method, route, FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?) AS b, SUM(requests) AS c', [$size])
+            ->groupByRaw('method, route, b')
             ->get()
             ->groupBy(fn (object $row): string => ((array) $row)['method'].' '.((array) $row)['route']);
 
@@ -118,7 +118,7 @@ class RouteController
                 $index = (int) $values['b'] - $start;
 
                 if ($index >= 0 && $index < count($series)) {
-                    $series[$index] = (int) $values['c'];
+                    $series[$index] = (int) round((float) $values['c']);
                 }
             }
 
