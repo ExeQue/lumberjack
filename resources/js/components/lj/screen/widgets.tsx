@@ -299,6 +299,9 @@ function useSize<T extends HTMLElement>(): [
     return [ref, size];
 }
 
+/** How far the corner label and the gear sit from the tile's top and right edges. */
+const CORNER_INSET = '0.8em';
+
 export type TileProps = {
     widget: Widget;
     schema: Schema;
@@ -496,18 +499,44 @@ export function WidgetTile({
             }}
         >
             {decoration}
-            {corner && !(showTitle && widget.type !== 'empty' && title) && (
-                // Without a title row the gear has the corner to itself.
+            {(corner ||
+                (showTitle &&
+                    widget.type !== 'empty' &&
+                    title &&
+                    cornerText)) && (
+                // The corner label, as far from the top as from the right edge, with the
+                // designer's gear taking its place while it shows.
                 <span
-                    className="absolute top-1 right-1 z-20 flex"
-                    style={{ fontSize: 'var(--lj-cell-font)' }}
+                    className="pointer-events-none absolute z-20 flex"
+                    style={{ top: CORNER_INSET, right: CORNER_INSET }}
                 >
-                    {corner}
+                    {showTitle && widget.type !== 'empty' && title && (
+                        <span
+                            className={cn(
+                                // Up by the space above a digit, so the text itself sits
+                                // at the inset (IBM Plex Sans: 0.2em at line-height 1).
+                                'lj-tile-small -mt-[0.2em] leading-none whitespace-nowrap',
+                                corner && 'lj-corner-label',
+                            )}
+                            // The same size on every tile, whatever its text or title size.
+                            style={cornerStyle}
+                        >
+                            {cornerText}
+                        </span>
+                    )}
+                    {corner && (
+                        <span
+                            className="pointer-events-auto absolute top-0 right-0 flex"
+                            style={cornerStyle}
+                        >
+                            {corner}
+                        </span>
+                    )}
                 </span>
             )}
             {showTitle && widget.type !== 'empty' && title && (
-                // The label keeps to the top right corner: a grid with it on the right and
-                // an invisible twin on the left keeps a centered title centered on the tile.
+                // Invisible twins of the label keep room for it on the right, and on the
+                // left too for a centered title, so that stays centered on the tile.
                 <div
                     className={cn(
                         'grid items-baseline gap-[0.6em]',
@@ -535,21 +564,11 @@ export function WidgetTile({
                         {title}
                     </span>
                     <span
-                        className={cn(cornerClass, 'relative')}
-                        // The same size on every tile, whatever its text or title size.
+                        aria-hidden="true"
+                        className={cn(cornerClass, 'invisible')}
                         style={cornerStyle}
                     >
-                        <span
-                            className={corner ? 'lj-corner-label' : undefined}
-                        >
-                            {cornerText}
-                        </span>
-                        {/* The designer's gear takes the label's place while it shows. */}
-                        {corner && (
-                            <span className="absolute top-1/2 right-0 flex -translate-y-1/2">
-                                {corner}
-                            </span>
-                        )}
+                        {cornerText}
                     </span>
                 </div>
             )}
