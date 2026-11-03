@@ -3,6 +3,7 @@ import {
     Bell,
     BellOff,
     ChevronsUpDown,
+    ExternalLink,
     LogOut,
     Search,
     UserCog,
@@ -32,6 +33,21 @@ import { logout } from '@/routes';
 import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
 
 function NavLink({ item }: { item: NavItem }) {
+    if (item.external) {
+        return (
+            <a
+                href={item.href}
+                className="flex h-8 items-center justify-between rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink"
+            >
+                {item.label}
+                <ExternalLink
+                    className="size-3 text-ink-3"
+                    aria-hidden="true"
+                />
+            </a>
+        );
+    }
+
     return (
         <Link
             href={item.href}
