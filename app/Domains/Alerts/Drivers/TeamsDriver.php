@@ -38,6 +38,11 @@ class TeamsDriver implements ChannelDriver
             ['type' => 'TextBlock', 'text' => $title, 'weight' => 'Bolder', 'size' => 'Medium', 'wrap' => true, 'color' => $alert->urgency() === 'high' ? 'Attention' : 'Default'],
             ['type' => 'TextBlock', 'text' => $subject, 'fontType' => 'Monospace', 'wrap' => true],
             ...array_map(fn (string $line): array => ['type' => 'TextBlock', 'text' => $line, 'wrap' => true, 'isSubtle' => true], $body),
+            ...($alert->facts() !== [] ? [['type' => 'FactSet', 'facts' => array_map(
+                fn (string $title, string $value): array => ['title' => $title, 'value' => $value],
+                array_keys($alert->facts()),
+                $alert->facts(),
+            )]] : []),
         ], $alert->url));
     }
 

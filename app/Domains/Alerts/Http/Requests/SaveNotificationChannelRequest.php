@@ -65,4 +65,22 @@ class SaveNotificationChannelRequest extends FormRequest
             ...$configRules,
         ];
     }
+
+    /**
+     * Config fields by the label the form shows, not "config.bot token".
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        $type = ChannelType::tryFrom((string) $this->input('type'));
+
+        if ($type === null) {
+            return [];
+        }
+
+        return collect(app(ChannelDriverRegistry::class)->for($type)->rules())
+            ->mapWithKeys(fn (mixed $rules, string $field): array => ['config.'.$field => mb_strtolower((string) __('ui/alerts.channels.config.'.$field))])
+            ->all();
+    }
 }

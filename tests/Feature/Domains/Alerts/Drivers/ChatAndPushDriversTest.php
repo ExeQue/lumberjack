@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Alerts\Data\IssueAlert;
+use App\Domains\Alerts\Drivers\DiscordDriver;
 use App\Domains\Alerts\Drivers\NtfyDriver;
 use App\Domains\Alerts\Drivers\PushoverDriver;
 use App\Domains\Alerts\Drivers\SlackDriver;
@@ -16,12 +17,32 @@ use App\Domains\Issues\Models\Issue;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
-covers(SlackDriver::class, TeamsDriver::class, TelegramDriver::class, NtfyDriver::class, PushoverDriver::class);
+covers(DiscordDriver::class, SlackDriver::class, TeamsDriver::class, TelegramDriver::class, NtfyDriver::class, PushoverDriver::class);
 
 beforeEach(function () {
     $this->issue = Issue::factory()->create(['title' => 'App\\Exceptions\\PaymentFailed', 'message' => 'Card <declined> & retried']);
     $this->alert = fn (AlertRuleType $type = AlertRuleType::NewIssue, ?int $burst = null) => new IssueAlert($this->issue, $type, 'production', 'https://lumberjack.test/issues/1', burst: $burst);
     $this->channel = fn (ChannelType $type, array $config) => NotificationChannel::factory()->for($this->issue->project->team)->create(['type' => $type, 'name' => 'Ops', 'config' => $config]);
+});
+
+describe('chat messages', function () {
+    it('list the same facts in Discord, Slack and Teams', function () {
+        $this->issue->update(['file' => 'app/Payments.php', 'line' => 12, 'last_release' => 'a1f3c9e']);
+        Http::fake(['*' => Http::response(null, 204)]);
+
+        app(DiscordDriver::class)->send(($this->channel)(ChannelType::Discord, ['webhook_url' => 'https://discord.com/api/webhooks/1/x']), ($this->alert)());
+        app(SlackDriver::class)->send(($this->channel)(ChannelType::Slack, ['webhook_url' => 'https://hooks.slack.com/services/T/B/x']), ($this->alert)());
+        app(TeamsDriver::class)->send(($this->channel)(ChannelType::Teams, ['webhook_url' => 'https://93.184.215.14/workflows/x']), ($this->alert)());
+
+        $sent = Http::recorded()->map(fn (array $pair) => $pair[0]);
+        $discord = collect($sent[0]['embeds'][0]['fields'])->pluck('value', 'name')->all();
+        $slack = collect(collect($sent[1]['blocks'])->firstWhere('fields')['fields'])->mapWithKeys(fn (array $f) => [trim(explode("\n", $f['text'])[0], '*') => explode("\n", $f['text'])[1]])->all();
+        $teams = collect(collect($sent[2]['attachments'][0]['content']['body'])->firstWhere('type', 'FactSet')['facts'])->pluck('value', 'title')->all();
+
+        expect($discord)->toBe(['Location' => 'app/Payments.php:12', 'Release' => 'a1f3c9e', 'Occurrences' => (string) $this->issue->occurrences_count])
+            ->and($slack)->toBe($discord)
+            ->and($teams)->toBe($discord);
+    });
 });
 
 describe('Slack', function () {

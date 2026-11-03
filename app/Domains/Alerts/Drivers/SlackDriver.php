@@ -36,7 +36,12 @@ class SlackDriver implements ChannelDriver
             'blocks' => [
                 ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_substr('*<'.$alert->url.'|'.self::escape($title).'>*'."\n`".self::escape($subject).'`', 0, 3000)]],
                 ...($body !== [] ? [['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_substr(self::escape(implode("\n", $body)), 0, 3000)]]] : []),
-                ['type' => 'context', 'elements' => [['type' => 'mrkdwn', 'text' => self::escape(implode(' · ', array_filter([$alert->issue->project->name, $alert->environment, $alert->issue->occurrences_count.' '.__('alerts.discord.occurrences')])))]]],
+                ...($alert->facts() !== [] ? [['type' => 'section', 'fields' => array_map(
+                    fn (string $label, string $value): array => ['type' => 'mrkdwn', 'text' => '*'.self::escape($label)."*\n".self::escape($value)],
+                    array_keys($alert->facts()),
+                    $alert->facts(),
+                )]] : []),
+                ['type' => 'actions', 'elements' => [['type' => 'button', 'text' => ['type' => 'plain_text', 'text' => (string) __('alerts.open_issue')], 'url' => $alert->url]]],
             ],
         ]);
     }

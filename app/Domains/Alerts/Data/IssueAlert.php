@@ -70,11 +70,33 @@ final readonly class IssueAlert
         $subject = ($issue->number !== null ? $issue->reference().' · ' : '').$issue->title;
 
         $body = match (true) {
-            $this->statusChange !== null, $this->note !== null => array_filter([$this->note !== null ? $this->noteBody() : null]),
+            $this->statusChange !== null => array_filter([$this->note !== null ? $this->noteBody() : null]),
+            $this->note !== null => [__('alerts.messages.note_by', ['author' => $this->noteAuthor() ?? __('alerts.messages.unknown_author')]), $this->noteBody()],
             default => array_filter([$this->burstLine(), $issue->message, $this->triageSummary]),
         };
 
         return ['title' => $this->headline(), 'subject' => $subject, 'body' => array_values(array_map('strval', $body))];
+    }
+
+    /**
+     * The facts every chat message lists under the text, label => value: where it
+     * happened, the release and the occurrence count. None for notes and status changes.
+     *
+     * @return array<string, string>
+     */
+    public function facts(): array
+    {
+        if ($this->statusChange !== null || $this->note !== null) {
+            return [];
+        }
+
+        $issue = $this->issue;
+
+        return array_filter([
+            (string) __('alerts.discord.location') => $issue->file !== null ? $issue->file.($issue->line ? ':'.$issue->line : '') : null,
+            (string) __('alerts.discord.release') => $issue->last_release ?? '-',
+            (string) __('alerts.discord.occurrences') => (string) $issue->occurrences_count,
+        ], fn (?string $value): bool => $value !== null);
     }
 
     /**

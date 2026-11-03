@@ -9,11 +9,18 @@ import {
     EmptyState,
     Field,
     Input,
-    Select,
 } from '@/components/lj/ui';
 import { formatRelative } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     destroy as channelDestroy,
     store as channelStore,
@@ -158,8 +165,8 @@ function ExtraFields({
 }
 
 /**
- * Alert channels and the form to add one. With a project, they are that project's
- * own channels; without, the team's shared ones.
+ * Alert channels, added and edited in a dialog. With a project, they are that
+ * project's own channels; without, the team's shared ones.
  */
 export function ChannelsCard({
     channels,
@@ -175,15 +182,8 @@ export function ChannelsCard({
     description?: string;
 }) {
     const t = useT();
-    const [type, setType] = useState(types[0] ?? 'discord');
-    const [editing, setEditing] = useState<number | null>(null);
-    const [newSender, setNewSender] = useState('');
-    const [adding, setAdding] = useState(false);
-    const field = configField[type] ?? {
-        key: 'address',
-        type: 'text',
-        placeholder: '',
-    };
+    // null: closed; 'new': adding one; a channel: editing it.
+    const [dialog, setDialog] = useState<Channel | 'new' | null>(null);
 
     return (
         <Card aria-labelledby="h-channels">
@@ -200,219 +200,285 @@ export function ChannelsCard({
                         {channels.map((channel) => (
                             <li
                                 key={channel.id}
-                                className="flex flex-col gap-3 rounded-md border border-line px-3 py-2.5"
+                                className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-line px-3 py-2.5"
                             >
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <span className="flex min-w-0 flex-wrap items-center gap-2.5">
-                                        <Badge>
-                                            {t(`alerts.types.${channel.type}`)}
-                                        </Badge>
-                                        <span className="font-medium">
-                                            {channel.name}
-                                        </span>
-                                        <span className="min-w-0 font-mono text-xs break-all text-ink-3">
-                                            {channel.target}
-                                        </span>
+                                <span className="flex min-w-0 flex-wrap items-center gap-2.5">
+                                    <Badge>
+                                        {t(`alerts.types.${channel.type}`)}
+                                    </Badge>
+                                    <span className="font-medium">
+                                        {channel.name}
                                     </span>
-                                    <span className="flex flex-wrap items-center gap-2">
-                                        <DeliveryBadge channel={channel} />
-                                        {canAdminister && (
-                                            <>
-                                                <Button
-                                                    aria-expanded={
-                                                        editing === channel.id
-                                                    }
-                                                    onClick={() =>
-                                                        setEditing(
-                                                            editing ===
-                                                                channel.id
-                                                                ? null
-                                                                : channel.id,
-                                                        )
-                                                    }
-                                                >
-                                                    {t('alerts.channels.edit')}
-                                                    <span className="sr-only">
-                                                        {' '}
-                                                        {channel.name}
-                                                    </span>
-                                                </Button>
-                                                <Button
-                                                    onClick={() =>
-                                                        router.post(
-                                                            channelTest(
-                                                                channel.id,
-                                                            ).url,
-                                                            {},
-                                                            {
-                                                                preserveScroll: true,
-                                                            },
-                                                        )
-                                                    }
-                                                >
-                                                    {t('alerts.channels.test')}
-                                                    <span className="sr-only">
-                                                        {' '}
-                                                        {channel.name}
-                                                    </span>
-                                                </Button>
-                                                <ConfirmButton
-                                                    question={t(
-                                                        'alerts.channels.delete_question',
+                                    <span className="min-w-0 font-mono text-xs break-all text-ink-3">
+                                        {channel.target}
+                                    </span>
+                                </span>
+                                <span className="flex flex-wrap items-center gap-2">
+                                    <DeliveryBadge channel={channel} />
+                                    {canAdminister && (
+                                        <>
+                                            <Button
+                                                onClick={() =>
+                                                    setDialog(channel)
+                                                }
+                                            >
+                                                {t('alerts.channels.edit')}
+                                                <span className="sr-only">
+                                                    {' '}
+                                                    {channel.name}
+                                                </span>
+                                            </Button>
+                                            <Button
+                                                onClick={() =>
+                                                    router.post(
+                                                        channelTest(channel.id)
+                                                            .url,
+                                                        {},
                                                         {
-                                                            name: channel.name,
+                                                            preserveScroll: true,
                                                         },
-                                                    )}
-                                                    confirmLabel={t(
-                                                        'common.delete',
-                                                    )}
-                                                    onConfirm={() =>
-                                                        router.delete(
-                                                            channelDestroy(
-                                                                channel.id,
-                                                            ).url,
-                                                            {
-                                                                preserveScroll: true,
-                                                            },
-                                                        )
-                                                    }
-                                                >
-                                                    {t('common.delete')}
-                                                    <span className="sr-only">
-                                                        {' '}
-                                                        {channel.name}
-                                                    </span>
-                                                </ConfirmButton>
-                                            </>
-                                        )}
-                                    </span>
-                                </div>
-                                {editing === channel.id && (
-                                    <ChannelEditForm
-                                        channel={channel}
-                                        onDone={() => setEditing(null)}
-                                    />
-                                )}
+                                                    )
+                                                }
+                                            >
+                                                {t('alerts.channels.test')}
+                                                <span className="sr-only">
+                                                    {' '}
+                                                    {channel.name}
+                                                </span>
+                                            </Button>
+                                            <ConfirmButton
+                                                question={t(
+                                                    'alerts.channels.delete_question',
+                                                    { name: channel.name },
+                                                )}
+                                                confirmLabel={t(
+                                                    'common.delete',
+                                                )}
+                                                onConfirm={() =>
+                                                    router.delete(
+                                                        channelDestroy(
+                                                            channel.id,
+                                                        ).url,
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    )
+                                                }
+                                            >
+                                                {t('common.delete')}
+                                                <span className="sr-only">
+                                                    {' '}
+                                                    {channel.name}
+                                                </span>
+                                            </ConfirmButton>
+                                        </>
+                                    )}
+                                </span>
                             </li>
                         ))}
                     </ul>
                 )}
 
-                {canAdminister && !adding && (
+                {canAdminister && (
                     <div>
-                        <Button onClick={() => setAdding(true)}>
+                        <Button onClick={() => setDialog('new')}>
                             {t('alerts.channels.add_new')}
                         </Button>
                     </div>
                 )}
+            </div>
+            {dialog !== null && (
+                <ChannelDialog
+                    // A fresh wizard each time it opens.
+                    key={dialog === 'new' ? 'new' : dialog.id}
+                    channel={dialog === 'new' ? undefined : dialog}
+                    types={types}
+                    project={project}
+                    onClose={() => setDialog(null)}
+                />
+            )}
+        </Card>
+    );
+}
 
-                {canAdminister && adding && (
+/**
+ * Adding a channel in two steps: where alerts go, then how to reach it, with setup
+ * help and a preview of a message. Editing starts at the second step.
+ */
+function ChannelDialog({
+    channel,
+    types,
+    project,
+    onClose,
+}: {
+    channel?: Channel;
+    types: string[];
+    project?: string;
+    onClose: () => void;
+}) {
+    const t = useT();
+    const [type, setType] = useState<string | null>(channel?.type ?? null);
+    const [sender, setSender] = useState(channel?.settings?.sender_name ?? '');
+    const field =
+        type === null
+            ? null
+            : (configField[type] ?? {
+                  key: 'address',
+                  type: 'text',
+                  placeholder: '',
+              });
+    const form = channel ? channelUpdate.form(channel.id) : channelStore.form();
+
+    return (
+        <Dialog open onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>
+                        {channel
+                            ? t('alerts.wizard.edit_title', {
+                                  name: channel.name,
+                              })
+                            : t('alerts.wizard.add_title')}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {type === null
+                            ? t('alerts.wizard.pick_type')
+                            : t(`alerts.wizard.setup.${type}`)}
+                    </DialogDescription>
+                </DialogHeader>
+
+                {type === null || field === null ? (
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
+                        {types.map((value) => (
+                            <button
+                                key={value}
+                                type="button"
+                                onClick={() => setType(value)}
+                                className="flex flex-col gap-1 rounded-md border border-line bg-panel px-3 py-2.5 text-left hover:border-amber"
+                            >
+                                <span className="font-medium text-ink">
+                                    {t(`alerts.types.${value}`)}
+                                </span>
+                                <span className="text-xs text-ink-3">
+                                    {t(`alerts.wizard.about.${value}`)}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                ) : (
                     <Form
-                        {...channelStore.form()}
+                        {...form}
                         options={{ preserveScroll: true }}
                         transform={(data) =>
-                            project ? { ...data, project } : data
+                            project && !channel ? { ...data, project } : data
                         }
-                        resetOnSuccess
-                        onSuccess={() => {
-                            setAdding(false);
-                            setNewSender('');
-                        }}
-                        className="flex flex-wrap items-start gap-2 border-t border-line pt-3"
+                        onSuccess={onClose}
+                        className="flex flex-col gap-4"
                     >
                         {({ errors, processing }) => (
                             <>
-                                <Field
-                                    label={t('alerts.channels.type')}
-                                    htmlFor="channel-type"
-                                    error={errors.type}
-                                    className="flex-[0_1_140px]"
-                                >
-                                    <Select
-                                        id="channel-type"
-                                        name="type"
-                                        value={type}
-                                        onChange={(e) =>
-                                            setType(e.target.value)
-                                        }
-                                    >
-                                        {types.map((value) => (
-                                            <option key={value} value={value}>
-                                                {t(`alerts.types.${value}`)}
-                                            </option>
-                                        ))}
-                                    </Select>
-                                </Field>
-                                <Field
-                                    label={t('alerts.channels.name')}
-                                    htmlFor="channel-name"
-                                    error={errors.name}
-                                    className="min-w-0 flex-[1_1_180px]"
-                                >
-                                    <Input
-                                        id="channel-name"
-                                        name="name"
-                                        required
-                                        maxLength={100}
-                                        placeholder={t(
-                                            'alerts.channels.name_placeholder',
-                                        )}
-                                        autoComplete="off"
+                                <input type="hidden" name="type" value={type} />
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="flex flex-col gap-3">
+                                        <Field
+                                            label={t('alerts.channels.name')}
+                                            htmlFor="channel-name"
+                                            error={errors.name}
+                                        >
+                                            <Input
+                                                id="channel-name"
+                                                name="name"
+                                                required
+                                                autoFocus
+                                                maxLength={100}
+                                                defaultValue={channel?.name}
+                                                placeholder={t(
+                                                    'alerts.channels.name_placeholder',
+                                                )}
+                                                autoComplete="off"
+                                            />
+                                        </Field>
+                                        <Field
+                                            label={t(
+                                                `alerts.channels.config.${field.key}`,
+                                            )}
+                                            htmlFor="channel-config"
+                                            hint={
+                                                channel
+                                                    ? t(
+                                                          'alerts.channels.keep_hint',
+                                                      )
+                                                    : undefined
+                                            }
+                                            error={
+                                                (
+                                                    errors as Record<
+                                                        string,
+                                                        string
+                                                    >
+                                                )[`config.${field.key}`] ??
+                                                errors.config
+                                            }
+                                        >
+                                            <Input
+                                                id="channel-config"
+                                                name={`config[${field.key}]`}
+                                                type={field.type}
+                                                required={!channel}
+                                                className="font-mono"
+                                                placeholder={
+                                                    channel?.target ??
+                                                    field.placeholder
+                                                }
+                                                autoComplete="off"
+                                            />
+                                        </Field>
+                                        <ExtraFields
+                                            type={type}
+                                            idPrefix="channel"
+                                            errors={
+                                                errors as Record<string, string>
+                                            }
+                                            values={channel?.settings}
+                                            onChange={(key, value) =>
+                                                key === 'sender_name' &&
+                                                setSender(value)
+                                            }
+                                        />
+                                    </div>
+                                    <ChannelPreview
+                                        type={type}
+                                        sender={sender}
                                     />
-                                </Field>
-                                <Field
-                                    label={t(
-                                        `alerts.channels.config.${field.key}`,
+                                </div>
+                                <DialogFooter>
+                                    {!channel && (
+                                        <Button
+                                            onClick={() => setType(null)}
+                                            className="sm:mr-auto"
+                                        >
+                                            {t('alerts.wizard.back')}
+                                        </Button>
                                     )}
-                                    htmlFor="channel-config"
-                                    error={
-                                        (errors as Record<string, string>)[
-                                            `config.${field.key}`
-                                        ] ?? errors.config
-                                    }
-                                    className="min-w-0 flex-[2_1_280px]"
-                                >
-                                    <Input
-                                        key={field.key}
-                                        id="channel-config"
-                                        name={`config[${field.key}]`}
-                                        type={field.type}
-                                        required
-                                        className="font-mono"
-                                        placeholder={field.placeholder}
-                                        autoComplete="off"
-                                    />
-                                </Field>
-                                <ExtraFields
-                                    key={type}
-                                    type={type}
-                                    idPrefix="channel"
-                                    errors={errors as Record<string, string>}
-                                    onChange={(_, value) => setNewSender(value)}
-                                />
-                                <Button
-                                    type="submit"
-                                    variant="primary"
-                                    disabled={processing}
-                                    className="mt-6"
-                                >
-                                    {t('alerts.channels.add')}
-                                </Button>
-                                <Button
-                                    onClick={() => setAdding(false)}
-                                    className="mt-6"
-                                >
-                                    {t('common.cancel')}
-                                </Button>
-                                {type === 'discord' && (
-                                    <DiscordPreview sender={newSender} />
-                                )}
+                                    <Button onClick={onClose}>
+                                        {t('common.cancel')}
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        variant="primary"
+                                        disabled={processing}
+                                    >
+                                        {channel
+                                            ? t('common.save')
+                                            : t('alerts.channels.add')}
+                                    </Button>
+                                </DialogFooter>
                             </>
                         )}
                     </Form>
                 )}
-            </div>
-        </Card>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -449,92 +515,6 @@ export function RulesCard({
                 <p className="text-xs text-ink-3">{t('alerts.rules.hint')}</p>
             </div>
         </Card>
-    );
-}
-
-function ChannelEditForm({
-    channel,
-    onDone,
-}: {
-    channel: Channel;
-    onDone: () => void;
-}) {
-    const t = useT();
-    const [sender, setSender] = useState(channel.settings?.sender_name ?? '');
-    const field = configField[channel.type] ?? {
-        key: 'address',
-        type: 'text',
-        placeholder: '',
-    };
-
-    return (
-        <Form
-            {...channelUpdate.form(channel.id)}
-            options={{ preserveScroll: true }}
-            onSuccess={onDone}
-            className="flex flex-wrap items-start gap-2 border-t border-line pt-3"
-        >
-            {({ errors, processing }) => (
-                <>
-                    <input type="hidden" name="type" value={channel.type} />
-                    <Field
-                        label={t('alerts.channels.name')}
-                        htmlFor={`edit-name-${channel.id}`}
-                        error={errors.name}
-                        className="min-w-0 flex-[1_1_180px]"
-                    >
-                        <Input
-                            id={`edit-name-${channel.id}`}
-                            name="name"
-                            required
-                            maxLength={100}
-                            defaultValue={channel.name}
-                            autoComplete="off"
-                        />
-                    </Field>
-                    <Field
-                        label={t(`alerts.channels.config.${field.key}`)}
-                        htmlFor={`edit-config-${channel.id}`}
-                        hint={t('alerts.channels.keep_hint')}
-                        error={
-                            (errors as Record<string, string>)[
-                                `config.${field.key}`
-                            ] ?? errors.config
-                        }
-                        className="min-w-0 flex-[2_1_280px]"
-                    >
-                        <Input
-                            id={`edit-config-${channel.id}`}
-                            name={`config[${field.key}]`}
-                            type={field.type}
-                            className="font-mono"
-                            placeholder={channel.target}
-                            autoComplete="off"
-                        />
-                    </Field>
-                    <ExtraFields
-                        type={channel.type}
-                        idPrefix={`edit-${channel.id}`}
-                        errors={errors as Record<string, string>}
-                        values={channel.settings}
-                        onChange={(_, value) => setSender(value)}
-                    />
-                    <div className="mt-6 flex gap-2">
-                        <Button onClick={onDone}>{t('common.cancel')}</Button>
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            disabled={processing}
-                        >
-                            {t('common.save')}
-                        </Button>
-                    </div>
-                    {channel.type === 'discord' && (
-                        <DiscordPreview sender={sender} />
-                    )}
-                </>
-            )}
-        </Form>
     );
 }
 
@@ -719,60 +699,277 @@ function RuleRow({
 }
 
 /**
- * What a new-error message looks like in Discord, from the sender name being typed.
+ * What a new-error message looks like where the channel delivers it. ntfy,
+ * Pushover and webhooks have none.
  */
+function ChannelPreview({ type, sender }: { type: string; sender: string }) {
+    const t = useT();
+    const preview = {
+        mail: <MailPreview />,
+        discord: <DiscordPreview sender={sender} />,
+        slack: <SlackPreview />,
+        teams: <TeamsPreview />,
+        telegram: <TelegramPreview />,
+    }[type];
+
+    if (preview === undefined) {
+        return null;
+    }
+
+    const title = t('alerts.preview.title', {
+        app: type === 'mail' ? 'Gmail' : t(`alerts.types.${type}`),
+    });
+
+    return (
+        <div
+            // An inbox row needs the width to show its subject.
+            className={cn(
+                'flex min-w-0 flex-col gap-2',
+                type === 'mail' && 'md:col-span-2',
+            )}
+            role="group"
+            aria-label={title}
+        >
+            <span className="text-xs font-medium text-ink-3">{title}</span>
+            {preview}
+            <p className="text-xs text-ink-3">
+                {type === 'discord'
+                    ? t('alerts.preview.hint')
+                    : t('alerts.preview.hint_general')}
+            </p>
+        </div>
+    );
+}
+
+/** Location, release and occurrences: listed the same way by every chat message. */
+function PreviewFacts({
+    labelClass,
+    valueClass,
+    inline = false,
+}: {
+    labelClass: string;
+    valueClass: string;
+    inline?: boolean;
+}) {
+    const t = useT();
+    const facts = [
+        ['location', 'app/Actions/StoreOrderAction.php:88'],
+        ['release', 'a1f3c9e'],
+        ['occurrences', '1'],
+    ];
+
+    return (
+        <dl
+            className={cn(
+                'grid gap-x-4 gap-y-1.5 text-xs',
+                inline ? 'grid-cols-[auto_1fr]' : 'grid-cols-2',
+            )}
+        >
+            {facts.map(([key, value]) => (
+                <div
+                    key={key}
+                    className={cn(
+                        inline ? 'contents' : 'flex flex-col',
+                        key === 'location' && !inline && 'col-span-2',
+                    )}
+                >
+                    <dt className={labelClass}>
+                        {t(`alerts.preview.facts.${key}`)}
+                    </dt>
+                    <dd className={cn('font-mono break-all', valueClass)}>
+                        {value}
+                    </dd>
+                </div>
+            ))}
+        </dl>
+    );
+}
+
+const subject = (t: ReturnType<typeof useT>) =>
+    `${t('alerts.preview.reference')} · ${t('alerts.preview.exception')}`;
+
+/** The mail as a row in a Gmail inbox: sender, subject, the start of the text. */
+function MailPreview() {
+    const t = useT();
+
+    return (
+        <div className="flex flex-col overflow-hidden rounded-lg bg-white text-[13px] text-[#202124]">
+            <div className="flex items-center gap-3 border-b border-[#ECEFF1] bg-[#F2F6FC] px-3 py-2.5">
+                <span
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0 rounded-sm border-2 border-[#BDC1C6]"
+                />
+                <span className="text-[#BDC1C6]" aria-hidden="true">
+                    ☆
+                </span>
+                <strong className="w-24 shrink-0 truncate">Lumberjack</strong>
+                <span className="min-w-0 flex-1 truncate">
+                    <strong>
+                        {t('alerts.preview.heading')}:{' '}
+                        {t('alerts.preview.exception')}
+                    </strong>
+                    <span className="text-[#5F6368]">
+                        {' '}
+                        - {t('alerts.preview.message')}
+                    </span>
+                </span>
+                <strong className="shrink-0 text-xs">10:12</strong>
+            </div>
+            <div className="flex items-center gap-3 px-3 py-2.5 text-[#5F6368]">
+                <span
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0 rounded-sm border-2 border-[#DADCE0]"
+                />
+                <span className="text-[#DADCE0]" aria-hidden="true">
+                    ☆
+                </span>
+                <span className="w-24 shrink-0 truncate">
+                    {t('alerts.preview.mail_other_sender')}
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                    {t('alerts.preview.mail_other_subject')}
+                </span>
+                <span className="shrink-0 text-xs">09:40</span>
+            </div>
+        </div>
+    );
+}
+
+function SlackPreview() {
+    const t = useT();
+
+    return (
+        <div className="flex gap-2.5 rounded-lg bg-white p-3 text-[13px] text-[#1D1C1D]">
+            <img
+                src="/images/lumberjack-avatar.png"
+                alt=""
+                className="size-9 shrink-0 rounded"
+            />
+            <div className="flex min-w-0 flex-col gap-1">
+                <span>
+                    <strong>Lumberjack</strong>{' '}
+                    <span className="rounded bg-[#E8E8E8] px-1 text-[10px] font-semibold text-[#616061]">
+                        APP
+                    </span>{' '}
+                    <span className="text-[11px] text-[#616061]">10:12</span>
+                </span>
+                <strong className="text-[#1264A3]">
+                    {t('alerts.preview.heading')}
+                </strong>
+                <code className="w-fit rounded border border-[#DDD] bg-[#F8F8F8] px-1 font-mono text-[12px] break-all text-[#E01E5A]">
+                    {subject(t)}
+                </code>
+                <span>{t('alerts.preview.message')}</span>
+                <PreviewFacts
+                    labelClass="font-bold"
+                    valueClass="text-[#1D1C1D]"
+                />
+                <span className="mt-1 w-fit rounded border border-[#BBBBBB] px-3 py-1 text-xs font-bold">
+                    {t('alerts.preview.link')}
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function TeamsPreview() {
+    const t = useT();
+
+    return (
+        <div className="flex flex-col gap-2 rounded-lg bg-[#292929] p-3 text-[13px] text-[#FFFFFF]">
+            <span className="text-[11px] text-[#ADADAD]">
+                Workflows · 10:12
+            </span>
+            <div className="flex flex-col gap-1.5 rounded-md border border-[#3D3D3D] bg-[#1F1F1F] p-3">
+                <strong className="text-[15px] text-[#F1707B]">
+                    {t('alerts.preview.heading')}
+                </strong>
+                <span className="font-mono text-xs break-all">
+                    {subject(t)}
+                </span>
+                <span className="text-[#ADADAD]">
+                    {t('alerts.preview.message')}
+                </span>
+                <PreviewFacts
+                    inline
+                    labelClass="font-semibold"
+                    valueClass="text-[#ADADAD]"
+                />
+                <span className="mt-1 w-fit rounded border border-[#5C5C5C] px-3 py-1 text-xs font-semibold">
+                    {t('alerts.preview.link')}
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function TelegramPreview() {
+    const t = useT();
+
+    return (
+        <div className="rounded-lg bg-[#0E1621] p-3 text-[13px]">
+            <div className="flex w-fit max-w-full flex-col gap-1 rounded-xl rounded-bl-sm bg-[#182533] px-3 py-2 text-[#F5F5F5]">
+                <span className="text-xs font-semibold text-[#6AB2F2]">
+                    Lumberjack
+                </span>
+                <strong>{t('alerts.preview.heading')}</strong>
+                <code className="font-mono text-xs break-all text-[#E8A85C]">
+                    {subject(t)}
+                </code>
+                <span>{t('alerts.preview.message')}</span>
+                <span className="text-[#6AB2F2] underline">
+                    {t('alerts.preview.link')}
+                </span>
+                <span className="self-end text-[10px] text-[#6D7F8F]">
+                    10:12
+                </span>
+            </div>
+        </div>
+    );
+}
+
+/** Discord, with the sender name being typed. */
 function DiscordPreview({ sender }: { sender: string }) {
     const t = useT();
 
     return (
-        <div
-            className="flex w-full flex-col gap-2"
-            role="group"
-            aria-label={t('alerts.preview.title')}
-        >
-            <span className="text-xs font-medium text-ink-3">
-                {t('alerts.preview.title')}
-            </span>
-            <div className="flex max-w-[640px] gap-3 rounded-lg bg-[#313338] p-3.5">
-                <img
-                    src="/images/lumberjack-avatar.png"
-                    alt=""
-                    className="size-9 shrink-0 rounded-full"
-                />
-                <div className="flex min-w-0 flex-col gap-1.5">
-                    <span>
-                        <strong className="text-[#F2F3F5]">
-                            {sender.trim() !== ''
-                                ? sender.trim()
-                                : 'Lumberjack'}
-                        </strong>{' '}
-                        <span className="rounded bg-[#5865F2] px-1 py-px text-[10px] font-semibold text-white">
-                            APP
-                        </span>{' '}
-                        <span className="text-[11px] text-[#B5BAC1]">
-                            {t('alerts.preview.time')}
-                        </span>
+        <div className="flex max-w-[640px] gap-3 rounded-lg bg-[#313338] p-3.5">
+            <img
+                src="/images/lumberjack-avatar.png"
+                alt=""
+                className="size-9 shrink-0 rounded-full"
+            />
+            <div className="flex min-w-0 flex-col gap-1.5">
+                <span>
+                    <strong className="text-[#F2F3F5]">
+                        {sender.trim() !== '' ? sender.trim() : 'Lumberjack'}
+                    </strong>{' '}
+                    <span className="rounded bg-[#5865F2] px-1 py-px text-[10px] font-semibold text-white">
+                        APP
+                    </span>{' '}
+                    <span className="text-[11px] text-[#B5BAC1]">
+                        {t('alerts.preview.time')}
                     </span>
-                    <div className="flex flex-col gap-1.5 rounded border-l-4 border-l-err bg-[#2B2D31] px-3 py-2.5">
-                        <span className="font-semibold text-[#F2F3F5]">
-                            {t('alerts.preview.heading')}
-                        </span>
-                        <span className="font-mono text-xs break-all text-[#DBDEE1]">
-                            {t('alerts.preview.exception')}
-                        </span>
-                        <span className="text-[#DBDEE1]">
-                            {t('alerts.preview.message')}
-                        </span>
-                        <span className="text-xs text-[#B5BAC1]">
-                            {t('alerts.preview.meta')}
-                        </span>
-                        <span className="text-[13px] text-[#00A8FC] underline">
-                            {t('alerts.preview.link')}
-                        </span>
-                    </div>
+                </span>
+                <div className="flex flex-col gap-1.5 rounded border-l-4 border-l-err bg-[#2B2D31] px-3 py-2.5">
+                    <span className="font-semibold text-[#F2F3F5]">
+                        {t('alerts.preview.heading')}
+                    </span>
+                    <span className="font-mono text-xs break-all text-[#DBDEE1]">
+                        {subject(t)}
+                    </span>
+                    <span className="text-[#DBDEE1]">
+                        {t('alerts.preview.message')}
+                    </span>
+                    <PreviewFacts
+                        labelClass="font-semibold text-[#F2F3F5]"
+                        valueClass="text-[#DBDEE1]"
+                    />
+                    <span className="text-[13px] text-[#00A8FC] underline">
+                        {t('alerts.preview.link')}
+                    </span>
                 </div>
             </div>
-            <p className="text-xs text-ink-3">{t('alerts.preview.hint')}</p>
         </div>
     );
 }

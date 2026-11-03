@@ -78,4 +78,12 @@ describe('channels of one project', function () {
 
         expect(NotificationChannel::sole()->project_id)->toBe($this->shop->id);
     });
+
+    it('names a wrong config field by its label', function () {
+        $admin = User::factory()->inTeam($this->team)->create();
+
+        $this->actingAs($admin)->post(route('alerts.channels.store'), [
+            'type' => 'telegram', 'name' => 'Phones', 'config' => ['bot_token' => 'bad', 'chat_id' => '-100123'],
+        ])->assertSessionHasErrors(['config.bot_token' => 'The bot token field format is invalid.']);
+    });
 });

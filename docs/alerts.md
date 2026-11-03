@@ -18,6 +18,15 @@ A project can also have channels of its own, in its settings.
 | Pushover        | Your user or group key and an application token from pushover.net/apps.                                               |
 | Webhook         | Any HTTPS endpoint. Project channels only.                                                                            |
 
+**Add new channel** opens a short wizard: pick where alerts go, then fill in the
+details. Each type explains where to find its URL or keys and shows a preview of a
+message (Mail as a Gmail inbox row; Discord, Slack, Teams and Telegram as the message
+itself). Editing opens the same dialog at the details.
+
+Discord, Slack and Teams messages carry the same content: the headline, the issue
+number and title, the message, the location, release and occurrence count, and a link
+to the issue.
+
 **Send test** delivers a test message so you can check the setup. Each channel shows
 when it last delivered or failed.
 

@@ -95,12 +95,12 @@ class DiscordDriver implements ChannelDriver
                     ($issue->number !== null ? $issue->reference().' · ' : '').'`'.$issue->title.'`',
                     $issue->message,
                     $alert->triageSummary !== null ? '> '.$alert->triageSummary : null,
-                ])), 0, 4000),
-                'fields' => array_values(array_filter([
-                    $issue->file !== null ? ['name' => __('alerts.discord.location'), 'value' => $issue->file.($issue->line ? ':'.$issue->line : ''), 'inline' => false] : null,
-                    ['name' => __('alerts.discord.release'), 'value' => $issue->last_release ?? '-', 'inline' => true],
-                    ['name' => __('alerts.discord.occurrences'), 'value' => (string) $issue->occurrences_count, 'inline' => true],
-                ])),
+                ])), 0, 3900)."\n\n[".__('alerts.open_issue').']('.$alert->url.')',
+                'fields' => array_map(
+                    fn (string $name, string $value): array => ['name' => $name, 'value' => $value, 'inline' => $name !== __('alerts.discord.location')],
+                    array_keys($alert->facts()),
+                    $alert->facts(),
+                ),
                 'timestamp' => $issue->last_seen_at->toIso8601String(),
             ]],
         ]);
