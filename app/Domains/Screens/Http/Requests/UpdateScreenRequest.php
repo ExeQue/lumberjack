@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Screens\Http\Requests;
 
 use App\Domains\Screens\Enums\ScreenAspect;
+use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Screen;
@@ -35,6 +36,7 @@ class UpdateScreenRequest extends FormRequest
             'theme' => ['sometimes', 'required', Rule::enum(ScreenTheme::class)],
             'aspect' => ['sometimes', 'required', Rule::enum(ScreenAspect::class)],
             'orientation' => ['sometimes', 'required', Rule::enum(ScreenOrientation::class)],
+            'fit' => ['sometimes', 'required', Rule::enum(ScreenFit::class)],
             'light_from' => ['sometimes', 'required', ...$time],
             'light_to' => ['sometimes', 'required', ...$time],
             'timezone' => ['sometimes', 'required', 'timezone:all'],
@@ -47,7 +49,7 @@ class UpdateScreenRequest extends FormRequest
     }
 
     /**
-     * @return array{name?: string, theme?: ScreenTheme, aspect?: ScreenAspect, orientation?: ScreenOrientation, light_from?: string, light_to?: string, timezone?: string, scope?: array{projects: list<string>, environment: string|null, period: string}}
+     * @return array{name?: string, theme?: ScreenTheme, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, light_from?: string, light_to?: string, timezone?: string, scope?: array{projects: list<string>, environment: string|null, period: string}}
      */
     public function settings(): array
     {
@@ -63,6 +65,10 @@ class UpdateScreenRequest extends FormRequest
 
         if ($this->has('orientation')) {
             $settings['orientation'] = ScreenOrientation::from($this->string('orientation')->toString());
+        }
+
+        if ($this->has('fit')) {
+            $settings['fit'] = ScreenFit::from($this->string('fit')->toString());
         }
 
         if ($this->has('scope')) {

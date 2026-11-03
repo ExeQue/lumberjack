@@ -12,6 +12,7 @@ use App\Domains\Screens\Actions\UpdateScreenAction;
 use App\Domains\Screens\Actions\UpdateScreenLayoutAction;
 use App\Domains\Screens\Actions\UpdateScreenWidgetAction;
 use App\Domains\Screens\Enums\ScreenAspect;
+use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
 use App\Domains\Screens\Enums\ScreenTemplate;
 use App\Domains\Screens\Enums\ScreenTheme;
@@ -23,6 +24,7 @@ use App\Domains\Screens\Http\Requests\StoreScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenLayoutRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenWidgetRequest;
+use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Policies\ScreenPolicy;
 use App\Domains\Screens\Presenters\ScreenPresenter;
@@ -183,6 +185,17 @@ describe('the pages', function () {
             ->has('checks')
             ->where('limits.max_cols', Screen::MAX_COLS));
     });
+
+    it('offers the aspects and the sizes the team\'s TVs report, to preview at', function () {
+        Display::factory()->for($this->screen->team)->create(['name' => 'Office TV', 'viewport_width' => 1920, 'viewport_height' => 1080]);
+        Display::factory()->for($this->screen->team)->create(['name' => 'Silent']);
+        Display::factory()->create(['viewport_width' => 800, 'viewport_height' => 600]);
+
+        $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
+            ->where('aspects', ['16:9', '16:10', '4:3', '21:9', '32:9'])
+            ->where('displays', [['name' => 'Office TV', 'w' => 1920, 'h' => 1080]])
+            ->where('screen.fit', 'keep'));
+    });
 });
 
 describe('saving from the designer', function () {
@@ -275,13 +288,14 @@ describe('saving from the designer', function () {
     });
 
     it('saves the display\'s aspect and orientation, and refuses others', function () {
-        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '32:9', 'orientation' => 'portrait'])->assertOk();
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '32:9', 'orientation' => 'portrait', 'fit' => 'fill'])->assertOk();
 
         expect($this->screen->refresh()->aspect)->toBe(ScreenAspect::SuperUltrawide)
-            ->and($this->screen->orientation)->toBe(ScreenOrientation::Portrait);
+            ->and($this->screen->orientation)->toBe(ScreenOrientation::Portrait)
+            ->and($this->screen->fit)->toBe(ScreenFit::Fill);
 
-        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '9:16', 'orientation' => 'upside-down'])
-            ->assertJsonValidationErrors(['aspect', 'orientation']);
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '9:16', 'orientation' => 'upside-down', 'fit' => 'zoom'])
+            ->assertJsonValidationErrors(['aspect', 'orientation', 'fit']);
     });
 });
 

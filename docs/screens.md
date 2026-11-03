@@ -46,6 +46,14 @@ you put it on; cells no widget covers simply stay empty on the TV.
 landscape or portrait (a 16:9 portrait screen is 9:16). The grid in the designer takes
 that shape, as large as fits, so a widget's text reads as it will on that display.
 
+**Preview at** shows the screen as a TV of that resolution shows it, header, gaps and
+type sizes included, scaled down to fit the designer: **Fit** (the default) draws the
+grid as large as fits; the resolutions of the screen's aspect (1920 x 1080 and 3840 x 2160
+for 16:9, turned for portrait), the size each of the team's TVs reports for its window
+("Office TV, 1920 x 1080"), or **Custom** with a width and height of your own. Moving,
+resizing and selecting widgets work the same in the preview. It is a view setting of
+this browser, kept per screen, not part of the screen.
+
 - **Add**: drag a widget type from the left onto any free cell, or click it to add it
   in the first free spot (row by row from the top left). The search field finds a type
   by what it can show, so "queue" finds Stat, Gauge, Chart and List.
@@ -198,6 +206,13 @@ change is noticed; there is no sound.
 large type, the cursor hidden after a few seconds without moving, and the whole picture
 shifting a few pixels every few minutes so nothing burns into the panel. The header
 shows how many widgets need attention, whether the screen is live, and the time.
+
+On a display of another shape than the screen's aspect, **On a different screen** in the
+screen's settings decides: **Keep its shape** (the default) lays the screen out at its
+own shape as large as fits, centered, with the ground color around it, so it looks as
+designed; **Fill the display** stretches it over the whole display. Within 2% of the
+screen's shape both look the same. This holds for the kiosk, a paired TV and a share
+link alike.
 
 The data updates on its own: a widget whose projects change (a new issue, a failed
 job, a health result) refetches within seconds, and every widget refetches every minute

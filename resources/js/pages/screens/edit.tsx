@@ -1,9 +1,22 @@
 import { Head, Link } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
-import type { DragEvent, KeyboardEvent, PointerEvent } from 'react';
+import type {
+    DragEvent,
+    KeyboardEvent,
+    MouseEvent as ReactMouseEvent,
+    PointerEvent,
+    RefObject,
+} from 'react';
 import { RectangleHorizontal, RectangleVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNow } from '@/components/lj/relative';
+import {
+    KioskFrame,
+    KioskStatus,
+    PreviewScale,
+    kioskClock,
+    kioskSubtitle,
+} from '@/components/lj/screen/frame';
 import {
     ScreenSettings,
     DisplayGear,
@@ -55,6 +68,9 @@ import {
 
 type Props = {
     screen: Screen;
+    team: { name: string };
+    /** The sizes the team's TVs report, to preview the screen at. */
+    displays: { name: string; w: number; h: number }[];
     projects: { uuid: string; name: string }[];
     data_url: string;
     schema: Schema;
@@ -178,6 +194,7 @@ type Settings = Pick<
     | 'name'
     | 'aspect'
     | 'orientation'
+    | 'fit'
     | 'theme'
     | 'light_from'
     | 'light_to'
@@ -185,10 +202,57 @@ type Settings = Pick<
     | 'scope'
 >;
 
+/** Resolutions to preview a screen at, per aspect, landscape. */
+const PRESETS: Record<string, [number, number][]> = {
+    '16:9': [
+        [1280, 720],
+        [1920, 1080],
+        [2560, 1440],
+        [3840, 2160],
+    ],
+    '16:10': [
+        [1920, 1200],
+        [2560, 1600],
+    ],
+    '4:3': [
+        [1024, 768],
+        [1600, 1200],
+    ],
+    '21:9': [
+        [2560, 1080],
+        [3440, 1440],
+    ],
+    '32:9': [
+        [3840, 1080],
+        [5120, 1440],
+    ],
+};
+
+/** The designer's preview: the grid as large as fits, or the TV's layout at a size. */
+type Preview =
+    | { mode: 'fit' }
+    | { mode: 'size'; w: number; h: number; custom?: boolean };
+
+/** The preview this browser last used for a screen; a view setting, not the screen's. */
+function storedPreview(uuid: string): Preview {
+    try {
+        const stored = JSON.parse(
+            localStorage.getItem(`lj-screen-preview:${uuid}`) ?? 'null',
+        ) as Preview | null;
+
+        return stored?.mode === 'size' && stored.w > 0 && stored.h > 0
+            ? stored
+            : { mode: 'fit' };
+    } catch {
+        return { mode: 'fit' };
+    }
+}
+
 const SETTINGS: (keyof Settings)[] = [
     'name',
     'aspect',
     'orientation',
+    'fit',
     'theme',
     'light_from',
     'light_to',
@@ -263,6 +327,21 @@ export default function EditScreen(props: Props) {
     const now = useNow();
     const [screen, setScreen] = useState<Screen>(props.screen);
     const [saved, setSaved] = useState<Screen>(props.screen);
+    const [preview, setPreviewState] = useState<Preview>(() =>
+        storedPreview(props.screen.uuid),
+    );
+    const setPreview = (next: Preview) => {
+        setPreviewState(next);
+
+        try {
+            localStorage.setItem(
+                `lj-screen-preview:${props.screen.uuid}`,
+                JSON.stringify(next),
+            );
+        } catch {
+            // Private window: it just does not stick.
+        }
+    };
     const [selected, setSelected] = useState<string | null>(
         props.screen.widgets[0]?.id ?? null,
     );
@@ -304,7 +383,7 @@ export default function EditScreen(props: Props) {
         col: number;
         row: number;
     } | null>(null);
-    const grid = useRef<HTMLDivElement>(null);
+    const grid = useRef<HTMLElement>(null);
     const focusAfter = useRef<string | null>(null);
     const timer = useRef<number | null>(null);
     const savedRef = useRef<Screen>(props.screen);
@@ -551,15 +630,12 @@ export default function EditScreen(props: Props) {
         (e: PointerEvent<HTMLSpanElement>) => {
             e.preventDefault();
             e.stopPropagation();
-            const rect = grid.current?.getBoundingClientRect();
-
-            if (!rect) {
+            if (!grid.current) {
                 return;
             }
 
             e.currentTarget.setPointerCapture(e.pointerId);
-            const gap = 10;
-            const pad = 14;
+            const { rect, gap, pad } = gridMetrics();
             resizing.current = {
                 id: widget.id,
                 handle,
@@ -618,10 +694,22 @@ export default function EditScreen(props: Props) {
     };
 
     /** The grid cell under a point, clamped to the grid. */
+    // The grid's box, gap and padding on screen, whatever scale a preview draws it at.
+    const gridMetrics = () => {
+        const el = grid.current!;
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        const scale = el.offsetWidth > 0 ? rect.width / el.offsetWidth : 1;
+
+        return {
+            rect,
+            gap: parseFloat(style.columnGap) * scale || 0,
+            pad: parseFloat(style.paddingLeft) * scale || 0,
+        };
+    };
+
     const cellAt = (clientX: number, clientY: number) => {
-        const rect = grid.current!.getBoundingClientRect();
-        const gap = 10;
-        const pad = 14;
+        const { rect, gap, pad } = gridMetrics();
         const col = (rect.width - 2 * pad + gap) / screen.cols;
         const row = (rect.height - 2 * pad + gap) / screen.rows;
 
@@ -789,6 +877,17 @@ export default function EditScreen(props: Props) {
     const theme = themeAt(screen, now);
     const [aw, ah] = screen.aspect.split(':').map(Number);
     const ratio = screen.orientation === 'portrait' ? [ah, aw] : [aw, ah];
+    const turn = ([w, h]: number[]) =>
+        screen.orientation === 'portrait' ? [h, w] : [w, h];
+    const presets = (PRESETS[screen.aspect] ?? []).map(turn);
+    const previewValue =
+        preview.mode === 'fit'
+            ? 'fit'
+            : preview.custom
+              ? 'custom'
+              : `${preview.w}x${preview.h}`;
+    const previewSize =
+        preview.mode === 'size' ? { w: preview.w, h: preview.h } : null;
     const statusText =
         status === 'saving'
             ? t('screens.designer.saving')
@@ -797,6 +896,214 @@ export default function EditScreen(props: Props) {
               : viewers !== null
                 ? t('screens.designer.saved_live', {}, viewers)
                 : t('screens.designer.saved');
+
+    // What the grid holds and does, the same at Fit and at a previewed size.
+    const gridHandlers = {
+        onDragOver: onGridDragOver,
+        onDrop: onGridDrop,
+        onDragLeave: (e: DragEvent<HTMLElement>) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                setHover(null);
+            }
+        },
+        onClick: (e: ReactMouseEvent<HTMLElement>) => {
+            if (e.target === e.currentTarget) {
+                setSelected(null);
+            }
+        },
+    };
+    const gridContent = (
+        <>
+            {/* While dragging, every cell is a drop zone. */}
+            {dragging &&
+                Array.from({ length: screen.cols * screen.rows }, (_, i) => (
+                    <span
+                        key={`cell-${i}`}
+                        aria-hidden="true"
+                        className="pointer-events-none rounded-[8px] border border-dashed border-(--s-line-strong)"
+                        style={{
+                            gridColumn: (i % screen.cols) + 1,
+                            gridRow: Math.floor(i / screen.cols) + 1,
+                        }}
+                    />
+                ))}
+            {screen.widgets.length === 0 && !dragging && (
+                <div
+                    className="flex flex-col items-center justify-center gap-[1em] rounded-[8px] border border-dashed border-(--s-line-strong) p-[2em] text-center"
+                    style={{
+                        gridColumn: '1 / -1',
+                        gridRow: '1 / -1',
+                    }}
+                >
+                    <span className="text-[1.1em] font-semibold text-(--s-ink)">
+                        {t('screens.designer.empty.title')}
+                    </span>
+                    <span className="max-w-[36em] text-(--s-ink-3)">
+                        {t('screens.designer.empty.body')}
+                    </span>
+                    <div className="flex flex-wrap justify-center gap-[0.5em]">
+                        {props.templates.map((template) => (
+                            <button
+                                key={template.id}
+                                type="button"
+                                title={template.description}
+                                className="cursor-pointer rounded-[6px] border border-(--s-line-strong) bg-(--s-panel) px-[0.9em] py-[0.45em] text-(--s-ink-2) hover:border-(--s-amber) hover:text-(--s-ink)"
+                                onClick={() =>
+                                    change((s) => ({
+                                        ...s,
+                                        cols: template.cols,
+                                        rows: template.rows,
+                                        widgets: template.widgets.map((w) => ({
+                                            ...w,
+                                            id: newWidgetId(),
+                                        })),
+                                    }))
+                                }
+                            >
+                                {t('screens.designer.empty.use', {
+                                    template: template.label,
+                                })}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+            {tiles.map((widget) => (
+                <WidgetTile
+                    key={widget.id}
+                    data-widget={widget.id}
+                    widget={widget}
+                    schema={schema}
+                    sources={sources}
+                    data={data[widget.id]}
+                    now={now}
+                    pinned={widget.id === selected ? pinned : undefined}
+                    incident={incident}
+                    designer
+                    tabIndex={0}
+                    role="button"
+                    aria-pressed={widget.id === selected}
+                    aria-label={t(
+                        widget.title || widget.source
+                            ? 'screens.designer.tile'
+                            : 'screens.designer.tile_untitled',
+                        {
+                            kind: t(`screens.kinds.${widget.type}`),
+                            title:
+                                widget.title ??
+                                sources[widget.type]?.find(
+                                    (s) => s.id === widget.source,
+                                )?.label ??
+                                '',
+                            w: widget.w,
+                            h: widget.h,
+                        },
+                    )}
+                    data-selected={widget.id === selected}
+                    draggable
+                    className={cn(
+                        'cursor-move',
+                        (!fits(widget, screen.cols, screen.rows) ||
+                            (dragging && drag.current?.tile === widget.id)) &&
+                            'opacity-40',
+                    )}
+                    // A widget partly outside the grid shows the part inside it.
+                    style={
+                        fits(widget, screen.cols, screen.rows)
+                            ? undefined
+                            : {
+                                  gridColumn: `${widget.x + 1} / ${Math.min(widget.x + widget.w, screen.cols) + 1}`,
+                                  gridRow: `${widget.y + 1} / ${Math.min(widget.y + widget.h, screen.rows) + 1}`,
+                              }
+                    }
+                    onClick={() => setSelected(widget.id)}
+                    onKeyDown={onKeyDown(widget)}
+                    onDragStart={(e) => {
+                        if (resizing.current) {
+                            e.preventDefault();
+
+                            return;
+                        }
+
+                        e.dataTransfer.setData('text/plain', widget.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                        // Held by the cell under the pointer, so it lands where it was dragged.
+                        const cell = cellAt(e.clientX, e.clientY);
+                        startDrag({
+                            tile: widget.id,
+                            w: widget.w,
+                            h: widget.h,
+                            dx: Math.max(
+                                0,
+                                Math.min(widget.w - 1, cell.x - widget.x),
+                            ),
+                            dy: Math.max(
+                                0,
+                                Math.min(widget.h - 1, cell.y - widget.y),
+                            ),
+                        });
+                    }}
+                    onDragEnd={endDrag}
+                    corner={
+                        widget.type !== 'empty' && (
+                            <DisplayGear
+                                widget={widget}
+                                catalog={catalog}
+                                onChange={(next) => patch(next.id, next)}
+                                onOpen={() => setSelected(widget.id)}
+                            />
+                        )
+                    }
+                    decoration={
+                        <>
+                            <span
+                                aria-hidden="true"
+                                className="lj-badge pointer-events-none absolute bottom-1.5 left-2 rounded border border-(--s-line) bg-(--s-ground) px-1.5 text-[10px] font-semibold tracking-wide text-(--s-ink-2) uppercase"
+                            >
+                                {`${t(`screens.kinds.${widget.type}`)} · ${widget.w}×${widget.h}`}
+                            </span>
+                            {HANDLES.map((handle) => (
+                                <span
+                                    key={handle.id}
+                                    aria-hidden="true"
+                                    draggable={false}
+                                    data-handle={handle.id}
+                                    onPointerDown={onResizeStart(
+                                        widget,
+                                        handle.id,
+                                    )}
+                                    onPointerMove={onResizeMove}
+                                    onPointerUp={onResizeEnd}
+                                    onPointerCancel={onResizeEnd}
+                                    className={cn(
+                                        'absolute z-10 touch-none',
+                                        handle.className,
+                                    )}
+                                />
+                            ))}
+                        </>
+                    }
+                />
+            ))}
+            {hover && (
+                <span
+                    aria-hidden="true"
+                    data-testid="drop-footprint"
+                    data-ok={hover.ok}
+                    className={cn(
+                        'pointer-events-none z-20 rounded-[8px] border-2',
+                        hover.ok
+                            ? 'border-(--s-green) bg-(--s-green)/20'
+                            : 'border-(--s-red) bg-(--s-red)/20',
+                    )}
+                    style={{
+                        gridColumn: `${Math.max(0, hover.x) + 1} / ${Math.min(hover.x + hover.w, screen.cols) + 1}`,
+                        gridRow: `${Math.max(0, hover.y) + 1} / ${Math.min(hover.y + hover.h, screen.rows) + 1}`,
+                    }}
+                />
+            )}
+        </>
+    );
 
     return (
         <div className="flex min-h-screen flex-col bg-ground text-[13px] text-ink">
@@ -1104,6 +1411,101 @@ export default function EditScreen(props: Props) {
                                 )}
                             </div>
                             <label className="flex items-center gap-1.5">
+                                {t('screens.designer.preview_at')}
+                                <Select
+                                    value={previewValue}
+                                    onChange={(e) => {
+                                        const v = e.target.value;
+
+                                        if (v === 'fit') {
+                                            setPreview({ mode: 'fit' });
+                                        } else if (v === 'custom') {
+                                            setPreview({
+                                                mode: 'size',
+                                                w: previewSize?.w ?? 1920,
+                                                h: previewSize?.h ?? 1080,
+                                                custom: true,
+                                            });
+                                        } else {
+                                            const [w, h] = v
+                                                .split('x')
+                                                .map(Number);
+                                            setPreview({ mode: 'size', w, h });
+                                        }
+                                    }}
+                                >
+                                    <option value="fit">
+                                        {t('screens.designer.preview_fit')}
+                                    </option>
+                                    {presets.map(([w, h]) => (
+                                        <option
+                                            key={`p${w}x${h}`}
+                                            value={`${w}x${h}`}
+                                        >
+                                            {`${w} × ${h}`}
+                                        </option>
+                                    ))}
+                                    {props.displays.map((d, i) => (
+                                        <option
+                                            key={`d${i}`}
+                                            value={`${d.w}x${d.h}`}
+                                        >
+                                            {`${d.name}, ${d.w} × ${d.h}`}
+                                        </option>
+                                    ))}
+                                    {/* A size not offered keeps showing as itself. */}
+                                    {preview.mode === 'size' &&
+                                        !preview.custom &&
+                                        ![
+                                            ...presets,
+                                            ...props.displays.map((d) => [
+                                                d.w,
+                                                d.h,
+                                            ]),
+                                        ].some(
+                                            ([w, h]) =>
+                                                w === preview.w &&
+                                                h === preview.h,
+                                        ) && (
+                                            <option value={previewValue}>
+                                                {`${preview.w} × ${preview.h}`}
+                                            </option>
+                                        )}
+                                    <option value="custom">
+                                        {t('screens.designer.preview_custom')}
+                                    </option>
+                                </Select>
+                            </label>
+                            {preview.mode === 'size' && preview.custom && (
+                                <span className="flex items-center gap-1">
+                                    {(['w', 'h'] as const).map((key) => (
+                                        <Input
+                                            key={key}
+                                            type="number"
+                                            min={100}
+                                            max={20000}
+                                            aria-label={t(
+                                                `screens.designer.preview_${key}`,
+                                            )}
+                                            className="h-8 w-20"
+                                            value={preview[key]}
+                                            onChange={(e) => {
+                                                const n = Number(
+                                                    e.target.value,
+                                                );
+
+                                                if (n >= 100 && n <= 20000) {
+                                                    setPreview({
+                                                        ...preview,
+                                                        [key]: n,
+                                                    });
+                                                }
+                                            }}
+                                        />
+                                    ))}
+                                </span>
+                            )}
+                            <label className="flex items-center gap-1.5">
                                 {t('screens.designer.theme')}
                                 <Select
                                     value={screen.theme}
@@ -1237,251 +1639,56 @@ export default function EditScreen(props: Props) {
                         </div>
                     )}
 
-                    <div
-                        ref={grid}
-                        className="lj-screen lj-grid mx-auto grid gap-[10px] overflow-hidden rounded-[10px] border border-(--s-line) p-[14px]"
-                        data-theme={theme}
-                        onDragOver={onGridDragOver}
-                        onDrop={onGridDrop}
-                        onDragLeave={(e) => {
-                            if (
-                                !e.currentTarget.contains(
-                                    e.relatedTarget as Node | null,
-                                )
-                            ) {
-                                setHover(null);
-                            }
-                        }}
-                        onClick={(e) => {
-                            if (e.target === e.currentTarget) {
-                                setSelected(null);
-                            }
-                        }}
-                        style={{
-                            // The display's shape, as large as fits: full width, or for a
-                            // tall shape the height of the window less the toolbar.
-                            aspectRatio: `${ratio[0]} / ${ratio[1]}`,
-                            width: `min(100%, calc((100dvh - 190px) * ${ratio[0] / ratio[1]}))`,
-                            ['--lj-cols' as string]: screen.cols,
-                            ['--lj-rows' as string]: screen.rows,
-                            gridTemplateColumns: `repeat(${screen.cols}, minmax(0, 1fr))`,
-                            gridTemplateRows: `repeat(${screen.rows}, minmax(0, 1fr))`,
-                            gridAutoRows: 'minmax(0, 1fr)',
-                        }}
-                    >
-                        {/* While dragging, every cell is a drop zone. */}
-                        {dragging &&
-                            Array.from(
-                                { length: screen.cols * screen.rows },
-                                (_, i) => (
-                                    <span
-                                        key={`cell-${i}`}
-                                        aria-hidden="true"
-                                        className="pointer-events-none rounded-[8px] border border-dashed border-(--s-line-strong)"
-                                        style={{
-                                            gridColumn: (i % screen.cols) + 1,
-                                            gridRow:
-                                                Math.floor(i / screen.cols) + 1,
-                                        }}
-                                    />
-                                ),
-                            )}
-                        {screen.widgets.length === 0 && !dragging && (
-                            <div
-                                className="flex flex-col items-center justify-center gap-[1em] rounded-[8px] border border-dashed border-(--s-line-strong) p-[2em] text-center"
-                                style={{
-                                    gridColumn: '1 / -1',
-                                    gridRow: '1 / -1',
-                                }}
-                            >
-                                <span className="text-[1.1em] font-semibold text-(--s-ink)">
-                                    {t('screens.designer.empty.title')}
-                                </span>
-                                <span className="max-w-[36em] text-(--s-ink-3)">
-                                    {t('screens.designer.empty.body')}
-                                </span>
-                                <div className="flex flex-wrap justify-center gap-[0.5em]">
-                                    {props.templates.map((template) => (
-                                        <button
-                                            key={template.id}
-                                            type="button"
-                                            title={template.description}
-                                            className="cursor-pointer rounded-[6px] border border-(--s-line-strong) bg-(--s-panel) px-[0.9em] py-[0.45em] text-(--s-ink-2) hover:border-(--s-amber) hover:text-(--s-ink)"
-                                            onClick={() =>
-                                                change((s) => ({
-                                                    ...s,
-                                                    cols: template.cols,
-                                                    rows: template.rows,
-                                                    widgets:
-                                                        template.widgets.map(
-                                                            (w) => ({
-                                                                ...w,
-                                                                id: newWidgetId(),
-                                                            }),
-                                                        ),
-                                                }))
-                                            }
-                                        >
-                                            {t('screens.designer.empty.use', {
-                                                template: template.label,
-                                            })}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        {tiles.map((widget) => (
-                            <WidgetTile
-                                key={widget.id}
-                                data-widget={widget.id}
-                                widget={widget}
-                                schema={schema}
-                                sources={sources}
-                                data={data[widget.id]}
-                                now={now}
-                                pinned={
-                                    widget.id === selected ? pinned : undefined
-                                }
-                                incident={incident}
-                                designer
-                                tabIndex={0}
-                                role="button"
-                                aria-pressed={widget.id === selected}
-                                aria-label={t(
-                                    widget.title || widget.source
-                                        ? 'screens.designer.tile'
-                                        : 'screens.designer.tile_untitled',
-                                    {
-                                        kind: t(`screens.kinds.${widget.type}`),
-                                        title:
-                                            widget.title ??
-                                            sources[widget.type]?.find(
-                                                (s) => s.id === widget.source,
-                                            )?.label ??
-                                            '',
-                                        w: widget.w,
-                                        h: widget.h,
-                                    },
-                                )}
-                                data-selected={widget.id === selected}
-                                draggable
-                                className={cn(
-                                    'cursor-move',
-                                    (!fits(widget, screen.cols, screen.rows) ||
-                                        (dragging &&
-                                            drag.current?.tile ===
-                                                widget.id)) &&
-                                        'opacity-40',
-                                )}
-                                // A widget partly outside the grid shows the part inside it.
-                                style={
-                                    fits(widget, screen.cols, screen.rows)
-                                        ? undefined
-                                        : {
-                                              gridColumn: `${widget.x + 1} / ${Math.min(widget.x + widget.w, screen.cols) + 1}`,
-                                              gridRow: `${widget.y + 1} / ${Math.min(widget.y + widget.h, screen.rows) + 1}`,
-                                          }
-                                }
-                                onClick={() => setSelected(widget.id)}
-                                onKeyDown={onKeyDown(widget)}
-                                onDragStart={(e) => {
-                                    if (resizing.current) {
-                                        e.preventDefault();
-
-                                        return;
-                                    }
-
-                                    e.dataTransfer.setData(
-                                        'text/plain',
-                                        widget.id,
-                                    );
-                                    e.dataTransfer.effectAllowed = 'move';
-                                    // Held by the cell under the pointer, so it lands where it was dragged.
-                                    const cell = cellAt(e.clientX, e.clientY);
-                                    startDrag({
-                                        tile: widget.id,
-                                        w: widget.w,
-                                        h: widget.h,
-                                        dx: Math.max(
-                                            0,
-                                            Math.min(
-                                                widget.w - 1,
-                                                cell.x - widget.x,
-                                            ),
-                                        ),
-                                        dy: Math.max(
-                                            0,
-                                            Math.min(
-                                                widget.h - 1,
-                                                cell.y - widget.y,
-                                            ),
-                                        ),
-                                    });
-                                }}
-                                onDragEnd={endDrag}
-                                corner={
-                                    widget.type !== 'empty' && (
-                                        <DisplayGear
-                                            widget={widget}
-                                            catalog={catalog}
-                                            onChange={(next) =>
-                                                patch(next.id, next)
-                                            }
-                                            onOpen={() =>
-                                                setSelected(widget.id)
-                                            }
+                    {previewSize ? (
+                        // The TV's own layout at that size, scaled down to fit here.
+                        <PreviewScale size={previewSize}>
+                            <KioskFrame
+                                screen={screen}
+                                view={previewSize}
+                                theme={theme}
+                                header={{
+                                    title: screen.name,
+                                    subtitle: kioskSubtitle(
+                                        screen,
+                                        props.team.name,
+                                        props.projects,
+                                        t,
+                                    ),
+                                    right: (
+                                        <KioskStatus
+                                            attention={0}
+                                            offline={null}
+                                            clock={kioskClock(screen, now)}
                                         />
-                                    )
-                                }
-                                decoration={
-                                    <>
-                                        <span
-                                            aria-hidden="true"
-                                            className="lj-badge pointer-events-none absolute bottom-1.5 left-2 rounded border border-(--s-line) bg-(--s-ground) px-1.5 text-[10px] font-semibold tracking-wide text-(--s-ink-2) uppercase"
-                                        >
-                                            {`${t(`screens.kinds.${widget.type}`)} · ${widget.w}×${widget.h}`}
-                                        </span>
-                                        {HANDLES.map((handle) => (
-                                            <span
-                                                key={handle.id}
-                                                aria-hidden="true"
-                                                draggable={false}
-                                                data-handle={handle.id}
-                                                onPointerDown={onResizeStart(
-                                                    widget,
-                                                    handle.id,
-                                                )}
-                                                onPointerMove={onResizeMove}
-                                                onPointerUp={onResizeEnd}
-                                                onPointerCancel={onResizeEnd}
-                                                className={cn(
-                                                    'absolute z-10 touch-none',
-                                                    handle.className,
-                                                )}
-                                            />
-                                        ))}
-                                    </>
-                                }
-                            />
-                        ))}
-                        {hover && (
-                            <span
-                                aria-hidden="true"
-                                data-testid="drop-footprint"
-                                data-ok={hover.ok}
-                                className={cn(
-                                    'pointer-events-none z-20 rounded-[8px] border-2',
-                                    hover.ok
-                                        ? 'border-(--s-green) bg-(--s-green)/20'
-                                        : 'border-(--s-red) bg-(--s-red)/20',
-                                )}
-                                style={{
-                                    gridColumn: `${Math.max(0, hover.x) + 1} / ${Math.min(hover.x + hover.w, screen.cols) + 1}`,
-                                    gridRow: `${Math.max(0, hover.y) + 1} / ${Math.min(hover.y + hover.h, screen.rows) + 1}`,
+                                    ),
                                 }}
-                            />
-                        )}
-                    </div>
+                                gridRef={grid}
+                                gridProps={{ ...gridHandlers }}
+                            >
+                                {gridContent}
+                            </KioskFrame>
+                        </PreviewScale>
+                    ) : (
+                        <div
+                            ref={grid as RefObject<HTMLDivElement>}
+                            className="lj-screen lj-grid mx-auto grid gap-[10px] overflow-hidden rounded-[10px] border border-(--s-line) p-[14px]"
+                            data-theme={theme}
+                            {...gridHandlers}
+                            style={{
+                                // The display's shape, as large as fits: full width, or for a
+                                // tall shape the height of the window less the toolbar.
+                                aspectRatio: `${ratio[0]} / ${ratio[1]}`,
+                                width: `min(100%, calc((100dvh - 190px) * ${ratio[0] / ratio[1]}))`,
+                                ['--lj-cols' as string]: screen.cols,
+                                ['--lj-rows' as string]: screen.rows,
+                                gridTemplateColumns: `repeat(${screen.cols}, minmax(0, 1fr))`,
+                                gridTemplateRows: `repeat(${screen.rows}, minmax(0, 1fr))`,
+                                gridAutoRows: 'minmax(0, 1fr)',
+                            }}
+                        >
+                            {gridContent}
+                        </div>
+                    )}
                     <p className="text-xs text-ink-3">
                         {t('screens.designer.help')}
                     </p>

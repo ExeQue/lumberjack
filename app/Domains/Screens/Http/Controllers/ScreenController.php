@@ -79,6 +79,7 @@ class ScreenController
             'sharing' => $presenter->sharing($screen, $request->user()),
             'tv' => $presenter->tvInstructions(),
             'screen' => $presenter->present($screen),
+            'team' => ['name' => $screen->team->name],
             'projects' => $presenter->projects($screen->team),
             'data_url' => route('screens.data', $screen, absolute: false),
             'templates' => ScreenTemplate::forDesigner(),

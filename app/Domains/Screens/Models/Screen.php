@@ -6,6 +6,7 @@ namespace App\Domains\Screens\Models;
 
 use App\Domains\Screens\Eloquent\Builders\ScreenBuilder;
 use App\Domains\Screens\Enums\ScreenAspect;
+use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Teams\Models\Team;
@@ -33,6 +34,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $rows
  * @property ScreenAspect $aspect
  * @property ScreenOrientation $orientation
+ * @property ScreenFit $fit
  * @property ScreenTheme $theme
  * @property string $light_from HH:MM
  * @property string $light_to HH:MM
@@ -45,7 +47,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'name', 'cols', 'rows', 'aspect', 'orientation', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets', 'share_key', 'share_key_hash', 'share_titles'])]
+#[Fillable(['team_id', 'name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets', 'share_key', 'share_key_hash', 'share_titles'])]
 #[Hidden(['share_key', 'share_key_hash'])]
 #[UseEloquentBuilder(ScreenBuilder::class)]
 #[UseFactory(ScreenFactory::class)]
@@ -88,6 +90,7 @@ class Screen extends Model
         return [
             'aspect' => ScreenAspect::class,
             'orientation' => ScreenOrientation::class,
+            'fit' => ScreenFit::class,
             'theme' => ScreenTheme::class,
             'cols' => 'integer',
             'rows' => 'integer',

@@ -57,6 +57,8 @@ export type Screen = {
     /** Such as 16:9; see ScreenAspect. */
     aspect: string;
     orientation: ScreenOrientation;
+    /** On a display of another shape: keep the screen's (bars around it) or fill it. */
+    fit: 'keep' | 'fill';
     theme: ScreenTheme;
     light_from: string;
     light_to: string;
