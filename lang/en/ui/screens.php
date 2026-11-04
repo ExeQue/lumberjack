@@ -236,6 +236,7 @@ return [
         'min' => ['label' => 'Minimum'],
         'max' => ['label' => 'Maximum'],
         'show_limits' => ['label' => 'Mark the amber limit on the arc'],
+        'show_red_limit' => ['label' => 'Mark the red limit on the arc'],
         'compare' => ['label' => 'Compare with', 'options' => ['none' => 'Nothing', 'previous' => 'Previous period', 'yesterday' => 'Same time yesterday', 'last_week' => 'Same time last week']],
         'decimals' => ['label' => 'Decimals', 'options' => ['auto' => 'Automatic', '0' => '0', '1' => '1', '2' => '2']],
         'sparkline' => ['label' => 'Sparkline under the number'],
