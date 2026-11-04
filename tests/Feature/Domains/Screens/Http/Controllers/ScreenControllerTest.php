@@ -80,6 +80,20 @@ describe('the screens of a team', function () {
             ->where('screens.0.widgets', 3));
     });
 
+    it('says which are shared and how many paired TVs show each, alone or in turn', function () {
+        $other = Screen::factory()->for($this->screen->team)->create(['name' => 'Zz other']);
+        Display::factory()->showing($this->screen)->create();
+        Display::factory()->showing($other)->create(['playlist' => [$other->id, $this->screen->id]]);
+        $this->screen->update(['share_key_hash' => hash('sha256', 'ls_x')]);
+
+        $this->actingAs($this->user)->get(route('screens.index'))->assertInertia(fn (Assert $page) => $page
+            ->where('screens.0.shared', true)
+            ->where('screens.0.displays', 2)
+            ->where('screens.1.shared', false)
+            ->where('screens.1.displays', 1)
+            ->missing('viewers'));
+    });
+
     it('creates one and opens it in the designer', function () {
         $response = $this->actingAs($this->user)->post(route('screens.store'), ['name' => 'Checkout']);
 

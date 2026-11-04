@@ -1,9 +1,10 @@
-import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage, usePoll } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { Relative } from '@/components/lj/relative';
 import { TopBar } from '@/components/lj/top-bar';
 import {
+    Badge,
     Button,
     buttonClass,
     Card,
@@ -62,6 +63,10 @@ type Row = {
     theme: string;
     widgets: number;
     updated_at: string | null;
+    /** Readable by anyone with its share link. */
+    shared: boolean;
+    /** Paired TVs set to show it, alone or in their turn. */
+    displays: number;
 };
 
 type Template = {
@@ -414,11 +419,14 @@ function TemplateDialog({
 /** The team's status screens: open one on a TV, design it, or make another. */
 export default function Screens({
     screens,
+    viewers,
     templates,
     saved_templates: savedTemplates,
     can_manage_templates: canManageTemplates,
 }: {
     screens: Row[];
+    /** Per screen, how many have it open now; null where that cannot be told. Deferred. */
+    viewers?: Record<string, number | null>;
     templates: Template[];
     saved_templates: SavedTemplate[];
     can_manage_templates: boolean;
@@ -431,6 +439,8 @@ export default function Screens({
     const otherTeams = teams.filter((item) => item.uuid !== team.uuid);
     // Another member adds, renames or edits a screen: the list follows.
     useTeamLive(['screens.changed'], ['screens']);
+    // Who has which screen open changes without an event: asked again every half minute.
+    usePoll(30_000, { only: ['viewers'] });
     const [creating, setCreating] = useState(false);
     const [template, setTemplate] = useState('overview');
     const [renaming, setRenaming] = useState<Row | null>(null);
@@ -496,6 +506,9 @@ export default function Screens({
                                             {t('screens.table.theme')}
                                         </th>
                                         <th className={thClass}>
+                                            {t('screens.table.shown_on')}
+                                        </th>
+                                        <th className={thClass}>
                                             {t('screens.table.updated')}
                                         </th>
                                         <th className={thClass}>
@@ -529,6 +542,65 @@ export default function Screens({
                                             <td className={tdClass}>
                                                 {t(
                                                     `screens.theme.${screen.theme}`,
+                                                )}
+                                            </td>
+                                            <td
+                                                className={tdClass}
+                                                title={t(
+                                                    'screens.table.now_hint',
+                                                )}
+                                            >
+                                                <span className="flex flex-wrap items-center gap-1.5">
+                                                    {viewers === undefined ? (
+                                                        <span className="text-ink-3">
+                                                            …
+                                                        </span>
+                                                    ) : (
+                                                        viewers[screen.uuid] !==
+                                                            null &&
+                                                        viewers[screen.uuid] !==
+                                                            undefined && (
+                                                            <span
+                                                                className={
+                                                                    (viewers[
+                                                                        screen
+                                                                            .uuid
+                                                                    ] ?? 0) > 0
+                                                                        ? 'text-ok'
+                                                                        : 'text-ink-3'
+                                                                }
+                                                            >
+                                                                {t(
+                                                                    'screens.table.now',
+                                                                    {},
+                                                                    viewers[
+                                                                        screen
+                                                                            .uuid
+                                                                    ] ?? 0,
+                                                                )}
+                                                            </span>
+                                                        )
+                                                    )}
+                                                    {screen.shared && (
+                                                        <Badge
+                                                            title={t(
+                                                                'screens.table.shared_hint',
+                                                            )}
+                                                        >
+                                                            {t(
+                                                                'screens.table.shared',
+                                                            )}
+                                                        </Badge>
+                                                    )}
+                                                </span>
+                                                {screen.displays > 0 && (
+                                                    <span className="block text-xs text-ink-3">
+                                                        {t(
+                                                            'screens.table.tvs',
+                                                            {},
+                                                            screen.displays,
+                                                        )}
+                                                    </span>
                                                 )}
                                             </td>
                                             <td className={tdClass}>
