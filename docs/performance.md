@@ -25,9 +25,11 @@ once a second.
 Open issues count every environment, whatever the period. Failed jobs show the failure
 rate and how many are stuck; the p95 shows the p50 and p99 under it.
 
-## Routes
+## Requests
 
-![The Routes page with the routes table and Web Vitals below](./screenshots/routes.png)
+**Requests** in the sidebar lists the project's routes.
+
+![The Requests page with the routes table and Web Vitals below](./screenshots/routes.png)
 
 Sort by highest p95 (the default), most requests, highest error rate, most total time
 or lowest [Apdex](#apdex). **Search routes or names** uses the [search syntax](./finding-things#search-syntax)
@@ -40,9 +42,11 @@ the same route on two domains is two rows, each with its domain in a **Domain** 
 picking a domain narrows the table, the detail and the sparklines to it. Requests an
 older SDK counted without a domain show as _unknown_.
 
-## Queries
+## Database
 
-![The Queries page: queries grouped by SQL with the share of database time](./screenshots/queries.png)
+**Database** in the sidebar lists the queries the app runs.
+
+![The Database page: queries grouped by SQL with the share of database time](./screenshots/queries.png)
 
 The top shows the number of queries, the total database time and the slowest single
 query. Filter by connection, search the SQL, and sort by most total time, highest p95 or
@@ -156,7 +160,7 @@ in amber, below 0.7 in red. Sort by lowest Apdex to find the routes people wait 
 ## Web Vitals
 
 The [browser script](./projects#browser-script) measures Core Web Vitals on every page
-view and sends them once, when the page is hidden or left. The Routes page lists each
+view and sends them once, when the page is hidden or left. The Requests page lists each
 browser page (its path, with numeric and UUID segments grouped as `{id}`) with page
 views and the 75th percentile of each vital, colored by Google's thresholds:
 

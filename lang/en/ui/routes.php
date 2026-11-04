@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'title' => 'Routes',
+    'title' => 'Requests',
     'description' => '{1} 1 route, :requests requests. Select a route for details.|[2,*] :count routes, :requests requests. Select a route for details.',
     'search' => 'Search routes or names',
     'domain' => [
