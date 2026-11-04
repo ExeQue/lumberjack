@@ -313,7 +313,7 @@ export function Sidebar() {
                 title={t('about.title')}
                 className="-mt-3 shrink-0 truncate px-2.5 font-mono text-[11px] text-ink-3 hover:text-ink-2"
             >
-                Lumberjack {appVersion}
+                {appVersion}
             </Link>
         </nav>
     );
