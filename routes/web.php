@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domains\Administration\Http\Controllers\AdminAuditController;
 use App\Domains\Administration\Http\Controllers\AdminTeamController;
 use App\Domains\Administration\Http\Controllers\AdminUserController;
+use App\Domains\Administration\Http\Controllers\OnboardingController;
 use App\Domains\Administration\Http\Controllers\SetupController;
 use App\Domains\Administration\Http\Middleware\EnsureSetupIsOpen;
 use App\Domains\Administration\Http\Middleware\EnsureUserIsAdmin;
@@ -81,6 +82,10 @@ Route::get('s/{key}/data', [SharedScreenController::class, 'data'])->where('key'
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', fn () => redirect()->route('projects.index'))->name('dashboard');
+
+    // The first-login onboarding, also opened again from the notification settings. See docs/teams.md.
+    Route::get('onboarding/{step?}', [OnboardingController::class, 'show'])->whereIn('step', range(1, OnboardingController::STEPS))->name('onboarding.show');
+    Route::post('onboarding', [OnboardingController::class, 'complete'])->name('onboarding.complete');
 
     Route::get('notifications', [NotificationCenterController::class, 'index'])->name('notifications.index');
     Route::get('notifications/recent', [NotificationCenterController::class, 'recent'])->name('notifications.recent');

@@ -52,6 +52,7 @@ void createInertiaApp({
                 name === 'screens/edit' ||
                 name === 'screens/unshared' ||
                 name.startsWith('tv/') ||
+                name.startsWith('onboarding/') ||
                 name.startsWith('pair/'):
                 return null;
             case name.startsWith('auth/') || name.startsWith('invitations/'):

@@ -16,6 +16,12 @@ return [
         'push' => 'Browser',
         'not_available' => 'Not available',
         'save' => 'Save',
+        'presets' => [
+            'label' => 'Presets',
+            'quiet' => ['label' => 'Quiet', 'description' => 'Only what concerns you, in app.'],
+            'balanced' => ['label' => 'Balanced', 'description' => 'What concerns you by mail too, your projects in app.'],
+            'everything' => ['label' => 'Everything', 'description' => 'Every kind in app and in the browser.'],
+        ],
         'groups' => [
             'personal' => 'About you',
             'project' => 'Your projects',
@@ -46,6 +52,12 @@ return [
         'denied' => 'Notifications are blocked for this site. Allow them in the browser\'s site settings, then try again.',
         'not_configured' => 'Browser notifications are not set up on this server. An administrator sets the VAPID keys (see the documentation).',
         'failed' => 'The browser could not turn notifications on. Try again, or check its settings.',
+    ],
+    'onboarding' => [
+        'title' => 'First steps',
+        'description' => 'The short tour from your first login: your teams, notifications and this browser.',
+        // Button
+        'open' => 'Show onboarding again',
     ],
     'account' => [
         'title' => 'Profile and security',

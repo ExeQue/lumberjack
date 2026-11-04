@@ -42,6 +42,7 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
  * @property CarbonImmutable|null $two_factor_confirmed_at
  * @property string|null $remember_token
  * @property NotificationPreferences $notification_preferences
+ * @property CarbonImmutable|null $onboarded_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -81,6 +82,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'is_admin' => 'boolean',
             'password_change_required' => 'boolean',
             'suspended_at' => 'datetime',
+            'onboarded_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'notification_preferences' => NotificationPreferencesCast::class,
         ];
