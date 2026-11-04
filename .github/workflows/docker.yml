@@ -87,6 +87,9 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            LUMBERJACK_VERSION=${{ steps.meta.outputs.version }}
+            LUMBERJACK_REVISION=${{ github.sha }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ steps.scope.outputs.name }}
           cache-to: type=gha,mode=max,scope=${{ steps.scope.outputs.name }}

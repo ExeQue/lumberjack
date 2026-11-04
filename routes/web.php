@@ -47,6 +47,7 @@ use App\Domains\Screens\Http\Controllers\ScreenShareController;
 use App\Domains\Screens\Http\Controllers\SharedScreenController;
 use App\Domains\Screens\Http\Controllers\TvController;
 use App\Domains\Search\Http\Controllers\SearchController;
+use App\Domains\Shared\Http\Controllers\AboutController;
 use App\Domains\Shared\Http\Controllers\MailPreviewController;
 use App\Domains\Teams\Http\Controllers\InvitationController;
 use App\Domains\Teams\Http\Controllers\MemberController;
@@ -82,6 +83,7 @@ Route::get('s/{key}/data', [SharedScreenController::class, 'data'])->where('key'
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', fn () => redirect()->route('projects.index'))->name('dashboard');
+    Route::get('about', AboutController::class)->name('about');
 
     // The first-login onboarding, also opened again from the notification settings. See docs/teams.md.
     Route::get('onboarding/{step?}', [OnboardingController::class, 'show'])->whereIn('step', range(1, OnboardingController::STEPS))->name('onboarding.show');

@@ -28,6 +28,13 @@ RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/fra
 
 FROM base
 
+# Which release this is and the commit it came from, for About; given by the image's build
+# (.github/workflows/docker.yml). Empty in a local build, which then says "dev".
+ARG LUMBERJACK_VERSION=""
+ARG LUMBERJACK_REVISION=""
+ENV LUMBERJACK_VERSION=$LUMBERJACK_VERSION \
+    LUMBERJACK_REVISION=$LUMBERJACK_REVISION
+
 ENV APP_NAME=Lumberjack \
     APP_ENV=production \
     APP_DEBUG=false \

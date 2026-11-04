@@ -15,6 +15,7 @@ import { index as issuesIndex } from '@/routes/issues';
 import { index as jobsIndex } from '@/routes/jobs';
 import { index as logsIndex } from '@/routes/logs';
 import { index as notificationsIndex } from '@/routes/notifications';
+import { about } from '@/routes';
 import {
     index as projectsIndex,
     settings as projectSettings,
@@ -169,6 +170,8 @@ export function useNavigation(
         item(t('common.nav.notifications'), notificationsIndex().url, {
             hidden: true,
         }),
+        // Under the user menu; the command palette lists it too.
+        item(t('about.title'), about().url, { hidden: true }),
     ];
 
     const adminNav: NavItem[] = is_admin

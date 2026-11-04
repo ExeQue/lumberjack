@@ -281,6 +281,8 @@ docker compose pull
 docker compose --env-file .env.docker up -d
 ```
 
+**About**, in the menu under your name, says which version is running.
+
 Migrations run on start. To run them yourself instead, set
 `LUMBERJACK_MIGRATE=false` and run
 `docker compose exec lumberjack php artisan migrate --force`.

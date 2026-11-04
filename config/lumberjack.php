@@ -6,6 +6,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Version
+    |--------------------------------------------------------------------------
+    |
+    | The release this is and the commit it was built from, baked into the
+    | Docker image by its build (LUMBERJACK_VERSION, LUMBERJACK_REVISION).
+    | Unset in a checkout, where git describes it instead. See About.
+    |
+    */
+
+    'version' => env('LUMBERJACK_VERSION'),
+
+    'revision' => env('LUMBERJACK_REVISION'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Documentation
+    |--------------------------------------------------------------------------
+    |
+    | Where the About page and its links send people to read up.
+    |
+    */
+
+    'docs_url' => env('LUMBERJACK_DOCS_URL', 'https://exeque.github.io/lumberjack/'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Mail senders
     |--------------------------------------------------------------------------
     |

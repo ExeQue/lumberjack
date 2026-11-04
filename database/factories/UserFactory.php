@@ -64,6 +64,12 @@ class UserFactory extends Factory
     /**
      * Indicate that the model has two-factor authentication configured.
      */
+    /** A system administrator: every team, the administration pages. */
+    public function systemAdmin(): static
+    {
+        return $this->state(fn (array $attributes) => ['is_admin' => true]);
+    }
+
     public function withTwoFactor(): static
     {
         return $this->state(fn (array $attributes) => [
