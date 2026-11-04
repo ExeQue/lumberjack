@@ -44,9 +44,11 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Links (password resets, invitations, alerts) always point at APP_URL, never at a
-        // Host or X-Forwarded-Host header someone sent.
+        // Host or X-Forwarded-Host header someone sent. Only for requests: the console
+        // builds links from APP_URL already, and forcing it there makes wayfinder:generate
+        // write absolute URLs into the frontend.
         $root = rtrim((string) config('app.url'), '/');
-        if ($root !== '') {
+        if ($root !== '' && (! $this->app->runningInConsole() || $this->app->runningUnitTests())) {
             URL::forceRootUrl($root);
             URL::forceScheme(str_starts_with($root, 'https://') ? 'https' : 'http');
         }
