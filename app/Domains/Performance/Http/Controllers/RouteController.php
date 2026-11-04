@@ -6,7 +6,6 @@ namespace App\Domains\Performance\Http\Controllers;
 
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Performance\Queries\RouteStatisticsQuery;
-use App\Domains\Performance\Queries\WebVitalsQuery;
 use App\Domains\Performance\Support\RequestTraffic;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
@@ -24,7 +23,7 @@ class RouteController
 {
     use ReadsDashboardFilters;
 
-    public function __invoke(Request $request, Project $project, RouteStatisticsQuery $query, WebVitalsQuery $vitals, ProjectPresenter $presenter): Response
+    public function __invoke(Request $request, Project $project, RouteStatisticsQuery $query, ProjectPresenter $presenter): Response
     {
         Gate::authorize('view', $project);
 
@@ -45,7 +44,6 @@ class RouteController
             'filters' => [...$this->filters($request), 'sort' => $sort, 'search' => $search, 'route' => $selected, 'method' => $method, 'domain' => $domain, 'route_domain' => $routeDomain],
             'domains' => fn (): array => $query->domains($project->id, $period, $environment),
             'routes' => fn (): array => $this->withSeries($project, $period, $environment, $domain, $query->get($project->id, $period, $environment, $sort, $search, domain: $domain)),
-            'vitals' => fn (): array => $vitals->get($project->id, $period, $environment),
             'sample_rate' => fn (): ?float => $query->sampleRate($project->id, $period, $environment, $domain),
             'detail' => fn (): ?array => $selected === '' ? null : $this->detail($project, $period, $environment, $domain ?? $routeDomain, $method, $selected),
         ]);

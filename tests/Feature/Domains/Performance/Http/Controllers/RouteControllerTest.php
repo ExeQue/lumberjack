@@ -9,7 +9,6 @@ use App\Domains\Performance\Queries\RouteStatisticsQuery;
 use App\Domains\Performance\Support\RequestTraffic;
 use App\Domains\Projects\Models\Project;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Performance\CreatesRequestCounts;
 
@@ -127,25 +126,5 @@ describe('the routes page', function () {
                 ->where('routes.0.route_name', 'orders.show')
                 ->where('routes.0.domain', null)
                 ->where('routes.0.requests', 5));
-    });
-
-    it('lists browser pages with the p75 of each web vital', function () {
-        $project = Project::factory()->create();
-        $user = User::factory()->inTeam($project->team)->create();
-        $row = ['project_id' => $project->id, 'environment' => 'production', 'route' => '/checkout', 'occurred_at' => now()->subMinutes(5)];
-        DB::table('web_vitals')->insert([
-            [...$row, 'lcp_us' => 1_000_000, 'inp_us' => null, 'cls' => 0.0],
-            [...$row, 'lcp_us' => 2_000_000, 'inp_us' => 100_000, 'cls' => 0.05],
-            [...$row, 'lcp_us' => 3_000_000, 'inp_us' => 300_000, 'cls' => 0.2],
-            [...$row, 'lcp_us' => 9_000_000, 'inp_us' => 600_000, 'cls' => 0.3],
-            [...$row, 'route' => '/old', 'occurred_at' => now()->subDays(40), 'lcp_us' => 1, 'inp_us' => 1, 'cls' => 0.0],
-        ]);
-
-        $this->actingAs($user)
-            ->get(route('routes.index', ['project' => $project]))
-            ->assertInertia(fn (Assert $page) => $page
-                ->has('vitals', 1)
-                // a missing INP is left out, not counted as zero: p75 of three values is the third
-                ->where('vitals.0', ['route' => '/checkout', 'views' => 4, 'lcp_us' => 3_000_000, 'inp_us' => 600_000, 'cls' => 0.2]));
     });
 });

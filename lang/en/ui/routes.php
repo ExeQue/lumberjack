@@ -42,16 +42,4 @@ return [
         'statuses_label' => ':ok 2xx, :redirect 3xx, :client 4xx, :server 5xx',
     ],
     'trend_label' => ':count requests in the period',
-    'vitals' => [
-        'title' => 'Web Vitals',
-        'description' => 'p75 per browser page, from the browser script. Green is good, amber needs improvement, red is poor.',
-        'page' => 'Page',
-        'views' => 'Page views',
-        'lcp' => 'LCP',
-        'lcp_help' => 'Largest Contentful Paint: good within 2.5 s, poor above 4 s.',
-        'inp' => 'INP',
-        'inp_help' => 'Interaction to Next Paint: good within 200 ms, poor above 500 ms.',
-        'cls' => 'CLS',
-        'cls_help' => 'Cumulative Layout Shift: good within 0.1, poor above 0.25.',
-    ],
 ];

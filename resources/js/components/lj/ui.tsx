@@ -212,7 +212,7 @@ export function StatCard({
     label: ReactNode;
     value: ReactNode;
     note?: ReactNode;
-    tone?: 'err' | 'warn';
+    tone?: 'err' | 'warn' | 'ok';
 }) {
     return (
         <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-4">
@@ -222,6 +222,7 @@ export function StatCard({
                     'font-mono text-2xl font-medium',
                     tone === 'err' && 'text-err',
                     tone === 'warn' && 'text-warn',
+                    tone === 'ok' && 'text-ok',
                 )}
             >
                 {value}

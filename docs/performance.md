@@ -4,7 +4,7 @@ Pick a period (1 h, 24 h, 7 d, 30 d) and an environment at the top of each page.
 period starts at 24 h, except on Logs, where it starts at 1 h. Hover a chart to see the
 value of each bucket.
 
-The pages update live: the overview, issues, routes, queries, releases, jobs,
+The pages update live: the overview, issues, routes, queries, browser, releases, jobs,
 schedule, commands, logs, health and agents reload in place as data arrives, at most
 once a second.
 
@@ -15,6 +15,7 @@ once a second.
 | Overview | Requests, error rate, p95, failed jobs, open issues and health checks, with the change from the period before; charts of requests, exceptions and response times; the latest issues, slowest routes and failed jobs. |
 | Routes   | Requests, p50/p95/p99, 5xx rate and Apdex per route. Click a route for its p50 and p95 over the period, its status codes (2xx to 5xx) and its 10 slowest requests with their query counts.                           |
 | Queries  | Queries grouped by normalized SQL, highlighted (as in traces): calls, total time, share of database time, p95 and max. N+1 patterns are flagged.                                                                     |
+| Browser  | Core Web Vitals of browser page views: p75 LCP, INP and CLS, split by device, over time and per page, and the browser errors. See [Browser](#browser).                                                               |
 | Jobs     | Runs, failure rate, stuck and retried jobs, duration and wait time per job class. Click a job for its runs.                                                                                                          |
 | Schedule | Scheduled tasks per environment with their last and next run. A task that does not run when expected is marked missed and becomes an issue.                                                                          |
 | Commands | Console commands with runs, failures and duration. Click a command for its runs.                                                                                                                                     |
@@ -29,7 +30,7 @@ rate and how many are stuck; the p95 shows the p50 and p99 under it.
 
 **Requests** in the sidebar lists the project's routes.
 
-![The Requests page with the routes table and Web Vitals below](./screenshots/routes.png)
+![The Requests page with the routes table](./screenshots/routes.png)
 
 Sort by highest p95 (the default), most requests, highest error rate, most total time
 or lowest [Apdex](#apdex). **Search routes or names** uses the [search syntax](./finding-things#search-syntax)
@@ -157,12 +158,16 @@ Apdex scores a route from 0 to 1 by how its requests felt. A request within 500 
 satisfied, within 2 s counts half, and slower or a 5xx counts nothing. Below 0.85 shows
 in amber, below 0.7 in red. Sort by lowest Apdex to find the routes people wait on.
 
-## Web Vitals
+## Browser
 
-The [browser script](./projects#browser-script) measures Core Web Vitals on every page
-view and sends them once, when the page is hidden or left. The Requests page lists each
-browser page (its path, with numeric and UUID segments grouped as `{id}`) with page
-views and the 75th percentile of each vital, colored by Google's thresholds:
+**Browser** in the sidebar shows how fast pages are for the people using them, measured
+by the [browser script](./projects#browser-script). It measures Core Web Vitals on every
+page view and sends them once, when the page is hidden or left, with the class of
+device the page was viewed on: mobile, tablet or desktop.
+
+At the top, cards show page views and the 75th percentile (p75) of each vital, colored
+by Google's thresholds, with the share of page views each vital rated good and the
+change from the period before:
 
 | Vital | Good     | Poor     |
 | ----- | -------- | -------- |
@@ -171,9 +176,25 @@ views and the 75th percentile of each vital, colored by Google's thresholds:
 | CLS   | ≤ 0.1    | > 0.25   |
 
 Between good (green) and poor (red) is needs improvement (amber). INP is the slowest
-interaction of the page view. TTFB and FCP are stored as well. Values below zero or
-above a minute are dropped as broken measurements. Web vitals have their own
-[retention](./projects#retention), 30 days by default.
+interaction of the page view.
+
+**All**, **Mobile**, **Tablet** and **Desktop** next to the title narrow every figure on
+the page to one class of device. **LCP by device** puts the p75 LCP of the three side
+by side, whichever is picked. A page view sent by an older browser script has no
+device class: it counts under **All** only.
+
+Below them, a chart per vital shows its p75 per bucket of the period, and **Pages**
+lists each browser page (its path, with numeric and UUID segments grouped as `{id}`)
+with page views and the p75 of LCP, INP, CLS, TTFB (time to first byte) and FCP (first
+contentful paint). Sort it by most viewed or slowest LCP.
+
+**Browser errors** counts the occurrences of browser issues in the period, on every
+device, and lists the issues with the most; **All issues** opens the issues list
+filtered to browser errors.
+
+Values below zero or above a minute are dropped as broken measurements. Web vitals
+have their own [retention](./projects#retention), 30 days by default. A project that
+never received any shows how to add the browser script instead.
 
 ## Traces
 

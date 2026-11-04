@@ -7,7 +7,7 @@ Self-hosted error tracking, logs and performance monitoring for Laravel.
 - **Issues:** exceptions, browser errors and error logs grouped into issues, with
   occurrences, stack traces, users affected, regressions, escalation detection,
   labels, notes, watching and history.
-- **Performance:** routes with Apdex and Web Vitals, queries (with the line that ran
+- **Performance:** routes with Apdex, Web Vitals by device, queries (with the line that ran
   them and N+1 hints), jobs and queues, scheduled tasks, commands and traces.
 - **Releases:** which deploy brought which errors and slowdowns.
 - **Health:** checks the app reports, and HTTP, SSL, TCP, DNS and heartbeat checks

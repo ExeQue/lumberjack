@@ -27,6 +27,7 @@ return [
         'issues' => 'Issues',
         'routes' => 'Requests',
         'queries' => 'Database',
+        'browser' => 'Browser',
         'releases' => 'Releases',
         'jobs' => 'Jobs',
         'schedule' => 'Schedule',

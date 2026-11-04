@@ -234,6 +234,25 @@
         }
     }
 
+    // mobile, tablet or desktop. Client hints know a phone; tablets (iPadOS calls itself a
+    // Mac with a touch screen, Android tablets leave out "Mobile") come from the user agent.
+    function deviceClass() {
+        var ua = navigator.userAgent || '';
+
+        if (navigator.userAgentData && navigator.userAgentData.mobile) {
+            return 'mobile';
+        }
+
+        if (
+            /iPad|Tablet|Android(?!.*Mobile)/i.test(ua) ||
+            (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+        ) {
+            return 'tablet';
+        }
+
+        return /Mobi|iPhone|iPod/i.test(ua) ? 'mobile' : 'desktop';
+    }
+
     function sendVitals() {
         if (
             vitalsSent ||
@@ -263,6 +282,7 @@
             cls: vitals.cls,
             ttfb_ms: vitals.ttfb,
             fcp_ms: vitals.fcp,
+            device: deviceClass(),
             timestamp: Date.now() / 1000,
         });
         flush();

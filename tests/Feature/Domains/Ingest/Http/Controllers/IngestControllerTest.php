@@ -370,6 +370,22 @@ describe('browser ingest', function () {
             ->and($vital->environment)->toBe('production');
     });
 
+    it('stores the device class of a page view, and none for a value it does not know', function (mixed $sent, ?string $stored) {
+        $this->postJson('/api/ingest/browser?key='.$this->project->public_key, $this->batch([
+            ['type' => 'vital', 'route' => '/', 'lcp_ms' => 1200, 'device' => $sent],
+        ]), ['Origin' => 'https://app.example.test', 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'])
+            ->assertStatus(202);
+
+        expect(DB::table('web_vitals')->sole()->device)->toBe($stored);
+    })->with([
+        'a phone' => ['mobile', 'mobile'],
+        'a tablet' => ['tablet', 'tablet'],
+        'a desktop' => ['desktop', 'desktop'],
+        'an older script sending none' => [null, null],
+        'an unknown class' => ['watch', null],
+        'not a string' => [['mobile'], null],
+    ]);
+
     it('does not accept non-error events from a browser', function () {
         $this->postJson('/api/ingest/browser?key='.$this->project->public_key, $this->batch([['type' => 'log', 'message' => 'x']]), ['Origin' => 'https://app.example.test'])
             ->assertUnprocessable();
