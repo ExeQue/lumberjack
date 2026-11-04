@@ -16,6 +16,7 @@ use App\Domains\Shared\Support\Translations;
 use App\Domains\Teams\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -59,7 +60,10 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'locale' => app()->getLocale(),
-            'translations' => fn (): array => Translations::forFrontend(app()->getLocale()),
+            // About 75 KB: sent once and kept by the page; asked for again only when the
+            // locale changes (its key), and a deploy reloads the page on the new version.
+            'translations' => Inertia::once(fn (): array => Translations::forFrontend(app()->getLocale()))
+                ->as('translations:'.app()->getLocale()),
             'auth' => [
                 'user' => $user,
             ],
