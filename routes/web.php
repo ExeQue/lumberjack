@@ -35,6 +35,7 @@ use App\Domains\Schedule\Http\Controllers\ScheduleController;
 use App\Domains\Screens\Http\Controllers\DeviceController;
 use App\Domains\Screens\Http\Controllers\DisplayController;
 use App\Domains\Screens\Http\Controllers\PairController;
+use App\Domains\Screens\Http\Controllers\SavedScreenTemplateController;
 use App\Domains\Screens\Http\Controllers\ScreenController;
 use App\Domains\Screens\Http\Controllers\ScreenFileController;
 use App\Domains\Screens\Http\Controllers\ScreenShareController;
@@ -171,6 +172,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('screens/import/preview', [ScreenFileController::class, 'preview'])->middleware('throttle:60,1')->name('screens.import.preview');
     Route::get('screens/{screen:uuid}/export', [ScreenFileController::class, 'export'])->name('screens.export');
     Route::post('screens/{screen:uuid}/copy', [ScreenFileController::class, 'copy'])->middleware('throttle:20,1')->name('screens.copy');
+    Route::post('screens/{screen:uuid}/template', [SavedScreenTemplateController::class, 'store'])->name('screens.template');
+    Route::put('screen-templates/{template:uuid}', [SavedScreenTemplateController::class, 'update'])->name('screen-templates.update');
+    Route::delete('screen-templates/{template:uuid}', [SavedScreenTemplateController::class, 'destroy'])->name('screen-templates.destroy');
     Route::get('screens/{screen:uuid}', [ScreenController::class, 'show'])->name('screens.show');
     Route::get('screens/{screen:uuid}/edit', [ScreenController::class, 'edit'])->name('screens.edit');
     Route::get('screens/{screen:uuid}/data', [ScreenController::class, 'data'])->middleware('throttle:120,1')->name('screens.data');

@@ -8,6 +8,7 @@ use App\Domains\Screens\Actions\CountScreenViewersAction;
 use App\Domains\Screens\Actions\CreateScreenAction;
 use App\Domains\Screens\Actions\DeleteScreenAction;
 use App\Domains\Screens\Actions\DuplicateScreenAction;
+use App\Domains\Screens\Actions\ImportScreenAction;
 use App\Domains\Screens\Actions\RequestReloadAction;
 use App\Domains\Screens\Actions\ResolveScreenDataAction;
 use App\Domains\Screens\Actions\UpdateScreenAction;
@@ -24,6 +25,7 @@ use App\Domains\Screens\Http\Requests\StoreScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenLayoutRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenWidgetRequest;
+use App\Domains\Screens\Models\SavedScreenTemplate;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Presenters\ScreenPresenter;
 use Illuminate\Http\JsonResponse;
@@ -51,14 +53,27 @@ class ScreenController
                 'updated_at' => $s->updated_at?->toIso8601String(),
             ])->all(),
             'templates' => array_map(fn (ScreenTemplate $t): array => $t->toArray(), ScreenTemplate::cases()),
+            'saved_templates' => SavedScreenTemplate::query()->whereBelongsTo($team)->with('creator')->orderBy('name')->get()
+                ->map(fn (SavedScreenTemplate $t): array => $t->toPicker())->all(),
+            'can_manage_templates' => $request->user()->canAdministerTeam($team),
         ]);
     }
 
-    public function store(StoreScreenRequest $request, CreateScreenAction $action): RedirectResponse
+    /** From a built-in template, or one the team saved (made the way an import is). */
+    public function store(StoreScreenRequest $request, CreateScreenAction $action, ImportScreenAction $import): RedirectResponse
     {
-        $screen = $action->execute($request->user()->currentTeam, $request->string('name')->toString(), $request->template());
+        $team = $request->user()->currentTeam;
+        $name = $request->string('name')->toString();
+        $saved = $request->savedTemplate();
 
-        return redirect()->route('screens.edit', $screen);
+        if ($saved === null) {
+            return redirect()->route('screens.edit', $action->execute($team, $name, $request->template()));
+        }
+
+        Gate::authorize('use', $saved);
+        $result = $import->execute($team, $saved->definition, $name);
+
+        return redirect()->route('screens.edit', $result->screen)->with('status', $result->hasDropped() ? $result->droppedNotice() : null);
     }
 
     /** The kiosk: the screen full screen, without the app around it. */

@@ -31,6 +31,8 @@ class ScreenFactory extends Factory
             'fit' => ScreenFit::Keep,
             'show_header' => true,
             'theme' => ScreenTheme::Dark,
+            'light_from' => '07:00',
+            'light_to' => '19:00',
             'timezone' => 'Europe/Copenhagen',
             'scope' => ['projects' => [], 'environment' => null, 'period' => '24h'],
             'widgets' => [
