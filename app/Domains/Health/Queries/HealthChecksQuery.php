@@ -64,7 +64,37 @@ class HealthChecksQuery
      */
     public function summary(Project $project, ?string $environment = null): array
     {
-        $checks = $this->checks($project, $environment, archived: false);
+        return $this->summarize($this->checks($project, $environment, archived: false));
+    }
+
+    /**
+     * summary() for several projects in two queries (checks, then their hosts), not two
+     * per project: a screen's health widget covers every project of its scope.
+     *
+     * @param  iterable<Project>  $projects
+     * @return array<int, array{total: int, ok: int, recovering: int, degraded: int, down: int, stale: int, pending: int, checks: list<array{uuid: string, name: string, state: string, message: string|null, since: string|null}>}> by project id
+     */
+    public function summaries(iterable $projects, ?string $environment = null): array
+    {
+        $ids = collect($projects)->map(fn (Project $p): int => $p->id)->all();
+        $checks = HealthCheck::query()
+            ->whereIn('project_id', $ids)
+            ->when($environment !== null)->whereIn('environment', [$environment ?? '', ''])
+            ->whereNotArchived()
+            ->with('hosts')
+            ->orderBy('source')->orderByRaw('COALESCE(name, slug)')
+            ->get()
+            ->groupBy('project_id');
+
+        return collect($ids)->mapWithKeys(fn (int $id): array => [$id => $this->summarize($checks->get($id, new EloquentCollection()))])->all();
+    }
+
+    /**
+     * @param  EloquentCollection<int, HealthCheck>  $checks
+     * @return array{total: int, ok: int, recovering: int, degraded: int, down: int, stale: int, pending: int, checks: list<array{uuid: string, name: string, state: string, message: string|null, since: string|null}>}
+     */
+    private function summarize(EloquentCollection $checks): array
+    {
         $states = $checks->map(fn (HealthCheck $check): string => self::state($check))->countBy();
 
         return [

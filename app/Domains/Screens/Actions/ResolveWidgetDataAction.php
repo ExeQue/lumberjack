@@ -467,9 +467,11 @@ class ResolveWidgetDataAction
         $picked = array_values(array_filter((array) ($options['checks'] ?? []), 'is_string'));
         $states = ['total' => 0, 'ok' => 0, 'degraded' => 0, 'down' => 0, 'recovering' => 0, 'stale' => 0, 'pending' => 0];
         $checks = [];
+        // All projects in one go: per project it was two queries each (an N+1).
+        $summaries = $this->memo->remember('health-summaries:'.implode(',', $projects->modelKeys()).':'.($scope->environment ?? '*'), fn (): array => $this->health->summaries($projects, $scope->environment));
 
         foreach ($projects as $project) {
-            foreach ($this->healthSummary($project, $scope)['checks'] as $check) {
+            foreach ($summaries[$project->id]['checks'] as $check) {
                 if ($picked !== [] && ! in_array($check['uuid'], $picked, true)) {
                     continue;
                 }
@@ -502,14 +504,6 @@ class ResolveWidgetDataAction
         }
 
         return ['summary' => $states, 'checks' => $checks, 'check' => $detail];
-    }
-
-    /**
-     * @return array{total: int, ok: int, recovering: int, degraded: int, down: int, stale: int, pending: int, checks: list<array{uuid: string, name: string, state: string, message: string|null, since: string|null}>}
-     */
-    private function healthSummary(Project $project, WidgetScope $scope): array
-    {
-        return $this->memo->remember("health-summary:{$project->id}:".($scope->environment ?? '*'), fn (): array => $this->health->summary($project, $scope->environment));
     }
 
     /**
