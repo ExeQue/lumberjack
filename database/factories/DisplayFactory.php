@@ -26,6 +26,7 @@ class DisplayFactory extends Factory
             'screen_id' => null,
             'name' => null,
             'theme' => DisplayTheme::Default,
+            'rotation' => 0,
             'token_hash' => TvCredentials::hash(TvCredentials::newDisplayToken()),
             'last_seen_at' => now(),
         ];
@@ -35,6 +36,12 @@ class DisplayFactory extends Factory
     public function showing(Screen $screen): static
     {
         return $this->state(fn () => ['team_id' => $screen->team_id, 'screen_id' => $screen->id]);
+    }
+
+    /** Hung sideways or upside down: the picture turned by this many degrees. */
+    public function rotated(int $degrees): static
+    {
+        return $this->state(fn () => ['rotation' => $degrees]);
     }
 
     /** Another window of this device. */

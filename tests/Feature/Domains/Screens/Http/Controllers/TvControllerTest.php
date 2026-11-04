@@ -156,6 +156,7 @@ describe('a paired TV', function () {
             ->where('screens.0.channel', 'screen.'.$this->screen->uuid)
             ->where('screens.0.share', false)
             ->where('rotate_seconds', 30)
+            ->where('rotation', 0)
             ->where('hold_on_alert', true)
             ->where('urls.heartbeat', '/tv/1/heartbeat')
             ->where('display.name', 'Office TV, window 1')

@@ -57,6 +57,7 @@ class DisplayController
                     'playlist' => array_values(array_filter(array_map(fn (int $id): ?string => $uuids->get($id), $d->playlist ?? []))),
                     'rotate_seconds' => $d->rotate_seconds,
                     'hold_on_alert' => $d->hold_on_alert,
+                    'rotation' => $d->rotation,
                     'theme' => $d->theme->value,
                     'viewport' => $d->viewport_width === null ? null : ['w' => $d->viewport_width, 'h' => (int) $d->viewport_height],
                     'online' => $d->isOnline(),

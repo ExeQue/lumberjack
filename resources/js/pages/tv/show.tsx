@@ -6,7 +6,7 @@ import { LogMark } from '@/components/lj/logo';
 import { displayTokenKey } from '@/components/lj/screen/tv';
 import type { TvUrls } from '@/components/lj/screen/tv';
 import { useT } from '@/lib/i18n';
-import { reloadSoon } from '@/components/lj/screen/frame';
+import { KioskRotation, reloadSoon } from '@/components/lj/screen/frame';
 import Kiosk from '@/pages/screens/kiosk';
 
 type KioskProps = Omit<
@@ -24,6 +24,8 @@ type Props = {
     /** The screens it shows, in turn when more than one. */
     screens: KioskProps[];
     rotate_seconds: number;
+    /** Degrees the picture is turned, for a TV hung sideways. */
+    rotation: number;
     /** Stay on a screen while one of its widgets is red. */
     hold_on_alert: boolean;
     urls: TvUrls;
@@ -44,6 +46,7 @@ export default function TvShow({
     version,
     screens,
     rotate_seconds,
+    rotation,
     hold_on_alert,
     urls,
 }: Props) {
@@ -156,7 +159,7 @@ export default function TvShow({
     }
 
     return (
-        <>
+        <KioskRotation.Provider value={rotation}>
             {screens.map((kiosk) => {
                 const visible = kiosk.screen.uuid === shown.screen.uuid;
 
@@ -187,6 +190,6 @@ export default function TvShow({
                 );
             })}
             <Head title={shown.screen.name} />
-        </>
+        </KioskRotation.Provider>
     );
 }

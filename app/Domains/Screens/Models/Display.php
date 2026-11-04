@@ -39,11 +39,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $slot which window of its computer, /tv/{slot}
  * @property list<int>|null $playlist screen ids shown in turn; empty shows screen_id alone
  * @property int $rotate_seconds
+ * @property int $rotation degrees the picture is turned clockwise: 0, 90, 180 or 270
  * @property bool $hold_on_alert whether a screen with a red widget stays until it clears
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'device_id', 'screen_id', 'name', 'theme', 'token_hash', 'viewport_width', 'viewport_height', 'pixel_ratio', 'last_seen_at', 'slot', 'playlist', 'rotate_seconds', 'hold_on_alert'])]
+#[Fillable(['team_id', 'device_id', 'screen_id', 'name', 'theme', 'token_hash', 'viewport_width', 'viewport_height', 'pixel_ratio', 'last_seen_at', 'slot', 'playlist', 'rotate_seconds', 'hold_on_alert', 'rotation'])]
 #[Hidden(['token_hash'])]
 #[UseEloquentBuilder(DisplayBuilder::class)]
 #[UseFactory(DisplayFactory::class)]
@@ -84,6 +85,7 @@ class Display extends Model
             'playlist' => 'array',
             'rotate_seconds' => 'integer',
             'hold_on_alert' => 'boolean',
+            'rotation' => 'integer',
             'viewport_width' => 'integer',
             'viewport_height' => 'integer',
             'pixel_ratio' => 'float',

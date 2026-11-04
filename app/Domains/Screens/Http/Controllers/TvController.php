@@ -191,6 +191,7 @@ class TvController
             'version' => self::version($display),
             'rotate_seconds' => $display->rotate_seconds,
             'hold_on_alert' => $display->hold_on_alert,
+            'rotation' => $display->rotation,
             'urls' => self::endpoints($slot),
             // ponytail: each screen carries the whole widget catalog; fine for a few screens.
             'screens' => array_map(fn (Screen $screen): array => $presenter->kiosk($screen, [
@@ -237,6 +238,6 @@ class TvController
     /** What the display shows; when it changes, the TV reloads. */
     private static function version(Display $display): string
     {
-        return md5(json_encode([$display->screenIds(), $display->theme->value, $display->rotate_seconds, $display->hold_on_alert], JSON_THROW_ON_ERROR));
+        return md5(json_encode([$display->screenIds(), $display->theme->value, $display->rotate_seconds, $display->hold_on_alert, $display->rotation], JSON_THROW_ON_ERROR));
     }
 }
