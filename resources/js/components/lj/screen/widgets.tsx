@@ -365,10 +365,34 @@ export function WidgetTile({
         now,
     );
     // The designer holds the tile on the open tab, with no progress to show.
-    const index =
+    const target =
         pinned !== undefined
             ? Math.min(pinned, Math.max(0, items.length - 1))
             : slot.index;
+    const transition = option<string>(schema, stored, 'transition') ?? 'fade';
+    // The value on screen: the old one stays while it leaves, then the new one comes in.
+    const [drawn, leaving] = useOutIn(
+        target,
+        shown.length > 1 && transition !== 'none',
+    );
+    // A value taken out of the rotation while it showed: the last one left.
+    const index = Math.min(drawn, Math.max(0, shown.length - 1));
+    // Title, corner label and value move together, out and then in.
+    const motion =
+        shown.length < 2 || transition === 'none'
+            ? undefined
+            : leaving
+              ? cn(
+                    'animate-out fill-mode-forwards fade-out motion-reduce:animate-none',
+                    transition === 'slide' && 'slide-out-to-left-8',
+                )
+              : cn(
+                    'animate-in fade-in motion-reduce:animate-none',
+                    transition === 'slide' && 'slide-in-from-right-8',
+                );
+    const motionStyle = motion
+        ? { animationDuration: `${SWITCH_MS}ms` }
+        : undefined;
     // The value shown now draws with its own settings over the widget's.
     const widget = shownAs(stored, index > 0 ? items[index] : undefined);
     const opt = <T,>(key: string) => option<T>(schema, widget, key);
@@ -409,7 +433,6 @@ export function WidgetTile({
             status !== 'down' &&
             status !== 'degraded') ||
         (hideWhen === 'empty' && empty);
-    const transition = opt<string>('transition') ?? 'fade';
     // The top right label: a list's order, then the period or how old the report is.
     const cornerText = [
         widget.type === 'list' && sourceId
@@ -522,14 +545,16 @@ export function WidgetTile({
                 >
                     {showTitle && widget.type !== 'empty' && title && (
                         <span
+                            key={`${keys[index] ?? ''}:corner`}
                             className={cn(
                                 // Up by the space above a digit, so the text itself sits
                                 // at the inset (IBM Plex Sans: 0.2em at line-height 1).
                                 'lj-tile-small -mt-[0.2em] leading-none whitespace-nowrap',
                                 corner && 'lj-corner-label',
+                                motion,
                             )}
                             // The same size on every tile, whatever its text or title size.
-                            style={cornerStyle}
+                            style={{ ...cornerStyle, ...motionStyle }}
                         >
                             {cornerText}
                         </span>
@@ -548,12 +573,16 @@ export function WidgetTile({
                 // Invisible twins of the label keep room for it on the right, and on the
                 // left too for a centered title, so that stays centered on the tile.
                 <div
+                    // Its own key: the value below already uses the plain one.
+                    key={`${keys[index] ?? ''}:title`}
                     className={cn(
                         'grid items-baseline gap-[0.6em]',
                         align === 'center'
                             ? 'grid-cols-[auto_minmax(0,1fr)_auto]'
                             : 'grid-cols-[minmax(0,1fr)_auto]',
+                        motion,
                     )}
+                    style={motionStyle}
                 >
                     {align === 'center' && (
                         <span
@@ -586,16 +615,12 @@ export function WidgetTile({
                 key={keys[index] ?? 'tile'}
                 className={cn(
                     'flex min-h-0 flex-1 flex-col gap-[0.3em]',
-                    shown.length > 1 &&
-                        transition === 'fade' &&
-                        'animate-in duration-500 fade-in',
-                    shown.length > 1 &&
-                        transition === 'slide' &&
-                        'animate-in duration-500 slide-in-from-right-8',
+                    motion,
                 )}
                 style={{
                     alignItems: align === 'center' ? 'center' : undefined,
                     justifyContent: middle ? 'center' : undefined,
+                    ...motionStyle,
                 }}
             >
                 {body}
@@ -603,7 +628,7 @@ export function WidgetTile({
             {progress && (
                 <RotationProgress
                     // A new bar for every value shown, so it starts over on the switch.
-                    key={`${keys[index]}@${Math.floor(now / 1000) - (slot.elapsed ?? 0)}`}
+                    key={`${keys[target]}@${Math.floor(now / 1000) - (slot.elapsed ?? 0)}`}
                     elapsed={slot.elapsed ?? 0}
                     seconds={slot.seconds}
                     status={status}
@@ -857,6 +882,35 @@ function curve(pts: [number, number][], smooth: boolean): string {
     }
 
     return path;
+}
+
+/** How long a rotating tile's value takes to leave, and then to come in. */
+const SWITCH_MS = 300;
+
+/**
+ * The index to draw while a rotating tile switches: the old one for SWITCH_MS while it
+ * leaves (leaving true), then the new one. Without animation, the new one at once.
+ */
+function useOutIn(target: number, animate: boolean): [number, boolean] {
+    const [shownIndex, setShownIndex] = useState(target);
+
+    useEffect(() => {
+        if (target === shownIndex) {
+            return;
+        }
+
+        if (!animate) {
+            setShownIndex(target);
+
+            return;
+        }
+
+        const timer = window.setTimeout(() => setShownIndex(target), SWITCH_MS);
+
+        return () => window.clearTimeout(timer);
+    }, [target, shownIndex, animate]);
+
+    return [shownIndex, shownIndex !== target];
 }
 
 /** A soft area line of the recent values, in the stat's own color. */
