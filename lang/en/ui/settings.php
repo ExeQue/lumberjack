@@ -60,7 +60,7 @@ return [
         'open' => 'Show onboarding again',
     ],
     'account' => [
-        'title' => 'Profile and security',
+        'title' => 'Profile and settings',
         'description' => 'Your name, email, notifications, password, two-factor authentication and how Lumberjack looks for you.',
         'profile' => 'Profile',
         'notifications' => 'Notifications',

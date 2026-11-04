@@ -304,7 +304,7 @@ function Push({ push }: { push: PushSettings }) {
                 </h1>
                 <p className="text-ink-2">{t('onboarding.push.intro')}</p>
             </div>
-            <BrowserNotifications push={push} />
+            <BrowserNotifications push={push} heading={false} />
             <Footer step={3}>
                 <Link
                     href={complete()}

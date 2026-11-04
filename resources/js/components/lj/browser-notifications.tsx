@@ -43,7 +43,14 @@ function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
  * Turns browser push notifications on for this browser (permission, service worker,
  * subscription), and lists every browser they are on in, each with Remove.
  */
-export function BrowserNotifications({ push }: { push: PushSettings }) {
+export function BrowserNotifications({
+    push,
+    heading = true,
+}: {
+    push: PushSettings;
+    /** Off where the page already says what this is (the onboarding's step). */
+    heading?: boolean;
+}) {
     const t = useT();
     const [problem, setProblem] = useState<Problem | null>(null);
     const [busy, setBusy] = useState(false);
@@ -137,11 +144,13 @@ export function BrowserNotifications({ push }: { push: PushSettings }) {
 
     return (
         <div className="space-y-6">
-            <Heading
-                variant="small"
-                title={t('settings.push.title')}
-                description={t('settings.push.description')}
-            />
+            {heading && (
+                <Heading
+                    variant="small"
+                    title={t('settings.push.title')}
+                    description={t('settings.push.description')}
+                />
+            )}
             <div className="space-y-2">
                 {here ? (
                     <p className="text-sm">{t('settings.push.enabled_here')}</p>
