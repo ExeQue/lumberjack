@@ -27,6 +27,7 @@ use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Models\Team;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\Health\CreatesDatabaseHealthResults;
 use Tests\Support\Performance\CreatesRequestCounts;
@@ -409,6 +410,31 @@ describe('health', function () {
         $action->execute($this->project->team, WidgetType::Health, 'checks', new WidgetScope(), ['only_problems' => true]);
 
         expect(count(DB::getQueryLog()) - $first)->toBeLessThan($first);
+    });
+
+    it('reads the checks of every project of the scope in the same few queries', function () {
+        $teamWith = function (int $projects): Team {
+            $team = Team::factory()->create();
+
+            foreach (range(1, $projects) as $i) {
+                $project = Project::factory()->for($team)->create();
+                HealthCheck::factory()->create(['project_id' => $project->id, 'slug' => "disk:{$i}"])
+                    ->hosts()->create(['host' => 'web-1', 'status' => HealthStatus::Ok, 'last_result_at' => now()]);
+            }
+
+            return $team;
+        };
+        $queries = function (Team $team): int {
+            Cache::flush();
+            app()->forgetScopedInstances();
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            app(ResolveWidgetDataAction::class)->execute($team, WidgetType::Health, 'checks', new WidgetScope());
+
+            return count(DB::getQueryLog());
+        };
+
+        expect($queries($teamWith(4)))->toBe($queries($teamWith(1)));
     });
 
     it('gauges the lowest uptime of the checks', function () {
