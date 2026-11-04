@@ -67,7 +67,7 @@ class IssueController
                 $counts['open'] = (int) ($counts['open'] ?? 0) + (int) ($counts['in_progress'] ?? 0);
             }),
             'releases' => fn () => (clone $base)->whereNotNull('last_release')->distinct()->orderByDesc('last_release')->limit(20)->pluck('last_release'),
-            'issues' => function () use ($base, $status, $source, $search, $release, $assigned, $label, $watching, $sort, $request, $presenter) {
+            'issues' => function () use ($base, $status, $source, $search, $release, $assigned, $label, $watching, $sort, $request, $presenter, $project) {
                 $issues = (clone $base)
                     ->when($status === IssueStatus::Open)->whereOpen()
                     ->when($status !== IssueStatus::Open)->whereStatus($status)
@@ -101,7 +101,7 @@ class IssueController
                     ->groupBy('issue_id');
 
                 return $issues->through(fn (Issue $issue): array => [
-                    ...$presenter->summary($issue),
+                    ...$presenter->summary($issue->setRelation('project', $project)),
                     'hourly' => collect(range(0, 24))->map(fn (int $h): int => (int) ($hourly->get($issue->id)?->firstWhere('h', $h)->c ?? 0))->all(),
                 ]);
             },
@@ -140,7 +140,8 @@ class IssueController
                 ->map(fn ($o): array => array_diff_key($presenter->occurrence($o), ['stacktrace' => true]))->all(),
             'period' => $this->period($request)->value,
             'series' => fn (): array => TimeSeries::count(DB::table('occurrences')->where('issue_id', $issue->id), $this->period($request)),
-            'notes' => fn (): array => $issue->notes()->with(['user', 'mcpToken'])->latest()->get()->map(fn (IssueNote $n): array => $presenter->note($n))->all(),
+            // The notes and the history share their notes and the people and agents who wrote them.
+            'notes' => fn (): array => $presenter->loadHistory($issue)->notes->map(fn (IssueNote $n): array => $presenter->note($n))->all(),
             'members' => fn (): array => $project->team->members()->orderBy('name')->get()->map(fn (User $u): array => ['id' => $u->id, 'name' => $u->name])->all(),
             // Agents whose MCP token covers this project, for tagging in notes.
             'agents' => fn (): array => $project->team->mcpTokens()->whereHas('projects', fn ($q) => $q->whereKey($project->id))

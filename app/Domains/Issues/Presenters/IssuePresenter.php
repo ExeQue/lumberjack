@@ -12,6 +12,8 @@ use App\Domains\Issues\Models\Label;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Mcp\Models\McpToken;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * The one shape of an issue that both the UI and the MCP tools hand out.
@@ -96,6 +98,27 @@ class IssuePresenter
     }
 
     /**
+     * Loads the issue's notes, newest first, and its latest events with who wrote each: a
+     * query for each, and one for the people and one for the agents of both.
+     */
+    public function loadHistory(Issue $issue, int $limit = 100): Issue
+    {
+        if ($issue->relationLoaded('notes') && $issue->relationLoaded('events')) {
+            return $issue;
+        }
+
+        $issue->load([
+            'notes' => fn (HasMany $notes) => $notes->latest(),
+            'events' => fn (HasMany $events) => $events->latest('occurred_at')->limit($limit),
+        ]);
+
+        // Events and notes name their author by the same keys, so one eager load fills both.
+        new Collection([...$issue->events, ...$issue->notes])->load(['user', 'mcpToken']);
+
+        return $issue;
+    }
+
+    /**
      * Everything that happened to the issue, newest first: its events and its notes.
      *
      * @return list<array{type: string, actor: string|null, via_mcp: bool, data: array<string, mixed>|null, at: string}>
@@ -103,8 +126,9 @@ class IssuePresenter
     public function history(Issue $issue, int $limit = 100): array
     {
         $actor = fn (?User $user, ?McpToken $token): ?string => $token !== null ? $token->name : $user?->name;
+        $this->loadHistory($issue, $limit);
 
-        $events = $issue->events()->with(['user', 'mcpToken'])->latest('occurred_at')->limit($limit)->get()
+        $events = $issue->events->take($limit)
             ->map(fn (IssueEvent $e): array => [
                 'type' => $e->type->value,
                 'actor' => $actor($e->user, $e->mcpToken),
@@ -113,7 +137,7 @@ class IssuePresenter
                 'at' => $e->occurred_at->format('Y-m-d\\TH:i:s.vP'),
             ]);
 
-        $notes = $issue->notes()->with(['user', 'mcpToken'])->latest()->limit($limit)->get()
+        $notes = $issue->notes->take($limit)
             ->map(fn (IssueNote $n): array => [
                 'type' => 'note',
                 'actor' => $actor($n->user, $n->mcpToken),
