@@ -47,9 +47,16 @@ class RecordHealthResultAction
             // Several hosts report the same slug at the same minute; one at a time.
             $check = HealthCheck::query()->whereKey($check->id)->lockForUpdate()->firstOrFail();
 
-            $host = HealthCheckHost::query()->firstOrNew(['health_check_id' => $check->id, 'host' => $result->host]);
+            // Every host of the check in one read: the one reporting, and the others for the
+            // check's status further down.
+            $hosts = $check->hosts()->get();
+            $host = $hosts->firstWhere('host', $result->host) ?? new HealthCheckHost(['health_check_id' => $check->id, 'host' => $result->host]);
             $this->advance($check, $host, $result, $at);
             $host->save();
+
+            if (! $hosts->contains($host)) {
+                $hosts->push($host);
+            }
 
             $row = HealthCheckResult::query()->create([
                 'health_check_id' => $check->id,
@@ -62,7 +69,6 @@ class RecordHealthResultAction
                 'checked_at' => $at,
             ]);
 
-            $hosts = $check->hosts()->get();
             $live = $hosts->reject(fn (HealthCheckHost $h): bool => $h->id !== $host->id && $check->isReported() && $h->isStale());
             $status = HealthStatus::worst($live->map(fn (HealthCheckHost $h): ?HealthStatus => $h->status));
 
@@ -145,6 +151,12 @@ class RecordHealthResultAction
     private function trackOutage(HealthCheck $check, ?HealthStatus $status, HealthResultData $result, CarbonImmutable $at): void
     {
         $bad = $status !== null && $status !== HealthStatus::Ok;
+
+        // Was fine and still is (the usual result): no outage can be open, none to look up.
+        if (! $bad && ($check->status === null || $check->status === HealthStatus::Ok)) {
+            return;
+        }
+
         $open = HealthOutage::query()->where('health_check_id', $check->id)->whereNull('ended_at')->latest('started_at')->first();
 
         // Recovering keeps an open outage open, at its worst status; it never opens one.

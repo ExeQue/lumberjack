@@ -25,6 +25,9 @@ class RecordReportedHealthAction
     /** @var array<string, HealthCheck> checks of this ingest batch, by project, environment and slug */
     private array $checks = [];
 
+    /** @var array<string, true> project and environment pairs whose checks are loaded */
+    private array $loaded = [];
+
     public function __construct(
         private readonly RecordHealthResultAction $recordHealthResultAction,
     ) {
@@ -44,8 +47,10 @@ class RecordReportedHealthAction
 
         $identity = ['project_id' => $project->id, 'environment' => $envelope->environment ?? '', 'slug' => $slug];
 
-        // firstOrCreate falls back to createOrFirst, so two hosts making it at once is fine.
-        // Looked up once per batch: the action is resolved per ingest job.
+        // Looked up once per batch (the action is resolved per ingest job): the first result
+        // of a project and environment loads all their checks in one query; a new slug is
+        // made with firstOrCreate, which falls back to createOrFirst when two hosts race.
+        $this->loadChecks($project->id, $identity['environment']);
         $check = $this->checks[implode("\0", $identity)] ??= HealthCheck::query()->firstOrCreate($identity, ['source' => HealthCheckSource::Reported]);
 
         if (! $check->thresholds_overridden) {
@@ -60,6 +65,19 @@ class RecordReportedHealthAction
 
         // The batch forgets the cached states and broadcasts once for all its results.
         return $this->recordHealthResultAction->execute($check, $result, announce: false);
+    }
+
+    private function loadChecks(int $projectId, string $environment): void
+    {
+        if (isset($this->loaded[$projectId."\0".$environment])) {
+            return;
+        }
+
+        $this->loaded[$projectId."\0".$environment] = true;
+
+        foreach (HealthCheck::query()->where('project_id', $projectId)->where('environment', $environment)->get() as $check) {
+            $this->checks[implode("\0", [$projectId, $environment, $check->slug])] ??= $check;
+        }
     }
 
     private static function threshold(mixed $value, int $default): int

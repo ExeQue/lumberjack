@@ -36,8 +36,10 @@ describe('ingest batch cost', function () {
         // 165 before the lines were bulk inserted and the health check looked up once per
         // batch; what is left is mostly the per-host health state, one result at a time.
         // 60 until the batch's release was written down (two, once per release) and the
-        // new issue's alert job, run inline here, looked for members to push to.
-        expect($stored)->toBeLessThanOrEqual(68)
+        // new issue's alert job, run inline here, looked for members to push to. 68 until a
+        // result read its check's hosts once, not twice, and skipped the outage lookup while
+        // the check stays ok.
+        expect($stored)->toBeLessThanOrEqual(57)
             ->and(LogEntry::query()->where('project_id', $project->id)->orderBy('id')->pluck('message')->all())
             ->toBe([...array_map(fn (int $i): string => "Line {$i}", range(1, 100)), 'It broke'])
             ->and(HealthCheck::query()->where('project_id', $project->id)->count())->toBe(1);
