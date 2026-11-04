@@ -181,7 +181,7 @@ Each widget's settings are grouped in sections that open and close:
   defaults shown; shares go from 0 to 1, durations are in milliseconds), whether a gauge
   marks each limit on its arc (with red hidden, amber runs to the end), whether low
   values are bad (Apdex, uptime), what to compare with, decimals, a prefix and suffix,
-  the chart style and how many series, its time axis, value axis and grid lines (each on or off), how many rows a list shows and in which order.
+  the chart style (bars, area or line, the lines smooth or straight) and how many series, its time axis, value axis and grid lines (each on or off), how many rows a list shows and in which order.
 - **Rotation**: a stat, gauge, chart, list or health widget can show several values in
   turn on one tile. The inspector shows them as tabs at the top, one per value in the order they
   show, the widget's own source first. **+** after the tabs adds the next value not

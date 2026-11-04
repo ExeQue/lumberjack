@@ -278,6 +278,7 @@ return [
         'top' => ['label' => 'Series', 'options' => ['5' => 'Top 5', '10' => 'Top 10', '20' => 'Top 20']],
         'overlay_previous' => ['label' => 'Overlay the previous period'],
         'smooth' => ['label' => 'Smooth lines'],
+        'smooth' => ['label' => 'Smooth lines'],
         'limit_line' => ['label' => 'Draw the red limit'],
         'y_zero' => ['label' => 'Y axis starts at zero'],
         'legend' => ['label' => 'Legend'],

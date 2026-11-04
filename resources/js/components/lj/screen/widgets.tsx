@@ -791,6 +791,59 @@ function Stat({
     );
 }
 
+/**
+ * An SVG path through the points: straight segments, or a monotone cubic curve that
+ * never overshoots the data (so a smooth line stays above zero and below the peak).
+ */
+function curve(pts: [number, number][], smooth: boolean): string {
+    if (!smooth || pts.length < 3) {
+        return 'M' + pts.map((p) => p.join(',')).join(' L');
+    }
+
+    const n = pts.length;
+    const d = pts
+        .slice(1)
+        .map((p, i) => (p[1] - pts[i][1]) / (p[0] - pts[i][0] || 1));
+    const m = pts.map((_, i) =>
+        i === 0
+            ? d[0]
+            : i === n - 1
+              ? d[n - 2]
+              : d[i - 1] * d[i] <= 0
+                ? 0
+                : (d[i - 1] + d[i]) / 2,
+    );
+
+    // Fritsch-Carlson: limit the tangents so each segment stays monotone.
+    for (let i = 0; i < n - 1; i++) {
+        if (d[i] === 0) {
+            m[i] = m[i + 1] = 0;
+            continue;
+        }
+
+        const a = m[i] / d[i];
+        const b = m[i + 1] / d[i];
+        const len = a * a + b * b;
+
+        if (len > 9) {
+            const t = 3 / Math.sqrt(len);
+            m[i] = t * a * d[i];
+            m[i + 1] = t * b * d[i];
+        }
+    }
+
+    let path = `M${pts[0][0]},${pts[0][1]}`;
+
+    for (let i = 0; i < n - 1; i++) {
+        const [x0, y0] = pts[i];
+        const [x1, y1] = pts[i + 1];
+        const h = (x1 - x0) / 3;
+        path += ` C${x0 + h},${y0 + m[i] * h} ${x1 - h},${y1 - m[i + 1] * h} ${x1},${y1}`;
+    }
+
+    return path;
+}
+
 /** A soft area line of the recent values, in the stat's own color. */
 function Spark({
     points,
@@ -1030,8 +1083,12 @@ function Chart({ widget, schema, data, t }: BodyProps) {
     const y = (v: number | null) =>
         40 - ((Math.max(bottom, v ?? 0) - bottom) / (top - bottom || 1)) * 40;
     const x = (i: number) => ((i + 0.5) / n) * 100;
+    const smooth = opt<boolean>('smooth') === true;
     const line = (s: Series) =>
-        s.points.map((p, i) => `${x(i)},${y(p.v)}`).join(' ');
+        curve(
+            s.points.map((p, i): [number, number] => [x(i), y(p.v)]),
+            smooth,
+        );
     const withDate = !String(data.interval).match(/[ms]$/);
     const spansDays =
         points.length > 1 &&
@@ -1146,8 +1203,8 @@ function Chart({ widget, schema, data, t }: BodyProps) {
                                 );
                             })}
                         {style === 'area' && series[0] && (
-                            <polygon
-                                points={`${x(0)},40 ${line(series[0])} ${x(n - 1)},40`}
+                            <path
+                                d={`${line(series[0])} L${x(n - 1)},40 L${x(0)},40 Z`}
                                 fill={seriesColor(
                                     String(data.source),
                                     0,
@@ -1163,9 +1220,9 @@ function Chart({ widget, schema, data, t }: BodyProps) {
                                     stacked && style === 'area' ? 1 : undefined,
                                 )
                                 .map((s, i) => (
-                                    <polyline
+                                    <path
                                         key={s.name}
-                                        points={line(s)}
+                                        d={line(s)}
                                         fill="none"
                                         stroke={
                                             stacked && i === 1
@@ -1181,8 +1238,8 @@ function Chart({ widget, schema, data, t }: BodyProps) {
                                     />
                                 ))}
                         {previous && (
-                            <polyline
-                                points={line(previous)}
+                            <path
+                                d={line(previous)}
                                 fill="none"
                                 stroke="var(--s-ink-4)"
                                 strokeWidth="1.2"
