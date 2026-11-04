@@ -394,7 +394,7 @@ final class WidgetSchema
         ])));
         $rotation = $section('rotation', [
             $select('rotate_every', ['5', '10', '20', '30', '60'], '10'),
-            $select('transition', ['fade', 'slide', 'none'], 'fade'),
+            $select('transition', ['fade', 'slide', 'flip', 'none'], 'fade'),
             $toggle('hold_problem', true),
             $toggle('progress', true),
             // How long the widget's own source shows; set on its row under Rotate through.

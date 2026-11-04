@@ -235,7 +235,7 @@ Each widget's settings are grouped in sections that open and close:
 
     Below the tabs, **Whole widget** holds what applies to every value: under
     **Rotation**, how often they switch (every 5 seconds to a minute), with a fade, a
-    slide or neither (the old value leaves with its title and label before the next comes in), whether a value that needs attention (amber or red) holds the tile
+    slide, a flip (as on a departures board) or none (the old value leaves with its title and label before the next comes in), whether a value that needs attention (amber or red) holds the tile
     until it clears, and a progress bar; then how often it updates (the rest
     of Display is behind the gear). Tiles with the same timing switch together. The
     progress bar runs along the bottom edge of the tile, growing from the center to the

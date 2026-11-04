@@ -385,7 +385,7 @@ return [
         'date' => ['label' => 'Date'],
         'text' => ['label' => 'Text', 'placeholder' => 'A note for the room'],
         'rotate_every' => ['label' => 'Switch every', 'options' => ['5' => '5 seconds', '10' => '10 seconds', '20' => '20 seconds', '30' => '30 seconds', '60' => '1 minute']],
-        'transition' => ['label' => 'Transition', 'options' => ['fade' => 'Fade', 'slide' => 'Slide', 'none' => 'None']],
+        'transition' => ['label' => 'Transition', 'options' => ['fade' => 'Fade', 'slide' => 'Slide', 'flip' => 'Flip', 'none' => 'None']],
         'hold_problem' => ['label' => 'Stay on a value that needs attention'],
         'progress' => ['label' => 'Show a progress bar until the next value'],
         'source_seconds' => ['label' => 'Seconds the first value shows'],

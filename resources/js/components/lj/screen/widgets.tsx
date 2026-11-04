@@ -381,15 +381,19 @@ export function WidgetTile({
     const motion =
         shown.length < 2 || transition === 'none'
             ? undefined
-            : leaving
-              ? cn(
-                    'animate-out fill-mode-forwards fade-out motion-reduce:animate-none',
-                    transition === 'slide' && 'slide-out-to-left-8',
-                )
-              : cn(
-                    'animate-in fade-in motion-reduce:animate-none',
-                    transition === 'slide' && 'slide-in-from-right-8',
-                );
+            : transition === 'flip'
+              ? leaving
+                  ? 'lj-flip-out'
+                  : 'lj-flip-in'
+              : leaving
+                ? cn(
+                      'animate-out fill-mode-forwards fade-out motion-reduce:animate-none',
+                      transition === 'slide' && 'slide-out-to-left-8',
+                  )
+                : cn(
+                      'animate-in fade-in motion-reduce:animate-none',
+                      transition === 'slide' && 'slide-in-from-right-8',
+                  );
     const motionStyle = motion
         ? { animationDuration: `${SWITCH_MS}ms` }
         : undefined;
