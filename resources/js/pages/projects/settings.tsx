@@ -39,6 +39,7 @@ import {
     tdClass,
     thClass,
     numClass,
+    navActiveClass,
 } from '@/components/lj/ui';
 import { LiveNotice } from '@/components/lj/live-notice';
 import { PageBody } from '@/layouts/lumberjack-layout';
@@ -404,8 +405,7 @@ export default function ProjectSettings(props: Props) {
                                 }}
                                 className={cn(
                                     'rounded-md px-2.5 py-1.5 text-ink-2 hover:bg-panel-2 hover:text-ink',
-                                    active === section &&
-                                        'bg-panel-2 font-medium text-ink shadow-[inset_2px_0_0_var(--lj-amber)]',
+                                    active === section && navActiveClass,
                                     section === 'danger' && 'text-err',
                                 )}
                             >

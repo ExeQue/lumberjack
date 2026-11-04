@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import { TopBar } from '@/components/lj/top-bar';
-import { PageTitle } from '@/components/lj/ui';
+import { PageTitle, navActiveClass } from '@/components/lj/ui';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
@@ -49,8 +49,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                     aria-current={current ? 'page' : undefined}
                                     className={cn(
                                         'rounded-md px-2.5 py-1.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink',
-                                        current &&
-                                            'bg-panel-2 font-medium text-ink shadow-[inset_2px_0_0_var(--lj-amber)]',
+                                        current && navActiveClass,
                                     )}
                                 >
                                     {t(`settings.account.${section.key}`)}
