@@ -234,6 +234,48 @@
     white-space: nowrap;
 }
 
+/* A rotating tile's flip: the old value tips away about its horizontal axis, the next
+   one tips in, as on a departures board. */
+@keyframes lj-flip-out {
+    from {
+        transform: perspective(40em) rotateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: perspective(40em) rotateX(90deg);
+        opacity: 0.4;
+    }
+}
+
+@keyframes lj-flip-in {
+    from {
+        transform: perspective(40em) rotateX(-90deg);
+        opacity: 0.4;
+    }
+    to {
+        transform: perspective(40em) rotateX(0);
+        opacity: 1;
+    }
+}
+
+.lj-flip-out {
+    animation-name: lj-flip-out;
+    animation-timing-function: ease-in;
+    animation-fill-mode: forwards;
+}
+
+.lj-flip-in {
+    animation-name: lj-flip-in;
+    animation-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lj-flip-out,
+    .lj-flip-in {
+        animation: none;
+    }
+}
+
 /* A widget that crossed into red flashes once. */
 @keyframes lj-flash {
     0%,
