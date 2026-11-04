@@ -590,15 +590,18 @@ export function WidgetTile({
                     // Its own key: the value below already uses the plain one.
                     key={`${keys[index] ?? ''}:title`}
                     className={cn(
-                        'grid items-baseline gap-[0.6em]',
-                        align === 'center'
-                            ? 'grid-cols-[auto_minmax(0,1fr)_auto]'
-                            : 'grid-cols-[minmax(0,1fr)_auto]',
+                        'grid items-baseline',
+                        // No label, no room kept: the title gets the whole width.
+                        !cornerText
+                            ? 'grid-cols-[minmax(0,1fr)]'
+                            : align === 'center'
+                              ? 'grid-cols-[auto_minmax(0,1fr)_auto] gap-[0.6em]'
+                              : 'grid-cols-[minmax(0,1fr)_auto] gap-[0.6em]',
                         motion,
                     )}
                     style={motionStyle}
                 >
-                    {align === 'center' && (
+                    {cornerText && align === 'center' && (
                         <span
                             aria-hidden="true"
                             className={cn(cornerClass, 'invisible')}
@@ -616,13 +619,15 @@ export function WidgetTile({
                     >
                         {title}
                     </span>
-                    <span
-                        aria-hidden="true"
-                        className={cn(cornerClass, 'invisible')}
-                        style={cornerStyle}
-                    >
-                        {cornerText}
-                    </span>
+                    {cornerText && (
+                        <span
+                            aria-hidden="true"
+                            className={cn(cornerClass, 'invisible')}
+                            style={cornerStyle}
+                        >
+                            {cornerText}
+                        </span>
+                    )}
                 </div>
             )}
             <div
