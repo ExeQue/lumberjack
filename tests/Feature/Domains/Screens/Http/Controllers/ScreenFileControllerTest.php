@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use App\Domains\Health\Models\HealthCheck;
+use App\Domains\Screens\Actions\CopyScreenToTeamAction;
 use App\Domains\Screens\Actions\ExportScreenAction;
 use App\Domains\Screens\Actions\ImportScreenAction;
 use App\Domains\Screens\Data\ScreenImport;
 use App\Domains\Screens\Http\Controllers\ScreenFileController;
+use App\Domains\Screens\Http\Requests\CopyScreenRequest;
 use App\Domains\Screens\Http\Requests\ImportScreenRequest;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Policies\ScreenPolicy;
@@ -21,6 +23,8 @@ covers(
     ExportScreenAction::class,
     ImportScreenAction::class,
     ImportScreenRequest::class,
+    CopyScreenToTeamAction::class,
+    CopyScreenRequest::class,
     ScreenImport::class,
     ScreenFile::class,
     ScreenPolicy::class,
@@ -196,5 +200,46 @@ describe('importing a screen', function () {
 
     it('asks for a file', function () {
         $this->actingAs($this->other)->post(route('screens.import'), [])->assertSessionHasErrors(['file' => 'Pick a file or paste its JSON.']);
+    });
+});
+
+describe('copying a screen to another team', function () {
+    beforeEach(function () {
+        $this->otherProject->team->members()->attach($this->user, ['role' => TeamRole::Member->value]);
+        $this->copy = fn (string $team) => $this->actingAs($this->user)->from(route('screens.index'))
+            ->post(route('screens.copy', $this->screen), ['team' => $team]);
+    });
+
+    it('makes the screen there, its references found by slug', function () {
+        ($this->copy)($this->otherProject->team->uuid)
+            ->assertRedirect(route('screens.index'))
+            ->assertSessionHas('status', "Ops wall copied to {$this->otherProject->team->name}.");
+
+        $copy = $this->otherProject->team->screens()->sole();
+
+        expect($copy->name)->toBe('Ops wall')
+            ->and($copy->scope['projects'])->toBe([$this->otherProject->uuid])
+            ->and($copy->widgets[3]['options']['checks'])->toBe([$this->otherCheck->uuid, $this->otherWebsite->uuid])
+            ->and($this->project->team->screens()->count())->toBe(1);
+    });
+
+    it('names what the other team has no match for', function () {
+        $this->otherCheck->delete();
+
+        ($this->copy)($this->otherProject->team->uuid)
+            ->assertSessionHas('status', "Ops wall copied to {$this->otherProject->team->name}. Not found in this team, so left out: check shop: database:pgsql.");
+    });
+
+    it('is only for teams the user is in', function () {
+        $foreign = Screen::factory()->create()->team;
+
+        ($this->copy)($foreign->uuid)->assertForbidden();
+        ($this->copy)('00000000-0000-0000-0000-000000000000')->assertForbidden();
+
+        expect($foreign->screens()->count())->toBe(1);
+    });
+
+    it('is only for screens the user can see', function () {
+        $this->actingAs($this->other)->post(route('screens.copy', $this->screen), ['team' => $this->otherProject->team->uuid])->assertForbidden();
     });
 });

@@ -47,6 +47,19 @@ return [
         // Downloads the screen as a JSON file.
         'export' => 'Export',
         'export_hint' => 'Download this screen as a JSON file to import in another team or Lumberjack.',
+        // Opens the menu with export, copy to team and save as template.
+        'more' => 'More',
+    ],
+
+    // Copying a screen to another team of the user's.
+    'copy' => [
+        // Menu item.
+        'button' => 'Copy to team...',
+        'title' => 'Copy :name to another team',
+        'hint' => 'A new screen in that team, like this one. Projects and health checks are found there by their slugs; any it does not have are left out and named.',
+        'team' => 'Team',
+        // Button.
+        'submit' => 'Copy screen',
     ],
 
     // Importing a screen from an exported JSON file.
