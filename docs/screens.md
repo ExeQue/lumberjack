@@ -27,9 +27,9 @@ deleted screen says so instead of going on with old numbers.
 
 ### Export and import
 
-**Export**, on each row and in the designer's top bar, downloads the screen as a JSON
-file named after it, such as `ops-wall.lumberjack-screen.json`, to keep in a repository
-or bring to another team or another Lumberjack:
+**Export**, under **More** on each row and in the designer's top bar, downloads the
+screen as a JSON file named after it, such as `ops-wall.lumberjack-screen.json`, to keep
+in a repository or bring to another team or another Lumberjack:
 
 ```json
 {
@@ -72,6 +72,10 @@ projects or checks that remain, or all of them when none does. A file of another
 or version, or with widgets the designer would not save (an unknown source, cells used
 twice, a grid past 12 x 12), is refused with the reason. Every member can export and
 import, as every member can make screens.
+
+**More > Copy to team...** does both in one step for another team you are in: pick the
+team and the screen is made there as an import would make it, with the same notice of
+what that team has no match for. The screen stays as it is in this team.
 
 ## The designer
 

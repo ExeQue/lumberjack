@@ -170,6 +170,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('screens/import', [ScreenFileController::class, 'import'])->middleware('throttle:20,1')->name('screens.import');
     Route::post('screens/import/preview', [ScreenFileController::class, 'preview'])->middleware('throttle:60,1')->name('screens.import.preview');
     Route::get('screens/{screen:uuid}/export', [ScreenFileController::class, 'export'])->name('screens.export');
+    Route::post('screens/{screen:uuid}/copy', [ScreenFileController::class, 'copy'])->middleware('throttle:20,1')->name('screens.copy');
     Route::get('screens/{screen:uuid}', [ScreenController::class, 'show'])->name('screens.show');
     Route::get('screens/{screen:uuid}/edit', [ScreenController::class, 'edit'])->name('screens.edit');
     Route::get('screens/{screen:uuid}/data', [ScreenController::class, 'data'])->middleware('throttle:120,1')->name('screens.data');

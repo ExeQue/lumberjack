@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Http\Controllers;
 
+use App\Domains\Screens\Actions\CopyScreenToTeamAction;
 use App\Domains\Screens\Actions\ExportScreenAction;
 use App\Domains\Screens\Actions\ImportScreenAction;
+use App\Domains\Screens\Http\Requests\CopyScreenRequest;
 use App\Domains\Screens\Http\Requests\ImportScreenRequest;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Support\ScreenFile;
+use App\Domains\Teams\Models\Team;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
@@ -40,5 +43,15 @@ class ScreenFileController
 
         return redirect()->route('screens.edit', $import->screen)
             ->with('status', trim(__('screens.imported').' '.$import->droppedNotice()));
+    }
+
+    /** Copy to another team of the user's: the export imported there, in one step. */
+    public function copy(CopyScreenRequest $request, Screen $screen, CopyScreenToTeamAction $action): RedirectResponse
+    {
+        /** @var Team $team authorized */
+        $team = $request->team();
+        $import = $action->execute($screen, $team);
+
+        return back()->with('status', trim(__('screens.copied', ['name' => $screen->name, 'team' => $team->name]).' '.$import->droppedNotice()));
     }
 }

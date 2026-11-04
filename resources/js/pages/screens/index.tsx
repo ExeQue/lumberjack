@@ -11,6 +11,7 @@ import {
     Field,
     Input,
     LinkButton,
+    Select,
     PageTitle,
     tableClass,
     tdClass,
@@ -24,12 +25,19 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { xsrf } from '@/lib/http';
 import { useT } from '@/lib/i18n';
 import { useTeamLive } from '@/lib/use-live';
 import {
     destroy,
+    copy,
     duplicate,
     edit,
     exportMethod,
@@ -313,13 +321,18 @@ export default function Screens({
     templates: Template[];
 }) {
     const t = useT();
-    const { team } = usePage<{ team: TeamShared }>().props;
+    const { team, teams } = usePage<{
+        team: TeamShared;
+        teams: { uuid: string; name: string }[];
+    }>().props;
+    const otherTeams = teams.filter((item) => item.uuid !== team.uuid);
     // Another member adds, renames or edits a screen: the list follows.
     useTeamLive(['screens.changed'], ['screens']);
     const [creating, setCreating] = useState(false);
     const [template, setTemplate] = useState('overview');
     const [renaming, setRenaming] = useState<Row | null>(null);
     const [importing, setImporting] = useState(false);
+    const [copying, setCopying] = useState<Row | null>(null);
 
     return (
         <>
@@ -460,22 +473,50 @@ export default function Screens({
                                                             'screens.actions.duplicate',
                                                         )}
                                                     </Button>
-                                                    <a
-                                                        href={
-                                                            exportMethod(
-                                                                screen.uuid,
-                                                            ).url
-                                                        }
-                                                        download
-                                                        title={t(
-                                                            'screens.actions.export_hint',
-                                                        )}
-                                                        className={buttonClass()}
-                                                    >
-                                                        {t(
-                                                            'screens.actions.export',
-                                                        )}
-                                                    </a>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            className={buttonClass()}
+                                                        >
+                                                            {t(
+                                                                'screens.actions.more',
+                                                            )}
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                asChild
+                                                            >
+                                                                <a
+                                                                    href={
+                                                                        exportMethod(
+                                                                            screen.uuid,
+                                                                        ).url
+                                                                    }
+                                                                    download
+                                                                    title={t(
+                                                                        'screens.actions.export_hint',
+                                                                    )}
+                                                                >
+                                                                    {t(
+                                                                        'screens.actions.export',
+                                                                    )}
+                                                                </a>
+                                                            </DropdownMenuItem>
+                                                            {otherTeams.length >
+                                                                0 && (
+                                                                <DropdownMenuItem
+                                                                    onSelect={() =>
+                                                                        setCopying(
+                                                                            screen,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    {t(
+                                                                        'screens.copy.button',
+                                                                    )}
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                     <ConfirmButton
                                                         question={t(
                                                             'screens.actions.delete_question',
@@ -508,6 +549,72 @@ export default function Screens({
                     )}
                 </Card>
             </PageBody>
+
+            <Dialog
+                open={copying !== null}
+                onOpenChange={(open) => !open && setCopying(null)}
+            >
+                <DialogContent>
+                    {copying && (
+                        <Form
+                            {...copy.form(copying.uuid)}
+                            onSuccess={() => setCopying(null)}
+                            options={{ preserveScroll: true }}
+                            className="flex flex-col gap-4"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            {t('screens.copy.title', {
+                                                name: copying.name,
+                                            })}
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            {t('screens.copy.hint')}
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <Field
+                                        label={t('screens.copy.team')}
+                                        htmlFor="copy-team"
+                                        error={errors.team}
+                                    >
+                                        <Select
+                                            id="copy-team"
+                                            name="team"
+                                            required
+                                            defaultValue={otherTeams[0]?.uuid}
+                                        >
+                                            {otherTeams.map((item) => (
+                                                <option
+                                                    key={item.uuid}
+                                                    value={item.uuid}
+                                                >
+                                                    {item.name}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </Field>
+                                    <DialogFooter>
+                                        <Button
+                                            onClick={() => setCopying(null)}
+                                        >
+                                            {t('common.cancel')}
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            variant="primary"
+                                            disabled={processing}
+                                        >
+                                            {t('screens.copy.submit')}
+                                        </Button>
+                                    </DialogFooter>
+                                </>
+                            )}
+                        </Form>
+                    )}
+                </DialogContent>
+            </Dialog>
 
             <ImportDialog
                 open={importing}

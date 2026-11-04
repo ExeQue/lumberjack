@@ -7,6 +7,7 @@ return [
     'duplicated' => 'Screen duplicated.',
     'deleted' => 'Screen deleted.',
     'imported' => 'Screen imported.',
+    'copied' => ':name copied to :team.',
 
     // Why a TV's code could not be confirmed.
     'pairing' => [
