@@ -124,11 +124,13 @@ export function useNavigation(
                   count: counts?.health,
               }),
               item(t('common.nav.releases'), releasesIndex(project.uuid).url),
-              // The gear: the settings (with the data sources listed in their menu) for
+              // Last in the list: the settings (with the data sources in their menu) for
               // whoever administers the project, else the data sources, read only.
               {
                   ...item(
-                      t('common.nav.project_settings'),
+                      project.can_administer
+                          ? t('common.nav.settings')
+                          : t('common.nav.data_sources'),
                       project.can_administer
                           ? projectSettings(project.uuid).url
                           : dataSourcesIndex(project.uuid).url,
@@ -136,14 +138,17 @@ export function useNavigation(
                   active:
                       isAt(projectSettings(project.uuid).url) ||
                       isAt(dataSourcesIndex(project.uuid).url),
-                  hidden: true,
               },
-              // Not in the sidebar's list, but in the command palette.
-              item(
-                  t('common.nav.data_sources'),
-                  dataSourcesIndex(project.uuid).url,
-                  { hidden: true },
-              ),
+              // For admins, behind Settings: not in the sidebar's list, but in the palette.
+              ...(project.can_administer
+                  ? [
+                        item(
+                            t('common.nav.data_sources'),
+                            dataSourcesIndex(project.uuid).url,
+                            { hidden: true },
+                        ),
+                    ]
+                  : []),
           ]
         : [];
 
