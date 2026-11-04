@@ -213,11 +213,12 @@ const BIG_HEIGHT: Record<string, number> = {
 };
 
 /** Title size relative to the tile's text. */
+/** Title size, of the cell's own text: the widget's text size leaves the title alone. */
 const TITLE_SIZE: Record<string, string> = {
-    s: '0.85em',
-    m: '1em',
-    l: '1.3em',
-    xl: '1.7em',
+    s: 'calc(var(--lj-cell-font) * 0.85)',
+    m: 'var(--lj-cell-font)',
+    l: 'calc(var(--lj-cell-font) * 1.3)',
+    xl: 'calc(var(--lj-cell-font) * 1.7)',
 };
 
 const TEXT_SCALE: Record<string, number> = {
