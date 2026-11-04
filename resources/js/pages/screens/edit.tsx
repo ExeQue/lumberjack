@@ -104,7 +104,8 @@ type Props = {
     }[];
 };
 
-const SAVE_DELAY_MS = 300;
+// Long enough to finish a word or a nudge before it saves; leaving the page saves at once.
+const SAVE_DELAY_MS = 1000;
 const VIEWERS_EVERY_MS = 15_000;
 const COLS = [2, 3, 4, 5, 6, 8, 10, 12];
 const PERIODS = ['1h', '24h', '7d', '30d'];
