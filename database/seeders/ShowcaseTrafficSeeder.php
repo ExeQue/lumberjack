@@ -262,7 +262,8 @@ class ShowcaseTrafficSeeder extends Seeder
             'ttfb_us' => Showcase::latency(180, 0.4),
             'fcp_us' => Showcase::latency($lcp * 0.6, 0.4),
             'cls' => round(($route === '/products/{slug}' ? 0.11 : 0.02) * exp(0.6 * Showcase::gauss()), 3),
-            'occurred_at' => Showcase::ms($at->addSeconds(2)),
+            // Measured when the page is left, a moment later; never after now.
+            'occurred_at' => Showcase::ms($at->addSeconds(2)->min(now())),
         ]);
     }
 
