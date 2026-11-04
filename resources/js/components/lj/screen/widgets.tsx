@@ -194,6 +194,24 @@ const BIG_SIZE: Record<string, string> = {
     xl: 'min(56cqh, 24cqw)',
 };
 
+/**
+ * A big value as large as the tile's height allows (heightPct of it), and only as narrow
+ * as its own characters need: "2" fills a 1 x 1 tile like a gauge's value does, a long
+ * figure shrinks to fit. A mono digit is about 0.62em wide; 90% of the width is used.
+ */
+function autoSize(chars: number, heightPct: number): string {
+    return `min(${heightPct}cqh, ${(90 / (Math.max(1, chars) * 0.62)).toFixed(1)}cqw)`;
+}
+
+/** A stat's value height per text size, in % of the tile; the width follows its length. */
+const BIG_HEIGHT: Record<string, number> = {
+    auto: 40,
+    s: 22,
+    m: 30,
+    l: 42,
+    xl: 56,
+};
+
 /** Title size relative to the tile's text. */
 const TITLE_SIZE: Record<string, string> = {
     s: '0.85em',
@@ -767,6 +785,8 @@ function Stat({
         String(data.unit),
         opt<string>('decimals') ?? 'auto',
     );
+    const shown =
+        (opt<string>('prefix') ?? '') + value + (opt<string>('suffix') ?? '');
 
     return (
         <>
@@ -774,15 +794,18 @@ function Stat({
                 className="lj-tile-big"
                 style={{
                     fontSize:
-                        textSize === 'auto' && extra
-                            ? 'min(36cqh, 16cqw)'
+                        BIG_HEIGHT[textSize] !== undefined
+                            ? autoSize(
+                                  shown.length,
+                                  textSize === 'auto' && extra
+                                      ? 36
+                                      : BIG_HEIGHT[textSize],
+                              )
                             : BIG_SIZE[textSize],
                     color: valueColor(data.state, colored),
                 }}
             >
-                {(opt<string>('prefix') ?? '') +
-                    value +
-                    (opt<string>('suffix') ?? '')}
+                {shown}
             </span>
             {compare !== 'none' && change !== null && (
                 <span
