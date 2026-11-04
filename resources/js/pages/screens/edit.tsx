@@ -1285,7 +1285,7 @@ export default function EditScreen(props: Props) {
             <div className="flex min-h-0 flex-1 flex-wrap lg:flex-nowrap">
                 <aside
                     aria-label={t('screens.palette.title')}
-                    className="flex w-full flex-col gap-2 border-line p-5 lg:w-[240px] lg:flex-none lg:border-r"
+                    className="flex w-full flex-col gap-2 border-line p-5 lg:sticky lg:top-0 lg:h-screen lg:w-[240px] lg:flex-none lg:[scrollbar-gutter:stable] lg:self-start lg:overflow-y-auto lg:border-r"
                 >
                     <h2 className="text-[11px] font-semibold tracking-wide text-ink-3 uppercase">
                         {t('screens.palette.title')}
@@ -1759,7 +1759,7 @@ export default function EditScreen(props: Props) {
 
                 <aside
                     aria-label={t('screens.inspector.label')}
-                    className="flex w-full flex-col gap-4 border-line bg-panel p-5 lg:w-[340px] lg:flex-none lg:border-l"
+                    className="flex w-full flex-col gap-4 border-line bg-panel p-5 lg:sticky lg:top-0 lg:h-screen lg:w-[340px] lg:flex-none lg:[scrollbar-gutter:stable] lg:self-start lg:overflow-y-auto lg:border-l"
                 >
                     {current ? (
                         <WidgetInspector
