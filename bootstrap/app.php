@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Administration\Http\Middleware\RedirectToOnboarding;
 use App\Domains\Administration\Http\Middleware\RedirectToSetup;
 use App\Domains\Administration\Http\Middleware\RequirePasswordChange;
 use App\Domains\Administration\Http\Middleware\SignOutSuspendedUsers;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             RedirectToSetup::class,
             SignOutSuspendedUsers::class,
             RequirePasswordChange::class,
+            RedirectToOnboarding::class,
             UseTabTeam::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,

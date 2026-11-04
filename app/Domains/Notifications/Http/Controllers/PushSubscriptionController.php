@@ -29,7 +29,7 @@ class PushSubscriptionController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('account.push_enabled')]);
 
-        return to_route('notifications.edit');
+        return back(fallback: route('notifications.edit'));
     }
 
     /**
@@ -43,6 +43,6 @@ class PushSubscriptionController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('account.push_removed')]);
 
-        return to_route('notifications.edit');
+        return back(fallback: route('notifications.edit'));
     }
 }

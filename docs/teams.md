@@ -42,6 +42,25 @@ An invitation link opens a page to join the team:
 
 An expired or revoked link says **Invitation expired**; ask for a new one.
 
+## First login
+
+The first time you sign in (after a required password change and a confirmed email
+address), Lumberjack opens a short onboarding of three steps, each with **Skip**:
+
+1. **Welcome:** your teams with their projects, and where things are: the sidebar, the
+   command palette (Ctrl+K, or Cmd+K on a Mac) and the notification bell at the top of
+   the sidebar. Without a team it says how to create one or be invited.
+2. **Notifications:** pick **Quiet** (what concerns you, in app only), **Balanced** (the
+   defaults below) or **Everything** (every kind in app and in the browser, mail as
+   Balanced), change any cell, then **Next** saves it as your
+   [notification settings](#notifications).
+3. **Browser on this device:** **Enable on this device** turns on
+   [browser notifications](#browser-notifications) here; **Not now** skips it.
+
+**Done** or **Skip** ends it for good and continues to the page you were going to, or
+the projects. **Show onboarding again** at the bottom of Notifications in your account
+settings opens it again. Users who existed before it was added do not see it.
+
 ## Your account
 
 **Profile and security** under your name at the bottom of the sidebar.
@@ -97,7 +116,9 @@ set up under the team's [alerts](./alerts).
 | Agents          | An agent has sent no heartbeat for 5 minutes; once, until it is back. Several at once are one notification per project                                                               | off  | on     | off     |
 | Releases        | A project's server reports a release for the first time (the first release a project ever reports is not news)                                                                       | off  | on     | off     |
 
-The columns show the defaults, used until you save your own choice. Mail about issues
+The columns show the defaults, used until you save your own choice. The presets above
+the table, **Quiet**, **Balanced** and **Everything**, fill it in one click, as in the
+[first login](#first-login). Mail about issues
 you watch is the grouped mail described under [watching](./issues#watching). A
 project mail is short: what happened, and a button to the page. If your address is also
 a team mail channel, you get both.

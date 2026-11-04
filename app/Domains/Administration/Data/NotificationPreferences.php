@@ -58,6 +58,26 @@ final readonly class NotificationPreferences implements JsonSerializable
     }
 
     /**
+     * The starting points offered at first login and in the settings: Quiet (what concerns
+     * you, in app only), Balanced (the defaults) and Everything (every kind in app and in
+     * the browser, mail as Balanced).
+     *
+     * @return array{quiet: array<string, array<string, bool>>, balanced: array<string, array<string, bool>>, everything: array<string, array<string, bool>>}
+     */
+    public static function presets(): array
+    {
+        $quiet = [];
+        $everything = [];
+
+        foreach (self::DEFAULTS as $kind => $vias) {
+            $quiet[$kind] = ['mail' => false, 'toast' => in_array($kind, self::PERSONAL, true), 'push' => false];
+            $everything[$kind] = ['mail' => $vias['mail'], 'toast' => true, 'push' => true];
+        }
+
+        return ['quiet' => $quiet, 'balanced' => self::DEFAULTS, 'everything' => $everything];
+    }
+
+    /**
      * Tolerant of what older versions stored: a kind or channel missing takes its default,
      * one no longer known is dropped.
      *
