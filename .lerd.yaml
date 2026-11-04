@@ -3,7 +3,6 @@ domains:
 secured: true
 services:
   - mailpit
-  - mysql
   - postgres
   - redis
 workers:
