@@ -10,6 +10,7 @@ use App\Domains\Retention\Enums\RetentionCategory;
 use App\Domains\Retention\Enums\RetentionLevel;
 use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Teams\Models\Team;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * The rows of a retention table at one level: what is stored there, what it would inherit, and what applies.
@@ -21,11 +22,12 @@ class RetentionPresenter
     }
 
     /**
+     * @param  Collection<int, RetentionPolicy>|null  $policies  the scope's policies when the caller has them already
      * @return list<array<string, mixed>>
      */
-    public function rows(Team|Project|null $scope = null): array
+    public function rows(Team|Project|null $scope = null, ?Collection $policies = null): array
     {
-        $policies = $this->resolve->policiesFor($scope);
+        $policies ??= $this->resolve->policiesFor($scope);
         $parent = $scope instanceof Project ? $scope->team : null;
         $categories = $scope === null ? RetentionCategory::cases() : RetentionCategory::forTeams();
 
