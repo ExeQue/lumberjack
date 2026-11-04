@@ -759,7 +759,9 @@ function Stat({
     const change = data.change as number | null;
     const spark = (data.sparkline as { v: number | null }[] | null) ?? null;
     const extra =
-        (compare !== 'none' && change !== null) || !!spark || !!release;
+        (compare !== 'none' && change !== null) ||
+        (spark?.length ?? 0) > 0 ||
+        !!release;
     const value = formatValue(
         data.value,
         String(data.unit),
@@ -830,14 +832,11 @@ function Stat({
                     )}
                 </span>
             )}
-            {/* Too few points to draw yet: keep the line's room, so the value sits
-                where it does on every stat. */}
-            {spark && spark.length <= 1 && (
-                <span aria-hidden="true" className="min-h-[10px] flex-1" />
-            )}
-            {spark && spark.length > 1 && (
+            {/* One point so far (a new source, a fresh period): a flat line at it, so the
+                tile looks like every stat. No points: no line and no room kept. */}
+            {spark && spark.length > 0 && (
                 <Spark
-                    points={spark}
+                    points={spark.length === 1 ? [spark[0], spark[0]] : spark}
                     color={
                         colored &&
                         (data.state === 'red' || data.state === 'amber')
