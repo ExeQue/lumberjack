@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { translate, useT } from '@/lib/i18n';
+import { t, useT } from '@/lib/i18n';
 import { accept } from '@/routes/invitations';
 import { login, logout } from '@/routes';
 
@@ -141,12 +141,7 @@ export default function InvitationShow({ token, invitation }: Props) {
 
 // The title and line under it, worked out from the page's props: dynamic layout props would
 // outlive this page (they survive a sign-out from here onto the login page).
-InvitationShow.layout = (
-    props: Props & { translations: Parameters<typeof translate>[0] },
-) => {
-    const t = (key: string, replace?: Record<string, string>) =>
-        translate(props.translations, key, replace);
-
+InvitationShow.layout = (props: Props) => {
     return props.invitation === null
         ? {
               title: t('invitation.expired_title'),

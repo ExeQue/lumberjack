@@ -38,6 +38,9 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 
+        {{-- The UI strings, fetched while the scripts load; cached for good (versioned address). --}}
+        <link rel="preload" href="{{ \App\Domains\Shared\Support\Translations::url(app()->getLocale()) }}" as="fetch" crossorigin>
+
         <meta name="lumberjack-reverb" content="{{ json_encode(config('reverb.client')) }}">
 
         @viteReactRefresh
