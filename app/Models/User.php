@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Domains\Administration\Casts\NotificationPreferencesCast;
 use App\Domains\Administration\Data\NotificationPreferences;
 use App\Domains\Administration\Eloquent\Builders\UserBuilder;
+use App\Domains\Screens\Support\ScreenQr;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Domains\Teams\Models\Membership;
 use App\Domains\Teams\Models\Team;
@@ -148,5 +149,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function canAdministerTeam(Team $team): bool
     {
         return $this->roleIn($team)?->canAdminister() ?? false;
+    }
+
+    /** The setup code for an authenticator app, in Lumberjack's own QR style. */
+    public function twoFactorQrCodeSvg(): string
+    {
+        return ScreenQr::textSvg($this->twoFactorQrCodeUrl());
     }
 }
