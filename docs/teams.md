@@ -63,7 +63,7 @@ settings opens it again. Users who existed before it was added do not see it.
 
 ## Your account
 
-**Profile and security** under your name at the bottom of the sidebar.
+**Profile and settings** under your name at the bottom of the sidebar.
 
 - **Profile:** your name and email (a new email has to be confirmed again).
 - **Notifications:** what you hear about and how, and the browsers you get

@@ -52,7 +52,7 @@ return [
     'switch_team' => 'Switch team',
     'switch_project' => 'Switch project',
     'choose_project' => 'Choose project',
-    'profile' => 'Profile and security',
+    'profile' => 'Profile and settings',
     'log_out' => 'Log out',
     'statuses' => [
         'two-factor-authentication-enabled' => 'Scan the code with your authenticator app, then enter a code from it to finish.',
