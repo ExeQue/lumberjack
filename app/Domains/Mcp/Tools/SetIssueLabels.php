@@ -44,7 +44,7 @@ class SetIssueLabels extends Tool
         }
 
         $request->validate(['labels' => ['present', 'array', 'max:'.Label::MAX_PER_ISSUE], 'labels.*' => ['string', 'max:'.Label::MAX_NAME]]);
-        $issue = $this->issue($request);
+        $issue = $this->issue($request, 'update');
 
         if ($issue instanceof Response) {
             return $issue;

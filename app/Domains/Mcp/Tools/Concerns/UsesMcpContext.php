@@ -30,7 +30,11 @@ trait UsesMcpContext
         return $project ?? Response::error('Unknown project. Pass "project" with one of: '.$this->context()->projects()->pluck('slug')->implode(', '));
     }
 
-    protected function issue(Request $request): Issue|Response
+    /**
+     * The issue the request names, within the token's projects, if the token may do
+     * $ability on it ("view" to read or watch, "update" to change it).
+     */
+    protected function issue(Request $request, string $ability = 'view'): Issue|Response
     {
         $given = trim((string) $request->get('issue'));
         $projects = $this->context()->projects();
@@ -47,7 +51,13 @@ trait UsesMcpContext
             ->with(['project', 'assignee'])
             ->first();
 
-        return $issue ?? Response::error('Unknown issue for this token; give its id or its number, e.g. DEMO-42.');
+        if ($issue === null) {
+            return Response::error('Unknown issue for this token; give its id or its number, e.g. DEMO-42.');
+        }
+
+        return $this->context()->token()->allows($ability, $issue)
+            ? $issue
+            : Response::error('The token\'s owner may not '.($ability === 'view' ? 'see' : 'change').' this issue.');
     }
 
     protected function denyUnlessWrite(): ?Response

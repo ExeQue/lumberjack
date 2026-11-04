@@ -11,7 +11,8 @@ Two ways in, both read only:
 
 - **A team token**, as a bearer token: `Authorization: Bearer lj_mcp_...`. These are the
   tokens under **API and MCP tokens** on the team page (see [MCP](./mcp#tokens)); a
-  token of either scope reads the projects it lists, and nothing of any other project.
+  token of either scope reads the projects it lists that its creator may see (and that
+  are still in its team), and nothing of any other project.
   Its expiry, revocation and "last used" work as for MCP.
 - **Public stats**, without a header. In a project's **Settings, Keys**, an owner or
   admin turns on **Public stats**. That creates an unguessable URL,

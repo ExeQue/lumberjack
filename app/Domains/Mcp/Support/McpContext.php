@@ -22,7 +22,7 @@ class McpContext
     public function authenticate(McpToken $token): void
     {
         $this->token = $token;
-        $this->projects = $token->projects()->with('team')->get();
+        $this->projects = $token->readableProjects();
     }
 
     public function token(): McpToken

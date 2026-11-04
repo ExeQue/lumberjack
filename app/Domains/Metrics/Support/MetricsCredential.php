@@ -27,8 +27,7 @@ class MetricsCredential
 
     public function authenticateToken(McpToken $token): void
     {
-        // A project moved to another team is no longer the token's to read.
-        $this->projects = $token->projects()->where('projects.team_id', $token->team_id)->orderBy('projects.name')->get();
+        $this->projects = $token->readableProjects();
     }
 
     public function authenticatePublic(Project $project): void

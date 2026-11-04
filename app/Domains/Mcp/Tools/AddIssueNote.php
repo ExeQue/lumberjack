@@ -41,7 +41,7 @@ class AddIssueNote extends Tool
         }
 
         $request->validate(['body' => ['required', 'string', 'max:20000']]);
-        $issue = $this->issue($request);
+        $issue = $this->issue($request, 'update');
 
         if ($issue instanceof Response) {
             return $issue;
