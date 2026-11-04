@@ -6,9 +6,11 @@ owners and admins can change its settings.
 ## The projects list
 
 **Projects** in the sidebar shows every project of the team with its open issues, errors, p95
-and job failures of the last 24 hours, its errors per hour, and a status: **3 open** or **Calm**. **Agent offline** and **Not seen** warn when the project's
-[agents](#agents) stopped checking in, naming each agent with its host ("queue on
-web-2", or "unnamed agent on web-2"). **Search projects** filters the list.
+and failed jobs of the last 24 hours and its errors per hour. **Calm** marks a project
+with no open issues and every agent checking in. **2 agents offline** and **Not seen**
+under the chart warn when the project's [agents](#agents) stopped checking in: by host
+when they share a name ("api-1, api-2"), else by agent and host ("queue on web-2", or
+"unnamed agent on web-2"); the whole list shows on hover. **Search projects** filters the list.
 
 ## Live updates
 

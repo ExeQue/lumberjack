@@ -52,6 +52,15 @@ describe('the projects page', function () {
             ->assertInertia(fn (Assert $page) => $page->where('projects.0.offline_agents', ['unnamed agent on web-1', 'worker on web-2']));
     });
 
+    it('names offline agents by host alone when they share one name', function () {
+        ['user' => $user, 'project' => $project] = $this->memberWithProject();
+        ProjectAgent::factory()->for($project)->offline()->create(['host' => 'api-1', 'name' => 'lumberjack-agent']);
+        ProjectAgent::factory()->for($project)->offline()->create(['host' => 'api-2', 'name' => 'lumberjack-agent']);
+
+        $this->actingAs($user)->get(route('projects.index'))
+            ->assertInertia(fn (Assert $page) => $page->where('projects.0.offline_agents', ['api-1', 'api-2']));
+    });
+
     it('shows each project\'s day in a few grouped queries', function () {
         ['user' => $user, 'project' => $project] = $this->memberWithProject();
         $project->forceFill(['name' => 'Aa shop'])->save();
