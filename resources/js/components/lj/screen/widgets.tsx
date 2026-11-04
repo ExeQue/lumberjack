@@ -286,32 +286,32 @@ function timeOf(iso: string, withDate: boolean): string {
 
 /** The size of an element, kept current. */
 function useSize<T extends HTMLElement>(): [
-    RefObject<T | null>,
+    (el: T | null) => void,
     { w: number; h: number; em: number },
 ] {
-    const ref = useRef<T | null>(null);
+    // A callback ref: the element can change (another view of the widget), and each one
+    // is measured from the start and on every resize.
+    const [el, setEl] = useState<T | null>(null);
     const [size, setSize] = useState({ w: 0, h: 0, em: 14 });
 
     useEffect(() => {
-        const el = ref.current;
-
         if (!el) {
             return;
         }
 
-        const observer = new ResizeObserver(() =>
+        const measure = () =>
             setSize({
                 w: el.clientWidth,
                 h: el.clientHeight,
                 em: parseFloat(getComputedStyle(el).fontSize) || 14,
-            }),
-        );
+            });
+        const observer = new ResizeObserver(measure);
         observer.observe(el);
 
         return () => observer.disconnect();
-    }, []);
+    }, [el]);
 
-    return [ref, size];
+    return [setEl, size];
 }
 
 /** How far the corner label and the gear sit from the tile's top and right edges. */
