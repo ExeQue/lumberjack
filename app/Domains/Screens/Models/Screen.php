@@ -36,10 +36,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property ScreenOrientation $orientation
  * @property ScreenFit $fit
  * @property bool $show_header whether the TV shows the name, scope, live state and clock above the grid
+ * @property bool $show_clock whether that header shows the clock
  * @property ScreenTheme $theme
  * @property string $light_from HH:MM
  * @property string $light_to HH:MM
- * @property string $timezone
+ * @property string|null $timezone null: the viewer's own (the browser's) time zone
  * @property array{projects?: list<string>, environment?: string|null, period?: string} $scope
  * @property list<array<string, mixed>> $widgets
  * @property string|null $share_key encrypted at rest; found by share_key_hash
@@ -48,7 +49,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets', 'share_key', 'share_key_hash', 'share_titles'])]
+#[Fillable(['team_id', 'name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets', 'share_key', 'share_key_hash', 'share_titles'])]
 #[Hidden(['share_key', 'share_key_hash'])]
 #[UseEloquentBuilder(ScreenBuilder::class)]
 #[UseFactory(ScreenFactory::class)]
@@ -93,6 +94,7 @@ class Screen extends Model
             'orientation' => ScreenOrientation::class,
             'fit' => ScreenFit::class,
             'show_header' => 'boolean',
+            'show_clock' => 'boolean',
             'theme' => ScreenTheme::class,
             'cols' => 'integer',
             'rows' => 'integer',
@@ -125,7 +127,7 @@ class Screen extends Model
             return $this->theme;
         }
 
-        $local = ($datetime ?? now())->setTimezone($this->timezone);
+        $local = ($datetime ?? now())->setTimezone($this->timezone ?? config('app.timezone'));
         $minute = $local->hour * 60 + $local->minute;
         $from = self::minutes($this->light_from);
         $to = self::minutes($this->light_to);

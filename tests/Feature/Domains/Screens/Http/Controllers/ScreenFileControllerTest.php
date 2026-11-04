@@ -95,8 +95,8 @@ describe('importing a screen', function () {
 
         expect($copy->uuid)->not->toBe($original->uuid)
             ->and($copy->share_key)->toBeNull()
-            ->and($copy->only(['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'theme', 'light_from', 'light_to', 'timezone']))
-            ->toEqual($original->only(['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'theme', 'light_from', 'light_to', 'timezone']))
+            ->and($copy->only(['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'theme', 'light_from', 'light_to', 'timezone']))
+            ->toEqual($original->only(['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'theme', 'light_from', 'light_to', 'timezone']))
             ->and($copy->scope)->toBe(['projects' => [$this->otherProject->uuid], 'environment' => 'production', 'period' => '7d'])
             ->and($copy->widgets[3]['options']['checks'])->toBe([$this->otherCheck->uuid, $this->otherWebsite->uuid])
             ->and($copy->widgets[3]['rotate'][0]['scope']['projects'])->toBe([$this->otherProject->uuid])

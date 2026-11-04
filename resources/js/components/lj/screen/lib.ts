@@ -355,6 +355,10 @@ export function themeAt(
     let minute: number;
 
     try {
+        if (screen.timezone === null) {
+            throw new Error('the browser keeps the time');
+        }
+
         minute = minuteIn(screen.timezone, now);
     } catch {
         minute = new Date(now).getHours() * 60 + new Date(now).getMinutes();

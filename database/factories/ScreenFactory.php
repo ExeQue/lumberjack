@@ -30,6 +30,7 @@ class ScreenFactory extends Factory
             'orientation' => ScreenOrientation::Landscape,
             'fit' => ScreenFit::Keep,
             'show_header' => true,
+            'show_clock' => true,
             'theme' => ScreenTheme::Dark,
             'light_from' => '07:00',
             'light_to' => '19:00',

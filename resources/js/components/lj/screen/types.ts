@@ -63,10 +63,13 @@ export type Screen = {
     fit: 'keep' | 'fill';
     /** Whether the TV shows the name, scope, live state and clock above the grid. */
     show_header: boolean;
+    /** Whether that header shows the clock. */
+    show_clock: boolean;
     theme: ScreenTheme;
     light_from: string;
     light_to: string;
-    timezone: string;
+    /** Null: the viewer's own (the browser's) time zone. */
+    timezone: string | null;
     current_theme: 'dark' | 'light';
     scope: { projects: string[]; environment: string | null; period: string };
     widgets: Widget[];

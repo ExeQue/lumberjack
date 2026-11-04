@@ -177,8 +177,9 @@ it happens for real. **Live data** goes back to the real numbers.
 With no widget selected (click the grid's background, the toolbar's Screen settings button, or press Escape anywhere) the right side
 shows the screen's own settings: its name, the projects, environment and period every
 widget shows unless it picks its own (no project ticked means every project of the team,
-new ones included), the time zone for the clock and the theme schedule, whether the
-header shows, the [theme](#theme) and how the screen fits a display of another shape.
+new ones included), the time zone for the clock and the theme schedule (left empty, each TV
+uses its browser's own, so one screen shows local time in every office), whether the
+header shows and whether its clock does, the [theme](#theme) and how the screen fits a display of another shape.
 
 ## Widgets
 
@@ -191,7 +192,7 @@ A widget is a way of showing something; what it shows is picked under **Shows**.
 | Chart          | A series over the period: requests and errors, requests, requests per minute, error rate, p95, Apdex, users affected, queue size or wait, failed jobs, host CPU, memory or disk, LCP, database size or connections. It can split by route, queue, host, database check, environment, release or project.                 |
 | List           | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents.                                                                                                                                                                                                         |
 | Health         | The health checks of the projects: a count at 1 x 1, a list when narrow, small cards when two or more fit side by side. With exactly one check picked, that check alone with its uptime, timeline and last message, and for a database check its connections (amber at 80% of the maximum, red at 90%) and size.         |
-| Clock and text | The time (12 or 24 hour, any time zone, with seconds or the date), a note for the room, or both.                                                                                                                                                                                                                         |
+| Clock and text | The time (12 or 24 hour, its own time zone or the screen's, with seconds or the date), a note for the room, or both.                                                                                                                                                                                                     |
 
 A list of queues judges each queue like its [backlog alert](./alerts#queue-backlog): red
 past the project's thresholds (its own for that queue, or the rule's: 1,000 jobs or 10

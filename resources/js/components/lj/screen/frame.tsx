@@ -193,10 +193,10 @@ export function kioskSubtitle(
     ].join(' · ');
 }
 
-/** A time as the screen's clock shows it, in the screen's time zone. */
+/** A time as the screen's clock shows it, in the screen's time zone (else the browser's). */
 export function kioskClock(screen: Screen, at: number): string {
     return new Intl.DateTimeFormat(document.documentElement.lang || 'en', {
-        timeZone: screen.timezone,
+        timeZone: screen.timezone ?? undefined,
         hour: '2-digit',
         minute: '2-digit',
         hourCycle: 'h23',
@@ -272,7 +272,8 @@ export function KioskStatus({
     attention: number;
     /** "Offline since 12:03", or null while live. */
     offline: string | null;
-    clock: string;
+    /** Null: the screen hides its clock. */
+    clock: string | null;
 }) {
     const t = useT();
 
@@ -300,9 +301,11 @@ export function KioskStatus({
                     {offline}
                 </span>
             )}
-            <span className="font-mono text-[2.1cqw] font-semibold">
-                {clock}
-            </span>
+            {clock !== null && (
+                <span className="font-mono text-[2.1cqw] font-semibold">
+                    {clock}
+                </span>
+            )}
         </>
     );
 }
