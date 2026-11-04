@@ -44,6 +44,37 @@ return [
         'delete' => 'Delete',
         'delete_question' => 'Delete the screen :name? TVs showing it go blank.',
         'save' => 'Save',
+        // Downloads the screen as a JSON file.
+        'export' => 'Export',
+        'export_hint' => 'Download this screen as a JSON file to import in another team or Lumberjack.',
+    ],
+
+    // Importing a screen from an exported JSON file.
+    'import' => [
+        // Button.
+        'button' => 'Import',
+        'title' => 'Import a screen',
+        'hint' => 'Pick a file exported from Lumberjack, or paste its JSON. Projects and health checks are found by their slugs in this team.',
+        'file' => 'File',
+        'paste' => 'Or paste the JSON',
+        'reading' => 'Reading the file...',
+        'preview' => 'What gets imported',
+        'grid' => ':cols x :rows grid',
+        'widgets' => '{0} no widgets|{1} 1 widget|[2,*] :count widgets',
+        'all_found' => 'Every project and health check it names exists in this team.',
+        // Button.
+        'submit' => 'Import screen',
+        // What an import left out; :items lists them.
+        'dropped' => 'Not found in this team, so left out: :items.',
+        'dropped_project' => 'project :slug',
+        'dropped_check' => 'check :check',
+        'errors' => [
+            'format' => 'This is not a Lumberjack screen file.',
+            'version' => 'This screen file is from another version of Lumberjack; this one reads version :version.',
+            'json' => 'This is not valid JSON.',
+            'size' => 'The file is too large; a screen file is at most :max KB.',
+            'missing' => 'Pick a file or paste its JSON.',
+        ],
     ],
 
     'theme' => [
@@ -246,6 +277,7 @@ return [
         'split_by' => ['label' => 'Split by', 'options' => ['none' => 'Nothing', 'route' => 'Route', 'queue' => 'Queue', 'host' => 'Host', 'check' => 'Database check', 'environment' => 'Environment', 'release' => 'Release', 'project' => 'Project']],
         'top' => ['label' => 'Series', 'options' => ['5' => 'Top 5', '10' => 'Top 10', '20' => 'Top 20']],
         'overlay_previous' => ['label' => 'Overlay the previous period'],
+        'smooth' => ['label' => 'Smooth lines'],
         'limit_line' => ['label' => 'Draw the red limit'],
         'y_zero' => ['label' => 'Y axis starts at zero'],
         'legend' => ['label' => 'Legend'],

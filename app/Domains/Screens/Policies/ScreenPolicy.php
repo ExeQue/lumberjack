@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Screens\Policies;
 
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Teams\Models\Team;
 use App\Models\User;
 
 /**
@@ -14,6 +15,12 @@ use App\Models\User;
  */
 class ScreenPolicy
 {
+    /** A new screen in the team: made, imported, copied there or from a template. */
+    public function create(User $user, Team $team): bool
+    {
+        return $user->belongsToTeam($team);
+    }
+
     public function view(User $user, Screen $screen): bool
     {
         return $user->belongsToTeam($screen->team);
