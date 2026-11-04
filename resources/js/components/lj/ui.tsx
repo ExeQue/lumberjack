@@ -311,12 +311,12 @@ export const tableClass = 'w-full border-collapse text-[13px]';
 export const thClass =
     'border-b border-line px-3 py-2.5 text-left text-[11px] font-medium tracking-wide whitespace-nowrap text-ink-3 uppercase';
 /**
- * The chosen entry of a menu (sidebar, settings): a quiet background and a short amber
- * bar at the left, straight and rounded, not bent by the entry's own corners. The text
- * keeps its weight, so nothing moves when the choice changes.
+ * The chosen entry of a menu (sidebar, settings): a quiet background, square on the left
+ * where an amber bar runs its full height, rounded on the right. The text keeps its
+ * weight, so nothing moves when the choice changes.
  */
 export const navActiveClass =
-    'relative bg-panel-2 text-ink before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-amber';
+    'rounded-l-none bg-panel-2 text-ink shadow-[inset_3px_0_0_var(--lj-amber)]';
 
 export const tdClass = 'border-b border-line/60 px-3 py-2.5 align-middle';
 export const numClass = 'text-right font-mono tabular-nums whitespace-nowrap';
