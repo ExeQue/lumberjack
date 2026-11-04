@@ -262,17 +262,3 @@
 .lj-kiosk[data-idle='true'] * {
     cursor: none !important;
 }
-
-/* A layout change on a TV glides widgets to their new cells instead of jumping. */
-::view-transition-group(*) {
-    animation-duration: 600ms;
-    animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    ::view-transition-group(*),
-    ::view-transition-old(*),
-    ::view-transition-new(*) {
-        animation: none;
-    }
-}

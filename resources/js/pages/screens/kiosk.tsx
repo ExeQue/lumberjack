@@ -91,8 +91,7 @@ export default function Kiosk({
     useEcho(
         channel,
         '.screen.changed',
-        // A view transition glides moved and resized widgets to their new cells.
-        () => router.reload({ only: reloadOnly, viewTransition: true }),
+        () => router.reload({ only: reloadOnly }),
         [],
         share ? 'public' : 'private',
     );
@@ -233,13 +232,6 @@ export default function Kiosk({
                         timezone={screen.timezone}
                         flash={flashing[widget.id]}
                         onStatus={onStatus}
-                        style={{
-                            viewTransitionName:
-                                `w-${screen.uuid}-${widget.id}`.replace(
-                                    /[^A-Za-z0-9_-]/g,
-                                    '_',
-                                ),
-                        }}
                         aria-hidden={widget.type === 'empty' || undefined}
                     />
                 ))
