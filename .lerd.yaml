@@ -2,7 +2,10 @@ domains:
   - lumberjack
 secured: true
 services:
+  - mailpit
   - mysql
+  - postgres
+  - redis
 workers:
   - horizon
   - reverb
