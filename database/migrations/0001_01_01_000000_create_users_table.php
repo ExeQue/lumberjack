@@ -6,6 +6,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Users, password reset tokens and sessions: Laravel's own, plus team, administration and two factor columns.
+ */
 return new class () extends Migration {
     /**
      * Run the migrations.
@@ -20,6 +23,17 @@ return new class () extends Migration {
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
+            $table->text('two_factor_secret')->nullable();
+            $table->text('two_factor_recovery_codes')->nullable();
+            $table->timestamp('two_factor_confirmed_at')->nullable();
+            // Its foreign key is added with the teams table, which comes later.
+            $table->unsignedBigInteger('current_team_id')->nullable();
+            // A system administrator sees and manages every team on this Lumberjack.
+            $table->boolean('is_admin')->default(false);
+            $table->timestamp('suspended_at')->nullable();
+            $table->boolean('password_change_required')->default(false);
+            $table->uuid()->unique();
+            $table->json('notification_preferences')->nullable();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
