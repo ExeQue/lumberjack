@@ -176,37 +176,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('team/mcp-tokens/{token}', [McpTokenController::class, 'destroy'])->name('mcp-tokens.destroy');
 
     // Status screens: the team's wall displays. See docs/screens.md.
-    Route::get('screens', [ScreenController::class, 'index'])->name('screens.index');
-    // The team's paired TVs: a tab of Screens. Before screens/{screen}, which would take the word.
-    Route::get('screens/displays', [DisplayController::class, 'index'])->name('team.displays');
-    Route::put('screens/displays/{display:uuid}', [DisplayController::class, 'update'])->name('displays.update');
-    Route::post('screens/displays/{display:uuid}/reload', [DisplayController::class, 'reload'])->name('displays.reload');
-    Route::delete('screens/displays/{display:uuid}', [DisplayController::class, 'destroy'])->name('displays.destroy');
-    Route::put('screens/devices/{device:uuid}', [DeviceController::class, 'update'])->name('devices.update');
-    Route::post('screens/devices/{device:uuid}/reload', [DeviceController::class, 'reload'])->name('devices.reload');
-    Route::delete('screens/devices/{device:uuid}', [DeviceController::class, 'destroy'])->name('devices.destroy');
-    Route::post('screens', [ScreenController::class, 'store'])->name('screens.store');
-    Route::post('screens/import', [ScreenFileController::class, 'import'])->middleware('throttle:20,1')->name('screens.import');
-    Route::post('screens/import/preview', [ScreenFileController::class, 'preview'])->middleware('throttle:60,1')->name('screens.import.preview');
-    Route::get('screens/{screen:uuid}/export', [ScreenFileController::class, 'export'])->name('screens.export');
-    Route::post('screens/{screen:uuid}/copy', [ScreenFileController::class, 'copy'])->middleware('throttle:20,1')->name('screens.copy');
-    Route::post('screens/{screen:uuid}/template', [SavedScreenTemplateController::class, 'store'])->name('screens.template');
-    Route::put('screen-templates/{template:uuid}', [SavedScreenTemplateController::class, 'update'])->name('screen-templates.update');
-    Route::delete('screen-templates/{template:uuid}', [SavedScreenTemplateController::class, 'destroy'])->name('screen-templates.destroy');
-    Route::get('screens/{screen:uuid}', [ScreenController::class, 'show'])->name('screens.show');
-    Route::get('screens/{screen:uuid}/edit', [ScreenController::class, 'edit'])->name('screens.edit');
-    Route::get('screens/{screen:uuid}/data', [ScreenController::class, 'data'])->middleware('throttle:120,1')->name('screens.data');
-    Route::get('screens/{screen:uuid}/data-sources/{dataSource}/preview', DataSourcePreviewController::class)->middleware('throttle:60,1')->name('screens.data-sources.preview');
-    Route::get('screens/{screen:uuid}/viewers', [ScreenController::class, 'viewers'])->name('screens.viewers');
-    Route::put('screens/{screen:uuid}', [ScreenController::class, 'update'])->name('screens.update');
-    Route::put('screens/{screen:uuid}/layout', [ScreenController::class, 'layout'])->name('screens.layout');
-    Route::put('screens/{screen:uuid}/widgets/{widget}', [ScreenController::class, 'widget'])->where('widget', '[A-Za-z0-9_-]{1,40}')->name('screens.widget');
-    Route::post('screens/{screen:uuid}/reload', [ScreenController::class, 'reload'])->name('screens.reload');
-    Route::post('screens/{screen:uuid}/duplicate', [ScreenController::class, 'duplicate'])->name('screens.duplicate');
-    Route::delete('screens/{screen:uuid}', [ScreenController::class, 'destroy'])->name('screens.destroy');
-    Route::put('screens/{screen:uuid}/share', [ScreenShareController::class, 'update'])->name('screens.share');
-    Route::post('screens/{screen:uuid}/share/rotate', [ScreenShareController::class, 'rotate'])->name('screens.share.rotate');
-    Route::get('screens/{screen:uuid}/share/qr', [ScreenShareController::class, 'qr'])->name('screens.share.qr');
+    Route::get('present/screens', [ScreenController::class, 'index'])->name('screens.index');
+    // The team's paired TVs: a tab of Screens.
+    Route::get('present/displays', [DisplayController::class, 'index'])->name('team.displays');
+    Route::put('present/displays/{display:uuid}', [DisplayController::class, 'update'])->name('displays.update');
+    Route::post('present/displays/{display:uuid}/reload', [DisplayController::class, 'reload'])->name('displays.reload');
+    Route::delete('present/displays/{display:uuid}', [DisplayController::class, 'destroy'])->name('displays.destroy');
+    Route::put('present/devices/{device:uuid}', [DeviceController::class, 'update'])->name('devices.update');
+    Route::post('present/devices/{device:uuid}/reload', [DeviceController::class, 'reload'])->name('devices.reload');
+    Route::delete('present/devices/{device:uuid}', [DeviceController::class, 'destroy'])->name('devices.destroy');
+    Route::post('present/screens', [ScreenController::class, 'store'])->name('screens.store');
+    Route::post('present/screens/import', [ScreenFileController::class, 'import'])->middleware('throttle:20,1')->name('screens.import');
+    Route::post('present/screens/import/preview', [ScreenFileController::class, 'preview'])->middleware('throttle:60,1')->name('screens.import.preview');
+    Route::get('present/screens/{screen:uuid}/export', [ScreenFileController::class, 'export'])->name('screens.export');
+    Route::post('present/screens/{screen:uuid}/copy', [ScreenFileController::class, 'copy'])->middleware('throttle:20,1')->name('screens.copy');
+    Route::post('present/screens/{screen:uuid}/template', [SavedScreenTemplateController::class, 'store'])->name('screens.template');
+    Route::put('present/screen-templates/{template:uuid}', [SavedScreenTemplateController::class, 'update'])->name('screen-templates.update');
+    Route::delete('present/screen-templates/{template:uuid}', [SavedScreenTemplateController::class, 'destroy'])->name('screen-templates.destroy');
+    Route::get('present/screens/{screen:uuid}', [ScreenController::class, 'show'])->name('screens.show');
+    Route::get('present/screens/{screen:uuid}/edit', [ScreenController::class, 'edit'])->name('screens.edit');
+    Route::get('present/screens/{screen:uuid}/data', [ScreenController::class, 'data'])->middleware('throttle:120,1')->name('screens.data');
+    Route::get('present/screens/{screen:uuid}/data-sources/{dataSource}/preview', DataSourcePreviewController::class)->middleware('throttle:60,1')->name('screens.data-sources.preview');
+    Route::get('present/screens/{screen:uuid}/viewers', [ScreenController::class, 'viewers'])->name('screens.viewers');
+    Route::put('present/screens/{screen:uuid}', [ScreenController::class, 'update'])->name('screens.update');
+    Route::put('present/screens/{screen:uuid}/layout', [ScreenController::class, 'layout'])->name('screens.layout');
+    Route::put('present/screens/{screen:uuid}/widgets/{widget}', [ScreenController::class, 'widget'])->where('widget', '[A-Za-z0-9_-]{1,40}')->name('screens.widget');
+    Route::post('present/screens/{screen:uuid}/reload', [ScreenController::class, 'reload'])->name('screens.reload');
+    Route::post('present/screens/{screen:uuid}/duplicate', [ScreenController::class, 'duplicate'])->name('screens.duplicate');
+    Route::delete('present/screens/{screen:uuid}', [ScreenController::class, 'destroy'])->name('screens.destroy');
+    Route::put('present/screens/{screen:uuid}/share', [ScreenShareController::class, 'update'])->name('screens.share');
+    Route::post('present/screens/{screen:uuid}/share/rotate', [ScreenShareController::class, 'rotate'])->name('screens.share.rotate');
+    Route::get('present/screens/{screen:uuid}/share/qr', [ScreenShareController::class, 'qr'])->name('screens.share.qr');
 
     // Pairing a TV by the code it shows, and the team's paired TVs.
     Route::get('pair', [PairController::class, 'index'])->name('pair');

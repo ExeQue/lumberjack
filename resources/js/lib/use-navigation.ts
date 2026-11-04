@@ -149,7 +149,7 @@ export function useNavigation(
     const teamNav: NavItem[] = [
         item(t('common.nav.projects'), projectsIndex().url, { exact: true }),
         group(t('common.nav.screens'), [
-            // Exact: the displays live under /screens/displays.
+            // Exact: not on the screens below it, or another tab of the section.
             item(t('common.nav.screens'), screensIndex().url, { exact: true }),
             item(t('common.nav.displays'), teamDisplays().url),
         ]),

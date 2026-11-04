@@ -301,7 +301,7 @@ change is noticed; there is no sound.
 
 ## On the TV
 
-`/screens/<id>` (**Open kiosk**) shows the screen full screen: no sidebar or menu,
+`/present/screens/<id>` (**Open kiosk**) shows the screen full screen: no sidebar or menu,
 large type, the cursor hidden after a few seconds without moving, and the whole picture
 shifting a few pixels every few minutes so nothing burns into the panel. The header
 shows how many widgets need attention, whether the screen is live, and the time.
@@ -323,7 +323,7 @@ dims the numbers it has, and tries again every 30 seconds; it never lets old num
 look current.
 
 A TV does not sign in: it is paired once, with a code, and shows its screen from then
-on (see below). `/screens/<id>` is for a browser that is signed in anyway.
+on (see below). `/present/screens/<id>` is for a browser that is signed in anyway.
 
 ## Setting up a TV
 

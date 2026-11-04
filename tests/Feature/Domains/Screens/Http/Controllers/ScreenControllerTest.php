@@ -155,7 +155,7 @@ describe('the screens of a team', function () {
     ]);
 
     it('answers an unknown screen with 404', function () {
-        $this->actingAs($this->user)->get('/screens/'.fake()->uuid())->assertNotFound();
+        $this->actingAs($this->user)->get('/present/screens/'.fake()->uuid())->assertNotFound();
     });
 });
 
@@ -169,7 +169,7 @@ describe('the pages', function () {
             ->where('screen.orientation', 'landscape')
             ->where('screen.show_header', true)
             ->where('channel', 'screen.'.$this->screen->uuid)
-            ->where('data_url', '/screens/'.$this->screen->uuid.'/data')
+            ->where('data_url', '/present/screens/'.$this->screen->uuid.'/data')
             ->has('schema.stat')
             ->has('sources.list')
             ->where('projects.0.uuid', $this->project->uuid));
