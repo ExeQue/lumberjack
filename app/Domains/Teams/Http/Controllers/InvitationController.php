@@ -10,6 +10,7 @@ use App\Domains\Teams\Actions\FindInvitationAction;
 use App\Domains\Teams\Actions\InviteMemberAction;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Domains\Teams\Exceptions\TeamExceptionInterface;
+use App\Domains\Teams\Http\Middleware\UseTabTeam;
 use App\Domains\Teams\Http\Requests\AcceptInvitationRequest;
 use App\Domains\Teams\Http\Requests\InviteMemberRequest;
 use App\Domains\Teams\Models\TeamInvitation;
@@ -97,7 +98,7 @@ class InvitationController
 
         $accept->execute($token, $user);
 
-        return redirect()->route('projects.index');
+        return redirect()->route('projects.index')->with(UseTabTeam::SWITCHED, true);
     }
 
     private function isFor(TeamInvitation $invitation, User $user): bool

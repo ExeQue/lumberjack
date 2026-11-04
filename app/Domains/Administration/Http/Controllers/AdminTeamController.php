@@ -11,6 +11,7 @@ use App\Domains\Administration\Enums\AdminAction;
 use App\Domains\Administration\Http\Requests\CreateTeamRequest;
 use App\Domains\Teams\Actions\SwitchTeamAction;
 use App\Domains\Teams\Enums\TeamRole;
+use App\Domains\Teams\Http\Middleware\UseTabTeam;
 use App\Domains\Teams\Models\Team;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -64,7 +65,7 @@ class AdminTeamController
         $switch->execute($request->user(), $team);
         $audit->execute($request->user(), AdminAction::TeamOpened, $team->name);
 
-        return redirect()->route('projects.index');
+        return redirect()->route('projects.index')->with(UseTabTeam::SWITCHED, true);
     }
 
     public function destroy(Request $request, Team $team, DeleteTeamAction $delete): RedirectResponse

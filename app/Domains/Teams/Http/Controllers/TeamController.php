@@ -8,6 +8,7 @@ use App\Domains\Mcp\Enums\McpScope;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Teams\Actions\CreateTeamAction;
 use App\Domains\Teams\Actions\SwitchTeamAction;
+use App\Domains\Teams\Http\Middleware\UseTabTeam;
 use App\Domains\Teams\Http\Requests\StoreTeamRequest;
 use App\Domains\Teams\Models\Team;
 use App\Domains\Teams\Models\TeamInvitation;
@@ -65,13 +66,13 @@ class TeamController
     {
         $action->execute($request->user(), $request->string('name')->toString());
 
-        return redirect()->route('projects.index');
+        return redirect()->route('projects.index')->with(UseTabTeam::SWITCHED, true);
     }
 
     public function switch(Request $request, Team $team, SwitchTeamAction $action): RedirectResponse
     {
         abort_unless($action->execute($request->user(), $team), 403);
 
-        return redirect()->route('projects.index');
+        return redirect()->route('projects.index')->with(UseTabTeam::SWITCHED, true);
     }
 }

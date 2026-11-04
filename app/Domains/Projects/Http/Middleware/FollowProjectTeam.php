@@ -31,7 +31,7 @@ class FollowProjectTeam
         $project = $request->route('project');
         $user = $request->user();
 
-        if ($project instanceof Project && $user !== null && $user->current_team_id !== $project->team_id && self::isOpened($request) && $user->can('view', $project)) {
+        if ($project instanceof Project && $user !== null && $user->currentTeam?->id !== $project->team_id && self::isOpened($request) && $user->can('view', $project)) {
             $this->switchTeam->execute($user, $project->team);
             $user->setRelation('currentTeam', $project->team);
         }
