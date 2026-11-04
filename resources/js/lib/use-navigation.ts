@@ -76,7 +76,8 @@ export function useNavigation(
 ): { projectNav: NavItem[]; teamNav: NavItem[]; adminNav: NavItem[] } {
     const t = useT();
     const page = usePage();
-    const path = page.url.split('?')[0];
+    // Without the query or a #section (the settings page keeps its section there).
+    const path = page.url.split(/[?#]/)[0];
     const isAt = (href: string, exact = false) =>
         exact ? path === href : path === href || path.startsWith(href + '/');
     const item = (
@@ -203,7 +204,7 @@ export function useSectionTabs(): NavItem[] | null {
         page.props.sidebar_project?.counts,
         page.props.is_admin,
     );
-    const path = page.url.split('?')[0];
+    const path = page.url.split(/[?#]/)[0];
 
     // Only on the pages themselves, not on what they lead to (one route, one job).
     const tabs =
