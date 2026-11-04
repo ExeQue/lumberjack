@@ -192,7 +192,7 @@ security settings until they choose a new one.
 
 ## About
 
-**About** in the menu under your name (it shows the version, e.g. "Lumberjack 0.2.0")
+The version under your name at the bottom of the sidebar
 opens a page with the version, the commit it was built from, links to the release notes
 and the documentation. System administrators also see what it runs on: PHP, Laravel, the
 database, and the queue, cache and session drivers, handy in a bug report.

@@ -8,7 +8,6 @@ return [
     'revision' => 'Built from :revision',
     'release_notes' => 'Release notes',
     'docs' => 'Documentation',
-    'menu' => 'Lumberjack :version',
     'system' => [
         'title' => 'System',
         'description' => 'What this Lumberjack runs on; handy in a bug report. Only system administrators see it.',
