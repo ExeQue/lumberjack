@@ -33,8 +33,14 @@ class HttpError extends Error {
 const GONE = [401, 403, 404, 410];
 
 async function load(url: string, widget?: string): Promise<ScreenData> {
-    const target = widget ? `${url}?widget=${encodeURIComponent(widget)}` : url;
-    const response = await fetch(target, {
+    // The URL may already carry a query (a display showing screens in turn asks by ?screen=).
+    const target = new URL(url, window.location.origin);
+
+    if (widget) {
+        target.searchParams.set('widget', widget);
+    }
+
+    const response = await fetch(target.toString(), {
         headers: { Accept: 'application/json' },
         credentials: 'same-origin',
     });
