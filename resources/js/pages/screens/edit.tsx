@@ -1378,362 +1378,383 @@ export default function EditScreen(props: Props) {
 
                 <section
                     aria-label={t('screens.designer.grid')}
-                    className="flex min-w-0 flex-1 flex-col gap-3.5 bg-rail p-6"
+                    className="flex min-w-0 flex-1 flex-col bg-rail p-6"
                 >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex flex-wrap items-center gap-3.5 text-ink-2">
-                            <Button
-                                aria-pressed={selected === null}
-                                onClick={() => setSelected(null)}
-                            >
-                                {t('screens.settings.title')}
-                            </Button>
-                            <span>
-                                {t(
-                                    'screens.designer.count',
-                                    {},
-                                    screen.widgets.length,
-                                )}
-                            </span>
-                            <label className="flex items-center gap-1.5">
-                                {t('screens.designer.cols')}
-                                <Select
-                                    value={screen.cols}
-                                    onChange={(e) =>
-                                        setGrid(
-                                            Number(e.target.value),
-                                            screen.rows,
-                                        )
-                                    }
+                    {/* The preview stays in view while a long inspector scrolls the page. */}
+                    <div className="flex flex-col gap-3.5 lg:sticky lg:top-6">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-3.5 text-ink-2">
+                                <Button
+                                    aria-pressed={selected === null}
+                                    onClick={() => setSelected(null)}
                                 >
-                                    {COLS.filter(
-                                        (c) =>
-                                            c >= props.limits.min_cols &&
-                                            c <= props.limits.max_cols,
-                                    ).map((c) => (
-                                        <option key={c} value={c}>
-                                            {c}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </label>
-                            <label className="flex items-center gap-1.5">
-                                {t('screens.designer.rows')}
-                                <Select
-                                    value={screen.rows}
-                                    onChange={(e) =>
-                                        setGrid(
-                                            screen.cols,
-                                            Number(e.target.value),
-                                        )
-                                    }
-                                >
-                                    {Array.from(
-                                        {
-                                            length:
-                                                props.limits.max_rows -
-                                                props.limits.min_rows +
-                                                1,
-                                        },
-                                        (_, i) => props.limits.min_rows + i,
-                                    ).map((r) => (
-                                        <option key={r} value={r}>
-                                            {r}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </label>
-                            <label className="flex items-center gap-1.5">
-                                {t('screens.designer.aspect')}
-                                <Select
-                                    value={screen.aspect}
-                                    onChange={(e) =>
-                                        change((s) => ({
-                                            ...s,
-                                            aspect: e.target.value,
-                                        }))
-                                    }
-                                >
-                                    {props.aspects.map((a) => (
-                                        <option key={a} value={a}>
-                                            {t(`screens.aspect.${a}`)}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </label>
-                            <div
-                                role="group"
-                                aria-label={t('screens.designer.orientation')}
-                                className="flex"
-                            >
-                                {(['landscape', 'portrait'] as const).map(
-                                    (o) => (
-                                        <button
-                                            key={o}
-                                            type="button"
-                                            aria-pressed={
-                                                screen.orientation === o
-                                            }
-                                            aria-label={t(
-                                                `screens.orientation.${o}`,
-                                            )}
-                                            title={t(
-                                                `screens.orientation.${o}`,
-                                            )}
-                                            className={cn(
-                                                'flex h-8 w-8 items-center justify-center border border-line first:rounded-l-md last:rounded-r-md',
-                                                screen.orientation === o
-                                                    ? 'bg-amber text-amber-ink'
-                                                    : 'bg-rail text-ink-2 hover:text-ink',
-                                            )}
-                                            onClick={() =>
-                                                change((s) => ({
-                                                    ...s,
-                                                    orientation: o,
-                                                }))
-                                            }
-                                        >
-                                            {o === 'landscape' ? (
-                                                <RectangleHorizontal
-                                                    aria-hidden="true"
-                                                    className="size-4"
-                                                />
-                                            ) : (
-                                                <RectangleVertical
-                                                    aria-hidden="true"
-                                                    className="size-4"
-                                                />
-                                            )}
-                                        </button>
-                                    ),
-                                )}
-                            </div>
-                            <label className="flex items-center gap-1.5">
-                                {t('screens.designer.preview_at')}
-                                <Select
-                                    value={previewValue}
-                                    onChange={(e) => {
-                                        const v = e.target.value;
-
-                                        if (v === 'fit') {
-                                            setPreview({ mode: 'fit' });
-                                        } else if (v === 'custom') {
-                                            setPreview({
-                                                mode: 'size',
-                                                w: previewSize?.w ?? 1920,
-                                                h: previewSize?.h ?? 1080,
-                                                custom: true,
-                                            });
-                                        } else {
-                                            const [w, h] = v
-                                                .split('x')
-                                                .map(Number);
-                                            setPreview({ mode: 'size', w, h });
+                                    {t('screens.settings.title')}
+                                </Button>
+                                <span>
+                                    {t(
+                                        'screens.designer.count',
+                                        {},
+                                        screen.widgets.length,
+                                    )}
+                                </span>
+                                <label className="flex items-center gap-1.5">
+                                    {t('screens.designer.cols')}
+                                    <Select
+                                        value={screen.cols}
+                                        onChange={(e) =>
+                                            setGrid(
+                                                Number(e.target.value),
+                                                screen.rows,
+                                            )
                                         }
-                                    }}
+                                    >
+                                        {COLS.filter(
+                                            (c) =>
+                                                c >= props.limits.min_cols &&
+                                                c <= props.limits.max_cols,
+                                        ).map((c) => (
+                                            <option key={c} value={c}>
+                                                {c}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </label>
+                                <label className="flex items-center gap-1.5">
+                                    {t('screens.designer.rows')}
+                                    <Select
+                                        value={screen.rows}
+                                        onChange={(e) =>
+                                            setGrid(
+                                                screen.cols,
+                                                Number(e.target.value),
+                                            )
+                                        }
+                                    >
+                                        {Array.from(
+                                            {
+                                                length:
+                                                    props.limits.max_rows -
+                                                    props.limits.min_rows +
+                                                    1,
+                                            },
+                                            (_, i) => props.limits.min_rows + i,
+                                        ).map((r) => (
+                                            <option key={r} value={r}>
+                                                {r}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </label>
+                                <label className="flex items-center gap-1.5">
+                                    {t('screens.designer.aspect')}
+                                    <Select
+                                        value={screen.aspect}
+                                        onChange={(e) =>
+                                            change((s) => ({
+                                                ...s,
+                                                aspect: e.target.value,
+                                            }))
+                                        }
+                                    >
+                                        {props.aspects.map((a) => (
+                                            <option key={a} value={a}>
+                                                {t(`screens.aspect.${a}`)}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </label>
+                                <div
+                                    role="group"
+                                    aria-label={t(
+                                        'screens.designer.orientation',
+                                    )}
+                                    className="flex"
                                 >
-                                    <option value="fit">
-                                        {t('screens.designer.preview_fit')}
-                                    </option>
-                                    {props.displays.length > 0 && (
+                                    {(['landscape', 'portrait'] as const).map(
+                                        (o) => (
+                                            <button
+                                                key={o}
+                                                type="button"
+                                                aria-pressed={
+                                                    screen.orientation === o
+                                                }
+                                                aria-label={t(
+                                                    `screens.orientation.${o}`,
+                                                )}
+                                                title={t(
+                                                    `screens.orientation.${o}`,
+                                                )}
+                                                className={cn(
+                                                    'flex h-8 w-8 items-center justify-center border border-line first:rounded-l-md last:rounded-r-md',
+                                                    screen.orientation === o
+                                                        ? 'bg-amber text-amber-ink'
+                                                        : 'bg-rail text-ink-2 hover:text-ink',
+                                                )}
+                                                onClick={() =>
+                                                    change((s) => ({
+                                                        ...s,
+                                                        orientation: o,
+                                                    }))
+                                                }
+                                            >
+                                                {o === 'landscape' ? (
+                                                    <RectangleHorizontal
+                                                        aria-hidden="true"
+                                                        className="size-4"
+                                                    />
+                                                ) : (
+                                                    <RectangleVertical
+                                                        aria-hidden="true"
+                                                        className="size-4"
+                                                    />
+                                                )}
+                                            </button>
+                                        ),
+                                    )}
+                                </div>
+                                <label className="flex items-center gap-1.5">
+                                    {t('screens.designer.preview_at')}
+                                    <Select
+                                        value={previewValue}
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+
+                                            if (v === 'fit') {
+                                                setPreview({ mode: 'fit' });
+                                            } else if (v === 'custom') {
+                                                setPreview({
+                                                    mode: 'size',
+                                                    w: previewSize?.w ?? 1920,
+                                                    h: previewSize?.h ?? 1080,
+                                                    custom: true,
+                                                });
+                                            } else {
+                                                const [w, h] = v
+                                                    .split('x')
+                                                    .map(Number);
+                                                setPreview({
+                                                    mode: 'size',
+                                                    w,
+                                                    h,
+                                                });
+                                            }
+                                        }}
+                                    >
+                                        <option value="fit">
+                                            {t('screens.designer.preview_fit')}
+                                        </option>
+                                        {props.displays.length > 0 && (
+                                            <optgroup
+                                                label={t(
+                                                    'screens.designer.preview_tvs',
+                                                )}
+                                            >
+                                                {props.displays.map((d, i) => (
+                                                    <option
+                                                        key={`d${i}`}
+                                                        value={`${d.w}x${d.h}`}
+                                                    >
+                                                        {`${d.name}, ${d.w} × ${d.h}`}
+                                                    </option>
+                                                ))}
+                                            </optgroup>
+                                        )}
                                         <optgroup
                                             label={t(
-                                                'screens.designer.preview_tvs',
+                                                'screens.designer.preview_common',
                                             )}
                                         >
-                                            {props.displays.map((d, i) => (
+                                            {presets.map(([w, h]) => (
                                                 <option
-                                                    key={`d${i}`}
-                                                    value={`${d.w}x${d.h}`}
+                                                    key={`p${w}x${h}`}
+                                                    value={`${w}x${h}`}
                                                 >
-                                                    {`${d.name}, ${d.w} × ${d.h}`}
+                                                    {`${w} × ${h}`}
                                                 </option>
                                             ))}
                                         </optgroup>
-                                    )}
-                                    <optgroup
-                                        label={t(
-                                            'screens.designer.preview_common',
-                                        )}
-                                    >
-                                        {presets.map(([w, h]) => (
-                                            <option
-                                                key={`p${w}x${h}`}
-                                                value={`${w}x${h}`}
-                                            >
-                                                {`${w} × ${h}`}
-                                            </option>
-                                        ))}
-                                    </optgroup>
-                                    {/* A size not offered keeps showing as itself. */}
-                                    {preview.mode === 'size' &&
-                                        !preview.custom &&
-                                        ![
-                                            ...presets,
-                                            ...props.displays.map((d) => [
-                                                d.w,
-                                                d.h,
-                                            ]),
-                                        ].some(
-                                            ([w, h]) =>
-                                                w === preview.w &&
-                                                h === preview.h,
-                                        ) && (
-                                            <option value={previewValue}>
-                                                {`${preview.w} × ${preview.h}`}
-                                            </option>
-                                        )}
-                                    <option value="custom">
-                                        {t('screens.designer.preview_custom')}
-                                    </option>
-                                </Select>
-                            </label>
-                            {preview.mode === 'size' && preview.custom && (
-                                <span className="flex items-center gap-1">
-                                    {(['w', 'h'] as const).map((key) => (
-                                        <Input
-                                            key={key}
-                                            type="number"
-                                            min={100}
-                                            max={20000}
-                                            aria-label={t(
-                                                `screens.designer.preview_${key}`,
+                                        {/* A size not offered keeps showing as itself. */}
+                                        {preview.mode === 'size' &&
+                                            !preview.custom &&
+                                            ![
+                                                ...presets,
+                                                ...props.displays.map((d) => [
+                                                    d.w,
+                                                    d.h,
+                                                ]),
+                                            ].some(
+                                                ([w, h]) =>
+                                                    w === preview.w &&
+                                                    h === preview.h,
+                                            ) && (
+                                                <option value={previewValue}>
+                                                    {`${preview.w} × ${preview.h}`}
+                                                </option>
                                             )}
-                                            className="h-8 w-20"
-                                            value={preview[key]}
-                                            onChange={(e) => {
-                                                const n = Number(
-                                                    e.target.value,
-                                                );
+                                        <option value="custom">
+                                            {t(
+                                                'screens.designer.preview_custom',
+                                            )}
+                                        </option>
+                                    </Select>
+                                </label>
+                                {preview.mode === 'size' && preview.custom && (
+                                    <span className="flex items-center gap-1">
+                                        {(['w', 'h'] as const).map((key) => (
+                                            <Input
+                                                key={key}
+                                                type="number"
+                                                min={100}
+                                                max={20000}
+                                                aria-label={t(
+                                                    `screens.designer.preview_${key}`,
+                                                )}
+                                                className="h-8 w-20"
+                                                value={preview[key]}
+                                                onChange={(e) => {
+                                                    const n = Number(
+                                                        e.target.value,
+                                                    );
 
-                                                if (n >= 100 && n <= 20000) {
-                                                    setPreview({
-                                                        ...preview,
-                                                        [key]: n,
-                                                    });
-                                                }
-                                            }}
-                                        />
-                                    ))}
-                                </span>
-                            )}
-                        </div>
-                        <div
-                            role="group"
-                            aria-label={t('screens.designer.preview')}
-                            className="flex gap-1.5"
-                        >
-                            <button
-                                type="button"
-                                aria-pressed={!incident}
-                                onClick={() => setIncident(false)}
-                                className={buttonClass(
-                                    incident ? 'ghost' : 'default',
+                                                    if (
+                                                        n >= 100 &&
+                                                        n <= 20000
+                                                    ) {
+                                                        setPreview({
+                                                            ...preview,
+                                                            [key]: n,
+                                                        });
+                                                    }
+                                                }}
+                                            />
+                                        ))}
+                                    </span>
                                 )}
+                            </div>
+                            <div
+                                role="group"
+                                aria-label={t('screens.designer.preview')}
+                                className="flex gap-1.5"
                             >
-                                {t('screens.designer.live_data')}
-                            </button>
-                            <button
-                                type="button"
-                                aria-pressed={incident}
-                                onClick={() => setIncident(true)}
-                                className={buttonClass(
-                                    incident ? 'default' : 'ghost',
-                                )}
-                            >
-                                {t('screens.designer.incident')}
-                            </button>
-                        </div>
-                    </div>
-
-                    {outside.length > 0 && (
-                        <div
-                            role="status"
-                            className="flex flex-col gap-2 rounded-lg border border-warn-line bg-warn-bg px-3 py-2 text-warn"
-                        >
-                            {t(
-                                'screens.designer.overflow',
-                                { cols: screen.cols, rows: screen.rows },
-                                outside.length,
-                            )}
-                            <div className="flex flex-wrap gap-1.5">
-                                {outside.map((widget) => (
-                                    <button
-                                        key={widget.id}
-                                        type="button"
-                                        draggable
-                                        aria-pressed={widget.id === selected}
-                                        onClick={() => setSelected(widget.id)}
-                                        onDragStart={(e) => {
-                                            e.dataTransfer.setData(
-                                                'text/plain',
-                                                widget.id,
-                                            );
-                                            e.dataTransfer.effectAllowed =
-                                                'move';
-                                            startDrag({
-                                                tile: widget.id,
-                                                w: widget.w,
-                                                h: widget.h,
-                                                dx: 0,
-                                                dy: 0,
-                                            });
-                                        }}
-                                        onDragEnd={endDrag}
-                                        className={cn(
-                                            'cursor-grab rounded-md border border-warn-line bg-panel px-2 py-1 text-xs text-ink',
-                                            widget.id === selected &&
-                                                'border-amber',
-                                        )}
-                                    >
-                                        {`${widget.title ?? sources[widget.type]?.find((x) => x.id === widget.source)?.label ?? t(`screens.kinds.${widget.type}`)} · ${widget.w}×${widget.h}`}
-                                    </button>
-                                ))}
+                                <button
+                                    type="button"
+                                    aria-pressed={!incident}
+                                    onClick={() => setIncident(false)}
+                                    className={buttonClass(
+                                        incident ? 'ghost' : 'default',
+                                    )}
+                                >
+                                    {t('screens.designer.live_data')}
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={incident}
+                                    onClick={() => setIncident(true)}
+                                    className={buttonClass(
+                                        incident ? 'default' : 'ghost',
+                                    )}
+                                >
+                                    {t('screens.designer.incident')}
+                                </button>
                             </div>
                         </div>
-                    )}
 
-                    {/* The TV's own layout: at Fit as large as fits, else at the
-                        previewed size scaled down to fit here. */}
-                    <PreviewScale
-                        size={previewSize}
-                        ratio={ratio[0] / ratio[1]}
-                    >
-                        {(view) => (
-                            <KioskFrame
-                                screen={screen}
-                                view={view}
-                                theme={theme}
-                                header={{
-                                    title: screen.name,
-                                    subtitle: kioskSubtitle(
-                                        screen,
-                                        props.team.name,
-                                        props.projects,
-                                        t,
-                                    ),
-                                    right: (
-                                        <KioskStatus
-                                            attention={0}
-                                            offline={null}
-                                            clock={
-                                                screen.show_clock
-                                                    ? kioskClock(screen, now)
-                                                    : null
-                                            }
-                                        />
-                                    ),
-                                }}
-                                gridRef={grid}
-                                gridProps={{ ...gridHandlers }}
+                        {outside.length > 0 && (
+                            <div
+                                role="status"
+                                className="flex flex-col gap-2 rounded-lg border border-warn-line bg-warn-bg px-3 py-2 text-warn"
                             >
-                                {gridContent}
-                            </KioskFrame>
+                                {t(
+                                    'screens.designer.overflow',
+                                    { cols: screen.cols, rows: screen.rows },
+                                    outside.length,
+                                )}
+                                <div className="flex flex-wrap gap-1.5">
+                                    {outside.map((widget) => (
+                                        <button
+                                            key={widget.id}
+                                            type="button"
+                                            draggable
+                                            aria-pressed={
+                                                widget.id === selected
+                                            }
+                                            onClick={() =>
+                                                setSelected(widget.id)
+                                            }
+                                            onDragStart={(e) => {
+                                                e.dataTransfer.setData(
+                                                    'text/plain',
+                                                    widget.id,
+                                                );
+                                                e.dataTransfer.effectAllowed =
+                                                    'move';
+                                                startDrag({
+                                                    tile: widget.id,
+                                                    w: widget.w,
+                                                    h: widget.h,
+                                                    dx: 0,
+                                                    dy: 0,
+                                                });
+                                            }}
+                                            onDragEnd={endDrag}
+                                            className={cn(
+                                                'cursor-grab rounded-md border border-warn-line bg-panel px-2 py-1 text-xs text-ink',
+                                                widget.id === selected &&
+                                                    'border-amber',
+                                            )}
+                                        >
+                                            {`${widget.title ?? sources[widget.type]?.find((x) => x.id === widget.source)?.label ?? t(`screens.kinds.${widget.type}`)} · ${widget.w}×${widget.h}`}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         )}
-                    </PreviewScale>
-                    <p className="text-xs text-ink-3">
-                        {t('screens.designer.help')}
-                    </p>
+
+                        {/* The TV's own layout: at Fit as large as fits, else at the
+                        previewed size scaled down to fit here. */}
+                        <PreviewScale
+                            size={previewSize}
+                            ratio={ratio[0] / ratio[1]}
+                        >
+                            {(view) => (
+                                <KioskFrame
+                                    screen={screen}
+                                    view={view}
+                                    theme={theme}
+                                    header={{
+                                        title: screen.name,
+                                        subtitle: kioskSubtitle(
+                                            screen,
+                                            props.team.name,
+                                            props.projects,
+                                            t,
+                                        ),
+                                        right: (
+                                            <KioskStatus
+                                                attention={0}
+                                                offline={null}
+                                                clock={
+                                                    screen.show_clock
+                                                        ? kioskClock(
+                                                              screen,
+                                                              now,
+                                                          )
+                                                        : null
+                                                }
+                                            />
+                                        ),
+                                    }}
+                                    gridRef={grid}
+                                    gridProps={{ ...gridHandlers }}
+                                >
+                                    {gridContent}
+                                </KioskFrame>
+                            )}
+                        </PreviewScale>
+                        <p className="text-xs text-ink-3">
+                            {t('screens.designer.help')}
+                        </p>
+                    </div>
                 </section>
 
                 <aside
