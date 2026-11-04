@@ -23,11 +23,16 @@ class AgentMetricsQuery
      */
     public function get(Collection $agents): array
     {
+        $latest = $this->latest($agents);
+        $ids = array_keys($latest);
+        $memory = $this->series($ids, 'MAX(memory_used_bytes::float / NULLIF(memory_total_bytes, 0))');
+        $load = $this->series($ids, 'MAX(cpu_load_1m)');
+
         return array_map(fn (array $metrics): array => [
             ...$metrics,
-            'memory_series' => $this->series($metrics['project_agent_id'], 'MAX(memory_used_bytes::float / NULLIF(memory_total_bytes, 0))'),
-            'load_series' => $this->series($metrics['project_agent_id'], 'MAX(cpu_load_1m)'),
-        ], $this->latest($agents));
+            'memory_series' => $memory[$metrics['project_agent_id']],
+            'load_series' => $load[$metrics['project_agent_id']],
+        ], $latest);
     }
 
     /**
@@ -72,14 +77,21 @@ class AgentMetricsQuery
     }
 
     /**
+     * One series per agent, all agents in one query.
+     *
+     * @param  list<int>  $agentIds
      * @param  literal-string  $aggregate
-     * @return list<float>
+     * @return array<int, list<float>>
      */
-    private function series(int $agentId, string $aggregate): array
+    private function series(array $agentIds, string $aggregate): array
     {
+        if ($agentIds === []) {
+            return [];
+        }
+
         return array_map(
-            fn (array $point): float => round((float) $point['v'], 3),
-            TimeSeries::count(DB::table('host_samples')->where('project_agent_id', $agentId), Period::Day, 'sampled_at', $aggregate),
+            fn (array $series): array => array_map(fn (array $point): float => round((float) $point['v'], 3), $series),
+            TimeSeries::countBy(DB::table('host_samples')->whereIn('project_agent_id', $agentIds), Period::Day, 'project_agent_id', $agentIds, 'sampled_at', $aggregate),
         );
     }
 }
