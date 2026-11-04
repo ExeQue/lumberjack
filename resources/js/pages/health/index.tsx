@@ -197,7 +197,16 @@ function StatusStrip({
                     )}
                 >
                     <span
-                        className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block"
+                        className={cn(
+                            'pointer-events-none absolute bottom-full z-10 mb-1 hidden rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block',
+                            // Near the ends of the strip the label opens inwards, so the
+                            // table's scroll box never cuts it off.
+                            i < strip.length / 4
+                                ? 'left-0'
+                                : i >= (strip.length * 3) / 4
+                                  ? 'right-0'
+                                  : 'left-1/2 -translate-x-1/2',
+                        )}
                         aria-hidden="true"
                     >
                         {bucketLabel(bucket.t, period)} ·{' '}
