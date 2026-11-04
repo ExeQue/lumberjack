@@ -1386,10 +1386,13 @@ export function WidgetInspector({
 export function ScreenSettings({
     screen,
     catalog,
+    theme,
     onChange,
 }: {
     screen: Screen;
     catalog: Catalog;
+    /** The theme the screen shows right now (the schedule resolved). */
+    theme: 'dark' | 'light';
     onChange: (changes: Partial<Screen>) => void;
 }) {
     const t = useT();
@@ -1511,6 +1514,79 @@ export function ScreenSettings({
                 <span className="text-xs text-ink-3">
                     {t('screens.settings.timezone_hint')}
                 </span>
+            </div>
+            <label className="flex items-center gap-2 text-[13px]">
+                <input
+                    type="checkbox"
+                    checked={screen.show_header}
+                    onChange={(e) =>
+                        onChange({ show_header: e.target.checked })
+                    }
+                />
+                {t('screens.designer.show_header')}
+            </label>
+            <div className="flex flex-col gap-1.5">
+                <Label htmlFor="screen-theme">
+                    {t('screens.designer.theme')}
+                </Label>
+                <Select
+                    id="screen-theme"
+                    value={screen.theme}
+                    onChange={(e) =>
+                        onChange({ theme: e.target.value as Screen['theme'] })
+                    }
+                >
+                    {(['dark', 'light', 'schedule'] as const).map((th) => (
+                        <option key={th} value={th}>
+                            {t(`screens.theme.${th}`)}
+                        </option>
+                    ))}
+                </Select>
+                {screen.theme === 'schedule' && (
+                    <>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <div className="flex flex-col gap-1">
+                                <Label
+                                    htmlFor="screen-light-from"
+                                    className="text-xs text-ink-2"
+                                >
+                                    {t('screens.designer.light_from')}
+                                </Label>
+                                <Input
+                                    id="screen-light-from"
+                                    type="time"
+                                    value={screen.light_from}
+                                    onChange={(e) =>
+                                        e.target.value &&
+                                        onChange({ light_from: e.target.value })
+                                    }
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <Label
+                                    htmlFor="screen-light-to"
+                                    className="text-xs text-ink-2"
+                                >
+                                    {t('screens.designer.light_to')}
+                                </Label>
+                                <Input
+                                    id="screen-light-to"
+                                    type="time"
+                                    value={screen.light_to}
+                                    onChange={(e) =>
+                                        e.target.value &&
+                                        onChange({ light_to: e.target.value })
+                                    }
+                                />
+                            </div>
+                        </div>
+                        <span className="text-xs text-ink-3">
+                            {t('screens.designer.now_theme', {
+                                theme: t(`screens.theme.${theme}`),
+                            })}
+                        </span>
+                    </>
+                )}
             </div>
             <div className="flex flex-col gap-1.5">
                 <Label htmlFor="screen-fit">{t('screens.settings.fit')}</Label>

@@ -1612,77 +1612,6 @@ export default function EditScreen(props: Props) {
                                     ))}
                                 </span>
                             )}
-                            <label className="flex items-center gap-1.5">
-                                <input
-                                    type="checkbox"
-                                    checked={screen.show_header}
-                                    onChange={(e) =>
-                                        change((s) => ({
-                                            ...s,
-                                            show_header: e.target.checked,
-                                        }))
-                                    }
-                                />
-                                {t('screens.designer.show_header')}
-                            </label>
-                            <label className="flex items-center gap-1.5">
-                                {t('screens.designer.theme')}
-                                <Select
-                                    value={screen.theme}
-                                    onChange={(e) =>
-                                        change((s) => ({
-                                            ...s,
-                                            theme: e.target
-                                                .value as Screen['theme'],
-                                        }))
-                                    }
-                                >
-                                    {(
-                                        ['dark', 'light', 'schedule'] as const
-                                    ).map((th) => (
-                                        <option key={th} value={th}>
-                                            {t(`screens.theme.${th}`)}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </label>
-                            {screen.theme === 'schedule' && (
-                                <>
-                                    <label className="flex items-center gap-1.5">
-                                        {t('screens.designer.light_from')}
-                                        <Input
-                                            type="time"
-                                            value={screen.light_from}
-                                            onChange={(e) =>
-                                                e.target.value &&
-                                                change((s) => ({
-                                                    ...s,
-                                                    light_from: e.target.value,
-                                                }))
-                                            }
-                                        />
-                                    </label>
-                                    <label className="flex items-center gap-1.5">
-                                        {t('screens.designer.light_to')}
-                                        <Input
-                                            type="time"
-                                            value={screen.light_to}
-                                            onChange={(e) =>
-                                                e.target.value &&
-                                                change((s) => ({
-                                                    ...s,
-                                                    light_to: e.target.value,
-                                                }))
-                                            }
-                                        />
-                                    </label>
-                                    <span className="text-xs text-ink-3">
-                                        {t('screens.designer.now_theme', {
-                                            theme: t(`screens.theme.${theme}`),
-                                        })}
-                                    </span>
-                                </>
-                            )}
                         </div>
                         <div
                             role="group"
@@ -1816,6 +1745,7 @@ export default function EditScreen(props: Props) {
                         <ScreenSettings
                             screen={screen}
                             catalog={catalog}
+                            theme={theme}
                             onChange={(changes) =>
                                 change((s) => ({ ...s, ...changes }))
                             }
