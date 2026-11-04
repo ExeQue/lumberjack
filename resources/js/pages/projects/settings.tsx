@@ -64,6 +64,7 @@ import {
     destroy as labelDestroy,
     update as labelUpdate,
 } from '@/routes/labels';
+import { index as dataSourcesIndex } from '@/routes/data-sources';
 import { update as settingsUpdate } from '@/routes/projects/settings';
 import { show as teamShow } from '@/routes/team';
 import { index as jobsIndex } from '@/routes/jobs';
@@ -379,7 +380,17 @@ export default function ProjectSettings(props: Props) {
                         aria-label={t('settings.toc')}
                         className="flex flex-wrap gap-1 lg:sticky lg:top-6 lg:flex-col"
                     >
-                        {SECTIONS.map((section) => (
+                        {SECTIONS.map((section) => [
+                            // The data sources are a page of their own, listed with the settings.
+                            section === 'danger' && (
+                                <Link
+                                    key="data-sources"
+                                    href={dataSourcesIndex(project.uuid).url}
+                                    className="rounded-md px-2.5 py-1.5 text-ink-2 hover:bg-panel-2 hover:text-ink"
+                                >
+                                    {t('common.nav.data_sources')}
+                                </Link>
+                            ),
                             <a
                                 key={section}
                                 href={`#${section}`}
@@ -399,8 +410,8 @@ export default function ProjectSettings(props: Props) {
                                 )}
                             >
                                 {t(`settings.${section}.title`)}
-                            </a>
-                        ))}
+                            </a>,
+                        ])}
                     </nav>
                     {/* One section at a time; the address keeps which, so a link can open it. */}
                     <div className="flex min-w-0 flex-col gap-5">

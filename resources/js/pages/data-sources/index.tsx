@@ -36,7 +36,10 @@ import {
     store as sourceStore,
     update as sourceUpdate,
 } from '@/routes/data-sources';
-import { show as projectShow } from '@/routes/projects';
+import {
+    settings as projectSettings,
+    show as projectShow,
+} from '@/routes/projects';
 import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
 
 /** A source as the page gets it: its headers by name only, their values never leave the server. */
@@ -88,6 +91,14 @@ export default function DataSourcesIndex({ project, sources }: Props) {
                         href: projectShow(project.uuid).url,
                         mono: true,
                     },
+                    ...(project.can_administer
+                        ? [
+                              {
+                                  label: t('common.nav.project_settings'),
+                                  href: projectSettings(project.uuid).url,
+                              },
+                          ]
+                        : []),
                     { label: t('data_sources.title') },
                 ]}
             />
