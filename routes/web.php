@@ -83,7 +83,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
 
-    Route::prefix('projects/{project}')->scopeBindings()->middleware(FollowProjectTeam::class)->group(function () {
+    // Every project page needs at least view on the project, whatever its controller checks too.
+    Route::prefix('projects/{project}')->scopeBindings()->middleware(['can:view,project', FollowProjectTeam::class])->group(function () {
         Route::get('/', OverviewController::class)->name('projects.show');
         Route::delete('/', [ProjectController::class, 'destroy'])->name('projects.destroy');
 
