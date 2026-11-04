@@ -9,6 +9,13 @@ return [
     'imported' => 'Screen imported.',
     'copied' => ':name copied to :team.',
 
+    // Flash messages about the team's own templates.
+    'templates' => [
+        'saved' => 'Saved as the template :name; New screen offers it.',
+        'updated' => 'Template saved.',
+        'deleted' => 'Template :name deleted.',
+    ],
+
     // Why a TV's code could not be confirmed.
     'pairing' => [
         'expired' => 'This code has expired or was already used. The TV shows a new one; enter that.',

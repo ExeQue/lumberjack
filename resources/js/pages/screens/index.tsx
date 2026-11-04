@@ -45,7 +45,12 @@ import {
     show,
     store,
     update,
+    template as saveTemplate,
 } from '@/routes/screens';
+import {
+    destroy as destroyTemplate,
+    update as updateTemplate,
+} from '@/routes/screen-templates';
 import { preview as importPreview } from '@/routes/screens/import';
 import type { TeamShared } from '@/types/lumberjack';
 
@@ -66,6 +71,11 @@ type Template = {
     cols: number;
     rows: number;
     widgets: { type: string; x: number; y: number; w: number; h: number }[];
+};
+
+type SavedTemplate = Omit<Template, 'id'> & {
+    uuid: string;
+    creator: string | null;
 };
 
 type ImportPreview = {
@@ -312,13 +322,106 @@ function TemplatePreview({ template }: { template: Template }) {
     );
 }
 
+/** Save a screen as a team template, or edit a template's name and description. */
+function TemplateDialog({
+    open,
+    onClose,
+    form,
+    title,
+    hint,
+    name,
+    description,
+}: {
+    open: boolean;
+    onClose: () => void;
+    form: { action: string; method: 'post' | 'get' } | null;
+    title: string;
+    hint: string;
+    name: string;
+    description: string;
+}) {
+    const t = useT();
+
+    return (
+        <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+            <DialogContent>
+                {form && (
+                    <Form
+                        {...form}
+                        onSuccess={onClose}
+                        options={{ preserveScroll: true }}
+                        className="flex flex-col gap-4"
+                    >
+                        {({ errors, processing }) => (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>{title}</DialogTitle>
+                                    {hint && (
+                                        <DialogDescription>
+                                            {hint}
+                                        </DialogDescription>
+                                    )}
+                                </DialogHeader>
+                                <Field
+                                    label={t('screens.saved_templates.name')}
+                                    htmlFor="template-name"
+                                    error={errors.name}
+                                >
+                                    <Input
+                                        id="template-name"
+                                        name="name"
+                                        defaultValue={name}
+                                        required
+                                        maxLength={100}
+                                        autoFocus
+                                    />
+                                </Field>
+                                <Field
+                                    label={t(
+                                        'screens.saved_templates.description',
+                                    )}
+                                    htmlFor="template-description"
+                                    error={errors.description}
+                                >
+                                    <Input
+                                        id="template-description"
+                                        name="description"
+                                        defaultValue={description}
+                                        maxLength={255}
+                                    />
+                                </Field>
+                                <DialogFooter>
+                                    <Button onClick={onClose}>
+                                        {t('common.cancel')}
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        variant="primary"
+                                        disabled={processing}
+                                    >
+                                        {t('screens.saved_templates.submit')}
+                                    </Button>
+                                </DialogFooter>
+                            </>
+                        )}
+                    </Form>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 /** The team's status screens: open one on a TV, design it, or make another. */
 export default function Screens({
     screens,
     templates,
+    saved_templates: savedTemplates,
+    can_manage_templates: canManageTemplates,
 }: {
     screens: Row[];
     templates: Template[];
+    saved_templates: SavedTemplate[];
+    can_manage_templates: boolean;
 }) {
     const t = useT();
     const { team, teams } = usePage<{
@@ -333,6 +436,17 @@ export default function Screens({
     const [renaming, setRenaming] = useState<Row | null>(null);
     const [importing, setImporting] = useState(false);
     const [copying, setCopying] = useState<Row | null>(null);
+    const [saving, setSaving] = useState<Row | null>(null);
+    const [editingTemplate, setEditingTemplate] =
+        useState<SavedTemplate | null>(null);
+    const pickable: Template[] = [
+        ...templates,
+        ...savedTemplates.map((item) => ({
+            ...item,
+            id: `saved:${item.uuid}`,
+        })),
+    ];
+    const savedUuid = template.startsWith('saved:') ? template.slice(6) : null;
 
     return (
         <>
@@ -515,6 +629,17 @@ export default function Screens({
                                                                     )}
                                                                 </DropdownMenuItem>
                                                             )}
+                                                            <DropdownMenuItem
+                                                                onSelect={() =>
+                                                                    setSaving(
+                                                                        screen,
+                                                                    )
+                                                                }
+                                                            >
+                                                                {t(
+                                                                    'screens.saved_templates.save',
+                                                                )}
+                                                            </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                     <ConfirmButton
@@ -548,7 +673,145 @@ export default function Screens({
                         </div>
                     )}
                 </Card>
+
+                {savedTemplates.length > 0 && (
+                    <Card className="mt-6">
+                        <div className="border-b border-line px-4 py-3">
+                            <h2 className="text-[13px] font-semibold text-ink">
+                                {t('screens.saved_templates.title')}
+                            </h2>
+                            <p className="text-xs text-ink-3">
+                                {t('screens.saved_templates.list_hint')}
+                            </p>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className={tableClass}>
+                                <thead>
+                                    <tr>
+                                        <th className={thClass}>
+                                            {t('screens.saved_templates.name')}
+                                        </th>
+                                        <th className={thClass}>
+                                            {t(
+                                                'screens.saved_templates.description',
+                                            )}
+                                        </th>
+                                        <th className={thClass}>
+                                            {t('screens.table.grid')}
+                                        </th>
+                                        <th className={thClass}>
+                                            <span className="sr-only">
+                                                {t('screens.table.actions')}
+                                            </span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {savedTemplates.map((item) => (
+                                        <tr key={item.uuid}>
+                                            <td className={tdClass}>
+                                                <span className="font-medium text-ink">
+                                                    {item.label}
+                                                </span>
+                                                {item.creator && (
+                                                    <span className="ml-2 text-xs text-ink-3">
+                                                        {t(
+                                                            'screens.saved_templates.by',
+                                                            {
+                                                                name: item.creator,
+                                                            },
+                                                        )}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td
+                                                className={`${tdClass} text-ink-2`}
+                                            >
+                                                {item.description}
+                                            </td>
+                                            <td
+                                                className={`${tdClass} font-mono`}
+                                            >
+                                                {`${item.cols} × ${item.rows}`}
+                                            </td>
+                                            <td className={tdClass}>
+                                                {canManageTemplates && (
+                                                    <div className="flex justify-end gap-1.5">
+                                                        <Button
+                                                            onClick={() =>
+                                                                setEditingTemplate(
+                                                                    item,
+                                                                )
+                                                            }
+                                                        >
+                                                            {t(
+                                                                'screens.saved_templates.edit',
+                                                            )}
+                                                        </Button>
+                                                        <ConfirmButton
+                                                            question={t(
+                                                                'screens.saved_templates.delete_question',
+                                                                {
+                                                                    name: item.label,
+                                                                },
+                                                            )}
+                                                            confirmLabel={t(
+                                                                'screens.saved_templates.delete',
+                                                            )}
+                                                            onConfirm={() =>
+                                                                router.delete(
+                                                                    destroyTemplate(
+                                                                        item.uuid,
+                                                                    ).url,
+                                                                    {
+                                                                        preserveScroll: true,
+                                                                    },
+                                                                )
+                                                            }
+                                                        >
+                                                            {t(
+                                                                'screens.saved_templates.delete',
+                                                            )}
+                                                        </ConfirmButton>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+                )}
             </PageBody>
+
+            <TemplateDialog
+                key={saving?.uuid ?? editingTemplate?.uuid ?? 'closed'}
+                open={saving !== null || editingTemplate !== null}
+                onClose={() => {
+                    setSaving(null);
+                    setEditingTemplate(null);
+                }}
+                form={
+                    saving
+                        ? saveTemplate.form(saving.uuid)
+                        : editingTemplate
+                          ? updateTemplate.form(editingTemplate.uuid)
+                          : null
+                }
+                title={
+                    saving
+                        ? t('screens.saved_templates.save_title', {
+                              name: saving.name,
+                          })
+                        : t('screens.saved_templates.edit_title', {
+                              name: editingTemplate?.label ?? '',
+                          })
+                }
+                hint={saving ? t('screens.saved_templates.save_hint') : ''}
+                name={saving?.name ?? editingTemplate?.label ?? ''}
+                description={editingTemplate?.description ?? ''}
+            />
 
             <Dialog
                 open={copying !== null}
@@ -622,7 +885,7 @@ export default function Screens({
             />
 
             <Dialog open={creating} onOpenChange={setCreating}>
-                <DialogContent className="sm:max-w-2xl">
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
                     <Form
                         {...store.form()}
                         onSuccess={() => setCreating(false)}
@@ -657,15 +920,19 @@ export default function Screens({
                                     </legend>
                                     <input
                                         type="hidden"
-                                        name="template"
-                                        value={template}
+                                        name={
+                                            savedUuid
+                                                ? 'saved_template'
+                                                : 'template'
+                                        }
+                                        value={savedUuid ?? template}
                                     />
                                     <div
                                         role="radiogroup"
                                         aria-label={t('screens.template')}
                                         className="grid grid-cols-2 gap-2 sm:grid-cols-3"
                                     >
-                                        {templates.map((item) => {
+                                        {pickable.map((item) => {
                                             const on = item.id === template;
 
                                             return (
@@ -685,6 +952,15 @@ export default function Screens({
                                                     <span className="text-[13px] font-medium text-ink">
                                                         {item.label}
                                                     </span>
+                                                    {item.id.startsWith(
+                                                        'saved:',
+                                                    ) && (
+                                                        <span className="text-[11px] font-medium text-amber">
+                                                            {t(
+                                                                'screens.saved_templates.picker',
+                                                            )}
+                                                        </span>
+                                                    )}
                                                     <span className="text-xs leading-snug text-ink-3">
                                                         {item.description}
                                                     </span>

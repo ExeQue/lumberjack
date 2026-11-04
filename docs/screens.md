@@ -25,6 +25,18 @@ deleted screen says so instead of going on with old numbers.
 
 ![The list of screens](./screenshots/screens.png)
 
+### Team templates
+
+**More > Save as template** on a row keeps the screen as a template of the team, with a
+name and a short description. **New screen** then offers it to every member next to the
+built-in layouts, marked **Saved by the team**, with a thumbnail of its widgets. A
+template holds the screen as it was when saved, in the same portable form as an export,
+so later changes to the screen, or deleting it, do not change the template; a screen made
+from it finds its projects and health checks by slug, and the notice names any the team
+no longer has. Every member can save templates and use them; the **Team templates** list
+below the screens lets team admins edit their name and description or delete them. The
+built-in layouts stay as they are.
+
 ### Export and import
 
 **Export**, under **More** on each row and in the designer's top bar, downloads the

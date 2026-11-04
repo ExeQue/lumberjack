@@ -62,6 +62,27 @@ return [
         'submit' => 'Copy screen',
     ],
 
+    // The team's own templates, saved from its screens.
+    'saved_templates' => [
+        // Menu item.
+        'save' => 'Save as template',
+        'save_title' => 'Save :name as a template',
+        'save_hint' => 'New screen offers it to the whole team, next to the built-in layouts. Later changes to the screen do not change the template.',
+        'name' => 'Name',
+        'description' => 'Description',
+        // Button.
+        'submit' => 'Save template',
+        'title' => 'Team templates',
+        'list_hint' => 'Saved from the team\'s screens. Team admins can rename and delete them.',
+        // In the New screen dialog, above the team's templates.
+        'picker' => 'Saved by the team',
+        'by' => 'by :name',
+        'edit' => 'Edit',
+        'edit_title' => 'Edit the template :name',
+        'delete' => 'Delete',
+        'delete_question' => 'Delete the template :name? Screens made from it stay as they are.',
+    ],
+
     // Importing a screen from an exported JSON file.
     'import' => [
         // Button.
