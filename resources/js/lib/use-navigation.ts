@@ -34,7 +34,29 @@ export type NavItem = {
     count?: number;
     /** Not an Inertia page (Horizon's own dashboard): a plain link that leaves the app. */
     external?: boolean;
+    /** Related pages behind this one entry, shown as tabs on each of them. */
+    tabs?: NavItem[];
+    /** Reached another way than the sidebar list (project settings: the gear). */
+    hidden?: boolean;
 };
+
+/** A group of pages behind one sidebar entry: active on any of them, their counts added. */
+function group(label: string, tabs: NavItem[]): NavItem {
+    const counts = tabs.map((tab) => tab.count ?? 0);
+
+    return {
+        label,
+        href: tabs[0].href,
+        active: tabs.some((tab) => tab.active),
+        count: counts.reduce((sum, n) => sum + n, 0),
+        tabs,
+    };
+}
+
+/** Every page behind the entries, one per page: for the command palette. */
+export function leaves(items: NavItem[]): NavItem[] {
+    return items.flatMap((item) => item.tabs ?? [item]);
+}
 
 /** The pages the sidebar and the command palette offer, in sidebar order. */
 export function useNavigation(
@@ -55,75 +77,66 @@ export function useNavigation(
     const path = page.url.split('?')[0];
     const isAt = (href: string, exact = false) =>
         exact ? path === href : path === href || path.startsWith(href + '/');
+    const item = (
+        label: string,
+        href: string,
+        extra: Partial<NavItem> & { exact?: boolean } = {},
+    ): NavItem => {
+        const { exact = false, ...rest } = extra;
+
+        return { label, href, active: isAt(href, exact), ...rest };
+    };
 
     const projectNav: NavItem[] = project
         ? [
-              {
-                  label: t('common.nav.overview'),
-                  href: projectShow(project.uuid).url,
-                  active: isAt(projectShow(project.uuid).url, true),
-              },
-              {
-                  label: t('common.nav.issues'),
-                  href: issuesIndex(project.uuid).url,
-                  active: isAt(issuesIndex(project.uuid).url),
+              item(t('common.nav.overview'), projectShow(project.uuid).url, {
+                  exact: true,
+              }),
+              item(t('common.nav.issues'), issuesIndex(project.uuid).url, {
                   count: counts?.issues,
-              },
-              {
-                  label: t('common.nav.routes'),
-                  href: routesIndex(project.uuid).url,
-                  active: isAt(routesIndex(project.uuid).url),
-              },
-              {
-                  label: t('common.nav.queries'),
-                  href: queriesIndex(project.uuid).url,
-                  active: isAt(queriesIndex(project.uuid).url),
-              },
-              {
-                  label: t('common.nav.releases'),
-                  href: releasesIndex(project.uuid).url,
-                  active: isAt(releasesIndex(project.uuid).url),
-              },
-              {
-                  label: t('common.nav.jobs'),
-                  href: jobsIndex(project.uuid).url,
-                  active: isAt(jobsIndex(project.uuid).url),
-                  count: counts?.jobs,
-              },
-              {
-                  label: t('common.nav.schedule'),
-                  href: scheduleIndex(project.uuid).url,
-                  active: isAt(scheduleIndex(project.uuid).url),
-                  count: counts?.schedule,
-              },
-              {
-                  label: t('common.nav.commands'),
-                  href: commandsIndex(project.uuid).url,
-                  active: isAt(commandsIndex(project.uuid).url),
-                  count: counts?.commands,
-              },
-              {
-                  label: t('common.nav.logs'),
-                  href: logsIndex(project.uuid).url,
-                  active: isAt(logsIndex(project.uuid).url),
-              },
-              {
-                  label: t('common.nav.health'),
-                  href: healthIndex(project.uuid).url,
-                  active: isAt(healthIndex(project.uuid).url),
+              }),
+              group(t('common.nav.performance'), [
+                  item(t('common.nav.routes'), routesIndex(project.uuid).url),
+                  item(t('common.nav.queries'), queriesIndex(project.uuid).url),
+              ]),
+              group(t('common.nav.jobs'), [
+                  item(t('common.nav.jobs'), jobsIndex(project.uuid).url, {
+                      count: counts?.jobs,
+                  }),
+                  item(
+                      t('common.nav.schedule'),
+                      scheduleIndex(project.uuid).url,
+                      {
+                          count: counts?.schedule,
+                      },
+                  ),
+                  item(
+                      t('common.nav.commands'),
+                      commandsIndex(project.uuid).url,
+                      {
+                          count: counts?.commands,
+                      },
+                  ),
+              ]),
+              item(t('common.nav.logs'), logsIndex(project.uuid).url),
+              item(t('common.nav.health'), healthIndex(project.uuid).url, {
                   count: counts?.health,
-              },
-              {
-                  label: t('common.nav.data_sources'),
-                  href: dataSourcesIndex(project.uuid).url,
-                  active: isAt(dataSourcesIndex(project.uuid).url),
-              },
+              }),
+              item(t('common.nav.releases'), releasesIndex(project.uuid).url),
               ...(project.can_administer
                   ? [
                         {
-                            label: t('common.nav.settings'),
-                            href: projectSettings(project.uuid).url,
-                            active: isAt(projectSettings(project.uuid).url),
+                            ...group(t('common.nav.settings'), [
+                                item(
+                                    t('common.nav.settings'),
+                                    projectSettings(project.uuid).url,
+                                ),
+                                item(
+                                    t('common.nav.data_sources'),
+                                    dataSourcesIndex(project.uuid).url,
+                                ),
+                            ]),
+                            hidden: true,
                         },
                     ]
                   : []),
@@ -131,60 +144,24 @@ export function useNavigation(
         : [];
 
     const teamNav: NavItem[] = [
-        {
-            label: t('common.nav.all_projects'),
-            href: projectsIndex().url,
-            active: isAt(projectsIndex().url, true),
-        },
-        {
-            label: t('common.nav.team'),
-            href: teamShow().url,
-            active: isAt(teamShow().url, true),
-        },
-        {
-            label: t('common.nav.alerts'),
-            href: alertsIndex().url,
-            active: isAt(alertsIndex().url),
-        },
-        {
-            label: t('common.nav.retention'),
-            href: teamRetention().url,
-            active: isAt(teamRetention().url),
-        },
-        {
-            label: t('common.nav.screens'),
-            href: screensIndex().url,
-            active: isAt(screensIndex().url),
-        },
-        {
-            label: t('common.nav.displays'),
-            href: teamDisplays().url,
-            active: isAt(teamDisplays().url),
-        },
+        item(t('common.nav.projects'), projectsIndex().url, { exact: true }),
+        group(t('common.nav.screens'), [
+            item(t('common.nav.screens'), screensIndex().url),
+            item(t('common.nav.displays'), teamDisplays().url),
+        ]),
+        item(t('common.nav.alerts'), alertsIndex().url),
+        group(t('common.nav.team_page'), [
+            item(t('common.nav.team'), teamShow().url, { exact: true }),
+            item(t('common.nav.retention'), teamRetention().url),
+        ]),
     ];
 
     const adminNav: NavItem[] = is_admin
         ? [
-              {
-                  label: t('admin.nav.teams'),
-                  href: adminTeams().url,
-                  active: isAt(adminTeams().url),
-              },
-              {
-                  label: t('admin.nav.users'),
-                  href: adminUsers().url,
-                  active: isAt(adminUsers().url),
-              },
-              {
-                  label: t('admin.nav.audit'),
-                  href: adminAudit().url,
-                  active: isAt(adminAudit().url),
-              },
-              {
-                  label: t('admin.nav.retention'),
-                  href: adminRetention().url,
-                  active: isAt(adminRetention().url),
-              },
+              item(t('admin.nav.teams'), adminTeams().url),
+              item(t('admin.nav.users'), adminUsers().url),
+              item(t('admin.nav.audit'), adminAudit().url),
+              item(t('admin.nav.retention'), adminRetention().url),
               {
                   label: t('admin.nav.horizon'),
                   href: '/horizon',
@@ -195,6 +172,31 @@ export function useNavigation(
         : [];
 
     return { projectNav, teamNav, adminNav };
+}
+
+/** The tabs of the group the page belongs to, or null on a page of its own. */
+export function useSectionTabs(): NavItem[] | null {
+    const page = usePage<{
+        project?: Pick<ProjectHeader, 'uuid' | 'can_administer'>;
+        sidebar_project?: Pick<ProjectHeader, 'uuid' | 'can_administer'> & {
+            counts?: Parameters<typeof useNavigation>[1];
+        };
+        is_admin: boolean;
+    }>();
+    const project = page.props.project ?? page.props.sidebar_project;
+    const { projectNav, teamNav } = useNavigation(
+        project,
+        page.props.sidebar_project?.counts,
+        page.props.is_admin,
+    );
+    const path = page.url.split('?')[0];
+
+    // Only on the pages themselves, not on what they lead to (one route, one job).
+    return (
+        [...projectNav, ...teamNav].find((entry) =>
+            entry.tabs?.some((tab) => tab.href === path),
+        )?.tabs ?? null
+    );
 }
 
 const sections: Record<string, (project: string) => { url: string }> = {

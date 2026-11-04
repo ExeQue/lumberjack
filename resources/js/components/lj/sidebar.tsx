@@ -2,10 +2,12 @@ import { Link, router, usePage } from '@inertiajs/react';
 import {
     Bell,
     BellOff,
+    ChevronRight,
     ChevronsUpDown,
     ExternalLink,
     LogOut,
     Search,
+    Settings,
     UserCog,
 } from 'lucide-react';
 import {
@@ -99,6 +101,7 @@ export function Sidebar() {
         counts,
         is_admin,
     );
+    const settings = projectNav.find((item) => item.hidden);
 
     return (
         <nav
@@ -166,32 +169,55 @@ export function Sidebar() {
                 </DropdownMenu>
 
                 {team && team.projects.length > 0 && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger className="flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-line bg-panel px-2.5 text-left">
-                            <span className="truncate font-mono text-xs">
-                                {project?.name ?? t('common.choose_project')}
-                            </span>
-                            <ChevronsUpDown
-                                className="size-3.5 text-ink-3"
-                                aria-hidden="true"
-                            />
-                            <span className="sr-only">
-                                {t('common.switch_project')}
-                            </span>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56">
-                            {team.projects.map((item) => (
-                                <DropdownMenuItem key={item.uuid} asChild>
-                                    <Link
-                                        href={switchTo(item.uuid)}
-                                        className="font-mono text-xs"
-                                    >
-                                        {item.name}
-                                    </Link>
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex gap-1.5">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger className="flex h-9 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-md border border-line bg-panel px-2.5 text-left">
+                                <span className="truncate font-mono text-xs">
+                                    {project?.name ??
+                                        t('common.choose_project')}
+                                </span>
+                                <ChevronsUpDown
+                                    className="size-3.5 text-ink-3"
+                                    aria-hidden="true"
+                                />
+                                <span className="sr-only">
+                                    {t('common.switch_project')}
+                                </span>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-56">
+                                {team.projects.map((item) => (
+                                    <DropdownMenuItem key={item.uuid} asChild>
+                                        <Link
+                                            href={switchTo(item.uuid)}
+                                            className="font-mono text-xs"
+                                        >
+                                            {item.name}
+                                        </Link>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        {settings && (
+                            <Link
+                                href={settings.href}
+                                aria-label={t('common.nav.project_settings')}
+                                title={t('common.nav.project_settings')}
+                                aria-current={
+                                    settings.active ? 'page' : undefined
+                                }
+                                className={cn(
+                                    'inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-ink-3 hover:border-line-strong hover:text-ink',
+                                    settings.active &&
+                                        'border-amber text-amber',
+                                )}
+                            >
+                                <Settings
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
+                            </Link>
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -200,9 +226,11 @@ export function Sidebar() {
                     <span className="px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-ink-3 uppercase">
                         {t('common.nav.project')}
                     </span>
-                    {projectNav.map((item) => (
-                        <NavLink key={item.href} item={item} />
-                    ))}
+                    {projectNav
+                        .filter((item) => !item.hidden)
+                        .map((item) => (
+                            <NavLink key={item.href} item={item} />
+                        ))}
                 </div>
             )}
 
@@ -216,14 +244,22 @@ export function Sidebar() {
             </div>
 
             {adminNav.length > 0 && (
-                <div className="flex flex-col gap-0.5">
-                    <span className="px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-ink-3 uppercase">
+                // Folded away unless an admin page is open: most days it is not needed.
+                <details
+                    open={adminNav.some((item) => item.active) || undefined}
+                    className="group flex flex-col gap-0.5"
+                >
+                    <summary className="flex cursor-pointer list-none items-center justify-between px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-ink-3 uppercase hover:text-ink-2 [&::-webkit-details-marker]:hidden">
                         {t('admin.nav.section')}
-                    </span>
+                        <ChevronRight
+                            className="size-3 transition-transform group-open:rotate-90"
+                            aria-hidden="true"
+                        />
+                    </summary>
                     {adminNav.map((item) => (
                         <NavLink key={item.href} item={item} />
                     ))}
-                </div>
+                </details>
             )}
 
             <DropdownMenu>

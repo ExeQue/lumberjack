@@ -134,7 +134,8 @@ sent and nothing is saved. The route does not exist in any other environment.
 
 ## Administration pages
 
-Administrators see an **Administration** section in the sidebar. Everything they
+Administrators see an **Administration** section in the sidebar, folded away until
+opened (and open on its pages). Everything they
 do there is written to the audit log.
 
 - **All teams:** every team with its owner, members, projects and errors of the

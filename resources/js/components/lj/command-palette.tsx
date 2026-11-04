@@ -8,7 +8,11 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { useT } from '@/lib/i18n';
-import { useNavigation, useProjectSwitchUrl } from '@/lib/use-navigation';
+import {
+    leaves,
+    useNavigation,
+    useProjectSwitchUrl,
+} from '@/lib/use-navigation';
 import { search } from '@/routes/projects';
 import { switchMethod as switchTeam } from '@/routes/teams';
 import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
@@ -196,10 +200,13 @@ export function CommandPalette() {
                         ))}
 
                         {[
-                            { heading: project?.name, items: projectNav },
+                            {
+                                heading: project?.name,
+                                items: leaves(projectNav),
+                            },
                             {
                                 heading: t('common.nav.team_section'),
-                                items: teamNav,
+                                items: leaves(teamNav),
                             },
                             {
                                 heading: t('admin.nav.section'),
