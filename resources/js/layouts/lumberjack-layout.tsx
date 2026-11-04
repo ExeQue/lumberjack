@@ -26,7 +26,7 @@ export default function LumberjackLayout({
     return (
         <div className="flex min-h-screen flex-col bg-ground font-sans text-[13px] text-ink lg:flex-row">
             {/* Desktop: the sidebar beside the page. */}
-            <div className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[232px] lg:flex-none lg:self-start lg:overflow-y-auto">
+            <div className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[232px] lg:flex-none lg:[scrollbar-gutter:stable] lg:self-start lg:overflow-y-auto lg:border-r lg:border-line lg:bg-rail">
                 <Sidebar />
             </div>
 
@@ -52,7 +52,7 @@ export default function LumberjackLayout({
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                 <SheetContent
                     side="left"
-                    className="w-[260px] max-w-[85vw] gap-0 overflow-y-auto border-line bg-rail p-0"
+                    className="w-[260px] max-w-[85vw] [scrollbar-gutter:stable] gap-0 overflow-y-auto border-line bg-rail p-0"
                 >
                     <SheetTitle className="sr-only">
                         {t('common.nav.label')}
