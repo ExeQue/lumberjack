@@ -130,7 +130,8 @@ Each widget's settings are grouped in sections that open and close:
 
 - **Value**, **Scale**, **Chart**, **Rows**, **Checks** or **Clock**: what the type
   itself offers, such as the amber and red limits of a stat or gauge (empty uses the
-  defaults shown; shares go from 0 to 1, durations are in milliseconds), whether low
+  defaults shown; shares go from 0 to 1, durations are in milliseconds), whether a gauge
+  marks each limit on its arc (with red hidden, amber runs to the end), whether low
   values are bad (Apdex, uptime), what to compare with, decimals, a prefix and suffix,
   the chart style and how many series, its time axis, value axis and grid lines (each on or off), how many rows a list shows and in which order.
 - **Rotation**: a stat, gauge, chart, list or health widget can show several values in

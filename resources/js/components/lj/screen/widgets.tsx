@@ -855,13 +855,27 @@ function Gauge({
     const fraction = (v: number) =>
         Math.max(0, Math.min(1, (v - min) / (max - min || 1)));
     const f = value === null ? 0 : fraction(value);
-    const za = limits?.amber !== null && limits ? fraction(limits.amber) : null;
-    const zone =
+    const za = limits?.amber != null ? fraction(limits.amber) : null;
+    const zr = limits?.red != null ? fraction(limits.red) : null;
+    // A stretch of the inner arc, from one fraction of the scale to another.
+    const stretch = (from: number, to: number) =>
+        to > from ? `0 ${zl * from} ${zl * (to - from)} ${zl}` : `0 ${zl}`;
+    // Amber runs up to red (or the end); red runs on to the end. Low-is-bad mirrors it.
+    // With the red mark hidden, amber fills the whole stretch past its limit.
+    const showRed = option<boolean>(schema, widget, 'show_red_limit') !== false;
+    const amberUntil = showRed ? zr : null;
+    const amberZone =
         za === null
             ? `0 ${zl}`
             : limits.low_is_bad
-              ? `${zl * za} ${zl}`
-              : `0 ${zl * za} ${zl * (1 - za)} ${zl}`;
+              ? stretch(amberUntil ?? 0, za)
+              : stretch(za, amberUntil ?? 1);
+    const redZone =
+        zr === null
+            ? `0 ${zl}`
+            : limits.low_is_bad
+              ? stretch(0, zr)
+              : stretch(zr, 1);
     const color =
         !colored || !data.state
             ? 'var(--s-ink)'
@@ -896,7 +910,18 @@ function Gauge({
                         fill="none"
                         stroke="var(--s-amber)"
                         strokeWidth="2"
-                        strokeDasharray={zone}
+                        strokeDasharray={amberZone}
+                        opacity="0.8"
+                    />
+                )}
+                {option<boolean>(schema, widget, 'show_red_limit') !==
+                    false && (
+                    <path
+                        d="M21 62 A39 39 0 0 1 99 62"
+                        fill="none"
+                        stroke="var(--s-red)"
+                        strokeWidth="2"
+                        strokeDasharray={redZone}
                         opacity="0.8"
                     />
                 )}

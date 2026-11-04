@@ -413,7 +413,7 @@ final class WidgetSchema
                 $rotation, $scope(true), $display(true),
             ],
             'gauge' => [
-                $section('scale', [$number('min'), $number('max'), ...$limits, $toggle('show_limits', true)]),
+                $section('scale', [$number('min'), $number('max'), ...$limits, $toggle('show_limits', true), $toggle('show_red_limit', true)]),
                 $rotation, $scope(true), $display(true),
             ],
             'chart' => [
