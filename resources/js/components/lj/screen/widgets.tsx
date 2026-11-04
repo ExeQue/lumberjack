@@ -888,6 +888,9 @@ function curve(pts: [number, number][], smooth: boolean): string {
     return path;
 }
 
+/** The least height of a health card: its name, state and age, in the tile's em. */
+const CARD_MIN_EM = 3.8;
+
 /** How long a rotating tile's value takes to leave, and then to come in. */
 const SWITCH_MS = 300;
 
@@ -1933,11 +1936,37 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
         );
     }
 
-    const rowPx = size.em * (view === 'cards' ? 2.9 : 1.7);
-    const perRow = view === 'cards' ? cardCols : 1;
-    const fit = Math.max(1, perRow * Math.floor((size.h + 6) / (rowPx + 6)));
+    // Cards fill the tile: as many rows of at least CARD_MIN_EM as fit, stretched to its height.
+    // A list row is 1.7em of its 0.85em text.
+    const gap = 6;
+    const rows =
+        view === 'cards'
+            ? Math.max(
+                  1,
+                  Math.floor((size.h + gap) / (size.em * CARD_MIN_EM + gap)),
+              )
+            : Math.max(1, Math.floor(size.h / (size.em * 0.85 * 1.7)));
+    const fit = (view === 'cards' ? cardCols : 1) * rows;
     const more = checks.length > fit ? checks.length - fit + 1 : 0;
+    // Every row of cards in use: they stretch to fill the tile.
+    const full = checks.length >= fit;
     const visible = checks.slice(0, more ? fit - 1 : fit);
+    // What the "more" entry hides that needs attention, worst first.
+    const hidden = checks.slice(visible.length);
+    const hiddenBad = (['down', 'degraded', 'recovering'] as const)
+        .map(
+            (state) =>
+                [
+                    state,
+                    hidden.filter((c) => c.state === state).length,
+                ] as const,
+        )
+        .filter(([, n]) => n > 0)
+        .map(([state, n]) => `${n} ${word(state).toLowerCase()}`);
+    const moreText = [
+        t('screens.health.more', { count: more }),
+        ...hiddenBad,
+    ].join(' · ');
 
     return (
         <div ref={ref} className="min-h-0 w-full flex-1 overflow-hidden">
@@ -1950,12 +1979,28 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                 </span>
             )}
             {view === 'cards' ? (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(max(140px,9em),1fr))] content-start gap-1.5">
+                <div
+                    className={cn('grid content-start', full && 'h-full')}
+                    style={{
+                        gap,
+                        gridTemplateColumns: `repeat(${cardCols}, minmax(0, 1fr))`,
+                        // Full: the rows share the tile's height. A few checks: cards of
+                        // their own height from the top.
+                        gridTemplateRows: full
+                            ? `repeat(${rows}, minmax(0, 1fr))`
+                            : undefined,
+                        gridAutoRows: full
+                            ? undefined
+                            : `${CARD_MIN_EM + 0.4}em`,
+                    }}
+                >
                     {visible.map((c) => (
+                        // Each card is a small single health tile: the name, the state
+                        // large in its color, and how long it has been so.
                         <div
                             key={c.uuid}
                             title={c.name}
-                            className="flex h-[2.9em] min-w-0 flex-col justify-center rounded-md border border-l-[3px] px-2"
+                            className="flex min-h-0 min-w-0 flex-col items-center justify-center gap-[0.15em] overflow-hidden rounded-md border px-2 text-center"
                             style={{
                                 background:
                                     CARD_BG[c.state] ?? 'var(--s-panel-2)',
@@ -1963,58 +2008,67 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                                     c.state === 'ok'
                                         ? 'var(--s-green-line)'
                                         : STATE_COLOR[c.state],
-                                borderLeftColor: STATE_COLOR[c.state],
                             }}
                         >
-                            <span className="truncate font-mono text-[0.8em]">
+                            <span className="max-w-full truncate text-[0.75em] font-semibold">
                                 {c.name}
                             </span>
                             <span
-                                className="truncate text-[0.72em]"
-                                style={{
-                                    color:
-                                        c.state === 'ok'
-                                            ? 'var(--s-ink-2)'
-                                            : STATE_COLOR[c.state],
-                                }}
+                                className="font-mono text-[1.35em] leading-none font-bold"
+                                style={{ color: STATE_COLOR[c.state] }}
                             >
-                                {[
-                                    word(c.state),
-                                    c.since ? lasted(c.since, now) : null,
-                                ]
-                                    .filter(Boolean)
-                                    .join(' · ')}
+                                {word(c.state)}
+                            </span>
+                            <span
+                                className="max-w-full truncate text-[0.68em]"
+                                style={{ color: STATE_COLOR[c.state] }}
+                            >
+                                {c.since ? lasted(c.since, now) : '\u00a0'}
                             </span>
                         </div>
                     ))}
                     {more > 0 && (
-                        <div className="flex h-[2.9em] items-center rounded-md border border-(--s-line) bg-(--s-panel-2) px-2 text-[0.8em] text-(--s-ink-2)">
-                            {t('screens.health.more', { count: more })}
+                        <div className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-md border border-(--s-line) bg-(--s-panel-2) px-2 text-center text-[0.8em] text-(--s-ink-2)">
+                            <span className="truncate">{moreText}</span>
                         </div>
                     )}
                 </div>
             ) : (
-                <ul className="flex flex-col">
+                // Columns that line up: the dot, the name (it gives way), the state, how long.
+                <ul className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] content-start gap-x-[0.6em] text-[0.85em]">
                     {visible.map((c) => (
-                        <li
-                            key={c.uuid}
-                            className="flex h-[1.7em] items-center truncate text-[0.85em]"
-                            style={{ color: STATE_COLOR[c.state] }}
-                        >
-                            {'● ' +
-                                c.name +
-                                ' · ' +
-                                (c.since
-                                    ? t('screens.health.for', {
-                                          state: word(c.state),
-                                          time: lasted(c.since, now),
-                                      })
-                                    : word(c.state))}
+                        <li key={c.uuid} className="contents">
+                            <span
+                                aria-hidden="true"
+                                className="flex h-[1.7em] items-center"
+                                style={{ color: STATE_COLOR[c.state] }}
+                            >
+                                ●
+                            </span>
+                            <span className="flex h-[1.7em] min-w-0 items-center">
+                                <span className="truncate font-mono">
+                                    {c.name}
+                                </span>
+                            </span>
+                            <span
+                                className="flex h-[1.7em] items-center"
+                                style={{
+                                    color:
+                                        c.state === 'ok'
+                                            ? 'var(--s-ink-3)'
+                                            : STATE_COLOR[c.state],
+                                }}
+                            >
+                                {word(c.state)}
+                            </span>
+                            <span className="flex h-[1.7em] items-center justify-end font-mono text-(--s-ink-3) tabular-nums">
+                                {c.since ? lasted(c.since, now) : ''}
+                            </span>
                         </li>
                     ))}
                     {more > 0 && (
-                        <li className="flex h-[1.7em] items-center text-[0.85em] text-(--s-ink-2)">
-                            {t('screens.health.more', { count: more })}
+                        <li className="col-span-4 flex h-[1.7em] items-center truncate text-(--s-ink-2)">
+                            {moreText}
                         </li>
                     )}
                 </ul>
