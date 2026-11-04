@@ -17,7 +17,8 @@ team) are pages of their own. An entry's badge adds up its tabs' counts; each ta
 its own.
 
 The gear beside the project switcher opens the project's **Settings**, with **Data
-sources** as its second tab (for whoever administers the project). The
+sources** as its second tab; members, who cannot change the settings, land on the data
+sources (read only). The
 **Administration** section, for system administrators, folds away and opens on its own
 on an administration page.
 
