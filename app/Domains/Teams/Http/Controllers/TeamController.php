@@ -45,7 +45,8 @@ class TeamController
                 'expires_at' => $i->expires_at->toIso8601String(),
                 'expired' => $i->isExpired(),
             ])->all(),
-            'tokens' => $team->mcpTokens()->with(['projects:id,name,slug', 'user:id,name,is_admin,suspended_at', 'user.teams:id'])->latest()->get()->map(fn (McpToken $t): array => [
+            // Each token's usability check reads its team, which is this one.
+            'tokens' => $team->mcpTokens()->chaperone('team')->with(['projects:id,name,slug', 'user:id,name,is_admin,suspended_at', 'user.teams:id'])->latest()->get()->map(fn (McpToken $t): array => [
                 'id' => $t->id,
                 'name' => $t->name,
                 'scope' => $t->scope->value,
