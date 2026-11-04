@@ -89,6 +89,7 @@ describe('system administration', function () {
     });
 
     test('suspending signs the user out and keeps them out', function () {
+        config(['session.driver' => 'database']);
         $user = User::factory()->inTeam()->create();
         DB::table('sessions')->insert(['id' => 'abc', 'user_id' => $user->id, 'payload' => '', 'last_activity' => time()]);
 

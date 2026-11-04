@@ -32,8 +32,9 @@ class SetSuspendedAction
 
         $user->forceFill(['suspended_at' => $suspended ? now() : null])->save();
 
-        if ($suspended) {
-            // Database sessions end now; other drivers end on the next request.
+        // Database sessions end now; others (Redis, the default) on the next request, through
+        // SignOutSuspendedUsers.
+        if ($suspended && config('session.driver') === 'database') {
             DB::table('sessions')->where('user_id', $user->id)->delete();
         }
 
