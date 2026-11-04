@@ -58,6 +58,7 @@ import { xsrf } from '@/lib/http';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
+    exportMethod as exportRoute,
     index as screensIndex,
     layout as layoutRoute,
     reload as reloadRoute,
@@ -351,9 +352,8 @@ export default function EditScreen(props: Props) {
             // Private window: it just does not stick.
         }
     };
-    const [selected, setSelected] = useState<string | null>(
-        props.screen.widgets[0]?.id ?? null,
-    );
+    // Nothing is selected on load: the inspector opens on the screen's own settings.
+    const [selected, setSelected] = useState<string | null>(null);
     // The value of the selected widget's rotation its inspector has open; the tile shows it.
     const [tab, setTab] = useState({ id: '', index: 0 });
     const pinned = tab.id === selected ? tab.index : 0;
@@ -606,6 +606,28 @@ export default function EditScreen(props: Props) {
             focusAfter.current = null;
         }
     });
+
+    // Escape anywhere in the designer goes back to the screen settings, unless it is
+    // closing something else first (a popover, a dialog, an open select).
+    useEffect(() => {
+        const onEscape = (e: globalThis.KeyboardEvent) => {
+            if (
+                e.key !== 'Escape' ||
+                e.defaultPrevented ||
+                document.querySelector(
+                    ':popover-open, dialog[open], [role="dialog"][data-state="open"]',
+                )
+            ) {
+                return;
+            }
+
+            setSelected(null);
+        };
+
+        window.addEventListener('keydown', onEscape);
+
+        return () => window.removeEventListener('keydown', onEscape);
+    }, []);
 
     const onKeyDown = (widget: Widget) => (e: KeyboardEvent) => {
         if (e.target !== e.currentTarget) {
@@ -1199,6 +1221,14 @@ export default function EditScreen(props: Props) {
                     >
                         {t('screens.designer.reload')}
                     </Button>
+                    <a
+                        href={exportRoute(screen.uuid).url}
+                        download
+                        title={t('screens.actions.export_hint')}
+                        className={buttonClass()}
+                    >
+                        {t('screens.actions.export')}
+                    </a>
                     <Button onClick={() => setDialog('tv')}>
                         {t('screens.open_tv.button')}
                     </Button>
@@ -1347,6 +1377,12 @@ export default function EditScreen(props: Props) {
                 >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex flex-wrap items-center gap-3.5 text-ink-2">
+                            <Button
+                                aria-pressed={selected === null}
+                                onClick={() => setSelected(null)}
+                            >
+                                {t('screens.settings.title')}
+                            </Button>
                             <span>
                                 {t(
                                     'screens.designer.count',

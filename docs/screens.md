@@ -25,6 +25,54 @@ deleted screen says so instead of going on with old numbers.
 
 ![The list of screens](./screenshots/screens.png)
 
+### Export and import
+
+**Export**, on each row and in the designer's top bar, downloads the screen as a JSON
+file named after it, such as `ops-wall.lumberjack-screen.json`, to keep in a repository
+or bring to another team or another Lumberjack:
+
+```json
+{
+    "format": "lumberjack-screen",
+    "version": 1,
+    "exported_at": "2026-11-04T10:00:00+00:00",
+    "screen": {
+        "name": "Ops wall",
+        "cols": 4,
+        "rows": 4,
+        "aspect": "16:9",
+        "theme": "schedule",
+        "scope": { "projects": ["shop"], "environment": "production", "period": "24h" },
+        "widgets": [
+            {
+                "id": "health", "type": "health", "source": "checks",
+                "x": 0, "y": 3, "w": 2, "h": 1,
+                "options": {
+                    "checks": [{ "project": "shop", "environment": "production", "slug": "database:pgsql" }]
+                },
+                "scope": {}, "rotate": []
+            }
+        ]
+    }
+}
+```
+
+The file holds the grid, every setting (aspect, orientation, fit, header, theme with its
+light schedule and time zone, default scope) and every widget with its position, options,
+scope and rotation. Projects are named by slug and health checks by their project's slug,
+environment and slug (a monitored check, which has none, by its name), so the file does
+not depend on ids. Nothing that grants access goes in: no share link, no displays, no ids.
+
+**Import**, above the list, takes such a file, picked or pasted (at most 256 KB), and shows
+what it holds before anything is made: name, grid, widgets, and the projects and checks
+this team has no match for. **Import screen** creates it as a new screen of the current
+team and opens the designer. Projects and checks are found by slug within the team; one
+the team does not have is left out and the notice names it, so a widget covers the
+projects or checks that remain, or all of them when none does. A file of another format
+or version, or with widgets the designer would not save (an unknown source, cells used
+twice, a grid past 12 x 12), is refused with the reason. Every member can export and
+import, as every member can make screens.
+
 ## The designer
 
 The designer has three parts: the widgets you can add on the left, the screen as its
@@ -94,7 +142,7 @@ it happens for real. **Live data** goes back to the real numbers.
 
 ### Screen settings
 
-With no widget selected (click the grid's background, or press Escape) the right side
+With no widget selected (click the grid's background, the toolbar's Screen settings button, or press Escape anywhere) the right side
 shows the screen's own settings: its name, the projects, environment and period every
 widget shows unless it picks its own (no project ticked means every project of the team,
 new ones included), and the time zone for the clock and the theme schedule.
