@@ -281,7 +281,7 @@ docker compose pull
 docker compose --env-file .env.docker up -d
 ```
 
-**About**, in the menu under your name, says which version is running.
+The version under your name at the bottom of the sidebar says which one is running; it opens **About**.
 
 Migrations run on start. To run them yourself instead, set
 `LUMBERJACK_MIGRATE=false` and run

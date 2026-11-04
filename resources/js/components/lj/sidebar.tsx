@@ -4,7 +4,6 @@ import {
     BellOff,
     ChevronRight,
     ChevronsUpDown,
-    Info,
     ExternalLink,
     LogOut,
     Search,
@@ -294,14 +293,6 @@ export function Sidebar() {
                         )}
                         {sound ? t('common.sound_on') : t('common.sound_off')}
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                        <Link href={about().url}>
-                            <Info className="size-4" aria-hidden="true" />
-                            <span className="truncate">
-                                {t('about.menu', { version: appVersion })}
-                            </span>
-                        </Link>
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                         <Link
@@ -316,6 +307,14 @@ export function Sidebar() {
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
+            {/* The running version, small, under the user; it opens About. */}
+            <Link
+                href={about().url}
+                title={t('about.title')}
+                className="-mt-3 shrink-0 truncate px-2.5 font-mono text-[11px] text-ink-3 hover:text-ink-2"
+            >
+                Lumberjack {appVersion}
+            </Link>
         </nav>
     );
 }
