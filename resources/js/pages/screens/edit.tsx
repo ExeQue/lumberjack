@@ -1158,7 +1158,7 @@ export default function EditScreen(props: Props) {
     );
 
     return (
-        <div className="flex min-h-screen flex-col bg-ground text-[13px] text-ink">
+        <div className="flex min-h-screen flex-col bg-ground text-[13px] text-ink lg:h-screen">
             <Head title={t('screens.designer.title', { name: screen.name })} />
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-panel px-6 py-3.5">
                 <nav
@@ -1282,10 +1282,11 @@ export default function EditScreen(props: Props) {
                 </DialogContent>
             </Dialog>
 
+            {/* Wide screens: the top bar, then three columns that fill the rest and scroll on their own. */}
             <div className="flex min-h-0 flex-1 flex-wrap lg:flex-nowrap">
                 <aside
                     aria-label={t('screens.palette.title')}
-                    className="flex w-full flex-col gap-2 border-line p-5 lg:sticky lg:top-0 lg:h-screen lg:w-[240px] lg:flex-none lg:[scrollbar-gutter:stable] lg:self-start lg:overflow-y-auto lg:border-r"
+                    className="flex w-full flex-col gap-2 border-line p-5 lg:w-[240px] lg:flex-none lg:[scrollbar-gutter:stable] lg:overflow-y-auto lg:border-r"
                 >
                     <h2 className="text-[11px] font-semibold tracking-wide text-ink-3 uppercase">
                         {t('screens.palette.title')}
@@ -1378,10 +1379,9 @@ export default function EditScreen(props: Props) {
 
                 <section
                     aria-label={t('screens.designer.grid')}
-                    className="flex min-w-0 flex-1 flex-col bg-rail p-6"
+                    className="flex min-w-0 flex-1 flex-col bg-rail p-6 lg:overflow-y-auto"
                 >
-                    {/* The preview stays in view while a long inspector scrolls the page. */}
-                    <div className="flex flex-col gap-3.5 lg:sticky lg:top-6">
+                    <div className="flex flex-col gap-3.5">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex flex-wrap items-center gap-3.5 text-ink-2">
                                 <Button
@@ -1759,7 +1759,7 @@ export default function EditScreen(props: Props) {
 
                 <aside
                     aria-label={t('screens.inspector.label')}
-                    className="flex w-full flex-col gap-4 border-line bg-panel p-5 lg:sticky lg:top-0 lg:h-screen lg:w-[340px] lg:flex-none lg:[scrollbar-gutter:stable] lg:self-start lg:overflow-y-auto lg:border-l"
+                    className="flex w-full flex-col gap-4 border-line bg-panel p-5 lg:w-[340px] lg:flex-none lg:[scrollbar-gutter:stable] lg:overflow-y-auto lg:border-l"
                 >
                     {current ? (
                         <WidgetInspector
