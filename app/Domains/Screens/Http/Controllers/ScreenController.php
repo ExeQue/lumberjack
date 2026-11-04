@@ -103,6 +103,11 @@ class ScreenController
     {
         Gate::authorize('update', $screen);
 
+        // The sidebar loads the user's team anyway; mostly it is the screen's.
+        if ($request->user()->current_team_id === $screen->team_id) {
+            $screen->setRelation('team', $request->user()->currentTeam);
+        }
+
         return Inertia::render('screens/edit', [
             'sharing' => $presenter->sharing($screen, $request->user()),
             'tv' => $presenter->tvInstructions(),

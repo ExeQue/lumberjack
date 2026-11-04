@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Issues\Models\Issue;
+use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Actions\CountScreenViewersAction;
 use App\Domains\Screens\Actions\CreateScreenAction;
@@ -35,6 +36,7 @@ use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\Shared\ReadsQueryCounts;
 use Tests\Support\Teams\CreatesTeamMembers;
 
 covers(
@@ -58,7 +60,7 @@ covers(
     OverlappingWidgetsException::class,
 );
 
-uses(CreatesTeamMembers::class);
+uses(CreatesTeamMembers::class, ReadsQueryCounts::class);
 
 beforeEach(function () {
     ['user' => $this->user, 'project' => $this->project] = $this->memberWithProject(TeamRole::Member);
@@ -200,6 +202,19 @@ describe('the pages', function () {
             ->has('environments')
             ->has('checks')
             ->where('limits.max_cols', Screen::MAX_COLS));
+    });
+
+    it('reads the environments of all the team\'s projects in the same few queries', function () {
+        $page = fn () => $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertOk();
+        RequestRun::factory()->for($this->project)->create(['environment' => 'staging']);
+        $one = $this->queriesRunBy($page);
+
+        foreach (['production', 'qa', 'production'] as $environment) {
+            RequestRun::factory()->for(Project::factory()->for($this->project->team))->create(['environment' => $environment]);
+        }
+
+        expect($this->queriesRunBy($page))->toBe($one);
+        $page()->assertInertia(fn (Assert $page) => $page->where('environments', ['production', 'qa', 'staging']));
     });
 
     it('offers the aspects and the sizes the TVs showing it report, by device and window, to preview at', function () {
