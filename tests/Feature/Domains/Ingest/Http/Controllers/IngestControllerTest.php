@@ -187,13 +187,13 @@ describe('server ingest', function () {
 
     it('stores the queue sizes a heartbeat reports', function () {
         $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2', 'queues' => [
-            ['connection' => 'redis', 'queue' => 'default', 'size' => 12, 'oldest_age_s' => 40],
+            ['connection' => 'redis', 'queue' => 'default', 'size' => 12, 'oldest_age_s' => 40, 'workers' => 3],
             ['connection' => 'redis', 'queue' => 'emails', 'size' => 0, 'oldest_age_s' => null],
         ]], $this->auth)->assertOk();
 
-        expect(QueueSample::query()->orderBy('queue')->get(['host', 'connection', 'queue', 'size', 'oldest_age_s'])->toArray())->toBe([
-            ['host' => 'web-2', 'connection' => 'redis', 'queue' => 'default', 'size' => 12, 'oldest_age_s' => 40],
-            ['host' => 'web-2', 'connection' => 'redis', 'queue' => 'emails', 'size' => 0, 'oldest_age_s' => null],
+        expect(QueueSample::query()->orderBy('queue')->get(['host', 'connection', 'queue', 'size', 'oldest_age_s', 'workers'])->toArray())->toBe([
+            ['host' => 'web-2', 'connection' => 'redis', 'queue' => 'default', 'size' => 12, 'oldest_age_s' => 40, 'workers' => 3],
+            ['host' => 'web-2', 'connection' => 'redis', 'queue' => 'emails', 'size' => 0, 'oldest_age_s' => null, 'workers' => null],
         ]);
     });
 

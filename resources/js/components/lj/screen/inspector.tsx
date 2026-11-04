@@ -991,17 +991,27 @@ export function WidgetInspector({
                         value={(first ? widget.source : item.source) ?? ''}
                         onChange={(e) => pickSource(e.target.value)}
                     >
-                        {pool
-                            .filter(
-                                (s) =>
-                                    s.id === valueSource?.id ||
-                                    !items.some((i) => i.source === s.id),
-                            )
-                            .map((s) => (
-                                <option key={s.id} value={s.id}>
-                                    {s.label}
-                                </option>
-                            ))}
+                        {Object.entries(
+                            Object.groupBy(
+                                pool.filter(
+                                    (s) =>
+                                        s.id === valueSource?.id ||
+                                        !items.some((i) => i.source === s.id),
+                                ),
+                                (s) => s.topic,
+                            ),
+                        ).map(([topic, group]) => (
+                            <optgroup
+                                key={topic}
+                                label={t(`screens.topics.${topic}`)}
+                            >
+                                {group?.map((s) => (
+                                    <option key={s.id} value={s.id}>
+                                        {s.label}
+                                    </option>
+                                ))}
+                            </optgroup>
+                        ))}
                     </Select>
                 </div>
             )}

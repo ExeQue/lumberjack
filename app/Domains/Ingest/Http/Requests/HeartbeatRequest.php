@@ -36,6 +36,7 @@ class HeartbeatRequest extends FormRequest
             'queues.*.queue' => ['required', 'string', 'max:255'],
             'queues.*.size' => ['required', 'integer', 'min:0'],
             'queues.*.oldest_age_s' => ['nullable', 'integer', 'min:0'],
+            'queues.*.workers' => ['nullable', 'integer', 'min:0'],
             'metrics' => ['nullable', 'array'],
             'metrics.cpu_load_1m' => ['nullable', 'numeric', 'min:0'],
             'metrics.cpu_cores' => ['nullable', 'numeric', 'min:0'],
@@ -55,7 +56,7 @@ class HeartbeatRequest extends FormRequest
     }
 
     /**
-     * @return list<array{connection: string, queue: string, size: int, oldest_age_s: int|null}>
+     * @return list<array{connection: string, queue: string, size: int, oldest_age_s: int|null, workers: int|null}>
      */
     public function queues(): array
     {
@@ -64,6 +65,7 @@ class HeartbeatRequest extends FormRequest
             'queue' => (string) $q['queue'],
             'size' => (int) $q['size'],
             'oldest_age_s' => isset($q['oldest_age_s']) ? (int) $q['oldest_age_s'] : null,
+            'workers' => isset($q['workers']) ? (int) $q['workers'] : null,
         ], (array) $this->validated('queues', [])));
     }
 

@@ -40,7 +40,23 @@ final readonly class WidgetSource
     }
 
     /**
-     * @return array{type: string, id: string, label: string, unit: string, amber: float|null, red: float|null, low_is_bad: bool, metric: string|null, filter_on: string|null}
+     * What it is about, to group the designer's list: traffic, issues, jobs, infrastructure,
+     * databases or health.
+     */
+    public function topic(): string
+    {
+        return match (true) {
+            in_array($this->id, ['open_issues', 'users_affected', 'latest_issues', 'alert_feed'], true) => 'issues',
+            str_contains($this->id, 'job') || str_starts_with($this->id, 'queue') || $this->id === 'scheduled_tasks' => 'jobs',
+            str_starts_with($this->id, 'host') || str_starts_with($this->id, 'agents') || $this->id === 'current_release' => 'infrastructure',
+            str_starts_with($this->id, 'db_') => 'databases',
+            $this->type === WidgetType::Health || str_starts_with($this->id, 'health') => 'health',
+            default => 'traffic',
+        };
+    }
+
+    /**
+     * @return array{type: string, id: string, label: string, topic: string, unit: string, amber: float|null, red: float|null, low_is_bad: bool, metric: string|null, filter_on: string|null, snapshot: bool}
      */
     public function toArray(): array
     {
@@ -48,6 +64,7 @@ final readonly class WidgetSource
             'type' => $this->type->value,
             'id' => $this->id,
             'label' => __($this->label()),
+            'topic' => $this->topic(),
             'unit' => $this->unit,
             'amber' => $this->amber,
             'red' => $this->red,

@@ -108,6 +108,20 @@ describe('a stat', function () {
     });
 });
 
+describe('queue workers', function () {
+    it('adds up the latest workers of each queue, and knows none where no agent told', function () {
+        expect(($this->resolve)(WidgetType::Stat, 'queue_workers')['value'])->toBeNull();
+
+        QueueSample::factory()->forProject($this->project)->forQueue('mail')->withWorkers(5)->create(['sampled_at' => now()->subMinutes(3)]);
+        QueueSample::factory()->forProject($this->project)->forQueue('mail')->withWorkers(2)->create(['sampled_at' => now()->subMinute()]);
+        QueueSample::factory()->forProject($this->project)->forQueue('bulk')->withWorkers(0)->create(['sampled_at' => now()->subMinute()]);
+        QueueSample::factory()->forProject($this->project)->forQueue('old')->create(['sampled_at' => now()->subMinute()]);
+
+        expect(($this->resolve)(WidgetType::Stat, 'queue_workers'))->toMatchArray(['value' => 2.0, 'state' => 'ok'])
+            ->and(($this->resolve)(WidgetType::Stat, 'queue_workers', scope: new WidgetScope(filter: 'bulk'))['state'])->toBe('red');
+    });
+});
+
 describe('a gauge, a chart and a list', function () {
     it('puts a share on a scale from 0 to 1', function () {
         QueueSample::query()->create(['project_id' => $this->project->id, 'host' => 'web-1', 'connection' => 'redis', 'queue' => 'mail', 'size' => 150, 'sampled_at' => now()->subMinute()]);
@@ -174,10 +188,11 @@ describe('a gauge, a chart and a list', function () {
 describe('the sources and scope', function () {
     it('describes a source for the designer, its name translated', function () {
         expect(WidgetSources::find(WidgetType::Gauge, 'apdex')->toArray())->toBe([
-            'type' => 'gauge', 'id' => 'apdex', 'label' => 'Apdex', 'unit' => 'score', 'amber' => 0.85, 'red' => 0.7,
+            'type' => 'gauge', 'id' => 'apdex', 'label' => 'Apdex', 'topic' => 'traffic', 'unit' => 'score', 'amber' => 0.85, 'red' => 0.7,
             'low_is_bad' => true, 'metric' => 'apdex', 'filter_on' => 'route', 'snapshot' => false,
         ])->and(WidgetSources::has(WidgetType::List, 'queues'))->toBeTrue()
             ->and(WidgetSources::has(WidgetType::Stat, 'queues'))->toBeFalse()
+            ->and([WidgetSources::find(WidgetType::Stat, 'queue_workers')->topic(), WidgetSources::find(WidgetType::List, 'hosts')->topic(), WidgetSources::find(WidgetType::Chart, 'db_size')->topic(), WidgetSources::find(WidgetType::List, 'alert_feed')->topic()])->toBe(['jobs', 'infrastructure', 'databases', 'issues'])
             ->and(array_column(array_map(fn (WidgetSource $s): array => $s->toArray(), WidgetSources::for(WidgetType::Health)), 'id'))->toBe(['checks']);
     });
 

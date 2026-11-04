@@ -101,6 +101,8 @@ export type Source = {
     type: WidgetKind;
     id: string;
     label: string;
+    /** What it is about, to group the designer's list. */
+    topic: string;
     unit: string;
     amber: number | null;
     red: number | null;

@@ -22,6 +22,7 @@ class QueueSampleFactory extends Factory
             'queue' => 'default',
             'size' => 0,
             'oldest_age_s' => null,
+            'workers' => null,
             'sampled_at' => now(),
         ];
     }
@@ -35,5 +36,16 @@ class QueueSampleFactory extends Factory
     public function waiting(int $size, ?int $oldestSeconds = null): static
     {
         return $this->state(fn () => ['size' => $size, 'oldest_age_s' => $size > 0 ? ($oldestSeconds ?? 5) : null]);
+    }
+
+    /** This many workers ran on it, as their signs of life told the agent. */
+    public function withWorkers(int $workers): static
+    {
+        return $this->state(fn () => ['workers' => $workers]);
+    }
+
+    public function forProject(Project $project): static
+    {
+        return $this->state(fn () => ['project_id' => $project->id]);
     }
 }

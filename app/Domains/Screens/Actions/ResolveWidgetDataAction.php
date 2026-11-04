@@ -383,7 +383,7 @@ class ResolveWidgetDataAction
                 ))->sortByDesc('p95')->when($onlyProblems)->filter(fn (array $r): bool => in_array($r['state'], ['amber', 'red'], true))->take($limit)->values()->all(),
             ],
             'queues' => [
-                ['queue', 'connection', 'size', 'oldest_age_s'],
+                ['queue', 'connection', 'size', 'oldest_age_s', 'workers'],
                 collect($projects)->flatMap(fn (Project $p): array => array_map(
                     fn (array $q): array => [
                         'project' => $p->slug,
@@ -391,6 +391,7 @@ class ResolveWidgetDataAction
                         'connection' => $q['connection'],
                         'size' => $q['size'],
                         'oldest_age_s' => $q['oldest_age_s'],
+                        'workers' => $q['workers'],
                         ...$this->queueState($p, $q, $options, $limits),
                     ],
                     $this->queues->get($p->id, $scope->period, $scope->environment),
@@ -621,7 +622,7 @@ class ResolveWidgetDataAction
     {
         $ids = $projects->modelKeys();
         $kind = match (true) {
-            in_array($source->id, ['queue_size', 'queues'], true) => 'queues',
+            in_array($source->id, ['queue_size', 'queue_workers', 'queues'], true) => 'queues',
             str_starts_with($source->id, 'host_') || $source->id === 'hosts' => 'hosts',
             in_array($source->id, ['agents', 'agents_online'], true) => 'agents',
             $source->type === WidgetType::Health => 'health',

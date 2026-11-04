@@ -179,7 +179,7 @@ describe('the pages', function () {
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
             ->component('screens/edit')
             ->has('schema.health')
-            ->has('sources.stat', 17)
+            ->has('sources.stat', 18)
             ->has('filters.queue')
             ->has('filters.host')
             ->has('filters.check')

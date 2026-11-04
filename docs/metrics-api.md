@@ -89,6 +89,7 @@ Tables come as typed columns and rows:
 | `job_runs`, `job_failures`             | count | environment, queue, host                  |
 | `queue_wait` (p95)                     | ms    | environment, queue, host                  |
 | `queue_size`                           | count | queue, host                               |
+| `queue_workers`                        | count | queue, host                               |
 | `cpu_load`, `memory_used`, `disk_used` | ratio | host                                      |
 | `lcp_p75`, `inp_p75`                   | ms    | environment, route, release               |
 | `cls_p75`                              | score | environment, route, release               |
@@ -162,6 +163,7 @@ database gauges are each database check's latest report.
 | `lumberjack_failed_jobs`                  | `project`                         |
 | `lumberjack_health_checks`                | `project`, `state`                |
 | `lumberjack_queue_size`                   | `project`, `connection`, `queue`  |
+| `lumberjack_queue_workers`                | `project`, `connection`, `queue`  |
 | `lumberjack_queue_oldest_age_seconds`     | `project`, `connection`, `queue`  |
 | `lumberjack_agents_online`                | `project`                         |
 | `lumberjack_database_size_bytes`          | `project`, `environment`, `check` |

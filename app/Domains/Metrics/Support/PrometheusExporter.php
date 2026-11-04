@@ -47,6 +47,7 @@ class PrometheusExporter
         $failedJobs = $gauge('failed_jobs', 'Jobs that failed in the last hour.');
         $health = $gauge('health_checks', 'Health checks per state.', ['state']);
         $queueSize = $gauge('queue_size', 'Jobs waiting, as the agent reported last.', ['connection', 'queue']);
+        $queueWorkers = $gauge('queue_workers', 'Workers running on the queue, as the agent reported last.', ['connection', 'queue']);
         $queueAge = $gauge('queue_oldest_age_seconds', 'Age of the oldest waiting job.', ['connection', 'queue']);
         $agents = $gauge('agents_online', 'Agents that checked in within the last five minutes.');
         $database = [
@@ -95,6 +96,10 @@ class PrometheusExporter
             foreach ($this->queues->get($project->id, Period::Hour) as $queue) {
                 if ($queue['size'] !== null) {
                     $queueSize->set($queue['size'], [...$label, $queue['connection'], $queue['queue']]);
+                }
+
+                if ($queue['workers'] !== null) {
+                    $queueWorkers->set($queue['workers'], [...$label, $queue['connection'], $queue['queue']]);
                 }
 
                 if ($queue['oldest_age_s'] !== null) {

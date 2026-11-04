@@ -45,7 +45,7 @@ class MetricSeriesQuery
 
         $rows = match ($metric) {
             Metric::Apdex => $this->apdex($filter, $window, $group),
-            Metric::QueueSize => $this->queueSizeSeries($filter, $window, $group),
+            Metric::QueueSize, Metric::QueueWorkers => $this->queueSeries($metric, $filter, $window, $group),
             Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed => $this->databaseSeries($metric, $filter, $window, $group),
             default => $this->bucketed($metric, $filter, $window, $group),
         };
@@ -57,7 +57,7 @@ class MetricSeriesQuery
     {
         $value = match ($metric) {
             Metric::Apdex => $this->apdex($filter, $window, null, bucketed: false)[0]['value'] ?? null,
-            Metric::QueueSize => $this->queueSizeNow($filter, $window),
+            Metric::QueueSize, Metric::QueueWorkers => $this->queueNow($metric, $filter, $window),
             Metric::CpuLoad, Metric::MemoryUsed, Metric::DiskUsed => $this->hostNow($metric, $filter, $window),
             Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed => $this->databaseNow($metric, $filter, $window),
             default => (function () use ($metric, $filter, $window): mixed {
@@ -160,7 +160,7 @@ class MetricSeriesQuery
                 },
                 $this->column($group, nullableEnvironment: true),
             ],
-            Metric::Apdex, Metric::QueueSize, Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed => throw new LogicException("{$metric->value} has its own query."),
+            Metric::Apdex, Metric::QueueSize, Metric::QueueWorkers, Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed => throw new LogicException("{$metric->value} has its own query."),
         };
     }
 
@@ -270,29 +270,44 @@ class MetricSeriesQuery
      *
      * @return list<array<string, mixed>>
      */
-    private function queueSizeSeries(MetricFilter $filter, MetricWindow $window, ?MetricGroup $group): array
+    /**
+     * Jobs waiting or workers running: each queue's largest per bucket, added up over the
+     * queues (a worker taking two queues counts on both).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function queueSeries(Metric $metric, MetricFilter $filter, MetricWindow $window, ?MetricGroup $group): array
     {
         $size = $window->bucketSeconds;
         $by = $this->column($group) ?? 'NULL';
+        $column = $this->queueColumn($metric);
         $perQueue = $this->queueSamples($filter, $window)
-            ->selectRaw("FLOOR(EXTRACT(EPOCH FROM sampled_at) / ?) * ? AS bucket, {$by} AS series, connection, queue, MAX(size) AS size", [$size, $size])
+            ->when($column === 'workers')->whereNotNull('workers')
+            ->selectRaw("FLOOR(EXTRACT(EPOCH FROM sampled_at) / ?) * ? AS bucket, {$by} AS series, connection, queue, MAX({$column}) AS value", [$size, $size])
             ->groupByRaw('1, 2, connection, queue');
 
         return array_values(DB::query()->fromSub($perQueue, 'q')
-            ->selectRaw('bucket, series, SUM(size) AS value')
+            ->selectRaw('bucket, series, SUM(value) AS value')
             ->groupBy('bucket', 'series')
             ->get()
             ->map(fn (object $row): array => ['bucket' => (int) $row->bucket, 'series' => $row->series !== null ? (string) $row->series : null, 'value' => (float) $row->value])
             ->all());
     }
 
-    private function queueSizeNow(MetricFilter $filter, MetricWindow $window): mixed
+    private function queueNow(Metric $metric, MetricFilter $filter, MetricWindow $window): mixed
     {
+        $column = $this->queueColumn($metric);
         $latest = $this->queueSamples($filter, $window)
-            ->selectRaw('DISTINCT ON (project_id, connection, queue) size')
+            ->when($column === 'workers')->whereNotNull('workers')
+            ->selectRaw("DISTINCT ON (project_id, connection, queue) {$column} AS value")
             ->orderBy('project_id')->orderBy('connection')->orderBy('queue')->orderByDesc('sampled_at');
 
-        return DB::query()->fromSub($latest, 'q')->selectRaw('SUM(size) AS value')->value('value');
+        return DB::query()->fromSub($latest, 'q')->selectRaw('SUM(value) AS value')->value('value');
+    }
+
+    private function queueColumn(Metric $metric): string
+    {
+        return $metric === Metric::QueueWorkers ? 'workers' : 'size';
     }
 
     private function queueSamples(MetricFilter $filter, MetricWindow $window): Builder

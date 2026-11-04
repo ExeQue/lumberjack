@@ -20,7 +20,7 @@ class QueueStatisticsQuery
     public const int LIMIT = 20;
 
     /**
-     * @return list<array{connection: string, queue: string, size: int|null, oldest_age_s: int|null, sampled_at: string|null, p95_wait: int|null, series: list<array{t: string, v: int|float}>}>
+     * @return list<array{connection: string, queue: string, size: int|null, oldest_age_s: int|null, workers: int|null, sampled_at: string|null, p95_wait: int|null, series: list<array{t: string, v: int|float}>}>
      */
     public function get(int $projectId, Period $period, ?string $environment = null): array
     {
@@ -28,7 +28,7 @@ class QueueStatisticsQuery
     }
 
     /**
-     * @return list<array{connection: string, queue: string, size: int|null, oldest_age_s: int|null, sampled_at: string|null, p95_wait: int|null, series: list<array{t: string, v: int|float}>}>
+     * @return list<array{connection: string, queue: string, size: int|null, oldest_age_s: int|null, workers: int|null, sampled_at: string|null, p95_wait: int|null, series: list<array{t: string, v: int|float}>}>
      */
     private function compute(int $projectId, Period $period, ?string $environment): array
     {
@@ -37,7 +37,7 @@ class QueueStatisticsQuery
 
         // Queue size is one number per queue, whichever host reports it: the latest sample wins.
         $latest = collect(DB::select('
-            SELECT DISTINCT ON (connection, queue) connection, queue, size, oldest_age_s, sampled_at
+            SELECT DISTINCT ON (connection, queue) connection, queue, size, oldest_age_s, workers, sampled_at
             FROM queue_samples WHERE project_id = ? AND sampled_at >= ?
             ORDER BY connection, queue, sampled_at DESC
             LIMIT '.self::LIMIT, [$projectId, $since]))->map(fn (object $r): array => (array) $r)->keyBy($key);
@@ -65,6 +65,7 @@ class QueueStatisticsQuery
                 'queue' => $queue,
                 'size' => $sample !== null ? (int) $sample['size'] : null,
                 'oldest_age_s' => isset($sample['oldest_age_s']) ? (int) $sample['oldest_age_s'] : null,
+                'workers' => isset($sample['workers']) ? (int) $sample['workers'] : null,
                 'sampled_at' => $sample !== null ? CarbonImmutable::parse($sample['sampled_at'])->toIso8601String() : null,
                 'p95_wait' => isset($wait['p95_wait']) ? (int) $wait['p95_wait'] : null,
                 'series' => $sample !== null

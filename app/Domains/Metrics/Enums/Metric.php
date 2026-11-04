@@ -26,6 +26,7 @@ enum Metric: string
     case JobFailures = 'job_failures';
     case QueueSize = 'queue_size';
     case QueueWait = 'queue_wait';
+    case QueueWorkers = 'queue_workers';
     case CpuLoad = 'cpu_load';
     case MemoryUsed = 'memory_used';
     case DiskUsed = 'disk_used';
@@ -52,7 +53,7 @@ enum Metric: string
      */
     public function isCount(): bool
     {
-        return $this->unit() === 'count' && ! in_array($this, [self::QueueSize, self::DbConnections], true);
+        return $this->unit() === 'count' && ! in_array($this, [self::QueueSize, self::QueueWorkers, self::DbConnections], true);
     }
 
     /**
@@ -69,7 +70,7 @@ enum Metric: string
             self::Occurrences, self::Users => [MetricGroup::Environment, MetricGroup::Host, MetricGroup::Release],
             self::NewIssues => [MetricGroup::Environment, MetricGroup::Release],
             self::JobRuns, self::JobFailures, self::QueueWait => [MetricGroup::Environment, MetricGroup::Queue, MetricGroup::Host],
-            self::QueueSize => [MetricGroup::Queue, MetricGroup::Host],
+            self::QueueSize, self::QueueWorkers => [MetricGroup::Queue, MetricGroup::Host],
             self::CpuLoad, self::MemoryUsed, self::DiskUsed => [MetricGroup::Host],
             self::DbSize, self::DbConnections, self::DbConnectionsUsed => [MetricGroup::Environment, MetricGroup::Check],
         };
