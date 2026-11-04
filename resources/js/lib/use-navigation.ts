@@ -97,10 +97,10 @@ export function useNavigation(
               }),
               item(t('common.nav.routes'), routesIndex(project.uuid).url),
               item(t('common.nav.queries'), queriesIndex(project.uuid).url),
+              item(t('common.nav.jobs'), jobsIndex(project.uuid).url, {
+                  count: counts?.jobs,
+              }),
               group(t('common.nav.console'), [
-                  item(t('common.nav.jobs'), jobsIndex(project.uuid).url, {
-                      count: counts?.jobs,
-                  }),
                   item(
                       t('common.nav.schedule'),
                       scheduleIndex(project.uuid).url,
@@ -204,8 +204,8 @@ export function useSectionTabs(): NavItem[] | null {
 
 const sections: Record<string, (project: string) => { url: string }> = {
     issues: issuesIndex,
-    routes: routesIndex,
-    queries: queriesIndex,
+    requests: routesIndex,
+    database: queriesIndex,
     releases: releasesIndex,
     jobs: jobsIndex,
     schedule: scheduleIndex,

@@ -11,7 +11,7 @@ under the top bar:
 | Screens | Screens, Displays             |
 | Team    | Members and tokens, Retention |
 
-Overview, Issues, Requests, Database, Logs, Health and Releases (the project), and Projects and Alerts (the
+Overview, Issues, Requests, Database, Jobs, Logs, Health and Releases (the project), and Projects and Alerts (the
 team) are pages of their own. An entry's badge adds up its tabs' counts; each tab shows
 its own.
 

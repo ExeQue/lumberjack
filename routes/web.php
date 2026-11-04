@@ -100,8 +100,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('issues/{issue}/notes', [IssueActionController::class, 'note'])->name('issues.notes.store');
         Route::post('issues/{issue}/repo-issue', [IssueActionController::class, 'repoIssue'])->name('issues.repo-issue');
 
-        Route::get('routes', RouteController::class)->name('routes.index');
-        Route::get('queries', QueryController::class)->name('queries.index');
+        Route::get('requests', RouteController::class)->name('routes.index');
+        Route::get('database', QueryController::class)->name('queries.index');
         Route::get('releases', ReleaseController::class)->name('releases.index');
         Route::get('traces/{trace}', TraceController::class)->where('trace', '[A-Za-z0-9._:-]{1,64}')->name('traces.show');
         Route::get('jobs', JobController::class)->name('jobs.index');
@@ -174,6 +174,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Status screens: the team's wall displays. See docs/screens.md.
     Route::get('screens', [ScreenController::class, 'index'])->name('screens.index');
+    // The team's paired TVs: a tab of Screens. Before screens/{screen}, which would take the word.
+    Route::get('screens/displays', [DisplayController::class, 'index'])->name('team.displays');
+    Route::put('screens/displays/{display:uuid}', [DisplayController::class, 'update'])->name('displays.update');
+    Route::post('screens/displays/{display:uuid}/reload', [DisplayController::class, 'reload'])->name('displays.reload');
+    Route::delete('screens/displays/{display:uuid}', [DisplayController::class, 'destroy'])->name('displays.destroy');
+    Route::put('screens/devices/{device:uuid}', [DeviceController::class, 'update'])->name('devices.update');
+    Route::post('screens/devices/{device:uuid}/reload', [DeviceController::class, 'reload'])->name('devices.reload');
+    Route::delete('screens/devices/{device:uuid}', [DeviceController::class, 'destroy'])->name('devices.destroy');
     Route::post('screens', [ScreenController::class, 'store'])->name('screens.store');
     Route::post('screens/import', [ScreenFileController::class, 'import'])->middleware('throttle:20,1')->name('screens.import');
     Route::post('screens/import/preview', [ScreenFileController::class, 'preview'])->middleware('throttle:60,1')->name('screens.import.preview');
@@ -201,13 +209,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('pair', [PairController::class, 'index'])->name('pair');
     Route::get('pair/{code}', [PairController::class, 'show'])->where('code', '[A-Za-z0-9-]{1,12}')->middleware('throttle:tv-pair')->name('pair.show');
     Route::post('pair/{code}', [PairController::class, 'confirm'])->where('code', '[A-Za-z0-9-]{1,12}')->middleware('throttle:tv-pair')->name('pair.confirm');
-    Route::get('team/displays', [DisplayController::class, 'index'])->name('team.displays');
-    Route::put('team/displays/{display:uuid}', [DisplayController::class, 'update'])->name('displays.update');
-    Route::post('team/displays/{display:uuid}/reload', [DisplayController::class, 'reload'])->name('displays.reload');
-    Route::delete('team/displays/{display:uuid}', [DisplayController::class, 'destroy'])->name('displays.destroy');
-    Route::put('team/devices/{device:uuid}', [DeviceController::class, 'update'])->name('devices.update');
-    Route::post('team/devices/{device:uuid}/reload', [DeviceController::class, 'reload'])->name('devices.reload');
-    Route::delete('team/devices/{device:uuid}', [DeviceController::class, 'destroy'])->name('devices.destroy');
 
     Route::get('team/alerts', [AlertController::class, 'index'])->name('alerts.index');
     Route::post('team/alerts/channels', [AlertController::class, 'storeChannel'])->name('alerts.channels.store');
