@@ -16,11 +16,11 @@ class UpdateDisplayAction
      * long each shows, and its theme; the TV switches at once. Screens of other teams are
      * left out.
      *
-     * @param  array{name?: string|null, screen_id?: int|null, playlist?: list<int>, rotate_seconds?: int, hold_on_alert?: bool, theme?: DisplayTheme}  $settings
+     * @param  array{name?: string|null, screen_id?: int|null, playlist?: list<int>, rotate_seconds?: int, hold_on_alert?: bool, rotation?: int, theme?: DisplayTheme}  $settings
      */
     public function execute(Display $display, array $settings): Display
     {
-        $display->fill(array_intersect_key($settings, array_flip(['name', 'theme', 'rotate_seconds', 'hold_on_alert'])));
+        $display->fill(array_intersect_key($settings, array_flip(['name', 'theme', 'rotate_seconds', 'hold_on_alert', 'rotation'])));
 
         if (array_key_exists('playlist', $settings)) {
             $own = Screen::query()->whereTeam($display->team)->whereIn('id', $settings['playlist'])->pluck('id')->all();

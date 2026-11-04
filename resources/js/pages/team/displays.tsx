@@ -51,6 +51,8 @@ type Row = {
     rotate_seconds: number;
     hold_on_alert: boolean;
     theme: string;
+    /** Degrees the picture is turned clockwise. */
+    rotation: number;
     viewport: { w: number; h: number } | null;
     online: boolean;
     last_seen_at: string | null;
@@ -366,6 +368,12 @@ function DeviceCard({
                             <th className={thClass}>
                                 {t('screens.displays.theme')}
                             </th>
+                            <th
+                                className={thClass}
+                                title={t('screens.displays.rotation_hint')}
+                            >
+                                {t('screens.displays.rotation')}
+                            </th>
                             <th className={thClass}>
                                 {t('screens.displays.viewport')}
                             </th>
@@ -457,6 +465,31 @@ function DeviceCard({
                                             <option key={theme} value={theme}>
                                                 {t(
                                                     `screens.display_theme.${theme}`,
+                                                )}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </td>
+                                <td className={tdClass}>
+                                    <Select
+                                        aria-label={`${t('screens.displays.rotation')}: ${device.name}, ${display.label}`}
+                                        value={String(display.rotation)}
+                                        disabled={!canManage}
+                                        onChange={(e) =>
+                                            onSave(display, {
+                                                rotation: Number(
+                                                    e.target.value,
+                                                ),
+                                            })
+                                        }
+                                    >
+                                        {[0, 90, 180, 270].map((degrees) => (
+                                            <option
+                                                key={degrees}
+                                                value={degrees}
+                                            >
+                                                {t(
+                                                    `screens.displays.rotations.${degrees}`,
                                                 )}
                                             </option>
                                         ))}

@@ -383,8 +383,14 @@ paired into another team becomes a device of its own there.
 each: its name, the browser it runs in, how many windows it has, and whether it is
 online (any of its windows heard from in the last three minutes) or when it was last
 seen. Under it, its windows: the window number, the screen it shows, the seconds per
-screen and whether it holds on red, its theme, the size of the window as it last
-reported, and its own online status.
+screen and whether it holds on red, its theme, its rotation, the size of the window as
+it last reported, and its own online status.
+
+**Rotation** turns the picture 90° right, 180° or 90° left, for a TV hung sideways or
+upside down that cannot turn its picture itself (a smart TV's browser, a signage
+player). The TV turns at once; turned a quarter, the screen is laid out for the window
+as it now stands, so a screen designed in portrait fills a landscape TV hung on its
+side. A kiosk link without pairing takes the same as `?rotate=90` (or `180`, `270`).
 
 ![The team's displays](./screenshots/displays.png)
 

@@ -1,13 +1,15 @@
 import { Head, router } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { useNow } from '@/components/lj/relative';
 import {
     KioskFrame,
+    KioskRotation,
     KioskStatus,
     kioskClock,
     kioskSubtitle,
     reloadSoon,
+    rotationFromUrl,
 } from '@/components/lj/screen/frame';
 import { fits, themeAt } from '@/components/lj/screen/lib';
 import type {
@@ -70,6 +72,7 @@ export default function Kiosk({
     onAlert,
 }: Props) {
     const t = useT();
+    const inheritedRotation = useContext(KioskRotation);
     const now = useNow();
     const [gone, setGone] = useState<'deleted' | 'unshared' | null>(null);
     const [idle, setIdle] = useState(false);
@@ -158,84 +161,95 @@ export default function Kiosk({
     useEffect(() => onAlert?.(red), [red, onAlert]);
     const clock = (at: number) => kioskClock(screen, at);
 
+    // A kiosk link can turn the picture (?rotate=90); a paired TV gets its display's.
+    const rotation = rotationFromUrl() ?? inheritedRotation;
+
     return (
-        <KioskFrame
-            screen={screen}
-            theme={theme}
-            kiosk
-            idle={idle}
-            shift={[dx, dy]}
-            header={{
-                title: screen.name,
-                subtitle: kioskSubtitle(screen, team.name, projects, t),
-                right: (
-                    <KioskStatus
-                        attention={attention}
-                        offline={
-                            offlineSince === null
-                                ? null
-                                : t('screens.kiosk.offline_since', {
-                                      time: clock(offlineSince),
-                                  })
-                        }
-                        clock={screen.show_clock ? clock(now) : null}
-                    />
-                ),
-            }}
-            banner={
-                offlineSince !== null && (
+        <KioskRotation.Provider value={rotation}>
+            <KioskFrame
+                screen={screen}
+                theme={theme}
+                kiosk
+                idle={idle}
+                shift={[dx, dy]}
+                header={{
+                    title: screen.name,
+                    subtitle: kioskSubtitle(screen, team.name, projects, t),
+                    right: (
+                        <KioskStatus
+                            attention={attention}
+                            offline={
+                                offlineSince === null
+                                    ? null
+                                    : t('screens.kiosk.offline_since', {
+                                          time: clock(offlineSince),
+                                      })
+                            }
+                            clock={screen.show_clock ? clock(now) : null}
+                        />
+                    ),
+                }}
+                banner={
+                    offlineSince !== null && (
+                        <div
+                            role="status"
+                            className="flex items-center justify-between rounded-[0.7cqw] border-2 border-(--s-amber) bg-(--s-amber-bg) px-[1.4cqw] py-[0.9cqw]"
+                        >
+                            <div className="flex flex-col gap-[0.2cqw]">
+                                <span className="text-[1.25cqw] font-bold text-(--s-amber-soft)">
+                                    {t('screens.kiosk.offline_title')}
+                                </span>
+                                <span className="text-[0.9cqw] text-(--s-ink-2)">
+                                    {t('screens.kiosk.offline_body', {
+                                        time: updatedAt
+                                            ? clock(updatedAt)
+                                            : '-',
+                                    })}
+                                </span>
+                            </div>
+                        </div>
+                    )
+                }
+                gridProps={
+                    gone === null
+                        ? {
+                              style: {
+                                  opacity: offlineSince !== null ? 0.45 : 1,
+                              },
+                          }
+                        : undefined
+                }
+            >
+                <Head title={screen.name} />
+                {gone !== null ? (
                     <div
                         role="status"
-                        className="flex items-center justify-between rounded-[0.7cqw] border-2 border-(--s-amber) bg-(--s-amber-bg) px-[1.4cqw] py-[0.9cqw]"
+                        className="m-auto flex flex-col gap-[0.6cqw] text-center text-[1.6cqw] text-(--s-ink-2)"
                     >
-                        <div className="flex flex-col gap-[0.2cqw]">
-                            <span className="text-[1.25cqw] font-bold text-(--s-amber-soft)">
-                                {t('screens.kiosk.offline_title')}
+                        <span>{t(`screens.kiosk.${gone}`)}</span>
+                        {gone === 'unshared' && (
+                            <span className="text-[1cqw]">
+                                {t('screens.kiosk.unshared_body')}
                             </span>
-                            <span className="text-[0.9cqw] text-(--s-ink-2)">
-                                {t('screens.kiosk.offline_body', {
-                                    time: updatedAt ? clock(updatedAt) : '-',
-                                })}
-                            </span>
-                        </div>
+                        )}
                     </div>
-                )
-            }
-            gridProps={
-                gone === null
-                    ? { style: { opacity: offlineSince !== null ? 0.45 : 1 } }
-                    : undefined
-            }
-        >
-            <Head title={screen.name} />
-            {gone !== null ? (
-                <div
-                    role="status"
-                    className="m-auto flex flex-col gap-[0.6cqw] text-center text-[1.6cqw] text-(--s-ink-2)"
-                >
-                    <span>{t(`screens.kiosk.${gone}`)}</span>
-                    {gone === 'unshared' && (
-                        <span className="text-[1cqw]">
-                            {t('screens.kiosk.unshared_body')}
-                        </span>
-                    )}
-                </div>
-            ) : (
-                shown.map((widget) => (
-                    <WidgetTile
-                        key={widget.id}
-                        widget={widget}
-                        schema={schema}
-                        sources={sources}
-                        data={data[widget.id]}
-                        now={now}
-                        timezone={screen.timezone}
-                        flash={flashing[widget.id]}
-                        onStatus={onStatus}
-                        aria-hidden={widget.type === 'empty' || undefined}
-                    />
-                ))
-            )}
-        </KioskFrame>
+                ) : (
+                    shown.map((widget) => (
+                        <WidgetTile
+                            key={widget.id}
+                            widget={widget}
+                            schema={schema}
+                            sources={sources}
+                            data={data[widget.id]}
+                            now={now}
+                            timezone={screen.timezone}
+                            flash={flashing[widget.id]}
+                            onStatus={onStatus}
+                            aria-hidden={widget.type === 'empty' || undefined}
+                        />
+                    ))
+                )}
+            </KioskFrame>
+        </KioskRotation.Provider>
     );
 }

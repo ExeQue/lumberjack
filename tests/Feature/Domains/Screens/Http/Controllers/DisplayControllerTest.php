@@ -110,6 +110,14 @@ describe('changing a display', function () {
             && $e->broadcastOn()->name === 'private-display.'.$this->display->uuid && $e->broadcastWith() === []);
     });
 
+    it('turns the picture of a TV hung sideways, a quarter at a time', function () {
+        $this->actingAs($this->admin)->put(route('displays.update', $this->display), ['rotation' => 90])->assertRedirect();
+        expect($this->display->refresh()->rotation)->toBe(90);
+
+        $this->actingAs($this->admin)->put(route('displays.update', $this->display), ['rotation' => 45])->assertSessionHasErrors('rotation');
+        expect($this->display->refresh()->rotation)->toBe(90);
+    });
+
     it('shows several screens in turn, its team\'s only, and one again from the single pick', function () {
         $this->display->update(['theme' => DisplayTheme::Dark]);
 

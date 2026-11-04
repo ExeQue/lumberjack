@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ComponentProps, ReactNode, Ref } from 'react';
 import { LogMark } from '@/components/lj/logo';
 import { useT } from '@/lib/i18n';
@@ -38,16 +38,38 @@ export function fitBox(view: Size, ratio: number, fit: Screen['fit']): Size {
         : { w: view.w, h: view.w / ratio };
 }
 
+/**
+ * How far a kiosk's picture is turned clockwise (0, 90, 180 or 270), for a TV hung
+ * sideways or upside down that cannot turn it itself: its display's setting, or ?rotate=.
+ */
+export const KioskRotation = createContext(0);
+
+/** The rotation in a kiosk URL's ?rotate=, or null. */
+export function rotationFromUrl(): number | null {
+    const value = Number(
+        new URLSearchParams(window.location.search).get('rotate'),
+    );
+
+    return [90, 180, 270].includes(value) ? value : null;
+}
+
 function useWindowSize(): Size {
-    const read = () => ({ w: window.innerWidth, h: window.innerHeight });
+    // Turned a quarter, the picture is as wide as the window is tall.
+    const sideways = useContext(KioskRotation) % 180 !== 0;
+    const read = () =>
+        sideways
+            ? { w: window.innerHeight, h: window.innerWidth }
+            : { w: window.innerWidth, h: window.innerHeight };
     const [size, setSize] = useState(read);
 
     useEffect(() => {
         const update = () => setSize(read());
+        update();
         window.addEventListener('resize', update);
 
         return () => window.removeEventListener('resize', update);
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sideways]);
 
     return size;
 }
@@ -90,6 +112,8 @@ export function KioskFrame({
     children: ReactNode;
 }) {
     const windowSize = useWindowSize();
+    const rotation = useContext(KioskRotation);
+    const turned = kiosk && !view && rotation !== 0;
     const size = view ?? windowSize;
     const box = fitBox(size, ratioOf(screen), screen.fit);
 
@@ -97,9 +121,23 @@ export function KioskFrame({
         <div
             className={cn(
                 'lj-screen flex items-center justify-center overflow-hidden bg-(--s-ground)',
-                kiosk ? 'lj-kiosk fixed inset-0' : 'relative',
+                kiosk ? 'lj-kiosk fixed' : 'relative',
+                kiosk && !turned && 'inset-0',
             )}
-            style={view ? { width: view.w, height: view.h } : undefined}
+            style={
+                view
+                    ? { width: view.w, height: view.h }
+                    : turned
+                      ? {
+                            // The window's size turned, centered and spun into place.
+                            width: windowSize.w,
+                            height: windowSize.h,
+                            left: '50%',
+                            top: '50%',
+                            transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                        }
+                      : undefined
+            }
             data-theme={theme}
             data-idle={kiosk ? idle : undefined}
         >

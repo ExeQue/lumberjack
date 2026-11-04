@@ -36,12 +36,13 @@ class UpdateDisplayRequest extends FormRequest
             'playlist.*' => ['uuid', 'distinct', Rule::exists('screens', 'uuid')->where('team_id', $this->display()->team_id)],
             'rotate_seconds' => ['sometimes', 'integer', 'min:10', 'max:3600'],
             'hold_on_alert' => ['sometimes', 'boolean'],
+            'rotation' => ['sometimes', 'integer', 'in:0,90,180,270'],
             'theme' => ['sometimes', Rule::enum(DisplayTheme::class)],
         ];
     }
 
     /**
-     * @return array{name?: string|null, screen_id?: int|null, playlist?: list<int>, rotate_seconds?: int, hold_on_alert?: bool, theme?: DisplayTheme}
+     * @return array{name?: string|null, screen_id?: int|null, playlist?: list<int>, rotate_seconds?: int, hold_on_alert?: bool, rotation?: int, theme?: DisplayTheme}
      */
     public function settings(): array
     {
@@ -67,6 +68,10 @@ class UpdateDisplayRequest extends FormRequest
 
         if ($this->has('hold_on_alert')) {
             $settings['hold_on_alert'] = $this->boolean('hold_on_alert');
+        }
+
+        if ($this->has('rotation')) {
+            $settings['rotation'] = $this->integer('rotation');
         }
 
         if ($this->has('theme')) {
