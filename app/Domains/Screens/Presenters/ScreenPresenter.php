@@ -172,7 +172,7 @@ class ScreenPresenter
 
         return [
             ...$this->catalog(),
-            'environments' => $projects->flatMap(fn (Project $p): array => $this->environments->get($p))->unique()->sort()->values()->all(),
+            'environments' => $this->environments->forProjects($projects),
             'checks' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->orderBy('name')->orderBy('slug')->get(['uuid', 'project_id', 'name', 'slug', 'type'])
                 ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name])->values()->all(),
             // External values pick one; names and formats only, never a URL or header.
