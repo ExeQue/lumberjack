@@ -71,6 +71,11 @@ php artisan migrate --seed
 npm run dev
 ```
 
+[Monocle](https://github.com/ExeQue/laravel-monocle) profiles every request, job and
+command while `APP_DEBUG` is on: the round button in the bottom right corner of a page
+opens its captures, and `/_monocle` is the dashboard. For a coding agent, add its MCP
+server (`php artisan mcp:start monocle`) to your client.
+
 Checks, as CI runs them:
 
 ```bash
