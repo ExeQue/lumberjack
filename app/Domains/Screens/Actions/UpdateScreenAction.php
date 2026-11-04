@@ -17,11 +17,11 @@ class UpdateScreenAction
      * Name, the display's aspect and orientation and how it fits another, whether the header shows, theme and its schedule, time zone and
      * the default scope; open kiosks follow.
      *
-     * @param  array{name?: string, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, show_header?: bool, theme?: ScreenTheme, light_from?: string, light_to?: string, timezone?: string, scope?: array{projects: list<string>, environment: string|null, period: string}}  $settings
+     * @param  array{name?: string, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, show_header?: bool, show_clock?: bool, theme?: ScreenTheme, light_from?: string, light_to?: string, timezone?: string|null, scope?: array{projects: list<string>, environment: string|null, period: string}}  $settings
      */
     public function execute(Screen $screen, array $settings): Screen
     {
-        $screen->fill(array_intersect_key($settings, array_flip(['name', 'aspect', 'orientation', 'fit', 'show_header', 'theme', 'light_from', 'light_to', 'timezone', 'scope'])));
+        $screen->fill(array_intersect_key($settings, array_flip(['name', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'theme', 'light_from', 'light_to', 'timezone', 'scope'])));
 
         if ($screen->isDirty()) {
             $screen->save();

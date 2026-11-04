@@ -201,6 +201,7 @@ type Settings = Pick<
     | 'orientation'
     | 'fit'
     | 'show_header'
+    | 'show_clock'
     | 'theme'
     | 'light_from'
     | 'light_to'
@@ -260,6 +261,7 @@ const SETTINGS: (keyof Settings)[] = [
     'orientation',
     'fit',
     'show_header',
+    'show_clock',
     'theme',
     'light_from',
     'light_to',
@@ -1025,6 +1027,7 @@ export default function EditScreen(props: Props) {
                     sources={sources}
                     data={data[widget.id]}
                     now={now}
+                    timezone={screen.timezone}
                     pinned={widget.id === selected ? pinned : undefined}
                     incident={incident}
                     designer
@@ -1712,7 +1715,11 @@ export default function EditScreen(props: Props) {
                                         <KioskStatus
                                             attention={0}
                                             offline={null}
-                                            clock={kioskClock(screen, now)}
+                                            clock={
+                                                screen.show_clock
+                                                    ? kioskClock(screen, now)
+                                                    : null
+                                            }
                                         />
                                     ),
                                 }}

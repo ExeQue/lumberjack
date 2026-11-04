@@ -38,9 +38,11 @@ class UpdateScreenRequest extends FormRequest
             'orientation' => ['sometimes', 'required', Rule::enum(ScreenOrientation::class)],
             'fit' => ['sometimes', 'required', Rule::enum(ScreenFit::class)],
             'show_header' => ['sometimes', 'required', 'boolean'],
+            'show_clock' => ['sometimes', 'required', 'boolean'],
             'light_from' => ['sometimes', 'required', ...$time],
             'light_to' => ['sometimes', 'required', ...$time],
-            'timezone' => ['sometimes', 'required', 'timezone:all'],
+            // Empty: the viewer's own time zone.
+            'timezone' => ['sometimes', 'nullable', 'timezone:all'],
             'scope' => ['sometimes', 'required', 'array'],
             'scope.projects' => ['present_with:scope', 'array'],
             'scope.projects.*' => ['string', Rule::in($this->screen()->team->projects()->pluck('uuid')->all())],
@@ -50,7 +52,7 @@ class UpdateScreenRequest extends FormRequest
     }
 
     /**
-     * @return array{name?: string, theme?: ScreenTheme, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, show_header?: bool, light_from?: string, light_to?: string, timezone?: string, scope?: array{projects: list<string>, environment: string|null, period: string}}
+     * @return array{name?: string, theme?: ScreenTheme, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, show_header?: bool, show_clock?: bool, light_from?: string, light_to?: string, timezone?: string|null, scope?: array{projects: list<string>, environment: string|null, period: string}}
      */
     public function settings(): array
     {
@@ -70,6 +72,10 @@ class UpdateScreenRequest extends FormRequest
 
         if ($this->has('show_header')) {
             $settings['show_header'] = $this->boolean('show_header');
+        }
+
+        if ($this->has('show_clock')) {
+            $settings['show_clock'] = $this->boolean('show_clock');
         }
 
         if ($this->has('fit')) {

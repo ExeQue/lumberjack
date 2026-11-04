@@ -43,6 +43,7 @@ class ScreenPresenter
             'orientation' => $screen->orientation->value,
             'fit' => $screen->fit->value,
             'show_header' => $screen->show_header,
+            'show_clock' => $screen->show_clock,
             'theme' => $screen->theme->value,
             'light_from' => $screen->light_from,
             'light_to' => $screen->light_to,

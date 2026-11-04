@@ -179,7 +179,7 @@ export default function Kiosk({
                                       time: clock(offlineSince),
                                   })
                         }
-                        clock={clock(now)}
+                        clock={screen.show_clock ? clock(now) : null}
                     />
                 ),
             }}
@@ -230,6 +230,7 @@ export default function Kiosk({
                         sources={sources}
                         data={data[widget.id]}
                         now={now}
+                        timezone={screen.timezone}
                         flash={flashing[widget.id]}
                         onStatus={onStatus}
                         style={{

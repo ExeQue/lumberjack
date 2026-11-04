@@ -1508,8 +1508,9 @@ export function ScreenSettings({
                 </Label>
                 <TimezoneInput
                     id="screen-tz"
-                    value={screen.timezone}
-                    onChange={(zone) => onChange({ timezone: zone })}
+                    value={screen.timezone ?? ''}
+                    emptyLabel={t('screens.settings.browser_timezone')}
+                    onChange={(zone) => onChange({ timezone: zone || null })}
                 />
                 <span className="text-xs text-ink-3">
                     {t('screens.settings.timezone_hint')}
@@ -1525,6 +1526,18 @@ export function ScreenSettings({
                 />
                 {t('screens.designer.show_header')}
             </label>
+            {screen.show_header && (
+                <label className="flex items-center gap-2 text-[13px]">
+                    <input
+                        type="checkbox"
+                        checked={screen.show_clock}
+                        onChange={(e) =>
+                            onChange({ show_clock: e.target.checked })
+                        }
+                    />
+                    {t('screens.settings.show_clock')}
+                </label>
+            )}
             <div className="flex flex-col gap-1.5">
                 <Label htmlFor="screen-theme">
                     {t('screens.designer.theme')}

@@ -308,6 +308,8 @@ export type TileProps = {
     sources: Sources;
     data: WidgetData | undefined;
     now: number;
+    /** The screen's time zone, for a clock without its own; null: the browser's. */
+    timezone?: string | null;
     /** The designer holds the selected tile on the value its inspector has open. */
     pinned?: number;
     incident?: boolean;
@@ -331,6 +333,7 @@ export function WidgetTile({
     sources,
     data,
     now,
+    timezone = null,
     pinned,
     incident = false,
     designer = false,
@@ -448,7 +451,14 @@ export function WidgetTile({
             </span>
         ) : null;
     } else if (widget.type === 'clock') {
-        body = <Clock widget={widget} schema={schema} now={now} />;
+        body = (
+            <Clock
+                widget={widget}
+                schema={schema}
+                now={now}
+                screenZone={timezone}
+            />
+        );
     } else if (payload === undefined) {
         body = (
             <span className="lj-tile-small animate-pulse">
@@ -1938,14 +1948,17 @@ function Clock({
     widget,
     schema,
     now,
+    screenZone,
 }: {
     widget: Widget;
     schema: Schema;
     now: number;
+    screenZone: string | null;
 }) {
     const opt = <T,>(key: string) => option<T>(schema, widget, key);
     const mode = opt<string>('mode') ?? 'clock';
-    const timeZone = opt<string>('timezone') || undefined;
+    // Its own zone, else the screen's, else the browser's.
+    const timeZone = opt<string>('timezone') || screenZone || undefined;
     const lang = document.documentElement.lang || 'en';
     const time = new Intl.DateTimeFormat(lang, {
         timeZone,

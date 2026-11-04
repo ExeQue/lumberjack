@@ -314,6 +314,14 @@ describe('saving from the designer', function () {
         $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '9:16', 'orientation' => 'upside-down', 'fit' => 'zoom', 'show_header' => 'maybe'])
             ->assertJsonValidationErrors(['aspect', 'orientation', 'fit', 'show_header']);
     });
+
+    it('hides the clock and leaves the time zone to the browser', function () {
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['show_clock' => false, 'timezone' => null])->assertOk();
+
+        expect($this->screen->refresh()->show_clock)->toBeFalse()
+            ->and($this->screen->timezone)->toBeNull()
+            ->and($this->screen->currentTheme())->toBeInstanceOf(ScreenTheme::class);
+    });
 });
 
 describe('the data endpoint', function () {
