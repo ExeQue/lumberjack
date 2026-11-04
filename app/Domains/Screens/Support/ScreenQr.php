@@ -30,6 +30,15 @@ final class ScreenQr
         return self::screen($url)->logo(file: public_path('favicon.svg'), size: self::LOGO_SIZE)->svg()->contents();
     }
 
+    /**
+     * Anything that is not a link (a two-factor secret's otpauth:// address) in the same
+     * on screen style, without the logo.
+     */
+    public static function textSvg(string $text): string
+    {
+        return self::style(Qr::text($text))->svg()->contents();
+    }
+
     /** The on screen variant as PNG: what a camera sees of the SVG. */
     public static function screenPng(string $url, int $size = 600): Rendered
     {
@@ -51,7 +60,12 @@ final class ScreenQr
 
     private static function screen(string $url): PendingQr
     {
-        return Qr::url($url)->modules('rounded')->eyes(outer: 'rounded', inner: 'soft')->paint(self::AMBER)->background(self::PANEL)->margin(2);
+        return self::style(Qr::url($url));
+    }
+
+    private static function style(PendingQr $qr): PendingQr
+    {
+        return $qr->modules('rounded')->eyes(outer: 'rounded', inner: 'soft')->paint(self::AMBER)->background(self::PANEL)->margin(2);
     }
 
     /**
