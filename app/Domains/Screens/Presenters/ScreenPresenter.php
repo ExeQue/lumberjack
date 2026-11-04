@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Presenters;
 
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Jobs\Models\QueueSample;
 use App\Domains\Performance\Models\RequestRun;
@@ -160,8 +161,8 @@ class ScreenPresenter
     }
 
     /**
-     * What the designer offers to pick from besides the catalog: the team's environments
-     * and health checks, and the grid's limits.
+     * What the designer offers to pick from besides the catalog: the team's environments,
+     * health checks and data sources, and the grid's limits.
      *
      * @return array<string, mixed>
      */
@@ -174,6 +175,9 @@ class ScreenPresenter
             'environments' => $projects->flatMap(fn (Project $p): array => $this->environments->get($p))->unique()->sort()->values()->all(),
             'checks' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->orderBy('name')->orderBy('slug')->get(['uuid', 'project_id', 'name', 'slug', 'type'])
                 ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name])->values()->all(),
+            // External values pick one; names and formats only, never a URL or header.
+            'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->orderBy('name')->get(['uuid', 'project_id', 'name', 'format'])
+                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'format' => $s->format->value, 'project' => $projects->find($s->project_id)?->name])->values()->all(),
             // Names a filter can pick from, so a queue, host, domain or database check is chosen, not typed.
             'filters' => [
                 'queue' => QueueSample::query()->whereIn('project_id', $projects->modelKeys())->where('sampled_at', '>=', now()->subDays(7))

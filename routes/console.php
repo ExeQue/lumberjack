@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Alerts\Console\Commands\CheckQueueBacklogsCommand;
+use App\Domains\DataSources\Console\Commands\FetchDataSourcesCommand;
 use App\Domains\Health\Console\Commands\ArchiveSilentHealthChecksCommand;
 use App\Domains\Health\Console\Commands\RunHealthChecksCommand;
 use App\Domains\Health\Models\HealthCheckHost;
@@ -20,6 +21,7 @@ Schedule::command(ReturnIgnoredIssuesCommand::class)->everyMinute()->withoutOver
 Schedule::command(SendWatchDigestsCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(CheckQueueBacklogsCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(RunHealthChecksCommand::class)->everyMinute()->withoutOverlapping();
+Schedule::command(FetchDataSourcesCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(ArchiveSilentHealthChecksCommand::class)->daily()->withoutOverlapping();
 Schedule::command(PruneTelemetryCommand::class)->dailyAt('03:15')->timezone('Europe/Copenhagen')->withoutOverlapping();
 Schedule::command('horizon:snapshot')->everyFiveMinutes();

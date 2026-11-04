@@ -20,7 +20,8 @@ use Illuminate\Validation\Rule;
  * 0-based column and row (see ScreenLayout). Data types are the
  * WidgetType cases and show a source of WidgetSources; clock and empty need none. Options
  * live in sections of fields: select (one of its values), toggle, text, number, checks
- * (health check uuids). A field marked data is read by ResolveWidgetDataAction, so a
+ * (health check uuids), data_source (a data source uuid). A field with sources shows only
+ * for those sources (the External JSON fields). A field marked data is read by ResolveWidgetDataAction, so a
  * change to it refetches the widget; the rest only change how it draws. Scope fields are
  * stored in the widget's scope, not its options; absent means the screen's default.
  *
@@ -232,6 +233,7 @@ final class WidgetSchema
                 'toggle' => ['nullable', 'boolean'],
                 'number' => ['nullable', 'numeric', ...(isset($field['min']) ? ['min:'.$field['min'], 'max:'.$field['max']] : [])],
                 'checks' => ['nullable', 'array', 'max:50'],
+                'data_source' => ['nullable', 'string', 'uuid'],
                 'timezone' => ['nullable', 'timezone:all'],
                 default => ['nullable', 'string', 'max:200'],
             };
@@ -399,10 +401,17 @@ final class WidgetSchema
             ['key' => 'source_seconds', 'type' => 'number', 'default' => null, 'data' => false, 'span' => 1, 'min' => 1, 'max' => self::MAX_ROTATE_SECONDS],
         ]);
         $limits = [$number('amber'), $number('red'), $toggle('low_is_bad', null, true)];
+        // Where an External JSON value reads from: the source, and a JSONPath to one number, or for a list to its items.
+        $external = fn (bool $rows = false): array => array_map(fn (array $field): array => [...$field, 'data' => true, 'span' => 2, 'sources' => ['external_json']], [
+            ['key' => 'data_source', 'type' => 'data_source', 'default' => null],
+            $text('json_path'),
+            ...($rows ? [$text('label_path'), $text('value_path')] : []),
+        ]);
 
         return [
             'stat' => [
                 $section('value', [
+                    ...$external(),
                     ...$limits,
                     $select('compare', ['none', 'previous', 'yesterday', 'last_week'], 'previous', true, 2),
                     $select('decimals', ['auto', '0', '1', '2'], 'auto'),
@@ -413,11 +422,12 @@ final class WidgetSchema
                 $rotation, $scope(true), $display(true),
             ],
             'gauge' => [
-                $section('scale', [$number('min'), $number('max'), ...$limits, $toggle('show_limits', true), $toggle('show_red_limit', true)]),
+                $section('scale', [...$external(), $number('min'), $number('max'), ...$limits, $toggle('show_limits', true), $toggle('show_red_limit', true)]),
                 $rotation, $scope(true), $display(true),
             ],
             'chart' => [
                 $section('chart', [
+                    ...$external(),
                     $select('style', ['bars', 'area', 'line'], 'bars'),
                     $toggle('smooth', false),
                     $select('split_by', ['none', 'route', 'queue', 'host', 'check', 'environment', 'release', 'project'], 'none', true),
@@ -435,6 +445,7 @@ final class WidgetSchema
             ],
             'list' => [
                 $section('rows', [
+                    ...$external(true),
                     $select('limit', ['auto', '3', '5', '10', '20'], 'auto', true),
                     $select('sort', ['newest', 'worst', 'last_seen', 'most_frequent'], 'newest', true),
                     $toggle('only_problems', false, true),

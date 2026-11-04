@@ -81,6 +81,7 @@ type Props = {
     sources: Sources;
     environments: string[];
     checks: Catalog['checks'];
+    data_sources: Catalog['data_sources'];
     filters?: Catalog['filters'];
     limits: {
         min_cols: number;
@@ -225,10 +226,8 @@ const PRESETS: Record<string, [number, number][]> = {
         [1024, 768],
         [1600, 1200],
     ],
-    '21:9': [
-        [2560, 1080],
-        [3440, 1440],
-    ],
+    '21:9': [[2560, 1080]],
+    '43:18': [[3440, 1440]],
     '32:9': [
         [3840, 1080],
         [5120, 1440],
@@ -409,6 +408,8 @@ export default function EditScreen(props: Props) {
         projects: props.projects,
         environments: props.environments,
         checks: props.checks,
+        data_sources: props.data_sources,
+        screen: props.screen.uuid,
         periods: PERIODS,
         filters: props.filters,
     };

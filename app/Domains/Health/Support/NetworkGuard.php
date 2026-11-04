@@ -7,6 +7,12 @@ namespace App\Domains\Health\Support;
 use App\Domains\Health\Exceptions\PrivateAddressException;
 use App\Domains\Health\Exceptions\ProbeFailedException;
 use App\Domains\Health\Exceptions\UnresolvableHostException;
+use GuzzleHttp\Exception\RequestException as GuzzleRequestException;
+use GuzzleHttp\Psr7\StreamWrapper;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 
 /**
  * Keeps outbound requests (health checks, alert webhooks) off this server and the
@@ -85,6 +91,32 @@ class NetworkGuard
         $port = (int) ($parts['port'] ?? ($scheme === 'https' ? 443 : 80));
 
         return ['curl' => [CURLOPT_RESOLVE => [$host.':'.$port.':'.(str_contains($address, ':') ? '['.$address.']' : $address)]]];
+    }
+
+    /**
+     * Sends $request to the address this guard vetted, reading at most $maxBytes of the
+     * body: past that curl stops the transfer, and the response keeps its status, headers
+     * and first $maxBytes. Never streamed, as only curl applies the pin; so the timeout
+     * set on $request is one for the whole request, not for each read.
+     */
+    public function send(PendingRequest $request, string $method, string $url, int $maxBytes): Response
+    {
+        $body = new CappedStream($maxBytes);
+
+        try {
+            return $request->withOptions([...$this->pin($url), 'sink' => StreamWrapper::getResource($body)])->send($method, $url);
+        } catch (RequestException $e) {
+            // Cut off on an error status: the status is the answer.
+            return $e->response;
+        } catch (ConnectionException $e) {
+            $previous = $e->getPrevious();
+
+            if ($body->full && $previous instanceof GuzzleRequestException && $previous->getResponse() !== null) {
+                return new Response($previous->getResponse());
+            }
+
+            throw $e;
+        }
     }
 
     public static function isPublic(string $address): bool

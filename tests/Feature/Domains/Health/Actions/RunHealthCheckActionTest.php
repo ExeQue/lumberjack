@@ -19,6 +19,8 @@ covers(RunHealthCheckAction::class, NetworkGuard::class, DispatchDueHealthChecks
 uses(FakesHealthProbes::class);
 
 beforeEach(function () {
+    // The default, whatever the local .env says.
+    config(['health.allow_private' => false]);
     $this->fakeDns();
     $this->run = function (HealthCheckType $type, array $config, array $attributes = []): HealthCheckResult {
         $check = HealthCheck::factory()->monitored($type, $config)->create($attributes);
@@ -74,6 +76,21 @@ describe('http checks', function () {
         ($this->run)(HealthCheckType::Http, ['url' => 'https://example.com/up', 'timeout_s' => 30]);
 
         expect($options['timeout'])->toBe(RunHealthCheckAction::MAX_TIMEOUT_S);
+    });
+
+    it('pins the vetted address through curl, never streaming, which would drop the pin', function () {
+        $options = null;
+        Http::fake(function ($request, array $sent) use (&$options) {
+            $options = $sent;
+
+            return Http::response('ok');
+        });
+
+        ($this->run)(HealthCheckType::Http, ['url' => 'https://example.com/up']);
+
+        expect($options['curl'][CURLOPT_RESOLVE])->toBe(['example.com:443:93.184.215.14'])
+            ->and($options)->not->toHaveKey('stream')
+            ->and($options['sink'])->toBeResource();
     });
 
     it('follows a few redirects, and no more', function () {

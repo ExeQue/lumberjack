@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Projects\Models;
 
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Label;
@@ -108,6 +109,12 @@ class Project extends Model
     public function healthChecks(): HasMany
     {
         return $this->hasMany(HealthCheck::class);
+    }
+
+    /** @return HasMany<DataSource, $this> */
+    public function dataSources(): HasMany
+    {
+        return $this->hasMany(DataSource::class);
     }
 
     /** @return HasMany<ProjectAgent, $this> */

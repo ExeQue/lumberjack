@@ -22,7 +22,8 @@ use Illuminate\Support\Facades\Http;
 /**
  * Runs one check Lumberjack owns and records what it found. Every connection goes to
  * an address the network guard allowed, and redirects are followed by hand, at most
- * three, each checked again.
+ * three, each checked again. The timeout is for each request, so a check with
+ * redirects waits at most four times it.
  */
 class RunHealthCheckAction
 {
@@ -95,7 +96,7 @@ class RunHealthCheckAction
 
         return match (true) {
             $response->status() !== $expected => new HealthResultData(HealthResultStatus::Failed, __('health.results.http_status', ['expected' => $expected, 'got' => $response->status()]), $metrics),
-            $contains !== '' && ! str_contains(self::bodyStart($response), $contains) => new HealthResultData(HealthResultStatus::Failed, __('health.results.http_body', ['text' => $contains]), $metrics),
+            $contains !== '' && ! str_contains(substr($response->body(), 0, self::MAX_BODY_BYTES), $contains) => new HealthResultData(HealthResultStatus::Failed, __('health.results.http_body', ['text' => $contains]), $metrics),
             is_numeric($maxLatency) && $ms > (int) $maxLatency => new HealthResultData(HealthResultStatus::Warning, __('health.results.http_slow', ['ms' => $ms, 'max' => (int) $maxLatency]), $metrics),
             default => new HealthResultData(HealthResultStatus::Ok, __('health.results.http_ok', ['status' => $response->status(), 'ms' => $ms]), $metrics),
         };
@@ -103,38 +104,11 @@ class RunHealthCheckAction
 
     private function request(string $method, string $url, int $timeout): Response
     {
-        return Http::withoutRedirecting()
+        // Connects to the address the guard checked, and reads no more of the body than a check looks at.
+        return $this->guard->send(Http::withoutRedirecting()
             ->timeout($timeout)
             ->connectTimeout(min(5, $timeout))
-            ->withUserAgent('Lumberjack-Health/1')
-            // Connect to the address the guard checked, not whatever a second lookup says.
-            ->withOptions($this->guard->pin($url))
-            // Streamed, so a huge body is never downloaded whole; see bodyStart().
-            ->withOptions(['stream' => true])
-            ->send($method, $url);
-    }
-
-    /**
-     * The first MAX_BODY_BYTES of the body; the rest is never read.
-     */
-    private static function bodyStart(Response $response): string
-    {
-        $stream = $response->toPsrResponse()->getBody();
-        $body = '';
-
-        while (! $stream->eof() && strlen($body) < self::MAX_BODY_BYTES) {
-            $chunk = $stream->read(self::MAX_BODY_BYTES - strlen($body));
-
-            if ($chunk === '') {
-                break;
-            }
-
-            $body .= $chunk;
-        }
-
-        $stream->close();
-
-        return $body;
+            ->withUserAgent('Lumberjack-Health/1'), $method, $url, self::MAX_BODY_BYTES);
     }
 
     private function ssl(HealthCheck $check): HealthResultData

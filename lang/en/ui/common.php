@@ -33,6 +33,7 @@ return [
         'commands' => 'Commands',
         'logs' => 'Logs',
         'health' => 'Health',
+        'data_sources' => 'Data sources',
         'settings' => 'Settings',
         'all_projects' => 'All projects',
         'team' => 'Members and tokens',

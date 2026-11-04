@@ -8,6 +8,7 @@ use App\Domains\Administration\Models\AdminAuditEntry;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Commands\Models\CommandRun;
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Occurrence;
@@ -48,6 +49,7 @@ trait CreatesRetentionData
             RetentionCategory::Logs => LogEntry::factory()->for($project->logChannels()->sole(), 'channel')->create($time),
             RetentionCategory::HealthResults => DB::table('health_check_results')->insert(['health_check_id' => HealthCheck::factory()->for($project)->create(['slug' => 'r-'.uniqid()])->id, 'project_id' => $project->id, 'status' => 'ok', 'checked_at' => $at]),
             RetentionCategory::HealthOutages => DB::table('health_outages')->insert(['health_check_id' => HealthCheck::factory()->for($project)->create(['slug' => 'o-'.uniqid()])->id, 'project_id' => $project->id, 'status' => 'down', 'started_at' => $at->copy()->subHour(), 'ended_at' => $at]),
+            RetentionCategory::DataSourceFetches => DB::table('data_source_fetches')->insert(['project_id' => $project->id, 'data_source_id' => DataSource::factory()->for($project)->create()->id, 'body' => '{}', 'fetched_at' => $at]),
             RetentionCategory::QueueSamples => DB::table('queue_samples')->insert(['project_id' => $project->id, 'host' => 'web', 'connection' => 'redis', 'queue' => 'default', 'size' => 1, 'sampled_at' => $at]),
             RetentionCategory::HostSamples => DB::table('host_samples')->insert(['project_agent_id' => ProjectAgent::factory()->for($project)->create()->id, 'sampled_at' => $at]),
             RetentionCategory::AlertSends => DB::table('alert_sends')->insert([

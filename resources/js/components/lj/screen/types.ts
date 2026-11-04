@@ -84,6 +84,7 @@ export type SchemaField = {
         | 'text'
         | 'number'
         | 'checks'
+        | 'data_source'
         | 'timezone'
         | 'projects'
         | 'environment';
@@ -91,6 +92,8 @@ export type SchemaField = {
     default: string | boolean | null;
     data: boolean;
     span: number;
+    /** Shown only for these sources (the External JSON fields). */
+    sources?: string[];
 };
 
 export type SchemaSection = { id: string; fields: SchemaField[] };

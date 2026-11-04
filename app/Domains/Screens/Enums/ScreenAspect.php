@@ -14,6 +14,8 @@ enum ScreenAspect: string
     case Tall = '16:10';
     case Classic = '4:3';
     case Ultrawide = '21:9';
+    // 3440×1440, a little wider than 21:9.
+    case UltrawideQhd = '43:18';
     case SuperUltrawide = '32:9';
 
     public function label(): string

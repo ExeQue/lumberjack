@@ -311,6 +311,11 @@ export function formatValue(
             return formatNumber(n, fixed ?? 2);
         case 'bytes':
             return formatBytes(n, fixed);
+        // An external figure: as sent, to two decimals.
+        case 'number':
+            return Math.abs(n) >= 10_000 && fixed === undefined
+                ? formatCompact(n)
+                : formatNumber(n, fixed ?? (Number.isInteger(n) ? 0 : 2));
         default:
             return fixed !== undefined
                 ? formatNumber(n, fixed)

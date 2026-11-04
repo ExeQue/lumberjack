@@ -17,17 +17,25 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 final class PublicUrl implements ValidationRule
 {
+    /**
+     * @param  bool|null  $allowPrivate  null takes alerts.webhooks.allow_private; data sources pass health.allow_private
+     */
+    public function __construct(
+        private readonly ?bool $allowPrivate = null,
+    ) {
+    }
+
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (! is_string($value) || ! self::allows($value)) {
+        if (! is_string($value) || ! self::allows($value, $this->allowPrivate)) {
             $fail(__('alerts.webhook_not_public'));
         }
     }
 
-    public static function allows(string $url): bool
+    public static function allows(string $url, ?bool $allowPrivate = null): bool
     {
         try {
-            app(NetworkGuard::class)->pin($url, (bool) config('alerts.webhooks.allow_private', false));
+            app(NetworkGuard::class)->pin($url, $allowPrivate ?? (bool) config('alerts.webhooks.allow_private', false));
         } catch (HealthExceptionInterface) {
             return false;
         }
