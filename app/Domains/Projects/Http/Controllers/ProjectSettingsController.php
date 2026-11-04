@@ -81,7 +81,7 @@ class ProjectSettingsController
             ])->all(),
             'unknown_channels' => DB::table('log_entries')->where('project_id', $project->id)->where('occurred_at', '>=', now()->subDays(7))
                 ->whereNotNull('sent_channel')->distinct()->limit(10)->pluck('sent_channel'),
-            'retention' => $retentionRows->rows($project),
+            'retention' => $retentionRows->rows($project, $policies),
             'retention_stats' => Inertia::defer(fn (): array => $measure->execute(RetentionCategory::forTeams(), $project)),
             'job_overrides' => $policies->filter(fn (RetentionPolicy $p): bool => $p->project_id === $project->id && $p->job_class !== null)
                 ->map(fn (RetentionPolicy $p): array => ['job_class' => $p->job_class, 'days' => $p->days])->values()->all(),

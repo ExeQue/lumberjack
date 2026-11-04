@@ -36,6 +36,11 @@ class FollowProjectTeam
             $user->setRelation('currentTeam', $project->team);
         }
 
+        // One team, loaded once: the sidebar asks the user for it, the project's pages ask the project.
+        if ($project instanceof Project && $user?->currentTeam !== null && $user->currentTeam->id === $project->team_id) {
+            $project->setRelation('team', $user->currentTeam);
+        }
+
         return $next($request);
     }
 
