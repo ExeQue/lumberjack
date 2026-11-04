@@ -2,6 +2,7 @@ import { createInertiaApp, http } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
+import { tabHeaders, trackTabContext } from '@/lib/tab-context';
 import AuthLayout from '@/layouts/auth-layout';
 import LumberjackLayout from '@/layouts/lumberjack-layout';
 import SettingsLayout from '@/layouts/settings/layout';
@@ -32,8 +33,13 @@ http.onRequest((config) => {
         config.headers = { ...config.headers, 'X-Socket-ID': socket };
     }
 
+    // This tab's team and project, also for requests outside a page visit.
+    config.headers = { ...config.headers, ...tabHeaders() };
+
     return config;
 });
+
+trackTabContext();
 
 const appName = 'Lumberjack';
 

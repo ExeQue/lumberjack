@@ -28,7 +28,9 @@ every team (see [Setup and system administration](./administration)).
   read only for members.
 
 Anyone can **Create a team**: it starts empty, with them as the owner. The team switcher
-at the top of the sidebar moves between teams.
+at the top of the sidebar moves between teams. Each browser tab keeps its own team and
+project: switching in one tab leaves the others as they are, also when they are
+reloaded. A new tab starts with the team picked last.
 
 ## Invitations
 

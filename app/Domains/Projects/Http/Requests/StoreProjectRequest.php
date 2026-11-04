@@ -33,7 +33,7 @@ class StoreProjectRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100'],
             // Unique in the team, so a reference such as DEMO-42 points at one issue, for MCP too.
-            'issue_prefix' => ['required', 'string', 'min:2', 'max:8', 'regex:/^[A-Z][A-Z0-9]*$/', Rule::unique('projects', 'issue_prefix')->where('team_id', $this->user()?->current_team_id)],
+            'issue_prefix' => ['required', 'string', 'min:2', 'max:8', 'regex:/^[A-Z][A-Z0-9]*$/', Rule::unique('projects', 'issue_prefix')->where('team_id', $this->user()?->currentTeam?->id)],
         ];
     }
 }

@@ -20,6 +20,9 @@ use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    /** The project a browser tab showed last, for its sidebar on team pages. */
+    public const string PROJECT_HEADER = 'X-Lumberjack-Project';
+
     public const int SIDEBAR_COUNTS_SECONDS = 30;
 
     /**
@@ -108,7 +111,9 @@ class HandleInertiaRequests extends Middleware
             $request->session()->put('last_project', $routed->uuid);
         }
 
-        $project = $routed instanceof Project ? $routed : $team->projects()->where('uuid', $request->session()->get('last_project'))->first();
+        // The tab's own last project first (see UseTabTeam), then the session's.
+        $last = $request->header(self::PROJECT_HEADER) ?: $request->session()->get('last_project');
+        $project = $routed instanceof Project ? $routed : $team->projects()->where('uuid', $last)->first();
         $project ??= $team->projects()->orderBy('name')->first();
 
         return $project === null ? null : [
