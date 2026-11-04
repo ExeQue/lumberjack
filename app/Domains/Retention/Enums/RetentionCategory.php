@@ -20,6 +20,7 @@ enum RetentionCategory: string
     case Logs = 'logs';
     case HealthResults = 'health_results';
     case HealthOutages = 'health_outages';
+    case DataSourceFetches = 'data_source_fetches';
     case QueueSamples = 'queue_samples';
     case HostSamples = 'host_samples';
     case AlertSends = 'alert_sends';
@@ -42,7 +43,7 @@ enum RetentionCategory: string
             self::Requests, self::Queries, self::Spans, self::WebVitals => 'performance',
             self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns => 'jobs',
             self::Logs => 'logs',
-            self::HealthResults, self::HealthOutages => 'health',
+            self::HealthResults, self::HealthOutages, self::DataSourceFetches => 'health',
             self::QueueSamples, self::HostSamples => 'infrastructure',
             self::AlertSends => 'alerts',
             self::AuditLog => 'administration',
@@ -57,7 +58,8 @@ enum RetentionCategory: string
         return match ($this) {
             self::Occurrences, self::AlertSends => 90,
             self::Requests, self::Queries, self::Spans, self::Logs, self::HealthResults => 14,
-            self::WebVitals, self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::QueueSamples => 30,
+            // Data source history feeds screen charts, whose longest period is 30 days.
+            self::WebVitals, self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::QueueSamples, self::DataSourceFetches => 30,
             self::HostSamples => 7,
             self::HealthOutages, self::AuditLog => 365,
         };
@@ -95,6 +97,7 @@ enum RetentionCategory: string
             self::HealthOutages => 'ended_at',
             self::QueueSamples, self::HostSamples => 'sampled_at',
             self::AlertSends => 'sent_at',
+            self::DataSourceFetches => 'fetched_at',
             default => 'occurred_at',
         };
     }

@@ -1,9 +1,16 @@
 import { Settings } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import {
+    useEffect,
+    useId,
+    useRef,
+    useState,
+    useSyncExternalStore,
+} from 'react';
 import type { ReactNode } from 'react';
 import { Button, Input, Label, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { PATH_FIELDS, PathConfig, useJsonPreview } from './json-path-help';
 import { fieldsOf, option, rotationOf } from './lib';
 import type {
     RotateItem,
@@ -23,6 +30,15 @@ export type Catalog = {
     projects: { uuid: string; name: string }[];
     environments: string[];
     checks: { uuid: string; name: string; project: string | null }[];
+    /** The team's data sources, which External JSON values pick from. */
+    data_sources?: {
+        uuid: string;
+        name: string;
+        format: 'json' | 'prometheus';
+        project: string | null;
+    }[];
+    /** The screen's uuid, for the External JSON preview; without it there is none. */
+    screen?: string;
     periods: string[];
     /** Known names per filter kind (queue, host, domain), offered while typing a filter. */
     filters?: Record<string, string[]>;
@@ -124,6 +140,8 @@ function Section({
 type Target = {
     values: Record<string, unknown>;
     set: (key: string, value: unknown) => void;
+    /** Several at once, as one change (set after set would each start from the old values). */
+    setMany: (changes: Record<string, unknown>) => void;
     source: Source | undefined;
     inherited?: Record<string, unknown>;
     prefix: string;
@@ -183,6 +201,7 @@ export function WidgetInspector({
     part?: 'all' | 'display';
 }) {
     const t = useT();
+    const [checksProject, setChecksProject] = useState<string | null>(null);
     const { schema, sources } = catalog;
     const pool = sources[widget.type] ?? [];
     const source = pool.find((s) => s.id === widget.source);
@@ -416,6 +435,14 @@ export function WidgetInspector({
     const own: Target = {
         values: widget.options,
         set: setOption,
+        setMany: (changes) =>
+            onChange({
+                ...widget,
+                options: Object.entries(changes).reduce(
+                    (options, [key, value]) => without(options, key, value),
+                    widget.options,
+                ),
+            }),
         source,
         prefix: '',
     };
@@ -482,6 +509,33 @@ export function WidgetInspector({
                         </option>
                     </Select>
                 </div>
+            );
+        }
+
+        // An External JSON value's paths are set in a dialog, summed up here.
+        if (PATH_FIELDS.includes(field.key)) {
+            return (
+                field.key === 'json_path' && (
+                    <PathConfig
+                        key={`${target.prefix}${field.key}`}
+                        screen={part === 'all' ? catalog.screen : undefined}
+                        source={effective('data_source') || undefined}
+                        type={widget.type}
+                        prometheus={prometheus}
+                        fields={PATH_FIELDS.filter(
+                            (key) =>
+                                key === 'json_path' ||
+                                (!prometheus &&
+                                    (schema[widget.type] ?? []).some((s) =>
+                                        s.fields.some((f) => f.key === key),
+                                    )),
+                        )}
+                        values={target.values}
+                        inherited={target.inherited}
+                        preview={preview}
+                        onApply={target.setMany}
+                    />
+                )
             );
         }
 
@@ -641,8 +695,65 @@ export function WidgetInspector({
                     </div>
                 );
             }
+            case 'data_source': {
+                const all = catalog.data_sources ?? [];
+                // By project, like the checks.
+                const groups = Object.entries(
+                    Object.groupBy(all, (s) => s.project ?? ''),
+                ).sort(([a], [b]) => a.localeCompare(b));
+
+                return (
+                    <div
+                        key={field.key}
+                        className="col-span-2 flex flex-col gap-1"
+                    >
+                        <Label
+                            htmlFor={id(field.key)}
+                            className="text-xs text-ink-2"
+                        >
+                            {fieldLabel(field.key)}
+                        </Label>
+                        <Select
+                            id={id(field.key)}
+                            value={String(raw ?? '')}
+                            onChange={(e) =>
+                                target.set(field.key, e.target.value || null)
+                            }
+                        >
+                            <option value="">
+                                {t('screens.fields.data_source.none')}
+                            </option>
+                            {groups.map(([project, group]) => (
+                                <optgroup key={project} label={project}>
+                                    {group?.map((s) => (
+                                        <option key={s.uuid} value={s.uuid}>
+                                            {s.name}
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            ))}
+                        </Select>
+                        {all.length === 0 && (
+                            <span className="text-xs text-ink-3">
+                                {t('screens.fields.data_source.empty')}
+                            </span>
+                        )}
+                    </div>
+                );
+            }
             case 'checks': {
                 const picked = (raw as string[] | undefined) ?? [];
+                const groups = Object.entries(
+                    Object.groupBy(catalog.checks, (c) => c.project ?? ''),
+                ).sort(([a], [b]) => a.localeCompare(b));
+                const pickedIn = (group: typeof catalog.checks = []) =>
+                    group.filter((c) => picked.includes(c.uuid)).length;
+                // The chosen project, else the one holding a picked check, else the first.
+                const [shownProject, shown = []] =
+                    groups.find(([p]) => p === checksProject) ??
+                    groups.find(([, g]) => pickedIn(g) > 0) ??
+                    groups[0] ??
+                    [];
 
                 return (
                     <div
@@ -652,33 +763,55 @@ export function WidgetInspector({
                         <span className="text-xs text-ink-2">
                             {fieldLabel(field.key)}
                         </span>
-                        <div className="flex flex-wrap gap-1.5">
-                            {catalog.checks.map((check) => {
-                                const on = picked.includes(check.uuid);
+                        <div className="flex flex-col gap-2">
+                            {groups.length > 1 && (
+                                <div className="flex flex-wrap gap-1.5 border-b border-line pb-2">
+                                    {groups.map(([project, group]) => (
+                                        <button
+                                            key={project}
+                                            type="button"
+                                            aria-pressed={
+                                                project === shownProject
+                                            }
+                                            className={chip(
+                                                project === shownProject,
+                                            )}
+                                            onClick={() =>
+                                                setChecksProject(project)
+                                            }
+                                        >
+                                            {project}
+                                            {pickedIn(group) > 0 &&
+                                                ` · ${pickedIn(group)}`}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="flex flex-wrap gap-1.5">
+                                {shown.map((check) => {
+                                    const on = picked.includes(check.uuid);
+                                    const next = on
+                                        ? picked.filter((u) => u !== check.uuid)
+                                        : [...picked, check.uuid];
 
-                                return (
-                                    <button
-                                        key={check.uuid}
-                                        type="button"
-                                        aria-pressed={on}
-                                        title={check.project ?? undefined}
-                                        className={cn(chip(on), 'font-mono')}
-                                        onClick={() =>
-                                            target.set(
-                                                field.key,
-                                                on
-                                                    ? picked.filter(
-                                                          (u) =>
-                                                              u !== check.uuid,
-                                                      )
-                                                    : [...picked, check.uuid],
-                                            )
-                                        }
-                                    >
-                                        {check.name}
-                                    </button>
-                                );
-                            })}
+                                    return (
+                                        <button
+                                            key={check.uuid}
+                                            type="button"
+                                            aria-pressed={on}
+                                            className={cn(
+                                                chip(on),
+                                                'font-mono',
+                                            )}
+                                            onClick={() =>
+                                                target.set(field.key, next)
+                                            }
+                                        >
+                                            {check.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                             {catalog.checks.length === 0 && (
                                 <span className="text-xs text-ink-3">
                                     {t('screens.inspector.no_checks')}
@@ -887,10 +1020,41 @@ export function WidgetInspector({
                   setItem(active - 1, {
                       options: without(item.options, key, value),
                   }),
+              setMany: (changes) =>
+                  setItem(active - 1, {
+                      options: Object.entries(changes).reduce(
+                          (options, [key, value]) =>
+                              without(options, key, value),
+                          item.options ?? {},
+                      ),
+                  }),
               source: valueSource,
               inherited: widget.options,
               prefix: `r${active}-`,
           };
+    // An External JSON value's options over the widget's, as the server merges them.
+    const effective = (key: string) => {
+        const value = target.values[key] ?? target.inherited?.[key];
+
+        return typeof value === 'string' ? value : '';
+    };
+    // A Prometheus source is read with a selector, and has no item paths.
+    const prometheus =
+        valueSource?.id === 'external_json' &&
+        catalog.data_sources?.find((s) => s.uuid === effective('data_source'))
+            ?.format === 'prometheus';
+    const preview = useJsonPreview(
+        part === 'all' ? catalog.screen : undefined,
+        valueSource?.id === 'external_json'
+            ? effective('data_source') || undefined
+            : undefined,
+        widget.type,
+        {
+            path: effective('json_path'),
+            label_path: effective('label_path'),
+            value_path: effective('value_path'),
+        },
+    );
     // The open value's scope: the widget's on the first tab, else its entry's over it.
     const scopeTarget: {
         values: WidgetScope;
@@ -1147,13 +1311,25 @@ export function WidgetInspector({
                     title={t(`screens.sections.${valueSection.id}`)}
                     open
                 >
-                    {valueSection.fields.map((field) =>
-                        renderField(field, valueSection.id === 'scope', target),
-                    )}
+                    {valueSection.fields
+                        // External JSON's fields only for an External JSON value.
+                        .filter(
+                            (field) =>
+                                !field.sources ||
+                                field.sources.includes(valueSource?.id ?? ''),
+                        )
+                        .map((field) =>
+                            renderField(
+                                field,
+                                valueSection.id === 'scope',
+                                target,
+                            ),
+                        )}
                 </Section>
             )}
 
-            {scopeSection && (
+            {/* A data source is its own scope: projects and filters do not apply. */}
+            {scopeSection && valueSource?.id !== 'external_json' && (
                 <Section
                     key={scopeSection.id}
                     title={t(`screens.sections.${scopeSection.id}`)}
@@ -1641,6 +1817,37 @@ const GEAR_WIDTH = 300;
  * The gear in a designer tile's top right corner: the widget's Display settings in a
  * popover next to it (a native popover: Escape and a click outside close it).
  */
+/**
+ * Display settings copied from one widget's gear, to paste on another's. Kept for as
+ * long as the page is open; the keys say which settings the widget had, so a setting
+ * left at its default is pasted as the default too.
+ */
+type CopiedDisplay = {
+    from: string;
+    keys: string[];
+    values: Record<string, unknown>;
+};
+let copiedDisplay: CopiedDisplay | null = null;
+const copiedDisplayListeners = new Set<() => void>();
+const subscribeCopiedDisplay = (listener: () => void) => {
+    copiedDisplayListeners.add(listener);
+
+    return () => {
+        copiedDisplayListeners.delete(listener);
+    };
+};
+const setCopiedDisplay = (value: CopiedDisplay) => {
+    copiedDisplay = value;
+    copiedDisplayListeners.forEach((listener) => listener());
+};
+
+/** The keys behind the gear; refresh is about the data and stays in the inspector. */
+const displayKeys = (catalog: Catalog, type: Widget['type']) =>
+    (catalog.schema[type] ?? [])
+        .find((s) => s.id === 'display')
+        ?.fields.map((field) => field.key)
+        .filter((key) => key !== 'refresh') ?? [];
+
 export function DisplayGear({
     widget,
     catalog,
@@ -1653,6 +1860,39 @@ export function DisplayGear({
     onOpen: () => void;
 }) {
     const t = useT();
+    const copied = useSyncExternalStore(
+        subscribeCopiedDisplay,
+        () => copiedDisplay,
+    );
+    const keys = displayKeys(catalog, widget.type);
+    // Only what both widgets have: a gauge has no use for a list's settings.
+    const pasteable =
+        copied !== null && copied.from !== widget.id
+            ? keys.filter((key) => copied.keys.includes(key))
+            : [];
+    const copy = () =>
+        setCopiedDisplay({
+            from: widget.id,
+            keys,
+            values: Object.fromEntries(
+                keys
+                    .filter((key) => key in widget.options)
+                    .map((key) => [key, widget.options[key]]),
+            ),
+        });
+    const paste = () => {
+        const options = { ...widget.options };
+
+        for (const key of pasteable) {
+            if (copied !== null && key in copied.values) {
+                options[key] = copied.values[key];
+            } else {
+                delete options[key];
+            }
+        }
+
+        onChange({ ...widget, options });
+    };
     const gear = useRef<HTMLButtonElement>(null);
     const panel = useRef<HTMLDivElement>(null);
     // Beside the tile, so it stays in view while its settings change: right of it, else
@@ -1771,9 +2011,30 @@ export function DisplayGear({
                     e.stopPropagation();
                 }}
             >
-                <h3 className="mb-2.5 text-[11px] font-semibold tracking-wide text-ink-3 uppercase">
-                    {t('screens.sections.display')}
-                </h3>
+                <div className="mb-2.5 flex items-center justify-between gap-2">
+                    <h3 className="text-[11px] font-semibold tracking-wide text-ink-3 uppercase">
+                        {t('screens.sections.display')}
+                    </h3>
+                    <div className="flex gap-1">
+                        <Button
+                            variant="ghost"
+                            className="h-6 px-2 text-xs"
+                            onClick={copy}
+                        >
+                            {copied?.from === widget.id
+                                ? t('screens.inspector.display_copied')
+                                : t('screens.inspector.display_copy')}
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            className="h-6 px-2 text-xs"
+                            disabled={pasteable.length === 0}
+                            onClick={paste}
+                        >
+                            {t('screens.inspector.display_paste')}
+                        </Button>
+                    </div>
+                </div>
                 <WidgetInspector
                     part="display"
                     widget={widget}

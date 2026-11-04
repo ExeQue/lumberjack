@@ -1500,6 +1500,14 @@ function rowText(
                         : undefined,
                 at: row.last_seen_at as string,
             };
+        case 'external_json':
+            return {
+                main: String(row.label ?? ''),
+                tag:
+                    row.value !== null && row.value !== undefined
+                        ? { text: formatValue(row.value, 'number'), tone }
+                        : undefined,
+            };
         default:
             return { main: JSON.stringify(row) };
     }

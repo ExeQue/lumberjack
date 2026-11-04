@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Domains\Alerts\Models\QueueAlertThreshold;
+use App\Domains\DataSources\Enums\DataSourceFormat;
+use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Support\Prometheus;
 use App\Domains\Health\Enums\HealthStatus;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
@@ -23,6 +26,7 @@ use App\Domains\Screens\Exceptions\UnknownWidgetSourceException;
 use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Models\Team;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\Health\CreatesDatabaseHealthResults;
 use Tests\Support\Performance\CreatesRequestCounts;
@@ -458,5 +462,141 @@ describe('database checks', function () {
         $data = ($this->resolve)(WidgetType::Health, 'checks', ['checks' => [$this->mysql->uuid]]);
 
         expect($data['check']['metrics'])->toBe(['size_bytes' => 300, 'connections' => 45, 'max_connections' => 50]);
+    });
+});
+
+describe('external JSON', function () {
+    beforeEach(function () {
+        $this->source = DataSource::factory()->for($this->project)->create([
+            'name' => 'Shop',
+            'last_ok_at' => now(),
+            'last_body' => '{"orders": 30, "services": [{"name": "api", "status": "ok", "ms": 120}, {"name": "pay", "status": "down", "ms": 900}, {"name": "web", "status": "ok", "ms": 80}]}',
+        ]);
+        $fetch = fn (int $orders, CarbonInterface $at) => DB::table('data_source_fetches')->insert(['project_id' => $this->project->id, 'data_source_id' => $this->source->id, 'body' => json_encode(['orders' => $orders]), 'fetched_at' => $at]);
+        $fetch(10, now()->subDay()->subMinutes(5));
+        $fetch(15, now()->subHours(3)->subSeconds(20));
+        $fetch(20, now()->subHours(3));
+        $this->external = fn (array $options = []): array => ['data_source' => $this->source->uuid, 'json_path' => '$.orders', ...$options];
+    });
+
+    it('shows a stat from the latest response, against a period back, with a sparkline from the history', function () {
+        $data = ($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)(['amber' => 25, 'red' => 50]));
+
+        expect($data)->toMatchArray(['value' => 30.0, 'previous' => 10.0, 'change' => 2.0, 'state' => 'amber', 'period' => 'now', 'as_of' => now()->toIso8601String()])
+            ->and(array_values(array_filter(array_column($data['sparkline'], 'v'), fn ($v) => $v !== null)))->toBe([20.0]);
+    });
+
+    it('shows a gauge from a filter expression', function () {
+        $data = ($this->resolve)(WidgetType::Gauge, 'external_json', ($this->external)(['json_path' => "$.services[?(@.status=='down')].ms", 'max' => 1000, 'red' => 500]));
+
+        expect($data)->toMatchArray(['value' => 900.0, 'min' => 0.0, 'max' => 1000.0, 'state' => 'red']);
+    });
+
+    it('charts the history, the last fetch of each bucket', function () {
+        $data = ($this->resolve)(WidgetType::Chart, 'external_json', ($this->external)(), new WidgetScope(period: Period::Day));
+        $points = collect($data['series'][0]['points'])->whereNotNull('v');
+
+        expect($data['series'][0]['name'])->toBe('Shop')
+            ->and($data['interval'])->toBe('1h')
+            ->and($points->pluck('v')->all())->toBe([20.0])
+            ->and($points->first()['t'])->toBe(gmdate('Y-m-d\TH:00:00\Z', now()->subHours(3)->getTimestamp()));
+    });
+
+    it('lists the items a filter expression finds, with their labels, values and states', function () {
+        $data = ($this->resolve)(WidgetType::List, 'external_json', ($this->external)(['json_path' => "$.services[?(@.ms > 100)]", 'label_path' => 'name', 'value_path' => '$.ms', 'red' => 500]));
+
+        expect($data['columns'])->toBe(['label', 'value'])
+            ->and($data['rows'])->toBe([
+                ['project' => $this->project->slug, 'label' => 'api', 'value' => 120.0, 'state' => 'ok'],
+                ['project' => $this->project->slug, 'label' => 'pay', 'value' => 900.0, 'state' => 'red'],
+            ]);
+    });
+
+    it('numbers the rows on a share link without names', function () {
+        $data = app(ResolveWidgetDataAction::class)->execute($this->project->team, WidgetType::List, 'external_json', new WidgetScope(), ($this->external)(['json_path' => '$.services', 'label_path' => 'name']), aggregatesOnly: true);
+
+        expect(array_column($data['rows'], 'label'))->toBe(['#1', '#2', '#3']);
+    });
+
+    it('keeps only the numbers of the rows and the chart on a share link without names', function () {
+        $resolve = fn (WidgetType $type, array $options): array => app(ResolveWidgetDataAction::class)->execute($this->project->team, $type, 'external_json', new WidgetScope(period: Period::Day), ($this->external)($options), aggregatesOnly: true);
+
+        expect(array_column($resolve(WidgetType::List, ['json_path' => '$.services', 'label_path' => 'name', 'value_path' => 'status'])['rows'], 'value'))->toBe([null, null, null])
+            ->and(array_column($resolve(WidgetType::List, ['json_path' => '$.services', 'label_path' => 'name', 'value_path' => 'ms'])['rows'], 'value'))->toBe([120.0, 900.0, 80.0])
+            ->and($resolve(WidgetType::Chart, [])['series'][0]['name'])->toBe('source 1');
+    });
+
+    it('compares a stat with nothing fetched long before the period back', function () {
+        DB::table('data_source_fetches')->delete();
+        DB::table('data_source_fetches')->insert(['project_id' => $this->project->id, 'data_source_id' => $this->source->id, 'body' => '{"orders": 5}', 'fetched_at' => now()->subDays(3)]);
+
+        expect(($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)(['compare' => 'yesterday']))['previous'])->toBeNull()
+            ->and(($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)(['compare' => 'last_week']))['previous'])->toBeNull();
+    });
+
+    it('reads no source of a project outside the team', function () {
+        $other = DataSource::factory()->create(['last_ok_at' => now(), 'last_body' => '{"orders": 99}']);
+
+        $data = ($this->resolve)(WidgetType::Stat, 'external_json', ['data_source' => $other->uuid, 'json_path' => '$.orders']);
+
+        expect($data['value'])->toBeNull()
+            ->and($data['as_of'])->toBeNull();
+    });
+});
+
+describe('external Prometheus', function () {
+    beforeEach(function () {
+        $this->travelTo(now()->setTime(12, 30, 30));
+        $text = fn (int $ok, int $failed): string => "# TYPE http_requests_total counter\nhttp_requests_total{status=\"200\"} {$ok}\nhttp_requests_total{status=\"500\"} {$failed}\n# TYPE queue_depth gauge\nqueue_depth{queue=\"a\"} 5\nqueue_depth{queue=\"b\"} 2\n";
+        $this->source = DataSource::factory()->for($this->project)->create(['name' => 'Metrics', 'format' => DataSourceFormat::Prometheus, 'last_ok_at' => now(), 'last_body' => $text(280, 8)]);
+        $fetch = fn (int $ok, int $failed, CarbonInterface $at) => DB::table('data_source_fetches')->insert(['project_id' => $this->project->id, 'data_source_id' => $this->source->id, 'body' => json_encode(Prometheus::parse($text($ok, $failed))), 'fetched_at' => $at]);
+        $fetch(100, 10, now()->subHours(2));
+        // 500 drops from 10 to 4: a reset.
+        $fetch(160, 4, now()->subHour());
+        $fetch(220, 6, now()->subMinutes(2));
+        $this->external = fn (string $selector, array $options = []): array => ['data_source' => $this->source->uuid, 'json_path' => $selector, ...$options];
+    });
+
+    it('shows a counter on a stat as its increase per minute since the fetch before the latest', function () {
+        $data = ($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)('sum(http_requests_total)', ['compare' => 'none', 'sparkline' => false]));
+
+        // (280 - 220 + 8 - 6) over two minutes.
+        expect($data['value'])->toBe(31.0);
+    });
+
+    it('compares a counter with its rate a period back, from the two fetches by then', function () {
+        DB::table('data_source_fetches')->insert(['project_id' => $this->project->id, 'data_source_id' => $this->source->id, 'body' => json_encode(Prometheus::parse("# TYPE http_requests_total counter\nhttp_requests_total{status=\"200\"} 150\nhttp_requests_total{status=\"500\"} 3\n")), 'fetched_at' => now()->subHour()->subMinute()]);
+
+        $data = ($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)('sum(http_requests_total)', ['sparkline' => false]), new WidgetScope(period: Period::Hour));
+
+        // 150 to 160 and 3 to 4 in the minute before an hour ago.
+        expect($data)->toMatchArray(['value' => 31.0, 'previous' => 11.0]);
+    });
+
+    it('shows a gauge as it is, and only one group of sum by', function () {
+        expect(($this->resolve)(WidgetType::Gauge, 'external_json', ($this->external)('queue_depth{queue="a"}'))['value'])->toBe(5.0)
+            ->and(($this->resolve)(WidgetType::Gauge, 'external_json', ($this->external)('queue_depth'))['value'])->toBe(7.0)
+            ->and(($this->resolve)(WidgetType::Gauge, 'external_json', ($this->external)('sum by (queue) (queue_depth{queue=~"a|b"})'))['value'])->toBeNull()
+            ->and(($this->resolve)(WidgetType::Gauge, 'external_json', ($this->external)('$.orders'))['value'])->toBeNull();
+    });
+
+    it('charts a counter as the increase per minute between consecutive points, a reset as the new value', function () {
+        $data = ($this->resolve)(WidgetType::Chart, 'external_json', ($this->external)('sum(http_requests_total)'), new WidgetScope(period: Period::Day));
+
+        expect(array_map(fn (float $v): float => round($v, 4), array_values(array_filter(array_column($data['series'][0]['points'], 'v'), fn ($v) => $v !== null))))
+            ->toBe([round(64 / 60, 4), round(62 / 58, 4)]);
+    });
+
+    it('lists a row per group of sum by, or per series, a counter per minute', function () {
+        $rows = fn (string $selector): array => array_map(fn (array $r): array => [$r['label'], $r['value']], ($this->resolve)(WidgetType::List, 'external_json', ($this->external)($selector))['rows']);
+
+        expect($rows('sum by (status) (http_requests_total)'))->toBe([['200', 30.0], ['500', 1.0]])
+            ->and($rows('queue_depth'))->toBe([['queue=a', 5.0], ['queue=b', 2.0]]);
+    });
+
+    it('has no counter rate before a second fetch', function () {
+        DB::table('data_source_fetches')->delete();
+
+        expect(($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)('http_requests_total', ['compare' => 'none']))['value'])->toBeNull();
     });
 });

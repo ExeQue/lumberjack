@@ -8,6 +8,7 @@ import { index as adminTeams } from '@/routes/admin/teams';
 import { index as adminUsers } from '@/routes/admin/users';
 import { index as alertsIndex } from '@/routes/alerts';
 import { index as commandsIndex } from '@/routes/commands';
+import { index as dataSourcesIndex } from '@/routes/data-sources';
 import { index as healthIndex } from '@/routes/health';
 import { index as issuesIndex } from '@/routes/issues';
 import { index as jobsIndex } from '@/routes/jobs';
@@ -112,6 +113,11 @@ export function useNavigation(
                   active: isAt(healthIndex(project.uuid).url),
                   count: counts?.health,
               },
+              {
+                  label: t('common.nav.data_sources'),
+                  href: dataSourcesIndex(project.uuid).url,
+                  active: isAt(dataSourcesIndex(project.uuid).url),
+              },
               ...(project.can_administer
                   ? [
                         {
@@ -201,6 +207,7 @@ const sections: Record<string, (project: string) => { url: string }> = {
     commands: commandsIndex,
     logs: logsIndex,
     health: healthIndex,
+    'data-sources': dataSourcesIndex,
     settings: projectSettings,
 };
 

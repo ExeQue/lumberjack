@@ -11,6 +11,7 @@ use App\Domains\Administration\Http\Middleware\EnsureUserIsAdmin;
 use App\Domains\Alerts\Http\Controllers\AlertController;
 use App\Domains\Alerts\Http\Controllers\QueueAlertThresholdController;
 use App\Domains\Commands\Http\Controllers\CommandController;
+use App\Domains\DataSources\Http\Controllers\DataSourceController;
 use App\Domains\Health\Http\Controllers\HealthController;
 use App\Domains\Issues\Http\Controllers\IssueActionController;
 use App\Domains\Issues\Http\Controllers\IssueController;
@@ -32,6 +33,7 @@ use App\Domains\Releases\Http\Controllers\ReleaseController;
 use App\Domains\Repositories\Http\Controllers\RepositoryController;
 use App\Domains\Retention\Http\Controllers\RetentionController;
 use App\Domains\Schedule\Http\Controllers\ScheduleController;
+use App\Domains\Screens\Http\Controllers\DataSourcePreviewController;
 use App\Domains\Screens\Http\Controllers\DeviceController;
 use App\Domains\Screens\Http\Controllers\DisplayController;
 use App\Domains\Screens\Http\Controllers\PairController;
@@ -113,6 +115,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('health/{healthCheck}', [HealthController::class, 'update'])->name('health.update');
         Route::put('health/{healthCheck}/archive', [HealthController::class, 'archive'])->name('health.archive');
         Route::delete('health/{healthCheck}', [HealthController::class, 'destroy'])->name('health.destroy');
+        Route::get('data-sources', [DataSourceController::class, 'index'])->name('data-sources.index');
+        Route::post('data-sources', [DataSourceController::class, 'store'])->name('data-sources.store');
+        Route::put('data-sources/{dataSource}', [DataSourceController::class, 'update'])->name('data-sources.update');
+        Route::post('data-sources/{dataSource}/fetch', [DataSourceController::class, 'fetch'])->middleware('throttle:10,1')->name('data-sources.fetch');
+        Route::delete('data-sources/{dataSource}', [DataSourceController::class, 'destroy'])->name('data-sources.destroy');
         Route::get('search', SearchController::class)->middleware('throttle:120,1')->name('projects.search');
 
         Route::get('settings', [ProjectSettingsController::class, 'edit'])->name('projects.settings');
@@ -178,6 +185,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('screens/{screen:uuid}', [ScreenController::class, 'show'])->name('screens.show');
     Route::get('screens/{screen:uuid}/edit', [ScreenController::class, 'edit'])->name('screens.edit');
     Route::get('screens/{screen:uuid}/data', [ScreenController::class, 'data'])->middleware('throttle:120,1')->name('screens.data');
+    Route::get('screens/{screen:uuid}/data-sources/{dataSource}/preview', DataSourcePreviewController::class)->middleware('throttle:60,1')->name('screens.data-sources.preview');
     Route::get('screens/{screen:uuid}/viewers', [ScreenController::class, 'viewers'])->name('screens.viewers');
     Route::put('screens/{screen:uuid}', [ScreenController::class, 'update'])->name('screens.update');
     Route::put('screens/{screen:uuid}/layout', [ScreenController::class, 'layout'])->name('screens.layout');

@@ -57,6 +57,7 @@ describe('validating a widget', function () {
         'a chart' => [['id' => 'c', 'type' => 'chart', 'source' => 'requests', 'w' => 4, 'h' => 2, 'options' => ['style' => 'area', 'split_by' => 'route', 'top' => '10']]],
         'a list' => [['id' => 'd', 'type' => 'list', 'source' => 'queues', 'w' => 2, 'h' => 2, 'options' => ['limit' => 'auto', 'only_problems' => true]]],
         'health' => [['id' => 'e', 'type' => 'health', 'source' => 'checks', 'w' => 2, 'h' => 1, 'options' => ['view' => 'cards', 'checks' => ['8a3a9c5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e']]]],
+        'an external JSON list' => [['id' => 'h', 'type' => 'list', 'source' => 'external_json', 'w' => 2, 'h' => 2, 'options' => ['data_source' => '8a3a9c5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e', 'json_path' => "$.services[?(@.status=='down')]", 'label_path' => 'name', 'value_path' => 'ms']]],
         'a clock' => [['id' => 'f', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['timezone' => 'Europe/Copenhagen', 'format' => '12']]],
         'an empty cell' => [['id' => 'g', 'type' => 'empty', 'w' => 3, 'h' => 2]],
     ]);
@@ -65,6 +66,7 @@ describe('validating a widget', function () {
         expect($validate($widget))->toContain($error);
     })->with([
         'a check that is no uuid' => [['id' => 'e', 'type' => 'health', 'source' => 'checks', 'w' => 1, 'h' => 1, 'options' => ['checks' => ['x']]], 'w.options.checks.0'],
+        'a data source that is no uuid' => [['id' => 'a', 'type' => 'stat', 'source' => 'external_json', 'w' => 1, 'h' => 1, 'options' => ['data_source' => 'x']], 'w.options.data_source'],
         'an unknown time zone' => [['id' => 'f', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['timezone' => 'Nowhere']], 'w.options.timezone'],
         'a gauge source on a stat' => [['id' => 'a', 'type' => 'stat', 'source' => 'health_uptime', 'w' => 1, 'h' => 1], 'w.source'],
         'a widget that is no object' => [[], 'w'],

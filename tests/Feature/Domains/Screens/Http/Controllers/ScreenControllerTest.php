@@ -179,7 +179,7 @@ describe('the pages', function () {
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
             ->component('screens/edit')
             ->has('schema.health')
-            ->has('sources.stat', 18)
+            ->has('sources.stat', 19)
             ->has('filters.queue')
             ->has('filters.host')
             ->has('filters.check')
@@ -197,7 +197,7 @@ describe('the pages', function () {
         Display::factory()->create(['viewport_width' => 800, 'viewport_height' => 600]);
 
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
-            ->where('aspects', ['16:9', '16:10', '4:3', '21:9', '32:9'])
+            ->where('aspects', ['16:9', '16:10', '4:3', '21:9', '43:18', '32:9'])
             ->where('displays', [['name' => 'Office PC, Hall', 'w' => 3840, 'h' => 2160], ['name' => 'Office PC, window 2', 'w' => 1920, 'h' => 1080]])
             ->where('screen.fit', 'keep'));
     });

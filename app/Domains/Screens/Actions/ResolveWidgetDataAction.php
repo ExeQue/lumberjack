@@ -7,6 +7,8 @@ namespace App\Domains\Screens\Actions;
 use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Queries\DataSourceValuesQuery;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Health\Queries\HealthChecksQuery;
@@ -37,6 +39,7 @@ use App\Domains\Teams\Models\Team;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * The data one status screen widget shows, as JSON: what its source (WidgetSources)
@@ -48,7 +51,8 @@ use Illuminate\Support\Facades\DB;
  * (previous, yesterday, last_week, none) and sparkline for a stat; min and max for a
  * gauge; split_by (a metric group or project), top and overlay_previous for a chart;
  * limit, sort (newest, most_frequent, last_seen, worst) and only_problems for a list; checks (uuids) and
- * only_problems for health. Display options are the widget's own business.
+ * only_problems for health; data_source, json_path, and for a list label_path and value_path,
+ * for External JSON. Display options are the widget's own business.
  */
 class ResolveWidgetDataAction
 {
@@ -72,6 +76,7 @@ class ResolveWidgetDataAction
         private readonly ReleaseHealthQuery $releases,
         private readonly AgentMetricsQuery $agents,
         private readonly HealthChecksQuery $health,
+        private readonly DataSourceValuesQuery $dataSources,
     ) {
         $this->memo = new LruCache(200);
     }
@@ -94,7 +99,7 @@ class ResolveWidgetDataAction
             'low_is_bad' => (bool) ($options['low_is_bad'] ?? $source->lowIsBad),
         ];
 
-        $data = match ($type) {
+        $data = $source->id === 'external_json' ? $this->external($team, $type, $scope, $options, $limits, $aggregatesOnly) : match ($type) {
             WidgetType::Stat => $this->stat($source, $projects, $scope, $options, $limits),
             WidgetType::Gauge => $this->gauge($source, $projects, $scope, $options, $limits),
             WidgetType::Chart => $this->chart($source, $projects, $scope, $options, $aggregatesOnly),
@@ -528,6 +533,75 @@ class ResolveWidgetDataAction
             ->pluck('uptime');
 
         return $uptimes->isNotEmpty() ? (float) $uptimes->min() : null;
+    }
+
+    /**
+     * An External value: what the JSONPath (for a Prometheus source, the selector, a
+     * counter per minute) finds in the picked data source, in the shape of its type (see
+     * stat, gauge, chart and listRows), as of its last good fetch. The source must belong
+     * to one of the team's projects, whatever uuid the widget names. A stat's compare reads
+     * the history one period, a day or a week back; a list's rows are {label, value}.
+     * Without a source, or where the path finds no number, it is empty.
+     *
+     * @param  array<string, mixed>  $options
+     * @param  array{amber: float|null, red: float|null, low_is_bad: bool}  $limits
+     * @return array<string, mixed>
+     */
+    private function external(Team $team, WidgetType $type, WidgetScope $scope, array $options, array $limits, bool $aggregatesOnly): array
+    {
+        $uuid = $options['data_source'] ?? null;
+        $source = is_string($uuid) && Str::isUuid($uuid)
+            ? $this->memo->remember("data-source:{$team->id}:{$uuid}", fn (): DataSource|false => DataSource::query()
+                ->whereIn('project_id', $team->projects->modelKeys())->where('uuid', $uuid)->first() ?? false)
+            : false;
+        $source = $source instanceof DataSource ? $source : null;
+        $path = (string) ($options['json_path'] ?? '');
+        $window = MetricWindow::forPeriod($scope->period);
+        $value = $source !== null ? $this->dataSources->number($source, $path) : null;
+        $back = match ($options['compare'] ?? 'previous') {
+            'none' => null,
+            'yesterday' => 86400,
+            'last_week' => 7 * 86400,
+            default => $window->to->getTimestamp() - $window->from->getTimestamp(),
+        };
+        $previous = $type === WidgetType::Stat && $source !== null && $back !== null ? $this->dataSources->numberAt($source, $path, now()->subSeconds($back), $back) : null;
+
+        $data = match ($type) {
+            WidgetType::Stat => [
+                'value' => $value,
+                'previous' => $previous,
+                'change' => $value !== null && $previous !== null && $previous != 0 ? round($value / $previous - 1, 4) : null,
+                'state' => $value !== null ? $this->state($value, $limits) : null,
+                'limits' => $limits,
+                'sparkline' => $source !== null && ($options['sparkline'] ?? true) ? $this->dataSources->series($source, $path, $window) : null,
+            ],
+            WidgetType::Gauge => [
+                'value' => $value,
+                'min' => $this->number($options['min'] ?? null) ?? 0.0,
+                'max' => $this->number($options['max'] ?? null) ?? max(1.0, ($limits['red'] ?? 0) * 1.5, $value ?? 0),
+                'state' => $value !== null ? $this->state($value, $limits) : null,
+                'limits' => $limits,
+            ],
+            WidgetType::Chart => [
+                'interval' => $window->interval(),
+                'red' => $this->number($options['red'] ?? null),
+                // A share link without names does not name the source either.
+                'series' => $source !== null ? [['name' => $aggregatesOnly ? 'source 1' : $source->name, 'points' => $this->dataSources->series($source, $path, $window)]] : [],
+            ],
+            WidgetType::List => [
+                'columns' => ['label', 'value'],
+                'rows' => collect($source !== null ? $this->dataSources->rows($source, $path, $options['label_path'] ?? null, $options['value_path'] ?? null, 100) : [])
+                    ->map(fn (array $r): array => ['project' => $team->projects->find($source?->project_id)?->slug, ...$r, 'state' => is_float($r['value']) ? $this->state($r['value'], $limits) : null])
+                    ->when((bool) ($options['only_problems'] ?? false))->filter(fn (array $r): bool => in_array($r['state'], ['amber', 'red'], true))
+                    ->take(max(1, min(100, (int) ($options['limit'] ?? self::LIST_LIMIT))))->values()
+                    // A share link without names numbers the rows and keeps only their numbers: their
+                    // labels and text values are whatever the endpoint calls things.
+                    ->map(fn (array $r, int $i): array => $aggregatesOnly ? [...$r, 'label' => '#'.($i + 1), 'value' => is_string($r['value']) ? null : $r['value']] : $r)->all(),
+            ],
+            WidgetType::Health => [],
+        };
+
+        return ['as_of' => $source?->last_ok_at?->toIso8601String(), ...$data];
     }
 
     /**

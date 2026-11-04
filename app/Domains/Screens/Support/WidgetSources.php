@@ -75,6 +75,8 @@ final class WidgetSources
             new WidgetSource($stat, 'lcp_p75', 'ms', 2500, 4000, metric: Metric::LcpP75, filterOn: 'route'),
             new WidgetSource($stat, 'db_size', 'bytes', metric: Metric::DbSize, filterOn: 'check', snapshot: true),
             new WidgetSource($stat, 'db_connections', 'count', metric: Metric::DbConnections, filterOn: 'check', snapshot: true),
+            // A project's data source, read with the widget's JSONPath (see DataSourceValuesQuery).
+            new WidgetSource($stat, 'external_json', 'number', snapshot: true),
 
             // Gauge: one value on a scale.
             new WidgetSource($gauge, 'requests_per_minute', 'count', metric: Metric::Requests, filterOn: 'route', snapshot: true),
@@ -87,6 +89,7 @@ final class WidgetSources
             new WidgetSource($gauge, 'queue_size', 'count', 100, 1000, metric: Metric::QueueSize, filterOn: 'queue', snapshot: true),
             new WidgetSource($gauge, 'db_connections', 'ratio', 0.8, 0.9, metric: Metric::DbConnectionsUsed, filterOn: 'check', snapshot: true),
             new WidgetSource($gauge, 'health_uptime', 'ratio', 0.999, 0.99, lowIsBad: true),
+            new WidgetSource($gauge, 'external_json', 'number', snapshot: true),
 
             // Chart: one series (or a split) over the period.
             new WidgetSource($chart, 'requests_errors', 'count', metric: Metric::Requests, filterOn: 'route'),
@@ -106,6 +109,7 @@ final class WidgetSources
             new WidgetSource($chart, 'lcp_p75', 'ms', red: 4000, metric: Metric::LcpP75, filterOn: 'route'),
             new WidgetSource($chart, 'db_size', 'bytes', metric: Metric::DbSize, filterOn: 'check'),
             new WidgetSource($chart, 'db_connections', 'count', metric: Metric::DbConnections, filterOn: 'check'),
+            new WidgetSource($chart, 'external_json', 'number'),
 
             // List: rows, worst or newest first.
             new WidgetSource($list, 'latest_issues', 'rows', snapshot: true),
@@ -116,6 +120,7 @@ final class WidgetSources
             new WidgetSource($list, 'queues', 'rows', 100, 1000, filterOn: 'queue', snapshot: true),
             new WidgetSource($list, 'hosts', 'rows', 0.8, 0.9, filterOn: 'host', snapshot: true),
             new WidgetSource($list, 'agents', 'rows', filterOn: 'host', snapshot: true),
+            new WidgetSource($list, 'external_json', 'rows', snapshot: true),
 
             // Health: every check of the scope, or the picked ones.
             new WidgetSource(WidgetType::Health, 'checks', 'checks'),
