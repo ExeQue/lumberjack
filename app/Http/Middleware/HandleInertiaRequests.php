@@ -12,6 +12,7 @@ use App\Domains\Jobs\Enums\JobRunStatus;
 use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Schedule\Models\ScheduledTask;
+use App\Domains\Shared\Support\AppVersion;
 use App\Domains\Shared\Support\Translations;
 use App\Domains\Teams\Models\Team;
 use Illuminate\Http\Request;
@@ -59,6 +60,7 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'locale' => app()->getLocale(),
+            'app_version' => fn (): string => AppVersion::version(),
             // The strings themselves (about 75 KB) are a cached file of their own; the page
             // gets where it is, and the layout preloads it.
             'translations_url' => Translations::url(app()->getLocale()),

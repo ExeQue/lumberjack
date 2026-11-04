@@ -190,6 +190,17 @@ password; a session that was already open is told the account is suspended.
 A user whose password an administrator requires to be changed can only reach the
 security settings until they choose a new one.
 
+## About
+
+**About** in the menu under your name (it shows the version, e.g. "Lumberjack 0.2.0")
+opens a page with the version, the commit it was built from, links to the release notes
+and the documentation. System administrators also see what it runs on: PHP, Laravel, the
+database, and the queue, cache and session drivers, handy in a bug report.
+
+The Docker image knows its version from its build (`LUMBERJACK_VERSION` and
+`LUMBERJACK_REVISION`, set from the release tag and commit). A checkout asks git instead
+(`git describe --tags`, checked every five minutes), and says "dev" without git.
+
 ## Security
 
 ### Response headers

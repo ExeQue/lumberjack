@@ -4,6 +4,7 @@ import {
     BellOff,
     ChevronRight,
     ChevronsUpDown,
+    Info,
     ExternalLink,
     LogOut,
     Search,
@@ -29,6 +30,7 @@ import { navActiveClass } from '@/components/lj/ui';
 import { cn } from '@/lib/utils';
 import { useNavigation, useProjectSwitchUrl } from '@/lib/use-navigation';
 import type { NavItem } from '@/lib/use-navigation';
+import { about } from '@/routes';
 import { edit as profileEdit } from '@/routes/profile';
 import { index as projectsIndex } from '@/routes/projects';
 import { switchMethod as switchTeam } from '@/routes/teams';
@@ -90,8 +92,9 @@ export function Sidebar() {
             | null;
         auth: { user: { name: string } };
         is_admin: boolean;
+        app_version: string;
     }>();
-    const { team, teams, auth, is_admin } = page.props;
+    const { team, teams, auth, is_admin, app_version: appVersion } = page.props;
     const project =
         page.props.project ?? page.props.sidebar_project ?? undefined;
     const counts = page.props.sidebar_project?.counts;
@@ -290,6 +293,14 @@ export function Sidebar() {
                             <BellOff className="size-4" aria-hidden="true" />
                         )}
                         {sound ? t('common.sound_on') : t('common.sound_off')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href={about().url}>
+                            <Info className="size-4" aria-hidden="true" />
+                            <span className="truncate">
+                                {t('about.menu', { version: appVersion })}
+                            </span>
+                        </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
