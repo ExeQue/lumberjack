@@ -7,6 +7,7 @@ import {
 import { index as adminTeams } from '@/routes/admin/teams';
 import { index as adminUsers } from '@/routes/admin/users';
 import { index as alertsIndex } from '@/routes/alerts';
+import { index as browserIndex } from '@/routes/browser';
 import { index as commandsIndex } from '@/routes/commands';
 import { index as dataSourcesIndex } from '@/routes/data-sources';
 import { index as healthIndex } from '@/routes/health';
@@ -97,6 +98,7 @@ export function useNavigation(
               }),
               item(t('common.nav.routes'), routesIndex(project.uuid).url),
               item(t('common.nav.queries'), queriesIndex(project.uuid).url),
+              item(t('common.nav.browser'), browserIndex(project.uuid).url),
               item(t('common.nav.jobs'), jobsIndex(project.uuid).url, {
                   count: counts?.jobs,
               }),
@@ -206,6 +208,7 @@ const sections: Record<string, (project: string) => { url: string }> = {
     issues: issuesIndex,
     requests: routesIndex,
     database: queriesIndex,
+    browser: browserIndex,
     releases: releasesIndex,
     jobs: jobsIndex,
     schedule: scheduleIndex,

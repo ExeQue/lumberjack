@@ -15,10 +15,13 @@ final class Percentiles
      * @param  literal-string  $column
      * @param  literal-string  $percentile  a fraction such as '0.95'
      * @param  literal-string  $alias
+     * @param  literal-string|null  $filter  a condition only the rows it lets in are ranked by, e.g. 'occurred_at >= ?'
      * @return literal-string
      */
-    public static function select(string $column, string $percentile, string $alias): string
+    public static function select(string $column, string $percentile, string $alias, ?string $filter = null): string
     {
-        return "percentile_disc({$percentile}) WITHIN GROUP (ORDER BY {$column}) AS {$alias}";
+        $filter = $filter !== null ? " FILTER (WHERE {$filter})" : '';
+
+        return "percentile_disc({$percentile}) WITHIN GROUP (ORDER BY {$column}){$filter} AS {$alias}";
     }
 }

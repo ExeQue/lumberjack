@@ -127,10 +127,14 @@ The project settings show the script tag for browser errors:
 | `data-user`        | The user's id, for [users affected](./issues#users-affected).           |
 | `data-trace`       | The trace id of the request that rendered the page.                     |
 | `data-announce`    | `true` logs a line in the console when the script is active.            |
-| `data-vitals`      | `false` stops measuring [Web Vitals](./performance#web-vitals).         |
+| `data-vitals`      | `false` stops measuring [Web Vitals](./performance#browser).            |
 | `data-endpoint`    | Where to send, instead of `/api/ingest/browser` on the script's server. |
 
 Crawlers and automated browsers are skipped, in the browser and again on the server.
+
+With each page view's Web Vitals the script sends the class of device it ran on
+(mobile, tablet or desktop): from the browser's client hints where it has them, else
+from its user agent and touch screen.
 
 The script also has a small API on `window.Lumberjack`:
 

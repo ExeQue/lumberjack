@@ -16,6 +16,7 @@ use App\Domains\Live\Actions\BroadcastProjectChangeAction;
 use App\Domains\Live\Enums\ChangeKind;
 use App\Domains\Logs\Actions\RecordLogLineAction;
 use App\Domains\Performance\Actions\RecordRequestCountsAction;
+use App\Domains\Performance\Enums\DeviceClass;
 use App\Domains\Performance\Enums\SpanKind;
 use App\Domains\Performance\Support\SqlNormalizer;
 use App\Domains\Projects\Models\Project;
@@ -163,6 +164,8 @@ class ProcessIngestBatchAction
             'release' => $envelope->release,
             'route' => mb_substr(self::normalizePath(is_string($path) ? $path : '/'), 0, 255),
             ...$row,
+            // Anything but the three classes is dropped, like an out of range value.
+            'device' => is_string($event['device'] ?? null) ? DeviceClass::tryFrom($event['device'])?->value : null,
             'occurred_at' => Envelope::time($event['timestamp'] ?? null)->format('Y-m-d H:i:s.v'),
         ];
     }

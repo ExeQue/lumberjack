@@ -251,6 +251,13 @@ class ShowcaseTrafficSeeder extends Seeder
             '/invoices', '/checkout' => 1600,
             default => 1150,
         };
+        // Phones paint later; about one view in ten was measured by a script too old to tell.
+        $device = Showcase::chance(0.1) ? null : (Showcase::chance(0.5) ? 'mobile' : (Showcase::chance(0.15) ? 'tablet' : 'desktop'));
+        $lcp *= match ($device) {
+            'mobile' => 1.5,
+            'tablet' => 1.2,
+            default => 1.0,
+        };
 
         $this->bulk->push('web_vitals', [
             'project_id' => $project->id,
@@ -262,6 +269,7 @@ class ShowcaseTrafficSeeder extends Seeder
             'ttfb_us' => Showcase::latency(180, 0.4),
             'fcp_us' => Showcase::latency($lcp * 0.6, 0.4),
             'cls' => round(($route === '/products/{slug}' ? 0.11 : 0.02) * exp(0.6 * Showcase::gauss()), 3),
+            'device' => $device,
             // Measured when the page is left, a moment later; never after now.
             'occurred_at' => Showcase::ms($at->addSeconds(2)->min(now())),
         ]);

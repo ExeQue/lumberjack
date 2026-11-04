@@ -198,6 +198,8 @@ export type WebVitalStat = {
     lcp_us: number | null;
     inp_us: number | null;
     cls: number | null;
+    ttfb_us: number | null;
+    fcp_us: number | null;
 };
 
 export type ReleaseStat = {
