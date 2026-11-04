@@ -54,15 +54,31 @@ in a repository or bring to another team or another Lumberjack:
         "rows": 4,
         "aspect": "16:9",
         "theme": "schedule",
-        "scope": { "projects": ["shop"], "environment": "production", "period": "24h" },
+        "scope": {
+            "projects": ["shop"],
+            "environment": "production",
+            "period": "24h"
+        },
         "widgets": [
             {
-                "id": "health", "type": "health", "source": "checks",
-                "x": 0, "y": 3, "w": 2, "h": 1,
+                "id": "health",
+                "type": "health",
+                "source": "checks",
+                "x": 0,
+                "y": 3,
+                "w": 2,
+                "h": 1,
                 "options": {
-                    "checks": [{ "project": "shop", "environment": "production", "slug": "database:pgsql" }]
+                    "checks": [
+                        {
+                            "project": "shop",
+                            "environment": "production",
+                            "slug": "database:pgsql"
+                        }
+                    ]
                 },
-                "scope": {}, "rotate": []
+                "scope": {},
+                "rotate": []
             }
         ]
     }
