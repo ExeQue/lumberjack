@@ -786,6 +786,11 @@ function Stat({
                     )}
                 </span>
             )}
+            {/* Too few points to draw yet: keep the line's room, so the value sits
+                where it does on every stat. */}
+            {spark && spark.length <= 1 && (
+                <span aria-hidden="true" className="min-h-[10px] flex-1" />
+            )}
             {spark && spark.length > 1 && (
                 <Spark
                     points={spark}
