@@ -123,23 +123,25 @@ export function useNavigation(
                   count: counts?.health,
               }),
               item(t('common.nav.releases'), releasesIndex(project.uuid).url),
-              ...(project.can_administer
-                  ? [
-                        {
-                            ...group(t('common.nav.settings'), [
+              // On the gear: settings for whoever administers the project, the data
+              // sources (read only for members) for everyone.
+              {
+                  ...group(t('common.nav.project_settings'), [
+                      ...(project.can_administer
+                          ? [
                                 item(
                                     t('common.nav.settings'),
                                     projectSettings(project.uuid).url,
                                 ),
-                                item(
-                                    t('common.nav.data_sources'),
-                                    dataSourcesIndex(project.uuid).url,
-                                ),
-                            ]),
-                            hidden: true,
-                        },
-                    ]
-                  : []),
+                            ]
+                          : []),
+                      item(
+                          t('common.nav.data_sources'),
+                          dataSourcesIndex(project.uuid).url,
+                      ),
+                  ]),
+                  hidden: true,
+              },
           ]
         : [];
 
@@ -192,11 +194,13 @@ export function useSectionTabs(): NavItem[] | null {
     const path = page.url.split('?')[0];
 
     // Only on the pages themselves, not on what they lead to (one route, one job).
-    return (
+    const tabs =
         [...projectNav, ...teamNav].find((entry) =>
             entry.tabs?.some((tab) => tab.href === path),
-        )?.tabs ?? null
-    );
+        )?.tabs ?? [];
+
+    // One page alone needs no tabs (a member's gear: only the data sources).
+    return tabs.length > 1 ? tabs : null;
 }
 
 const sections: Record<string, (project: string) => { url: string }> = {
