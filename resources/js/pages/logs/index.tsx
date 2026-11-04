@@ -200,7 +200,7 @@ export default function LogsIndex({
                                     type="button"
                                     aria-pressed={filters.channel === c.value}
                                     onClick={() => apply({ channel: c.value })}
-                                    className="flex h-[34px] w-full cursor-pointer items-center justify-between gap-2 rounded-r-md px-2.5 text-left text-ink-2 hover:bg-panel-2 hover:text-ink aria-pressed:bg-panel-2 aria-pressed:text-ink aria-pressed:shadow-[inset_3px_0_0_var(--lj-amber)]"
+                                    className="lj-nav-item flex h-[34px] w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2.5 text-left text-ink-2 hover:bg-panel-2 hover:text-ink aria-pressed:rounded-l-none aria-pressed:bg-panel-2 aria-pressed:text-ink aria-pressed:shadow-[inset_3px_0_0_var(--lj-amber)]"
                                 >
                                     <span
                                         className={cn(

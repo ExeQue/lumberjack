@@ -40,7 +40,7 @@ function NavLink({ item }: { item: NavItem }) {
         return (
             <a
                 href={item.href}
-                className="flex h-8 items-center justify-between rounded-r-md px-2.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink"
+                className="lj-nav-item flex h-8 items-center justify-between rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink"
             >
                 {item.label}
                 <ExternalLink
@@ -56,7 +56,7 @@ function NavLink({ item }: { item: NavItem }) {
             href={item.href}
             aria-current={item.active ? 'page' : undefined}
             className={cn(
-                'flex h-8 items-center justify-between rounded-r-md px-2.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink',
+                'lj-nav-item flex h-8 items-center justify-between rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink',
                 item.active && navActiveClass,
             )}
         >
