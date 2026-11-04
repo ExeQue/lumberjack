@@ -10,7 +10,7 @@ use App\Domains\Projects\Models\Project;
 class RecordQueueSamplesAction
 {
     /**
-     * @param  list<array{connection: string, queue: string, size: int, oldest_age_s?: int|null}>  $queues
+     * @param  list<array{connection: string, queue: string, size: int, oldest_age_s?: int|null, workers?: int|null}>  $queues
      */
     public function execute(Project $project, string $host, array $queues): void
     {
@@ -27,6 +27,7 @@ class RecordQueueSamplesAction
             'queue' => $q['queue'],
             'size' => $q['size'],
             'oldest_age_s' => $q['oldest_age_s'] ?? null,
+            'workers' => $q['workers'] ?? null,
             'sampled_at' => $now,
         ], $queues));
     }

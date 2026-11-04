@@ -207,6 +207,15 @@ return [
         'tile_untitled' => ':kind, :w by :h',
     ],
 
+    // Groups of what a widget can show, in the designer's list.
+    'topics' => [
+        'traffic' => 'Traffic',
+        'issues' => 'Issues',
+        'jobs' => 'Jobs and queues',
+        'infrastructure' => 'Hosts and agents',
+        'databases' => 'Databases',
+        'health' => 'Health',
+    ],
     'inspector' => [
         'label' => 'Settings',
         'period' => 'Over',
@@ -400,6 +409,7 @@ return [
     'list' => [
         'empty' => 'Nothing to show.',
         'oldest' => 'oldest :age',
+        'workers' => '{0} no workers|{1} 1 worker|[2,*] :count workers',
         'host_usage' => 'CPU :cpu · memory :memory · disk :disk',
         'offline' => 'Offline',
         'queue' => ['backlog' => 'Backlog', 'waiting' => 'Waiting :age'],

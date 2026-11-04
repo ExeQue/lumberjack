@@ -37,6 +37,7 @@ return [
         'columns' => [
             'queue' => 'Queue',
             'size' => 'Waiting',
+            'workers' => 'Workers',
             'oldest' => 'Oldest pending',
             'p95_wait' => 'p95 wait',
             'trend' => 'Size',

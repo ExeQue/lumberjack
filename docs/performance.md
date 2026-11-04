@@ -73,6 +73,9 @@ is set to watch). Per connection and queue:
 - **Waiting:** jobs on the queue now, from the latest heartbeat. Several agents report
   the same queue, so this is the latest sample, not their sum. Gray when no agent has
   reported it for 5 minutes.
+- **Workers:** how many workers run on the queue, from the latest heartbeat, where the
+  SDK counts them (from each worker's sign of life in the app's cache); red when jobs
+  wait with none. A worker that takes several queues counts on each.
 - **Oldest pending:** how long the oldest waiting job has waited, where the queue driver
   can tell (Redis, database).
 - **p95 wait:** time from queued to started of the jobs that ran in the period.

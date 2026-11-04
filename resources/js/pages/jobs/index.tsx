@@ -61,6 +61,8 @@ type QueueStat = {
     queue: string;
     size: number | null;
     oldest_age_s: number | null;
+    /** Workers running on it; null where the agent does not know. */
+    workers: number | null;
     sampled_at: string | null;
     p95_wait: number | null;
     series: { t: string; v: number }[];
@@ -856,6 +858,9 @@ function QueuesCard({
                                 {t('jobs.queues.columns.size')}
                             </th>
                             <th className={`${thClass} text-right`}>
+                                {t('jobs.queues.columns.workers')}
+                            </th>
+                            <th className={`${thClass} text-right`}>
                                 {t('jobs.queues.columns.oldest')}
                             </th>
                             <th className={`${thClass} text-right`}>
@@ -912,6 +917,20 @@ function QueuesCard({
                                         {q.size === null
                                             ? '-'
                                             : formatNumber(q.size)}
+                                    </td>
+                                    <td
+                                        className={cn(
+                                            tdClass,
+                                            numClass,
+                                            // Jobs wait and nobody takes them.
+                                            q.workers === 0 &&
+                                                (q.size ?? 0) > 0 &&
+                                                'text-err',
+                                        )}
+                                    >
+                                        {q.workers === null
+                                            ? '-'
+                                            : formatNumber(q.workers)}
                                     </td>
                                     <td className={`${tdClass} ${numClass}`}>
                                         {formatDuration(

@@ -1430,11 +1430,19 @@ function rowText(
                           }
                         : undefined,
                 count:
-                    row.oldest_age_s !== null && row.oldest_age_s !== undefined
-                        ? t('screens.list.oldest', {
-                              age: duration(Number(row.oldest_age_s)),
-                          })
-                        : undefined,
+                    [
+                        typeof row.workers === 'number'
+                            ? t('screens.list.workers', {}, row.workers)
+                            : null,
+                        row.oldest_age_s !== null &&
+                        row.oldest_age_s !== undefined
+                            ? t('screens.list.oldest', {
+                                  age: duration(Number(row.oldest_age_s)),
+                              })
+                            : null,
+                    ]
+                        .filter(Boolean)
+                        .join(' · ') || undefined,
             };
         case 'hosts': {
             // The host name gets the room; what it uses (or that it is offline) sits right.

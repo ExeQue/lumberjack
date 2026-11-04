@@ -21,9 +21,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $queue
  * @property int $size
  * @property int|null $oldest_age_s
+ * @property int|null $workers null: the agent does not know
  * @property CarbonImmutable $sampled_at
  */
-#[Fillable(['project_id', 'host', 'connection', 'queue', 'size', 'oldest_age_s', 'sampled_at'])]
+#[Fillable(['project_id', 'host', 'connection', 'queue', 'size', 'oldest_age_s', 'workers', 'sampled_at'])]
 #[UseFactory(QueueSampleFactory::class)]
 class QueueSample extends Model
 {
