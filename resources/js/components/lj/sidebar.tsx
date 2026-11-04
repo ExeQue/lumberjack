@@ -7,7 +7,6 @@ import {
     ExternalLink,
     LogOut,
     Search,
-    Settings,
     UserCog,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/lj/notification-bell';
@@ -102,8 +101,6 @@ export function Sidebar() {
         counts,
         is_admin,
     );
-    const settings = projectNav.find((item) => item.hidden);
-
     return (
         <nav
             aria-label={t('common.nav.label')}
@@ -201,26 +198,6 @@ export function Sidebar() {
                                 ))}
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        {settings && (
-                            <Link
-                                href={settings.href}
-                                aria-label={t('common.nav.project_settings')}
-                                title={t('common.nav.project_settings')}
-                                aria-current={
-                                    settings.active ? 'page' : undefined
-                                }
-                                className={cn(
-                                    'inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-ink-3 hover:border-line-strong hover:text-ink',
-                                    settings.active &&
-                                        'border-amber text-amber',
-                                )}
-                            >
-                                <Settings
-                                    className="size-4"
-                                    aria-hidden="true"
-                                />
-                            </Link>
-                        )}
                     </div>
                 )}
             </div>

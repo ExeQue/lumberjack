@@ -15,9 +15,9 @@ Overview, Issues, Requests, Database, Browser, Jobs, Logs, Health and Releases (
 team) are pages of their own. An entry's badge adds up its tabs' counts; each tab shows
 its own.
 
-The gear beside the project switcher opens the project's **Settings**, whose menu also
-lists the **Data sources**; members, who cannot change the settings, land on the data
-sources (read only). The
+**Settings**, last in the project's list, opens the project's settings, whose menu also
+lists the **Data sources**; members, who cannot change the settings, see **Data sources**
+there instead (read only). The
 **Administration** section, for system administrators, folds away and opens on its own
 on an administration page.
 
