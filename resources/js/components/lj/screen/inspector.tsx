@@ -1,5 +1,5 @@
 import { Settings } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button, Input, Label, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
@@ -35,6 +35,59 @@ function timezones(current?: string): string[] {
     const zones = Intl.supportedValuesOf('timeZone');
 
     return current && !zones.includes(current) ? [current, ...zones] : zones;
+}
+
+/**
+ * A searchable time zone: type part of a name ("copen", "new_y") and pick it from the
+ * suggestions. Only a known zone is kept; leaving the field with anything else puts the
+ * last one back. An empty field means `emptyLabel`, when one is given.
+ */
+function TimezoneInput({
+    id,
+    value,
+    onChange,
+    emptyLabel,
+}: {
+    id: string;
+    value: string;
+    onChange: (zone: string) => void;
+    emptyLabel?: string;
+}) {
+    const list = useId();
+    const zones = timezones(value || undefined);
+    const [text, setText] = useState(value);
+
+    useEffect(() => setText(value), [value]);
+
+    return (
+        <>
+            <Input
+                id={id}
+                list={list}
+                value={text}
+                placeholder={emptyLabel}
+                autoComplete="off"
+                onChange={(e) => {
+                    const next = e.target.value;
+                    setText(next);
+
+                    if (zones.includes(next) || (emptyLabel && next === '')) {
+                        onChange(next);
+                    }
+                }}
+                onBlur={() => {
+                    if (!zones.includes(text) && !(emptyLabel && text === '')) {
+                        setText(value);
+                    }
+                }}
+            />
+            <datalist id={list}>
+                {zones.map((zone) => (
+                    <option key={zone} value={zone} />
+                ))}
+            </datalist>
+        </>
+    );
 }
 
 const chip = (on: boolean) =>
@@ -743,22 +796,12 @@ export function WidgetInspector({
                         >
                             {fieldLabel(field.key)}
                         </Label>
-                        <Select
+                        <TimezoneInput
                             id={id(field.key)}
                             value={String(raw ?? '')}
-                            onChange={(e) =>
-                                setOption(field.key, e.target.value)
-                            }
-                        >
-                            <option value="">
-                                {t('screens.inspector.screen_timezone')}
-                            </option>
-                            {timezones().map((zone) => (
-                                <option key={zone} value={zone}>
-                                    {zone}
-                                </option>
-                            ))}
-                        </Select>
+                            onChange={(zone) => setOption(field.key, zone)}
+                            emptyLabel={t('screens.inspector.screen_timezone')}
+                        />
                     </div>
                 );
             default:
@@ -1460,17 +1503,11 @@ export function ScreenSettings({
                 <Label htmlFor="screen-tz">
                     {t('screens.settings.timezone')}
                 </Label>
-                <Select
+                <TimezoneInput
                     id="screen-tz"
                     value={screen.timezone}
-                    onChange={(e) => onChange({ timezone: e.target.value })}
-                >
-                    {timezones(screen.timezone).map((zone) => (
-                        <option key={zone} value={zone}>
-                            {zone}
-                        </option>
-                    ))}
-                </Select>
+                    onChange={(zone) => onChange({ timezone: zone })}
+                />
                 <span className="text-xs text-ink-3">
                     {t('screens.settings.timezone_hint')}
                 </span>
