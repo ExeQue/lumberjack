@@ -423,9 +423,11 @@ a new one (**New link**) or turned off (**Stop sharing**); screens showing a lin
 stopped working say **This screen was unshared**. Only team admins share screens.
 
 Unless **Show issue titles and names** is ticked, a share link leaves out issue
-titles, alert channel names and health check messages, and numbers hosts, agents and
-health checks ("host 1", "check 2"), in lists and in charts split by them. Route, job,
-queue and scheduled task names show as they do on the metrics API's public stats. It may be shown inside another site's page. Every
+titles, alert channel names and health check messages, and numbers hosts and agents
+("host 1"), in lists and in charts split by them. Health checks keep their names: a
+share link is made on purpose, and a check's name is the team's own to choose (rename
+it in Health if it gives too much away). Route, job, queue and scheduled task names
+show as they do on the metrics API's public stats. It may be shown inside another site's page. Every
 change to a share link goes in the audit log. Prefer pairing: a paired TV needs no link
 that could be passed on.
 

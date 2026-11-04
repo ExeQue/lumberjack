@@ -248,8 +248,9 @@ class ResolveWidgetDataAction
             ];
         }
 
-        // A share link without names numbers the hosts and checks a chart is split by.
-        if ($aggregatesOnly && in_array($split, [MetricGroup::Host->value, MetricGroup::Check->value], true)) {
+        // A share link without names numbers the hosts a chart is split by; checks keep the
+        // names the team gave them, as on the health widget.
+        if ($aggregatesOnly && $split === MetricGroup::Host->value) {
             $series = array_combine(
                 array_map(fn (int $i): string => "{$split} ".($i + 1), array_keys(array_values($series))),
                 array_values($series),
@@ -492,11 +493,12 @@ class ResolveWidgetDataAction
             $detail = $row !== null ? [...array_intersect_key($row, array_flip(['uuid', 'name', 'state', 'last_message', 'last_result_at', 'duration_us', 'uptime', 'strip', 'metrics'])), 'since' => $checks[0]['since'] ?? null] : null;
         }
 
-        // A share link without names says how checks stand, not what they are called or
-        // what their probes answered: those name hosts, addresses and endpoints.
+        // A share link is made on purpose, so it names the checks (a name is the team's own
+        // choice, and can be changed). Without titles it leaves out what the probes answered:
+        // that can name hosts, addresses and endpoints.
         if ($aggregatesOnly) {
-            $checks = array_map(fn (array $c, int $i): array => [...$c, 'name' => 'check '.($i + 1), 'message' => null], $checks, array_keys($checks));
-            $detail = $detail !== null ? [...$detail, 'name' => 'check 1', 'last_message' => null] : null;
+            $checks = array_map(fn (array $c): array => [...$c, 'message' => null], $checks);
+            $detail = $detail !== null ? [...$detail, 'last_message' => null] : null;
         }
 
         return ['summary' => $states, 'checks' => $checks, 'check' => $detail];
