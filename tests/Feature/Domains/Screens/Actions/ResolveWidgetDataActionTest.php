@@ -384,7 +384,7 @@ describe('health', function () {
             ->and($data['check'])->toHaveKeys(['uptime', 'strip', 'since']);
     });
 
-    it('numbers the checks of a shared screen and leaves their messages out', function () {
+    it('names the checks of a shared screen and leaves their messages out', function () {
         ($this->check)('https://admin.internal/up', HealthStatus::Down);
         $picked = ($this->check)('db.internal:5432', HealthStatus::Ok);
         $resolve = fn (array $options = []): array => app(ResolveWidgetDataAction::class)
@@ -393,10 +393,10 @@ describe('health', function () {
         $all = $resolve();
         $one = $resolve(['checks' => [$picked->uuid]]);
 
-        expect(array_column($all['checks'], 'name'))->toBe(['check 1', 'check 2'])
+        expect(array_column($all['checks'], 'name'))->toBe(['https://admin.internal/up', 'db.internal:5432'])
             ->and(array_column($all['checks'], 'message'))->toBe([null, null])
             ->and(array_column($all['checks'], 'state'))->toBe(['down', 'ok'])
-            ->and($one['check'])->toMatchArray(['name' => 'check 1', 'last_message' => null, 'state' => 'ok']);
+            ->and($one['check'])->toMatchArray(['name' => 'db.internal:5432', 'last_message' => null, 'state' => 'ok']);
     });
 
     it('asks for the checks of a project once however many values show them', function () {
@@ -451,11 +451,11 @@ describe('database checks', function () {
             ->and($series(['split_by' => 'check']))->toBe(['database:pgsql' => [1000.0, 1200.0], 'database:mysql' => [300.0]]);
     });
 
-    it('numbers the checks a chart on a shared screen is split by', function () {
+    it('names the checks a chart on a shared screen is split by', function () {
         $data = app(ResolveWidgetDataAction::class)
             ->execute($this->project->team, WidgetType::Chart, 'db_size', new WidgetScope(), ['split_by' => 'check'], aggregatesOnly: true);
 
-        expect(array_column($data['series'], 'name'))->toBe(['check 1', 'check 2']);
+        expect(array_column($data['series'], 'name'))->toBe(['database:pgsql', 'database:mysql']);
     });
 
     it('gives a single picked check the metrics of its latest result', function () {
