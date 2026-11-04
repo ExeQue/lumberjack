@@ -44,7 +44,7 @@ class AssignIssue extends Tool
             return $denied;
         }
 
-        $issue = $this->issue($request);
+        $issue = $this->issue($request, 'update');
 
         if ($issue instanceof Response) {
             return $issue;

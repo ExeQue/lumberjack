@@ -22,6 +22,11 @@ team. It stops working, and is marked **Stopped** on the team page, when they le
 the team, become a plain member, are suspended or their account is deleted. Revoke it
 and let a current admin create a new one.
 
+A token acts as the person who created it, through the same permissions as the app: it
+sees a project only if that person may (and only while the project is still in the
+token's team), and changes an issue only if they may change it. The scope narrows that
+further: a read token changes nothing.
+
 ## Connecting
 
 The server is at `https://your-lumberjack/mcp` (streamable HTTP) and takes the token as

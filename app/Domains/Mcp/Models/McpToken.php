@@ -13,10 +13,12 @@ use Database\Factories\McpTokenFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @property int $id
@@ -79,6 +81,28 @@ class McpToken extends Model
         $user = $this->user;
 
         return $user !== null && ! $user->isSuspended() && $user->canAdministerTeam($this->team);
+    }
+
+    /**
+     * Whether the token may do this: it acts as the person who made it, through the same
+     * policies as the app, and only while that person may still use it.
+     */
+    public function allows(string $ability, mixed $arguments = []): bool
+    {
+        return $this->isUsable() && Gate::forUser($this->user)->allows($ability, $arguments);
+    }
+
+    /**
+     * The projects the token reads: those picked for it, still in its team (a project moved
+     * to another team is no longer the token's), that its maker may view.
+     *
+     * @return Collection<int, Project>
+     */
+    public function readableProjects(): Collection
+    {
+        return $this->projects()->where('projects.team_id', $this->team_id)->with('team')->orderBy('projects.name')->get()
+            ->filter(fn (Project $project): bool => $this->allows('view', $project))
+            ->values();
     }
 
     public function canWrite(): bool

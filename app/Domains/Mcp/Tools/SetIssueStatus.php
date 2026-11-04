@@ -47,7 +47,7 @@ class SetIssueStatus extends Tool
         }
 
         $request->validate(['status' => ['required', 'in:open,in_progress,resolved,ignored'], 'note' => ['nullable', 'string', 'max:20000'], 'until' => ['nullable', 'in:'.implode(',', IgnoreCondition::CHOICES)]]);
-        $issue = $this->issue($request);
+        $issue = $this->issue($request, 'update');
 
         if ($issue instanceof Response) {
             return $issue;
