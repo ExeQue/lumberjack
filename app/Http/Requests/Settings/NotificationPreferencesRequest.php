@@ -14,9 +14,10 @@ class NotificationPreferencesRequest extends FormRequest
     {
         $rules = [];
 
-        foreach (NotificationPreferences::KINDS as $kind) {
-            $rules[$kind.'.mail'] = ['required', 'boolean'];
-            $rules[$kind.'.toast'] = ['required', 'boolean'];
+        foreach (NotificationPreferences::DEFAULTS as $kind => $vias) {
+            foreach (array_keys($vias) as $via) {
+                $rules[$kind.'.'.$via] = ['required', 'boolean'];
+            }
         }
 
         return $rules;

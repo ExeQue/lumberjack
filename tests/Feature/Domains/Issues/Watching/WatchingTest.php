@@ -156,14 +156,14 @@ describe('what watchers hear', function () {
 
     it('respects someone who wants no watching mail, or no toast', function () {
         Event::fake([WatchedIssueUpdated::class]);
-        $this->morten->forceFill(['notification_preferences' => new NotificationPreferences(watchingMail: false)])->save();
+        $this->morten->forceFill(['notification_preferences' => NotificationPreferences::fromArray(['watching' => ['mail' => false]])])->save();
 
         app(AddIssueNoteAction::class)->execute($this->issue, 'Looking.', $this->sofie);
 
         expect(IssueWatchUpdate::query()->count())->toBe(0);
         Event::assertDispatchedTimes(WatchedIssueUpdated::class, 1);
 
-        $this->morten->forceFill(['notification_preferences' => new NotificationPreferences(watchingToast: false)])->save();
+        $this->morten->forceFill(['notification_preferences' => NotificationPreferences::fromArray(['watching' => ['toast' => false]])])->save();
         app(AddIssueNoteAction::class)->execute($this->issue, 'Again.', $this->sofie);
 
         expect(IssueWatchUpdate::query()->count())->toBe(1);
@@ -171,9 +171,11 @@ describe('what watchers hear', function () {
     });
 
     it('saves the preferences from the profile page', function () {
-        $prefs = ['watching' => ['mail' => false, 'toast' => true], 'mentions' => ['mail' => true, 'toast' => false], 'assignments' => ['mail' => true, 'toast' => true]];
+        $prefs = NotificationPreferences::DEFAULTS;
+        $prefs['watching']['mail'] = false;
+        $prefs['mentions']['toast'] = false;
 
-        $this->actingAs($this->morten)->put(route('notifications.update'), $prefs)->assertRedirect(route('profile.edit'));
+        $this->actingAs($this->morten)->put(route('notifications.update'), $prefs)->assertRedirect(route('notifications.edit'));
 
         expect($this->morten->refresh()->notification_preferences->toArray())->toBe($prefs);
     });

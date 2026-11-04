@@ -25,6 +25,8 @@ final readonly class MailReason
 
     public const string ASSIGNED = 'assigned';
 
+    public const string CHOSEN = 'chosen';
+
     /**
      * @param  array<string, string>  $bold  shown in bold
      * @param  array<string, string>  $plain  shown as is
@@ -84,6 +86,14 @@ final readonly class MailReason
     }
 
     /**
+     * "you turned on mail for Health checks", under Notifications in the profile.
+     */
+    public static function chosen(string $kind): self
+    {
+        return new self(self::CHOSEN, ['kind' => $kind]);
+    }
+
+    /**
      * As stored with a watched issue's update until its grouped mail goes out.
      *
      * @return array{kind: string, bold: array<string, string>, plain: array<string, string>, change_url: string|null, health: bool}
@@ -111,7 +121,7 @@ final readonly class MailReason
      */
     public function isPersonal(): bool
     {
-        return in_array($this->kind, [self::WATCHING, self::MENTIONED, self::ASSIGNED], true);
+        return in_array($this->kind, [self::WATCHING, self::MENTIONED, self::ASSIGNED, self::CHOSEN], true);
     }
 
     /**

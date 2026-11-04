@@ -77,6 +77,8 @@ class HandleInertiaRequests extends Middleware
             // An administrator can open every team.
             'teams' => fn (): array => ($user?->isAdmin() ? Team::query() : $user?->teams())?->orderBy('name')->get(['teams.uuid', 'teams.name'])->map(fn ($t): array => ['uuid' => $t->uuid, 'name' => $t->name])->all() ?? [],
             'is_admin' => fn (): bool => $user?->isAdmin() ?? false,
+            // The bell's badge; the list itself loads when it opens.
+            'notifications_unread' => fn (): int => $user?->unreadNotifications()->count() ?? 0,
             'flash' => fn (): array => [
                 'status' => $request->session()->get('status'),
                 'secret' => $request->session()->get('secret'),

@@ -3,8 +3,6 @@ import { Link } from '@inertiajs/react';
 import { useState } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
-import { NotificationSettings } from '@/components/lj/notification-settings';
-import type { NotificationPreferences } from '@/components/lj/notification-settings';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -21,11 +19,9 @@ type PageProps = {
 export default function Profile({
     mustVerifyEmail,
     status,
-    notifications,
 }: {
     mustVerifyEmail: boolean;
     status?: string;
-    notifications: NotificationPreferences;
 }) {
     const { auth } = usePage<PageProps>().props;
     const [email, setEmail] = useState(auth.user.email);
@@ -152,8 +148,6 @@ export default function Profile({
                     )}
                 </Form>
             </div>
-
-            <NotificationSettings preferences={notifications} />
 
             <DeleteUser />
         </>

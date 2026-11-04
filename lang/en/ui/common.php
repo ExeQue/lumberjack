@@ -11,9 +11,6 @@ return [
     'sound_on' => 'Sound for new errors: on',
     'sound_off' => 'Sound for new errors: off',
     'toasts' => [
-        'new_issue' => 'New error',
-        'regression' => 'Regression',
-        'escalation' => 'Escalating',
         'mentioned' => ':author tagged you on :title',
         // Button
         'view' => 'View',
@@ -45,6 +42,7 @@ return [
         'team' => 'Members and tokens',
         'alerts' => 'Alerts',
         'retention' => 'Retention',
+        'notifications' => 'Notifications',
         'screens' => 'Screens',
         'displays' => 'Displays',
     ],

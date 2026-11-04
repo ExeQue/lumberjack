@@ -21,6 +21,7 @@ return [
         'watching' => 'you watch :issue:why',
         'mentioned' => ':author mentioned you in a note on an issue in :project',
         'assigned' => ':actor changed who works on issues in :project',
+        'chosen' => 'you turned on mail for :kind',
         'change_rule' => 'Change it under :where.',
         'change_rule_health' => 'Change it under :where, or mute the check on its page.',
         'change_watching' => ':stop, or change how you hear about issues in :profile.',

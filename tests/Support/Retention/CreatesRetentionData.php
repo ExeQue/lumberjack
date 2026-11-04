@@ -22,8 +22,10 @@ use App\Domains\Retention\Enums\RetentionCategory;
 use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Schedule\Models\ScheduledTask;
 use App\Domains\Schedule\Models\ScheduledTaskRun;
+use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Rows of every retention data type, and the stored policies, for the retention tests.
@@ -60,6 +62,7 @@ trait CreatesRetentionData
                 'sent_at' => $at,
             ]),
             RetentionCategory::AuditLog => AdminAuditEntry::query()->forceCreate(['action' => 'team_created', 'created_at' => $at]),
+            RetentionCategory::Notifications => DB::table('notifications')->insert(['id' => (string) Str::uuid(), 'type' => 'releases', 'notifiable_type' => (new User())->getMorphClass(), 'notifiable_id' => User::factory()->create()->id, 'data' => '{}', 'created_at' => $at, 'updated_at' => $at]),
         };
     }
 

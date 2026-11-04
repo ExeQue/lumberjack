@@ -15,4 +15,5 @@ return [
     App\Domains\Mcp\Providers\McpServiceProvider::class,
     App\Domains\Metrics\Providers\MetricsServiceProvider::class,
     App\Domains\Screens\Providers\ScreensServiceProvider::class,
+    App\Domains\Notifications\Providers\NotificationsServiceProvider::class,
 ];

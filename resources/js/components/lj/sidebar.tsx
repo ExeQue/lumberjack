@@ -10,6 +10,7 @@ import {
     Settings,
     UserCog,
 } from 'lucide-react';
+import { NotificationBell } from '@/components/lj/notification-bell';
 import {
     openCommandPalette,
     shortcutLabel,
@@ -108,15 +109,18 @@ export function Sidebar() {
             aria-label={t('common.nav.label')}
             className="flex min-h-full w-full flex-col gap-5 bg-rail px-3 py-4 text-[13px] lg:h-full"
         >
-            <Link
-                href={projectsIndex().url}
-                className="flex items-center gap-2.5 px-2 py-1 text-ink"
-            >
-                <LogMark />
-                <span className="text-[15px] font-semibold tracking-tight">
-                    Lumberjack
-                </span>
-            </Link>
+            <div className="flex items-center justify-between gap-2">
+                <Link
+                    href={projectsIndex().url}
+                    className="flex items-center gap-2.5 px-2 py-1 text-ink"
+                >
+                    <LogMark />
+                    <span className="text-[15px] font-semibold tracking-tight">
+                        Lumberjack
+                    </span>
+                </Link>
+                <NotificationBell />
+            </div>
 
             <div className="flex flex-col gap-1.5">
                 <button
@@ -238,9 +242,11 @@ export function Sidebar() {
                 <span className="px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-ink-3 uppercase">
                     {t('common.nav.team_section')}
                 </span>
-                {teamNav.map((item) => (
-                    <NavLink key={item.href} item={item} />
-                ))}
+                {teamNav
+                    .filter((item) => !item.hidden)
+                    .map((item) => (
+                        <NavLink key={item.href} item={item} />
+                    ))}
             </div>
 
             {adminNav.length > 0 && (

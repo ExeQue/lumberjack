@@ -25,6 +25,7 @@ enum RetentionCategory: string
     case HostSamples = 'host_samples';
     case AlertSends = 'alert_sends';
     case AuditLog = 'audit_log';
+    case Notifications = 'notifications';
 
     public function label(): string
     {
@@ -46,7 +47,7 @@ enum RetentionCategory: string
             self::HealthResults, self::HealthOutages, self::DataSourceFetches => 'health',
             self::QueueSamples, self::HostSamples => 'infrastructure',
             self::AlertSends => 'alerts',
-            self::AuditLog => 'administration',
+            self::AuditLog, self::Notifications => 'administration',
         };
     }
 
@@ -56,7 +57,7 @@ enum RetentionCategory: string
     public function defaultDays(): int
     {
         return match ($this) {
-            self::Occurrences, self::AlertSends => 90,
+            self::Occurrences, self::AlertSends, self::Notifications => 90,
             self::Requests, self::Queries, self::Spans, self::Logs, self::HealthResults => 14,
             // Data source history feeds screen charts, whose longest period is 30 days.
             self::WebVitals, self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::QueueSamples, self::DataSourceFetches => 30,
@@ -66,11 +67,11 @@ enum RetentionCategory: string
     }
 
     /**
-     * Data of the whole install, not of a team: only the application level sets it.
+     * Data of the whole install or of a person, not of a team: only the application level sets it.
      */
     public function applicationOnly(): bool
     {
-        return $this === self::AuditLog;
+        return $this === self::AuditLog || $this === self::Notifications;
     }
 
     public function table(): string
@@ -92,7 +93,7 @@ enum RetentionCategory: string
     public function timeColumn(): string
     {
         return match ($this) {
-            self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::AuditLog => 'created_at',
+            self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::AuditLog, self::Notifications => 'created_at',
             self::HealthResults => 'checked_at',
             self::HealthOutages => 'ended_at',
             self::QueueSamples, self::HostSamples => 'sampled_at',

@@ -10,6 +10,8 @@ use App\Domains\Issues\Enums\WatchReason;
 use App\Domains\Issues\Events\WatchedIssueUpdated;
 use App\Domains\Issues\Models\IssueWatchUpdate;
 use App\Domains\Issues\Support\WatchLinks;
+use App\Domains\Notifications\Data\PushMessage;
+use App\Domains\Notifications\Notifications\WatchingNotification;
 use App\Domains\Shared\Mail\MailCard;
 use App\Domains\Shared\Mail\MailReason;
 use App\Domains\Shared\Mail\MailRecipients;
@@ -48,10 +50,18 @@ class NotifyWatchersAction
         foreach ($watchers as ['user' => $user, 'items' => $items]) {
             $preferences = $user->notification_preferences;
 
-            // Someone mentioned or assigned in this event already gets a toast for it.
-            if ($preferences->toast('watching') && ! $recipients->has($user->email, MailRecipients::PERSONAL)) {
+            // Someone mentioned or assigned in this event already gets a toast and a push for it.
+            $personal = $recipients->has($user->email, MailRecipients::PERSONAL);
+
+            if ($preferences->toast('watching') && ! $personal) {
                 foreach ($items as [$update]) {
                     $this->toast($user, $update);
+                }
+            }
+
+            if (! $personal) {
+                foreach ($items as [$update]) {
+                    $user->notify(new WatchingNotification(PushMessage::about($update->issue->project, $update->headline(), $update->issue->project->name, route('issues.show', [$update->issue->project, $update->issue]), 'issue-'.$update->issue->uuid)));
                 }
             }
 

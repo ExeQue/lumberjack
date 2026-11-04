@@ -20,6 +20,7 @@ use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\IssueEvent;
 use App\Domains\Issues\Models\IssueNote;
 use App\Domains\Issues\Support\NoteMentions;
+use App\Domains\Notifications\Actions\NotifySurfacedIssueAction;
 use App\Domains\Shared\Mail\MailReason;
 use App\Domains\Shared\Mail\MailRecipients;
 use App\Models\User;
@@ -36,6 +37,7 @@ class SendIssueAlertsAction
         private readonly ChannelDriverRegistry $drivers,
         private readonly NotifyWatchersAction $watchers,
         private readonly NoteMentions $mentions,
+        private readonly NotifySurfacedIssueAction $notifySurfacedIssueAction,
     ) {
     }
 
@@ -77,6 +79,9 @@ class SendIssueAlertsAction
 
         $own = $recipients === null;
         $recipients ??= new MailRecipients();
+
+        // Members who want it by push hear of it whether or not the rule has channels.
+        $this->notifySurfacedIssueAction->execute($issue, $type, $environment);
 
         // Watchers hear of a regression or an escalation right away, not grouped.
         if ($type === AlertRuleType::Regression || $type === AlertRuleType::Escalation) {

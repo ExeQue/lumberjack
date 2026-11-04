@@ -72,39 +72,41 @@ account.
 
 ## Command line
 
-| Command                                              | What it does                                                                                                                                                                                                                                                   |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `php artisan lumberjack:create-user --admin`         | Creates a user (`--name`, `--email` and `--password`, asked for when left out); `--admin` makes them an administrator (the first user created always is one), `--team="Name"` makes them the owner of a new team. Otherwise they are in no team until invited. |
-| `php artisan lumberjack:make-admin {email}`          | Makes an existing user an administrator.                                                                                                                                                                                                                       |
-| `php artisan lumberjack:make-admin {email} --revoke` | Takes administration away, unless they are the last active administrator.                                                                                                                                                                                      |
-| `php artisan setup:clear`                            | Deletes the setup flag.                                                                                                                                                                                                                                        |
-| `php artisan lumberjack:prune`                       | Deletes data older than its [retention](./projects#retention). Runs by itself every day.                                                                                                                                                                       |
+| Command                                              | What it does                                                                                                                                                                                                                                                                      |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `php artisan lumberjack:create-user --admin`         | Creates a user (`--name`, `--email` and `--password`, asked for when left out); `--admin` makes them an administrator (the first user created always is one), `--team="Name"` makes them the owner of a new team. Otherwise they are in no team until invited.                    |
+| `php artisan lumberjack:make-admin {email}`          | Makes an existing user an administrator.                                                                                                                                                                                                                                          |
+| `php artisan lumberjack:make-admin {email} --revoke` | Takes administration away, unless they are the last active administrator.                                                                                                                                                                                                         |
+| `php artisan setup:clear`                            | Deletes the setup flag.                                                                                                                                                                                                                                                           |
+| `php artisan lumberjack:prune`                       | Deletes data older than its [retention](./projects#retention). Runs by itself every day.                                                                                                                                                                                          |
+| `php artisan webpush:vapid --show`                   | Prints a new VAPID key pair for [browser notifications](./teams#browser-notifications), to set as `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Not needed: without them a pair is made on first use and stored encrypted. New keys make every browser turn notifications on again. |
 
 The scheduler runs the rest by itself; there is no need to call them:
 
-| Every     | Command                                                                                                                                                                                              |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Minute    | `lumberjack:mark-stuck-jobs`, `lumberjack:mark-missed-tasks`, `lumberjack:return-ignored-issues`, `lumberjack:send-watch-digests`, `lumberjack:check-queue-backlogs`, `lumberjack:run-health-checks` |
-| 5 minutes | `horizon:snapshot`                                                                                                                                                                                   |
-| Hour      | `model:prune`: agents and health check hosts not seen for 24 hours                                                                                                                                   |
-| Day       | `lumberjack:archive-silent-health-checks`, and `lumberjack:prune` at 03:15 Europe/Copenhagen                                                                                                         |
+| Every     | Command                                                                                                                                                                                                                                  |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Minute    | `lumberjack:mark-stuck-jobs`, `lumberjack:mark-missed-tasks`, `lumberjack:return-ignored-issues`, `lumberjack:send-watch-digests`, `lumberjack:check-queue-backlogs`, `lumberjack:run-health-checks`, `lumberjack:notify-offline-agents` |
+| 5 minutes | `horizon:snapshot`                                                                                                                                                                                                                       |
+| Hour      | `model:prune`: agents and health check hosts not seen for 24 hours                                                                                                                                                                       |
+| Day       | `lumberjack:archive-silent-health-checks`, and `lumberjack:prune` at 03:15 Europe/Copenhagen                                                                                                                                             |
 
 ## Mail
 
 Lumberjack sends these mails, all in one layout with a plain-text version:
 
-| Mail                                    | Sent to                                | From          |
-| --------------------------------------- | -------------------------------------- | ------------- |
-| New error, regression, escalation       | the rule's mail channels, and watchers | alerts        |
-| Note, resolved or ignored, bulk resolve | the rule's mail channels               | alerts        |
-| Health check down, degraded, recovered  | the rule's mail channels               | alerts        |
-| Queue backlog, queue recovered          | the rule's mail channels               | alerts        |
-| Test message                            | the channel being tested               | alerts        |
-| Mention                                 | the member a note tags                 | notifications |
-| Assigned, taken off                     | the member concerned, once per action  | notifications |
-| Updates on a watched issue              | its [watchers](./issues#watching)      | notifications |
-| Invitation                              | the invited address                    | notifications |
-| Password reset, email confirmation      | the account                            | notifications |
+| Mail                                    | Sent to                                                  | From          |
+| --------------------------------------- | -------------------------------------------------------- | ------------- |
+| New error, regression, escalation       | the rule's mail channels, and watchers                   | alerts        |
+| Note, resolved or ignored, bulk resolve | the rule's mail channels                                 | alerts        |
+| Health check down, degraded, recovered  | the rule's mail channels                                 | alerts        |
+| Queue backlog, queue recovered          | the rule's mail channels                                 | alerts        |
+| Test message                            | the channel being tested                                 | alerts        |
+| Mention                                 | the member a note tags                                   | notifications |
+| Assigned, taken off                     | the member concerned, once per action                    | notifications |
+| Updates on a watched issue              | its [watchers](./issues#watching)                        | notifications |
+| New issues, health checks and the rest  | members who turned on that [mail](./teams#notifications) | notifications |
+| Invitation                              | the invited address                                      | notifications |
+| Password reset, email confirmation      | the account                                              | notifications |
 
 Subjects start with the project in brackets (`[Demo] New error: DEMO-12 RuntimeException`),
 so a mail filter can sort them per project. Each mail says in its footer why it was sent

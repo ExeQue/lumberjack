@@ -14,6 +14,7 @@ import { index as healthIndex } from '@/routes/health';
 import { index as issuesIndex } from '@/routes/issues';
 import { index as jobsIndex } from '@/routes/jobs';
 import { index as logsIndex } from '@/routes/logs';
+import { index as notificationsIndex } from '@/routes/notifications';
 import {
     index as projectsIndex,
     settings as projectSettings,
@@ -158,6 +159,10 @@ export function useNavigation(
             item(t('common.nav.team'), teamShow().url, { exact: true }),
             item(t('common.nav.retention'), teamRetention().url),
         ]),
+        // The bell opens it; the command palette lists it.
+        item(t('common.nav.notifications'), notificationsIndex().url, {
+            hidden: true,
+        }),
     ];
 
     const adminNav: NavItem[] = is_admin

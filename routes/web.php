@@ -21,6 +21,7 @@ use App\Domains\Jobs\Http\Controllers\JobController;
 use App\Domains\Logs\Http\Controllers\LogChannelController;
 use App\Domains\Logs\Http\Controllers\LogController;
 use App\Domains\Mcp\Http\Controllers\McpTokenController;
+use App\Domains\Notifications\Http\Controllers\NotificationCenterController;
 use App\Domains\Overview\Http\Controllers\OverviewController;
 use App\Domains\Performance\Http\Controllers\BrowserController;
 use App\Domains\Performance\Http\Controllers\QueryController;
@@ -80,6 +81,11 @@ Route::get('s/{key}/data', [SharedScreenController::class, 'data'])->where('key'
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', fn () => redirect()->route('projects.index'))->name('dashboard');
+
+    Route::get('notifications', [NotificationCenterController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/recent', [NotificationCenterController::class, 'recent'])->name('notifications.recent');
+    Route::post('notifications/read', [NotificationCenterController::class, 'readAll'])->name('notifications.read-all');
+    Route::put('notifications/{notification}', [NotificationCenterController::class, 'update'])->whereUuid('notification')->name('notifications.mark');
 
     Route::get('projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');

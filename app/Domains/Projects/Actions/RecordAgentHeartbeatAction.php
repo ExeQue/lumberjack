@@ -14,7 +14,7 @@ class RecordAgentHeartbeatAction
     {
         return $project->agents()->updateOrCreate(
             ['host' => mb_substr($host, 0, 255), 'name' => mb_substr(trim((string) $name), 0, 64)],
-            [...$client->toColumns(), 'last_seen_at' => now()],
+            [...$client->toColumns(), 'last_seen_at' => now(), 'offline_notified_at' => null],
         );
     }
 }

@@ -60,6 +60,10 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
                 MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Lumberjack}
                 MAIL_ALERTS_FROM_ADDRESS: ${MAIL_ALERTS_FROM_ADDRESS:-}
                 MAIL_NOTIFICATIONS_FROM_ADDRESS: ${MAIL_NOTIFICATIONS_FROM_ADDRESS:-}
+                # Browser push keys: made and stored on first use when empty.
+                VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+                VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+                VAPID_SUBJECT: ${VAPID_SUBJECT:-}
             volumes:
                 - lumberjack-storage:/app/storage
             # Lets DB_HOST / REDIS_HOST=host.docker.internal reach services on this server.
@@ -183,23 +187,25 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-s
 
 Everything is set through environment variables in `.env.docker`.
 
-| Variable                                 | Default        |                                                                                                                                   |
-| ---------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `APP_URL`                                | (required)     | The public address, e.g. `https://lumberjack.example.com`                                                                         |
-| `APP_KEY`                                | (required)     | Encryption key. Keep it: changing it signs everyone out and breaks stored secrets                                                 |
-| `DB_PASSWORD`                            | (required)     | Password of the bundled Postgres                                                                                                  |
-| `LUMBERJACK_SETUP_TOKEN`                 | generated      | Locks first-run setup. Without one, a token is generated on first start, printed in the log and kept in `storage/app/setup/token` |
-| `LUMBERJACK_PORT`                        | `8080`         | Port on the host                                                                                                                  |
-| `HORIZON_INGEST_PROCESSES`               | `2`            | Most workers for incoming telemetry                                                                                               |
-| `HORIZON_BACKGROUND_PROCESSES`           | `2`            | Most workers for everything else (alerts, pruning)                                                                                |
-| `MAIL_*`                                 |                | SMTP for invitations, password resets and e-mail alerts; see [Mail](./administration#mail) for the two sender addresses           |
-| `TRUSTED_PROXIES`                        | Docker ranges  | Proxies whose `X-Forwarded-*` headers are believed: `127.0.0.1,172.16.0.0/12`. Comma separated; `*` for any (not recommended)     |
-| `LUMBERJACK_MIGRATE`                     | `true`         | Run database migrations on start                                                                                                  |
-| `LOG_LEVEL`                              | `info`         | How much Lumberjack itself logs, to the container's output                                                                        |
-| `SESSION_SECURE_COOKIE`                  | from `APP_URL` | `true` when `APP_URL` starts with `https://`: the session cookie is then only sent over HTTPS                                     |
-| `ALERTS_WEBHOOKS_ALLOW_PRIVATE`          | `false`        | Allow alert channels to [private addresses](./alerts#channels)                                                                    |
-| `LUMBERJACK_HEALTH_ALLOW_PRIVATE`        | `false`        | Allow health checks of [private addresses](./health#private-networks)                                                             |
-| `REVERB_CLIENT_HOST`, `_PORT`, `_SCHEME` | from `APP_URL` | Where browsers open the live-update WebSocket, when it is not `APP_URL`                                                           |
+| Variable                                 | Default        |                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_URL`                                | (required)     | The public address, e.g. `https://lumberjack.example.com`                                                                                                                                                                                                                                                                                       |
+| `APP_KEY`                                | (required)     | Encryption key. Keep it: changing it signs everyone out and breaks stored secrets                                                                                                                                                                                                                                                               |
+| `DB_PASSWORD`                            | (required)     | Password of the bundled Postgres                                                                                                                                                                                                                                                                                                                |
+| `LUMBERJACK_SETUP_TOKEN`                 | generated      | Locks first-run setup. Without one, a token is generated on first start, printed in the log and kept in `storage/app/setup/token`                                                                                                                                                                                                               |
+| `LUMBERJACK_PORT`                        | `8080`         | Port on the host                                                                                                                                                                                                                                                                                                                                |
+| `HORIZON_INGEST_PROCESSES`               | `2`            | Most workers for incoming telemetry                                                                                                                                                                                                                                                                                                             |
+| `HORIZON_BACKGROUND_PROCESSES`           | `2`            | Most workers for everything else (alerts, pruning)                                                                                                                                                                                                                                                                                              |
+| `MAIL_*`                                 |                | SMTP for invitations, password resets and e-mail alerts; see [Mail](./administration#mail) for the two sender addresses                                                                                                                                                                                                                         |
+| `TRUSTED_PROXIES`                        | Docker ranges  | Proxies whose `X-Forwarded-*` headers are believed: `127.0.0.1,172.16.0.0/12`. Comma separated; `*` for any (not recommended)                                                                                                                                                                                                                   |
+| `LUMBERJACK_MIGRATE`                     | `true`         | Run database migrations on start                                                                                                                                                                                                                                                                                                                |
+| `LOG_LEVEL`                              | `info`         | How much Lumberjack itself logs, to the container's output                                                                                                                                                                                                                                                                                      |
+| `SESSION_SECURE_COOKIE`                  | from `APP_URL` | `true` when `APP_URL` starts with `https://`: the session cookie is then only sent over HTTPS                                                                                                                                                                                                                                                   |
+| `ALERTS_WEBHOOKS_ALLOW_PRIVATE`          | `false`        | Allow alert channels to [private addresses](./alerts#channels)                                                                                                                                                                                                                                                                                  |
+| `LUMBERJACK_HEALTH_ALLOW_PRIVATE`        | `false`        | Allow health checks of [private addresses](./health#private-networks)                                                                                                                                                                                                                                                                           |
+| `REVERB_CLIENT_HOST`, `_PORT`, `_SCHEME` | from `APP_URL` | Where browsers open the live-update WebSocket, when it is not `APP_URL`                                                                                                                                                                                                                                                                         |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`  | generated      | Keys that sign [browser notifications](./teams#browser-notifications). Made on first use and kept in the database, encrypted with `APP_KEY`. Set them (`php artisan webpush:vapid --show`) to pin them, e.g. when several app servers must agree or the database is restored elsewhere. New keys make every browser turn notifications on again |
+| `VAPID_SUBJECT`                          | `APP_URL`      | Who push services contact about this server: a `mailto:` address or an `https://` URL                                                                                                                                                                                                                                                           |
 
 ### Your own Postgres or Redis
 
@@ -307,3 +313,8 @@ holds back an alert, and health checks wait behind both.
 
 Reverb's credentials are derived from `APP_KEY`, so there is nothing to set for
 them (`REVERB_APP_ID`, `REVERB_APP_KEY` and `REVERB_APP_SECRET` override them). Its HTTP API is not reachable from outside the container.
+
+The keys for browser notifications need nothing either: the first time someone opens
+their notification settings, or a notification goes out, Lumberjack makes a VAPID key pair and keeps
+it in the database, encrypted with `APP_KEY`. `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`
+override it.

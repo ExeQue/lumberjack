@@ -124,7 +124,7 @@ that was set to come back when it escalates comes back instead.
 
 - **Assignee:** any member of the team. Whoever is assigned, or taken off, gets a mail
   and a toast if Lumberjack is open (each can be turned off under
-  [Notifications](#watching) in your profile), naming who did it (a person, or an MCP token).
+  [Notifications](./teams#notifications) in your account settings), naming who did it (a person, or an MCP token).
   Nobody hears about their own change, so taking an issue yourself, or starting work
   on it (which assigns you), sends nothing. Resolving an issue takes it off its
   assignee, in the history like any unassign; the assignee is told unless they resolved
@@ -183,8 +183,9 @@ What watchers hear, never about their own actions:
   comments quoted. A single update is mailed on its own subject, such as "Sofie wrote
   a note on DEMO-12".
 
-Each also shows a toast if Lumberjack is open. Under **Notifications** in your profile,
-choose mail, toast or both for issues you watch, and the same for mentions and
+Each also shows a toast if Lumberjack is open, and a browser notification where you
+turned those on. Under [Notifications](./teams#notifications) in your account settings, choose
+mail, toast, browser or any of them for issues you watch, and the same for mentions and
 assignments. Everything is on until you turn it off.
 
 Every watching mail has a **Stop watching** link that works without signing in, and mail

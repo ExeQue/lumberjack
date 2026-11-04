@@ -28,8 +28,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $framework
  * @property string|null $framework_version
  * @property CarbonImmutable $last_seen_at
+ * @property CarbonImmutable|null $offline_notified_at  when members were told it went offline
  */
-#[Fillable(['project_id', 'host', 'name', 'sdk', 'sdk_version', 'agent', 'agent_version', 'runtime', 'runtime_version', 'framework', 'framework_version', 'last_seen_at'])]
+#[Fillable(['project_id', 'host', 'name', 'sdk', 'sdk_version', 'agent', 'agent_version', 'runtime', 'runtime_version', 'framework', 'framework_version', 'last_seen_at', 'offline_notified_at'])]
 #[UseFactory(ProjectAgentFactory::class)]
 class ProjectAgent extends Model
 {
@@ -52,6 +53,7 @@ class ProjectAgent extends Model
     {
         return [
             'last_seen_at' => 'datetime',
+            'offline_notified_at' => 'datetime',
         ];
     }
 
