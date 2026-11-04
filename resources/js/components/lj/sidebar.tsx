@@ -25,6 +25,7 @@ import {
 import { LogMark } from '@/components/lj/logo';
 import { useT } from '@/lib/i18n';
 import { useSoundSetting } from '@/lib/use-sound-setting';
+import { navActiveClass } from '@/components/lj/ui';
 import { cn } from '@/lib/utils';
 import { useNavigation, useProjectSwitchUrl } from '@/lib/use-navigation';
 import type { NavItem } from '@/lib/use-navigation';
@@ -56,8 +57,7 @@ function NavLink({ item }: { item: NavItem }) {
             aria-current={item.active ? 'page' : undefined}
             className={cn(
                 'flex h-8 items-center justify-between rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink',
-                item.active &&
-                    'bg-panel-2 font-medium text-ink shadow-[inset_2px_0_0_var(--lj-amber)]',
+                item.active && navActiveClass,
             )}
         >
             {item.label}
