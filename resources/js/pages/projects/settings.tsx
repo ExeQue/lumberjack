@@ -404,7 +404,7 @@ export default function ProjectSettings(props: Props) {
                                     setActive(section);
                                 }}
                                 className={cn(
-                                    'rounded-md px-2.5 py-1.5 text-ink-2 hover:bg-panel-2 hover:text-ink',
+                                    'rounded-r-md px-2.5 py-1.5 text-ink-2 hover:bg-panel-2 hover:text-ink',
                                     active === section && navActiveClass,
                                     section === 'danger' && 'text-err',
                                 )}

@@ -311,12 +311,13 @@ export const tableClass = 'w-full border-collapse text-[13px]';
 export const thClass =
     'border-b border-line px-3 py-2.5 text-left text-[11px] font-medium tracking-wide whitespace-nowrap text-ink-3 uppercase';
 /**
- * The chosen entry of a menu (sidebar, settings): a quiet background, square on the left
- * where an amber bar runs its full height, rounded on the right. The text keeps its
- * weight, so nothing moves when the choice changes.
+ * The chosen entry of a menu (sidebar, settings): a quiet background and an amber bar the
+ * full height of its left side. Menu entries are square on the left and rounded on the
+ * right at all times (rounded-r-md), so the bar never bends, not even while it fades.
+ * The text keeps its weight, so nothing moves when the choice changes.
  */
 export const navActiveClass =
-    'rounded-l-none bg-panel-2 text-ink shadow-[inset_3px_0_0_var(--lj-amber)]';
+    'bg-panel-2 text-ink shadow-[inset_3px_0_0_var(--lj-amber)]';
 
 export const tdClass = 'border-b border-line/60 px-3 py-2.5 align-middle';
 export const numClass = 'text-right font-mono tabular-nums whitespace-nowrap';
