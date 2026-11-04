@@ -16,8 +16,8 @@ Overview, Issues, Logs, Health and Releases (the project), and Projects and Aler
 team) are pages of their own. An entry's badge adds up its tabs' counts; each tab shows
 its own.
 
-The gear beside the project switcher opens the project's **Settings**, with **Data
-sources** as its second tab; members, who cannot change the settings, land on the data
+The gear beside the project switcher opens the project's **Settings**, whose menu also
+lists the **Data sources**; members, who cannot change the settings, land on the data
 sources (read only). The
 **Administration** section, for system administrators, folds away and opens on its own
 on an administration page.
