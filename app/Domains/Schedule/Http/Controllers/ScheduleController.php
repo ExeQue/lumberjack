@@ -10,6 +10,7 @@ use App\Domains\Schedule\Actions\DeleteScheduledTaskAction;
 use App\Domains\Schedule\Models\ScheduledTask;
 use App\Domains\Schedule\Models\ScheduledTaskRun;
 use App\Domains\Shared\Http\Concerns\ReadsDashboardFilters;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -32,6 +33,8 @@ class ScheduleController
         $tasks = $project->scheduledTasks()
             ->when($environment !== null)->where('environment', $environment)
             ->orderBy('name')
+            // The latest runs of every task in one query.
+            ->with(['runs' => fn (HasMany $runs) => $runs->select(['id', 'scheduled_task_id', 'status', 'started_at'])->latest('started_at')->limit(self::RECENT_RUNS)])
             ->get();
 
         $selectedTask = $selected !== null ? $tasks->firstWhere('id', $selected) : null;
@@ -39,10 +42,9 @@ class ScheduleController
         return Inertia::render('schedule/index', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => [...$this->filters($request), 'task' => $selectedTask?->id],
-            // ponytail: one query per task for its recent runs; fine for the few dozen tasks an app schedules.
             'tasks' => $tasks->map(fn (ScheduledTask $task): array => [
                 ...$this->task($task),
-                'recent' => $task->runs()->latest('started_at')->limit(self::RECENT_RUNS)->pluck('status')->map->value->reverse()->values()->all(),
+                'recent' => $task->runs->pluck('status')->map->value->reverse()->values()->all(),
             ])->all(),
             'runs' => $selectedTask === null ? [] : $selectedTask->runs()->with('occurrence.issue')->latest('started_at')->limit(50)->get()
                 ->map(fn (ScheduledTaskRun $run): array => [

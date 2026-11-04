@@ -9,8 +9,11 @@ use App\Domains\Schedule\Models\ScheduledTaskRun;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\Shared\ReadsQueryCounts;
 
 covers(ScheduleController::class);
+
+uses(ReadsQueryCounts::class);
 
 beforeEach(function () {
     $this->project = Project::factory()->create();
@@ -30,6 +33,22 @@ describe('the schedule page', function () {
                 ->where('tasks.0.name', 'artisan reports:send')
                 ->where('tasks.0.recent', ['finished', 'finished', 'finished'])
                 ->has('runs', 3));
+    });
+});
+
+describe('the queries of the schedule page', function () {
+    it('reads the recent runs of every task in one query, at most twenty each', function () {
+        $user = User::factory()->inTeam($this->project->team)->create();
+        $page = fn () => $this->actingAs($user)->get(route('schedule.index', $this->project))->assertOk();
+        $one = $this->queriesRunBy($page);
+
+        ScheduledTask::factory()->for($this->project)->count(3)->sequence(fn ($sequence) => ['name' => "artisan task:{$sequence->index}"])
+            ->has(ScheduledTaskRun::factory()->count(ScheduleController::RECENT_RUNS + 2), 'runs')->create();
+
+        expect($this->queriesRunBy($page))->toBe($one);
+        $page()->assertInertia(fn (Assert $page) => $page
+            ->has('tasks', 4)
+            ->where('tasks.1.recent', fn ($recent) => count($recent) === ScheduleController::RECENT_RUNS));
     });
 });
 
