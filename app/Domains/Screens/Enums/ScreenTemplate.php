@@ -20,11 +20,8 @@ enum ScreenTemplate: string
     /** @return array{0: int, 1: int} columns and rows */
     public function grid(): array
     {
-        return match ($this) {
-            self::Blank => [4, 4],
-            self::Overview => [4, 5],
-            self::OnCall, self::Infrastructure, self::Background => [4, 4],
-        };
+        // Every template fills the same 8 x 4 grid as an empty screen.
+        return [8, 4];
     }
 
     /**
@@ -35,46 +32,47 @@ enum ScreenTemplate: string
         $rows = match ($this) {
             self::Blank => [],
             self::Overview => [
-                ['stat', 'requests', 0, 0, 1, 1, ['rotate' => ['users_affected', 'apdex']]],
-                ['stat', 'error_rate', 1, 0, 1, 1],
-                ['stat', 'p95', 2, 0, 1, 1],
-                ['stat', 'open_issues', 3, 0, 1, 1],
-                ['chart', 'requests_errors', 0, 1, 2, 2],
-                ['list', 'latest_issues', 2, 1, 2, 2],
-                ['health', 'checks', 0, 3, 2, 2],
-                ['list', 'queues', 2, 3, 1, 1],
-                ['list', 'hosts', 3, 3, 1, 1],
-                ['stat', 'current_release', 2, 4, 1, 1, ['options' => ['compare' => 'none', 'sparkline' => false]]],
-                ['gauge', 'host_memory', 3, 4, 1, 1],
+                ['stat', 'requests', 0, 0, 2, 1, ['rotate' => ['users_affected', 'apdex']]],
+                ['stat', 'error_rate', 2, 0, 1, 1],
+                ['stat', 'p95', 3, 0, 1, 1],
+                ['stat', 'open_issues', 4, 0, 1, 1],
+                ['stat', 'current_release', 5, 0, 1, 1, ['options' => ['compare' => 'none', 'sparkline' => false]]],
+                ['gauge', 'host_memory', 6, 0, 1, 1],
+                ['gauge', 'host_cpu', 7, 0, 1, 1],
+                ['chart', 'requests_errors', 0, 1, 4, 2],
+                ['list', 'latest_issues', 4, 1, 4, 2],
+                ['health', 'checks', 0, 3, 4, 1],
+                ['list', 'queues', 4, 3, 2, 1],
+                ['list', 'hosts', 6, 3, 2, 1],
             ],
             self::OnCall => [
-                ['stat', 'error_rate', 0, 0, 1, 1],
-                ['stat', 'open_issues', 1, 0, 1, 1],
-                ['gauge', 'p95', 2, 0, 1, 1],
-                ['stat', 'users_affected', 3, 0, 1, 1],
-                ['list', 'latest_issues', 0, 1, 2, 3, ['options' => ['sort' => 'newest']]],
-                ['health', 'checks', 2, 1, 2, 2, ['options' => ['only_problems' => true]]],
-                ['list', 'alert_feed', 2, 3, 2, 1],
+                ['stat', 'error_rate', 0, 0, 2, 1],
+                ['stat', 'open_issues', 2, 0, 2, 1],
+                ['gauge', 'p95', 4, 0, 2, 1],
+                ['stat', 'users_affected', 6, 0, 2, 1],
+                ['list', 'latest_issues', 0, 1, 4, 3, ['options' => ['sort' => 'newest']]],
+                ['health', 'checks', 4, 1, 4, 2, ['options' => ['only_problems' => true]]],
+                ['list', 'alert_feed', 4, 3, 4, 1],
             ],
             self::Infrastructure => [
-                ['gauge', 'host_cpu', 0, 0, 1, 1],
-                ['gauge', 'host_memory', 1, 0, 1, 1],
-                ['gauge', 'host_disk', 2, 0, 1, 1],
-                ['stat', 'agents_online', 3, 0, 1, 1],
-                ['chart', 'host_cpu', 0, 1, 2, 2],
-                ['list', 'hosts', 2, 1, 2, 1],
-                ['list', 'agents', 2, 2, 2, 1],
-                ['health', 'checks', 0, 3, 4, 1],
+                ['gauge', 'host_cpu', 0, 0, 2, 1],
+                ['gauge', 'host_memory', 2, 0, 2, 1],
+                ['gauge', 'host_disk', 4, 0, 2, 1],
+                ['stat', 'agents_online', 6, 0, 2, 1],
+                ['chart', 'host_cpu', 0, 1, 4, 2],
+                ['list', 'hosts', 4, 1, 4, 1],
+                ['list', 'agents', 4, 2, 4, 1],
+                ['health', 'checks', 0, 3, 8, 1],
             ],
             self::Background => [
-                ['stat', 'failed_jobs', 0, 0, 1, 1],
-                ['stat', 'queue_size', 1, 0, 1, 1],
-                ['gauge', 'queue_size', 2, 0, 1, 1],
-                ['stat', 'current_release', 3, 0, 1, 1, ['options' => ['compare' => 'none', 'sparkline' => false]]],
-                ['chart', 'queue_size', 0, 1, 2, 2],
-                ['list', 'failed_jobs', 2, 1, 2, 2],
-                ['list', 'scheduled_tasks', 0, 3, 2, 1],
-                ['list', 'queues', 2, 3, 2, 1],
+                ['stat', 'failed_jobs', 0, 0, 2, 1],
+                ['stat', 'queue_size', 2, 0, 2, 1],
+                ['gauge', 'queue_size', 4, 0, 2, 1],
+                ['stat', 'current_release', 6, 0, 2, 1, ['options' => ['compare' => 'none', 'sparkline' => false]]],
+                ['chart', 'queue_size', 0, 1, 4, 2],
+                ['list', 'failed_jobs', 4, 1, 4, 2],
+                ['list', 'scheduled_tasks', 0, 3, 4, 1],
+                ['list', 'queues', 4, 3, 4, 1],
             ],
         };
 

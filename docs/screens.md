@@ -20,7 +20,9 @@ a layout to start from, then opens the designer:
 - **On call**: what needs attention: error rate, newest issues, failing checks, alerts.
 - **Infrastructure**: CPU, memory and disk per host, agents and every health check.
 - **Jobs and schedules**: failed jobs, queue sizes and how scheduled tasks ran.
-- **Empty**: a 4 x 4 grid to fill yourself.
+- **Empty**: an 8 x 4 grid to fill yourself.
+
+Every layout uses the same 8 x 4 grid; the designer changes it.
 
 Every widget of a template is an ordinary widget: change, move or remove it after. Each row opens the screen full screen (**Open kiosk**, in a new tab),
 in the designer (**Design**), or renames, duplicates or deletes it. A TV showing a

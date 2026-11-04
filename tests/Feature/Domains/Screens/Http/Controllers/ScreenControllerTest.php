@@ -100,7 +100,7 @@ describe('the screens of a team', function () {
         $screen = Screen::query()->where('name', 'Checkout')->sole();
         $response->assertRedirect(route('screens.edit', $screen));
         expect($screen->team_id)->toBe($this->project->team_id)
-            ->and($screen->cols)->toBe(4)
+            ->and([$screen->cols, $screen->rows])->toBe([8, 4])
             ->and($screen->theme)->toBe(ScreenTheme::Dark)
             ->and($screen->widgets)->toBe([]);
     });
