@@ -6,7 +6,9 @@ use App\Domains\Administration\Http\Middleware\RedirectToOnboarding;
 use App\Domains\Administration\Http\Middleware\RedirectToSetup;
 use App\Domains\Administration\Http\Middleware\RequirePasswordChange;
 use App\Domains\Administration\Http\Middleware\SignOutSuspendedUsers;
+use App\Domains\Shared\Http\Controllers\TranslationsController;
 use App\Domains\Shared\Http\Middleware\AddSecurityHeaders;
+use App\Domains\Shared\Support\Translations;
 use App\Domains\Teams\Http\Middleware\UseTabTeam;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -15,6 +17,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -23,6 +26,14 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         channels: __DIR__.'/../routes/channels.php',
         health: '/up',
+        // The UI strings the pages read: public, versioned by their address (see
+        // Translations::url), and outside the web group, so no session, setup or
+        // onboarding redirect stands between a page and its text.
+        then: function (): void {
+            Route::get('i18n/{locale}.json', TranslationsController::class)
+                ->where('locale', Translations::LOCALE_PATTERN)
+                ->name('i18n');
+        },
     )
     ->withCommands(glob(__DIR__.'/../app/Domains/*/Console/Commands') ?: [])
     ->withMiddleware(function (Middleware $middleware): void {

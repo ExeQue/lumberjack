@@ -1,6 +1,40 @@
-import { usePage } from '@inertiajs/react';
-
 type Tree = { [key: string]: string | Tree };
+
+/**
+ * The UI strings, loaded once before the first page renders from the versioned file the
+ * layout preloads (see Translations::url): kept here, not in every page's props.
+ */
+let strings: Tree = {};
+let loadedFrom: string | null = null;
+
+/** Fetches the strings at this address unless they are the ones loaded; true when new. */
+export async function loadTranslations(url: string): Promise<boolean> {
+    if (url === loadedFrom) {
+        return false;
+    }
+
+    const response = await fetch(url, {
+        headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+        return false;
+    }
+
+    strings = (await response.json()) as Tree;
+    loadedFrom = url;
+
+    return true;
+}
+
+/** A line for code outside a component (a page's layout callback). */
+export function t(
+    key: string,
+    replace: Record<string, string | number> = {},
+    count?: number,
+): string {
+    return translate(strings, key, replace, count);
+}
 
 function lookup(tree: Tree, key: string): string | undefined {
     let node: string | Tree | undefined = tree;
@@ -63,11 +97,5 @@ export function translate(
 }
 
 export function useT() {
-    const { translations } = usePage<{ translations: Tree }>().props;
-
-    return (
-        key: string,
-        replace: Record<string, string | number> = {},
-        count?: number,
-    ): string => translate(translations ?? {}, key, replace, count);
+    return t;
 }
