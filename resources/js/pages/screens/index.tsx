@@ -1,10 +1,11 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { Relative } from '@/components/lj/relative';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Button,
+    buttonClass,
     Card,
     EmptyState,
     Field,
@@ -24,16 +25,20 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
+import { xsrf } from '@/lib/http';
 import { useT } from '@/lib/i18n';
 import { useTeamLive } from '@/lib/use-live';
 import {
     destroy,
     duplicate,
     edit,
+    exportMethod,
+    importMethod,
     show,
     store,
     update,
 } from '@/routes/screens';
+import { preview as importPreview } from '@/routes/screens/import';
 import type { TeamShared } from '@/types/lumberjack';
 
 type Row = {
@@ -54,6 +59,208 @@ type Template = {
     rows: number;
     widgets: { type: string; x: number; y: number; w: number; h: number }[];
 };
+
+type ImportPreview = {
+    name: string;
+    cols: number;
+    rows: number;
+    widgets: Template['widgets'];
+    notice: string;
+};
+
+/**
+ * Import a screen file: picked or pasted, previewed by the server (name, grid, widgets
+ * and what this team has nothing for), then created in the current team.
+ */
+function ImportDialog({
+    open,
+    onClose,
+}: {
+    open: boolean;
+    onClose: () => void;
+}) {
+    const t = useT();
+    const [file, setFile] = useState<File | null>(null);
+    const [json, setJson] = useState('');
+    const [preview, setPreview] = useState<ImportPreview | null>(null);
+    const [errors, setErrors] = useState<string[]>([]);
+    const [busy, setBusy] = useState(false);
+
+    const body = () => {
+        const data = new FormData();
+
+        if (file) {
+            data.append('file', file);
+        } else {
+            data.append('json', json);
+        }
+
+        return data;
+    };
+
+    useEffect(() => {
+        setPreview(null);
+        setErrors([]);
+
+        if (!file && json.trim() === '') {
+            return;
+        }
+
+        const controller = new AbortController();
+        const timer = setTimeout(async () => {
+            setBusy(true);
+            const response = await fetch(importPreview().url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json', 'X-XSRF-TOKEN': xsrf() },
+                body: body(),
+                signal: controller.signal,
+            }).catch(() => null);
+            const result = (await response?.json().catch(() => null)) as
+                | (ImportPreview & { errors?: Record<string, string[]> })
+                | null;
+            setBusy(false);
+
+            if (response?.ok && result) {
+                setPreview(result);
+            } else {
+                setErrors(
+                    Object.values(result?.errors ?? {}).flat().length > 0
+                        ? Object.values(result?.errors ?? {}).flat()
+                        : [t('screens.import.errors.json')],
+                );
+            }
+        }, 300);
+
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [file, json]);
+
+    const close = () => {
+        setFile(null);
+        setJson('');
+        onClose();
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={(next) => !next && close()}>
+            <DialogContent className="sm:max-w-xl">
+                <form
+                    className="flex flex-col gap-4"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        router.post(importMethod().url, body(), {
+                            onSuccess: close,
+                            onError: (errs) => setErrors(Object.values(errs)),
+                        });
+                    }}
+                >
+                    <DialogHeader>
+                        <DialogTitle>{t('screens.import.title')}</DialogTitle>
+                        <DialogDescription>
+                            {t('screens.import.hint')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Field
+                        label={t('screens.import.file')}
+                        htmlFor="import-file"
+                    >
+                        <input
+                            id="import-file"
+                            type="file"
+                            accept=".json,application/json"
+                            className="text-[13px]"
+                            onChange={(e) =>
+                                setFile(e.currentTarget.files?.[0] ?? null)
+                            }
+                        />
+                    </Field>
+                    {!file && (
+                        <Field
+                            label={t('screens.import.paste')}
+                            htmlFor="import-json"
+                        >
+                            <textarea
+                                id="import-json"
+                                value={json}
+                                onChange={(e) => setJson(e.currentTarget.value)}
+                                rows={5}
+                                spellCheck={false}
+                                className="rounded-md border border-line-strong bg-rail p-2.5 font-mono text-xs text-ink"
+                            />
+                        </Field>
+                    )}
+                    <div aria-live="polite" className="flex flex-col gap-2">
+                        {busy && (
+                            <p className="text-xs text-ink-3">
+                                {t('screens.import.reading')}
+                            </p>
+                        )}
+                        {errors.map((error) => (
+                            <p key={error} className="text-xs text-err">
+                                {error}
+                            </p>
+                        ))}
+                        {preview && (
+                            <div className="flex items-start gap-3 rounded-md border border-line p-3">
+                                <div className="w-40 shrink-0">
+                                    <TemplatePreview
+                                        template={{
+                                            id: 'import',
+                                            label: preview.name,
+                                            description: '',
+                                            cols: preview.cols,
+                                            rows: preview.rows,
+                                            widgets: preview.widgets,
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs text-ink-3">
+                                        {t('screens.import.preview')}
+                                    </span>
+                                    <span className="font-medium text-ink">
+                                        {preview.name}
+                                    </span>
+                                    <span className="text-xs text-ink-2">
+                                        {t('screens.import.grid', {
+                                            cols: preview.cols,
+                                            rows: preview.rows,
+                                        })}
+                                        {', '}
+                                        {t(
+                                            'screens.import.widgets',
+                                            {},
+                                            preview.widgets.length,
+                                        )}
+                                    </span>
+                                    <span
+                                        className={`text-xs ${preview.notice ? 'text-amber' : 'text-ink-3'}`}
+                                    >
+                                        {preview.notice ||
+                                            t('screens.import.all_found')}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={close}>{t('common.cancel')}</Button>
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            disabled={preview === null || busy}
+                        >
+                            {t('screens.import.submit')}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 /** A thumbnail of a template's grid: each widget a block, tinted by its kind. */
 function TemplatePreview({ template }: { template: Template }) {
@@ -112,6 +319,7 @@ export default function Screens({
     const [creating, setCreating] = useState(false);
     const [template, setTemplate] = useState('overview');
     const [renaming, setRenaming] = useState<Row | null>(null);
+    const [importing, setImporting] = useState(false);
 
     return (
         <>
@@ -124,12 +332,17 @@ export default function Screens({
                     title={t('screens.title')}
                     description={t('screens.description')}
                     actions={
-                        <Button
-                            variant="primary"
-                            onClick={() => setCreating(true)}
-                        >
-                            {t('screens.new')}
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button onClick={() => setImporting(true)}>
+                                {t('screens.import.button')}
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={() => setCreating(true)}
+                            >
+                                {t('screens.new')}
+                            </Button>
+                        </div>
                     }
                 />
 
@@ -247,6 +460,22 @@ export default function Screens({
                                                             'screens.actions.duplicate',
                                                         )}
                                                     </Button>
+                                                    <a
+                                                        href={
+                                                            exportMethod(
+                                                                screen.uuid,
+                                                            ).url
+                                                        }
+                                                        download
+                                                        title={t(
+                                                            'screens.actions.export_hint',
+                                                        )}
+                                                        className={buttonClass()}
+                                                    >
+                                                        {t(
+                                                            'screens.actions.export',
+                                                        )}
+                                                    </a>
                                                     <ConfirmButton
                                                         question={t(
                                                             'screens.actions.delete_question',
@@ -279,6 +508,11 @@ export default function Screens({
                     )}
                 </Card>
             </PageBody>
+
+            <ImportDialog
+                open={importing}
+                onClose={() => setImporting(false)}
+            />
 
             <Dialog open={creating} onOpenChange={setCreating}>
                 <DialogContent className="sm:max-w-2xl">

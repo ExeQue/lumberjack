@@ -36,6 +36,7 @@ use App\Domains\Screens\Http\Controllers\DeviceController;
 use App\Domains\Screens\Http\Controllers\DisplayController;
 use App\Domains\Screens\Http\Controllers\PairController;
 use App\Domains\Screens\Http\Controllers\ScreenController;
+use App\Domains\Screens\Http\Controllers\ScreenFileController;
 use App\Domains\Screens\Http\Controllers\ScreenShareController;
 use App\Domains\Screens\Http\Controllers\SharedScreenController;
 use App\Domains\Screens\Http\Controllers\TvController;
@@ -166,6 +167,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Status screens: the team's wall displays. See docs/screens.md.
     Route::get('screens', [ScreenController::class, 'index'])->name('screens.index');
     Route::post('screens', [ScreenController::class, 'store'])->name('screens.store');
+    Route::post('screens/import', [ScreenFileController::class, 'import'])->middleware('throttle:20,1')->name('screens.import');
+    Route::post('screens/import/preview', [ScreenFileController::class, 'preview'])->middleware('throttle:60,1')->name('screens.import.preview');
+    Route::get('screens/{screen:uuid}/export', [ScreenFileController::class, 'export'])->name('screens.export');
     Route::get('screens/{screen:uuid}', [ScreenController::class, 'show'])->name('screens.show');
     Route::get('screens/{screen:uuid}/edit', [ScreenController::class, 'edit'])->name('screens.edit');
     Route::get('screens/{screen:uuid}/data', [ScreenController::class, 'data'])->middleware('throttle:120,1')->name('screens.data');

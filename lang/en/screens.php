@@ -6,6 +6,7 @@ return [
     // Flash messages on the list of screens.
     'duplicated' => 'Screen duplicated.',
     'deleted' => 'Screen deleted.',
+    'imported' => 'Screen imported.',
 
     // Why a TV's code could not be confirmed.
     'pairing' => [

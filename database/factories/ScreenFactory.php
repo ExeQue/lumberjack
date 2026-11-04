@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Domains\Health\Models\HealthCheck;
+use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
@@ -43,5 +45,25 @@ class ScreenFactory extends Factory
     public function scheduled(): static
     {
         return $this->state(fn () => ['theme' => ScreenTheme::Schedule, 'light_from' => '07:00', 'light_to' => '19:00']);
+    }
+
+    /** Showing only these projects by default. */
+    public function scopedTo(Project ...$projects): static
+    {
+        return $this->state(fn () => ['scope' => ['projects' => array_map(fn (Project $p): string => $p->uuid, $projects), 'environment' => 'production', 'period' => '7d']]);
+    }
+
+    /**
+     * Plus a health widget on row 3 picking these checks, rotating to a value of the first
+     * check alone on the first check's project.
+     */
+    public function withHealthWidget(HealthCheck ...$checks): static
+    {
+        return $this->state(fn (array $attributes) => ['widgets' => [...$attributes['widgets'], [
+            'id' => 'health', 'type' => 'health', 'source' => 'checks', 'x' => 0, 'y' => 3, 'w' => 2, 'h' => 1, 'title' => 'Checks',
+            'options' => ['checks' => array_map(fn (HealthCheck $c): string => $c->uuid, $checks), 'only_problems' => true],
+            'scope' => [],
+            'rotate' => [['source' => 'checks', 'seconds' => 20, 'options' => ['checks' => [$checks[0]->uuid]], 'scope' => ['projects' => [$checks[0]->project->uuid]]]],
+        ]]]);
     }
 }
