@@ -12,7 +12,7 @@ return [
     'create_hint' => 'Start from a ready layout or an empty grid; the designer opens next and everything can be changed there.',
     'template' => 'Start from',
     'templates' => [
-        'blank' => ['label' => 'Empty', 'description' => 'A 4 x 4 grid to fill yourself.'],
+        'blank' => ['label' => 'Empty', 'description' => 'An 8 x 4 grid to fill yourself.'],
         'overview' => ['label' => 'Overview', 'description' => 'Traffic, errors, latency, issues, health, queues and hosts at a glance.'],
         'on_call' => ['label' => 'On call', 'description' => 'What needs attention: errors, newest issues, failing checks and alerts.'],
         'infrastructure' => ['label' => 'Infrastructure', 'description' => 'CPU, memory and disk per host, agents and every health check.'],
