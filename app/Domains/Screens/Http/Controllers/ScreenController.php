@@ -25,6 +25,7 @@ use App\Domains\Screens\Http\Requests\StoreScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenLayoutRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenRequest;
 use App\Domains\Screens\Http\Requests\UpdateScreenWidgetRequest;
+use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\SavedScreenTemplate;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Presenters\ScreenPresenter;
@@ -37,13 +38,18 @@ use Inertia\Response;
 
 class ScreenController
 {
-    public function index(Request $request): Response
+    public function index(Request $request, CountScreenViewersAction $viewers): Response
     {
         $team = $request->user()->currentTeam;
         abort_if($team === null, 404);
 
+        $screens = $team->screens()->orderBy('name')->get();
+        // The paired TVs set to show each screen, alone or in their turn.
+        $displays = Display::query()->whereBelongsTo($team)->get(['screen_id', 'playlist']);
+        $pairedTo = fn (Screen $s): int => $displays->filter(fn (Display $d): bool => $d->screen_id === $s->id || in_array($s->id, $d->playlist ?? [], true))->count();
+
         return Inertia::render('screens/index', [
-            'screens' => $team->screens()->orderBy('name')->get()->map(fn (Screen $s): array => [
+            'screens' => $screens->map(fn (Screen $s): array => [
                 'uuid' => $s->uuid,
                 'name' => $s->name,
                 'cols' => $s->cols,
@@ -51,7 +57,11 @@ class ScreenController
                 'theme' => $s->theme->value,
                 'widgets' => count($s->widgets),
                 'updated_at' => $s->updated_at?->toIso8601String(),
+                'shared' => $s->share_key_hash !== null,
+                'displays' => $pairedTo($s),
             ])->all(),
+            // Asked from Reverb per screen, so after the page; null where it cannot tell.
+            'viewers' => Inertia::defer(fn (): array => $screens->mapWithKeys(fn (Screen $s): array => [$s->uuid => $viewers->execute($s)])->all()),
             'templates' => array_map(fn (ScreenTemplate $t): array => $t->toArray(), ScreenTemplate::cases()),
             'saved_templates' => SavedScreenTemplate::query()->whereBelongsTo($team)->with('creator')->orderBy('name')->get()
                 ->map(fn (SavedScreenTemplate $t): array => $t->toPicker())->all(),

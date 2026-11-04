@@ -10,7 +10,10 @@ shows what each member can already see on the project pages.
 
 ## The list of screens
 
-**Screens** in the sidebar lists the team's screens. **New screen** asks for a name and
+**Screens** in the sidebar lists the team's screens. **Shown on** says how many have each
+open right now (kiosks, paired TVs and share links, asked again every half minute), how
+many paired TVs are set to show it, alone or in turn, and **Shared** when it has a share
+link. **New screen** asks for a name and
 a layout to start from, then opens the designer:
 
 - **Overview**: traffic, errors, latency, issues, health, queues and hosts at a glance.

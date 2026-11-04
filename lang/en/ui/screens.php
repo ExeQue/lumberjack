@@ -32,6 +32,12 @@ return [
         'widgets' => 'Widgets',
         'theme' => 'Theme',
         'updated' => 'Changed',
+        'shown_on' => 'Shown on',
+        'now' => '{0} none now|{1} 1 now|[2,*] :count now',
+        'now_hint' => 'Kiosks, paired TVs and share links with the screen open right now.',
+        'tvs' => '{1} 1 paired TV|[2,*] :count paired TVs',
+        'shared' => 'Shared',
+        'shared_hint' => 'Readable by anyone with its link.',
         'actions' => 'Actions',
     ],
 
