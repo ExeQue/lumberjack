@@ -219,6 +219,21 @@
      * Only paint properties, never size or position, so charts and layout stay instant.
      * Utilities (transition-*, duration-*) still override this.
      */
+    /*
+     * A menu entry: its left corners square while chosen, for the amber bar. Leaving the
+     * choice they round only after the bar has faded (150ms), and turn square at once on
+     * the way in, so the bar is never seen bent around a corner.
+     */
+    .lj-nav-item {
+        transition-property: color, background-color, box-shadow, border-radius;
+        transition-duration: 150ms, 150ms, 150ms, 0s;
+        transition-delay: 0s, 0s, 0s, 150ms;
+    }
+
+    .lj-nav-item:is(.lj-nav-active, [aria-pressed='true']) {
+        transition-delay: 0s;
+    }
+
     *,
     ::before,
     ::after {
