@@ -106,7 +106,7 @@ export function Sidebar() {
     return (
         <nav
             aria-label={t('common.nav.label')}
-            className="flex min-h-full w-full flex-col gap-5 border-r border-line bg-rail px-3 py-4 text-[13px] lg:h-full"
+            className="flex min-h-full w-full flex-col gap-5 bg-rail px-3 py-4 text-[13px] lg:h-full"
         >
             <Link
                 href={projectsIndex().url}
