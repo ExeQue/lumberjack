@@ -37,7 +37,8 @@ class CheckQueueBacklogsAction
         foreach ($projects as $project) {
             $rule = AlertRule::query()->whereEffectiveFor($project)->whereType(AlertRuleType::QueueBacklog)->whereEnabled()->first();
 
-            if ($rule === null || $rule->channelsFor($project)->isEmpty()) {
+            // A rule with no channels still runs: members may want it by push (SendQueueBacklogAlert).
+            if ($rule === null) {
                 continue;
             }
 

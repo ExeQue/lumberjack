@@ -8,6 +8,9 @@ use App\Domains\Alerts\Actions\SendProjectAlertAction;
 use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Health\Models\HealthCheck;
+use App\Domains\Notifications\Actions\NotifyProjectMembersAction;
+use App\Domains\Notifications\Data\PushMessage;
+use App\Domains\Notifications\Notifications\HealthCheckNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -44,15 +47,18 @@ class SendHealthCheckAlert implements ShouldQueue
         return [10, 60, 300];
     }
 
-    public function handle(SendProjectAlertAction $action): void
+    public function handle(SendProjectAlertAction $action, NotifyProjectMembersAction $members): void
     {
-        $action->execute($this->rule, $this->check->project, new HealthCheckAlert(
+        $alert = new HealthCheckAlert(
             $this->check,
             $this->state,
             $this->message,
             $this->hosts,
             CarbonImmutable::parse($this->since),
             route('health.index', ['project' => $this->check->project, 'check' => $this->check->uuid]),
-        ));
+        );
+
+        $action->execute($this->rule, $this->check->project, $alert);
+        $members->execute($this->check->project, new HealthCheckNotification(PushMessage::fromAlert($alert, $this->check->project, 'health-'.$this->check->uuid)));
     }
 }

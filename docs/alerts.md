@@ -76,6 +76,10 @@ New issue and Escalation send at most one message per issue, rule and channel ev
 minutes. Every regression, note and status change is sent. Ignored issues and browser
 errors never send an alert.
 
+A rule that is on also decides when members hear of new issues, health checks and queue
+backlogs in their own [notifications](./teams#notifications), even with no channel
+picked; turning it off stops those too.
+
 A message carries the first line of the issue's latest note, so a triage result
 travels with the alert. A regression names who resolved the issue and when. A comment given
 when resolving or ignoring goes with the **Resolved or ignored** message, not as a

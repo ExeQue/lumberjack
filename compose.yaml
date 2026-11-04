@@ -41,6 +41,10 @@ services:
             MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Lumberjack}
             MAIL_ALERTS_FROM_ADDRESS: ${MAIL_ALERTS_FROM_ADDRESS:-}
             MAIL_NOTIFICATIONS_FROM_ADDRESS: ${MAIL_NOTIFICATIONS_FROM_ADDRESS:-}
+            # Browser push keys: made and stored on first use when empty.
+            VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+            VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+            VAPID_SUBJECT: ${VAPID_SUBJECT:-}
         volumes:
             - lumberjack-storage:/app/storage
         # Lets DB_HOST / REDIS_HOST=host.docker.internal reach services on this server.

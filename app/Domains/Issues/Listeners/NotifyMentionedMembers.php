@@ -7,10 +7,13 @@ namespace App\Domains\Issues\Listeners;
 use App\Domains\Issues\Events\IssueNoteAdded;
 use App\Domains\Issues\Events\NoteMentioned;
 use App\Domains\Issues\Support\NoteMentions;
+use App\Domains\Notifications\Data\PushMessage;
+use App\Domains\Notifications\Notifications\MentionedNotification;
 use Throwable;
 
 /**
- * Every team member a note tags gets a toast if Lumberjack is open. Their mail goes out
+ * Every team member a note tags gets a toast if Lumberjack is open, and a browser
+ * notification if they turned those on. Their mail goes out
  * with the note's other mails (SendNoteAlerts), so nobody gets two about one note.
  */
 class NotifyMentionedMembers
@@ -32,7 +35,19 @@ class NotifyMentionedMembers
         $author = $this->mentions->author($note);
         $body = $this->mentions->render($note->body, $note->issue?->project?->team);
 
+        $issue = $note->issue;
+
         foreach ($users as $user) {
+            if ($issue !== null) {
+                $user->notify(new MentionedNotification(PushMessage::about(
+                    $issue->project,
+                    (string) __('notifications.push.mentioned', ['author' => $author, 'title' => $issue->title]),
+                    $issue->project->name.' - '.mb_substr($body, 0, 200),
+                    route('issues.show', [$issue->project, $issue]),
+                    'issue-'.$issue->uuid,
+                )));
+            }
+
             if (! $user->notification_preferences->toast('mentions')) {
                 continue;
             }

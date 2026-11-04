@@ -1,20 +1,10 @@
 import { router, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
+import { InAppNotifications } from '@/components/lj/in-app-notifications';
 import { toast } from 'sonner';
 import { useT } from '@/lib/i18n';
 import { playChime, useSoundSetting } from '@/lib/use-sound-setting';
 import { show as issueShow } from '@/routes/issues';
-import type { TeamShared } from '@/types/lumberjack';
-
-type Surfaced = {
-    project: string;
-    project_name: string;
-    issue: string;
-    title: string;
-    message: string;
-    kind: 'new' | 'regression' | 'escalation';
-    regression: boolean;
-};
 
 type Mentioned = {
     project: string;
@@ -84,50 +74,21 @@ function MentionListener({ userUuid }: { userUuid: string }) {
     return null;
 }
 
-function Listener({ team }: { team: TeamShared }) {
-    const t = useT();
-    const [sound] = useSoundSetting();
-
-    useEcho<Surfaced>(`team.${team.uuid}`, '.issue.surfaced', (event) => {
-        const show = event.kind === 'regression' ? toast.warning : toast.error;
-        const label = {
-            new: t('common.toasts.new_issue'),
-            regression: t('common.toasts.regression'),
-            escalation: t('common.toasts.escalation'),
-        }[event.kind ?? 'new'];
-
-        show(`${label}: ${event.title}`, {
-            description: `${event.project_name} · ${event.message}`,
-            action: {
-                label: t('common.toasts.view'),
-                onClick: () =>
-                    router.visit(issueShow([event.project, event.issue]).url),
-            },
-        });
-
-        if (sound) {
-            playChime(event.kind !== 'new');
-        }
-    });
-
-    return null;
-}
-
 /**
- * A toast, and a chime unless turned off, when a new error or a regression comes in on
- * the team, when a note tags you, when someone assigns you or takes you off issues, or
- * when something happens to an issue you watch.
+ * A toast when a note tags you, when someone assigns you or takes you off issues, or
+ * when something happens to an issue you watch; and, through InAppNotifications, for
+ * your projects (new issues with their chime, health checks and the rest) as chosen
+ * under Notifications.
  */
 export function NewIssueToasts() {
-    const { team, auth } = usePage<{
-        team: TeamShared | null;
+    const { auth } = usePage<{
         auth: { user: { uuid: string } | null };
     }>().props;
 
-    return (
+    return auth.user ? (
         <>
-            {team && <Listener key={team.uuid} team={team} />}
-            {auth.user && <MentionListener userUuid={auth.user.uuid} />}
+            <MentionListener userUuid={auth.user.uuid} />
+            <InAppNotifications userUuid={auth.user.uuid} />
         </>
-    );
+    ) : null;
 }

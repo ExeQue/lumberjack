@@ -182,23 +182,24 @@ Each table shows per data type what the level inherits, the limit from above, ho
 rows are stored (counted up to 100,000; an estimate on the application page) with the
 age of the oldest, and the date the daily prune would delete up to.
 
-| Group          | Data type           | Default  | Holds                                                             |
-| -------------- | ------------------- | -------- | ----------------------------------------------------------------- |
-| Errors         | Occurrences         | 90 days  | Each time an error happened, with stack trace and context         |
-| Performance    | Requests            | 14 days  | One row per HTTP request: route, status and duration              |
-| Performance    | Queries             | 14 days  | Database queries recorded with their requests and jobs            |
-| Performance    | Spans               | 14 days  | Trace spans: outgoing HTTP, cache and custom timings              |
-| Performance    | Web vitals          | 30 days  | Page load metrics from browsers                                   |
-| Jobs           | Job runs            | 30 days  | Each queued job attempt; can be set per job class                 |
-| Jobs           | Scheduled task runs | 30 days  | Each run of a scheduled task                                      |
-| Jobs           | Command runs        | 30 days  | Each console command run                                          |
-| Logs           | Logs                | 14 days  | Log lines; can be set per channel                                 |
-| Health         | Health results      | 14 days  | Each health check probe and its latency                           |
-| Health         | Health outages      | 365 days | Periods a check was down or degraded; uptime is counted from them |
-| Infrastructure | Queue size samples  | 30 days  | Queue length and oldest job age, sampled by the agent             |
-| Infrastructure | Host metrics        | 7 days   | CPU, memory and disk samples from the agent                       |
-| Alerts         | Alert history       | 90 days  | Every alert sent, to which channel, and whether it got through    |
-| Administration | Audit log           | 365 days | What administrators did; set on the application level only        |
+| Group          | Data type            | Default  | Holds                                                                                                                   |
+| -------------- | -------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Errors         | Occurrences          | 90 days  | Each time an error happened, with stack trace and context                                                               |
+| Performance    | Requests             | 14 days  | One row per HTTP request: route, status and duration                                                                    |
+| Performance    | Queries              | 14 days  | Database queries recorded with their requests and jobs                                                                  |
+| Performance    | Spans                | 14 days  | Trace spans: outgoing HTTP, cache and custom timings                                                                    |
+| Performance    | Web vitals           | 30 days  | Page load metrics from browsers                                                                                         |
+| Jobs           | Job runs             | 30 days  | Each queued job attempt; can be set per job class                                                                       |
+| Jobs           | Scheduled task runs  | 30 days  | Each run of a scheduled task                                                                                            |
+| Jobs           | Command runs         | 30 days  | Each console command run                                                                                                |
+| Logs           | Logs                 | 14 days  | Log lines; can be set per channel                                                                                       |
+| Health         | Health results       | 14 days  | Each health check probe and its latency                                                                                 |
+| Health         | Health outages       | 365 days | Periods a check was down or degraded; uptime is counted from them                                                       |
+| Infrastructure | Queue size samples   | 30 days  | Queue length and oldest job age, sampled by the agent                                                                   |
+| Infrastructure | Host metrics         | 7 days   | CPU, memory and disk samples from the agent                                                                             |
+| Alerts         | Alert history        | 90 days  | Every alert sent, to which channel, and whether it got through                                                          |
+| Administration | Audit log            | 365 days | What administrators did; set on the application level only                                                              |
+| Administration | Notification history | 90 days  | Everyone's [notification center](./teams#notification-center), read and unread alike; set on the application level only |
 
 Issues themselves are never pruned, only their occurrences. Failed job runs, failed or
 missed scheduled runs and failed command runs stay at least as long as occurrences.

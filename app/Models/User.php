@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 /**
  * @property int $id
@@ -51,6 +52,7 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
+    use HasPushSubscriptions;
     use HasUuids;
     use Notifiable;
     use TwoFactorAuthenticatable;
@@ -91,6 +93,15 @@ class User extends Authenticatable implements MustVerifyEmail
             ->using(Membership::class)
             ->withPivot('role')
             ->withTimestamps();
+    }
+
+    /**
+     * Notifications broadcast for a toast go to the user's own channel, as every other
+     * personal toast does.
+     */
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return 'user.'.$this->uuid;
     }
 
     /** @return BelongsTo<Team, $this> */

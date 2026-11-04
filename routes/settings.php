@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Notifications\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\Settings\NotificationPreferencesController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
@@ -13,7 +14,10 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('settings/notifications', [NotificationPreferencesController::class, 'edit'])->name('notifications.edit');
     Route::put('settings/notifications', [NotificationPreferencesController::class, 'update'])->name('notifications.update');
+    Route::post('settings/push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
+    Route::delete('settings/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

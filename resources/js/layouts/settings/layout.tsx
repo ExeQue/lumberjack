@@ -7,11 +7,13 @@ import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+import { edit as editNotifications } from '@/routes/notifications';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 
 const sections = [
     { key: 'profile', href: edit() },
+    { key: 'notifications', href: editNotifications() },
     { key: 'security', href: editSecurity() },
     { key: 'appearance', href: editAppearance() },
 ] as const;

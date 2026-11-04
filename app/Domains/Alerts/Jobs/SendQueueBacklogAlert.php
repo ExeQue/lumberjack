@@ -8,6 +8,9 @@ use App\Domains\Alerts\Actions\SendProjectAlertAction;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
 use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\Notifications\Actions\NotifyProjectMembersAction;
+use App\Domains\Notifications\Data\PushMessage;
+use App\Domains\Notifications\Notifications\QueueBacklogNotification;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
@@ -45,11 +48,11 @@ class SendQueueBacklogAlert implements ShouldQueue
         return [10, 60, 300];
     }
 
-    public function handle(SendProjectAlertAction $action): void
+    public function handle(SendProjectAlertAction $action, NotifyProjectMembersAction $members): void
     {
         $project = $this->project ?? $this->rule->project;
 
-        $action->execute($this->rule, $project, new QueueBacklogAlert(
+        $alert = new QueueBacklogAlert(
             $project,
             $this->connectionName,
             $this->queueName,
@@ -59,6 +62,9 @@ class SendQueueBacklogAlert implements ShouldQueue
             CarbonImmutable::parse($this->since),
             $this->recovered,
             route('jobs.index', $project),
-        ));
+        );
+
+        $action->execute($this->rule, $project, $alert);
+        $members->execute($project, new QueueBacklogNotification(PushMessage::fromAlert($alert, $project, 'queue-'.$project->uuid.'-'.$this->connectionName.':'.$this->queueName)));
     }
 }

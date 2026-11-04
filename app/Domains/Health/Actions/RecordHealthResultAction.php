@@ -205,7 +205,8 @@ class RecordHealthResultAction
             ->whereEnabled()
             ->first();
 
-        if ($rule === null || $rule->channelsFor($check->project)->isEmpty() || ! $rule->appliesToEnvironment($check->environment !== '' ? $check->environment : null)) {
+        // A rule with no channels still sends: members may want it by push (SendHealthCheckAlert).
+        if ($rule === null || ! $rule->appliesToEnvironment($check->environment !== '' ? $check->environment : null)) {
             return null;
         }
 

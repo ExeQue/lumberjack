@@ -10,6 +10,8 @@ use App\Domains\Issues\Events\IssueAssignmentChanged;
 use App\Domains\Issues\Events\IssuesAssigned;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Notifications\IssueAssignmentNotification;
+use App\Domains\Notifications\Data\PushMessage;
+use App\Domains\Notifications\Notifications\AssignmentNotification;
 use App\Domains\Shared\Mail\MailReason;
 use App\Domains\Shared\Mail\MailRecipients;
 use App\Models\User;
@@ -59,6 +61,8 @@ class NotifyAssignees
                     $user->notify(new IssueAssignmentNotification(new Collection($issues), $actor, $assigned, $event->resolved && ! $assigned, $reasons));
                 });
             }
+
+            $user->notify(new AssignmentNotification(PushMessage::about($notification->project(), $notification->headline(), $notification->project()->name, $notification->url(), 'assignment-'.$user->uuid)));
 
             if ($preferences->toast('assignments')) {
                 try {

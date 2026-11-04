@@ -7,13 +7,13 @@ use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Performance\Models\RequestCount;
 use App\Domains\Projects\Models\Project;
-use App\Domains\Retention\Actions\PruneAuditLogAction;
+use App\Domains\Retention\Actions\PruneApplicationDataAction;
 use App\Domains\Retention\Actions\PruneProjectTelemetryAction;
 use App\Domains\Retention\Enums\RetentionCategory;
 use App\Domains\Retention\Models\RetentionPolicy;
 use Tests\Support\Retention\CreatesRetentionData;
 
-covers(PruneProjectTelemetryAction::class, PruneAuditLogAction::class);
+covers(PruneProjectTelemetryAction::class, PruneApplicationDataAction::class);
 
 uses(CreatesRetentionData::class);
 
@@ -127,7 +127,19 @@ describe('pruning', function () {
         $this->seedRetentionRow(RetentionCategory::AuditLog, $this->project, now()->subDays(11));
         $this->seedRetentionRow(RetentionCategory::AuditLog, $this->project, now()->subDays(9));
 
-        expect(app(PruneAuditLogAction::class)->execute())->toBe(1)
+        expect(app(PruneApplicationDataAction::class)->execute()['audit_log'])->toBe(1)
             ->and($this->retentionRows(RetentionCategory::AuditLog))->toBe(1);
+    });
+
+    it('prunes notification history, read or not, after 90 days unless the application says otherwise', function () {
+        $this->seedRetentionRow(RetentionCategory::Notifications, $this->project, now()->subDays(91));
+        $this->seedRetentionRow(RetentionCategory::Notifications, $this->project, now()->subDays(89));
+
+        expect(app(PruneApplicationDataAction::class)->execute()['notifications'])->toBe(1);
+
+        RetentionPolicy::factory()->create(['category' => RetentionCategory::Notifications, 'days' => 30]);
+
+        expect(app(PruneApplicationDataAction::class)->execute()['notifications'])->toBe(1)
+            ->and($this->retentionRows(RetentionCategory::Notifications))->toBe(0);
     });
 });
