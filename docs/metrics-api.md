@@ -137,7 +137,7 @@ How the numbers are counted:
   not; percentiles and the Apdex split only from the runs the SDK picked (see
   [Sampling](./performance#sampling)). Asking for a `release` reads the runs weighed by
   their sample rate instead, as the per-minute counts carry no release.
-- Apdex uses a 500 ms target, as on the Routes page.
+- Apdex uses a 500 ms target, as on the Requests page.
 - `cpu_load` is the 1 minute load per core (1 is every core busy); memory and disk are
   the share in use. A host metric is the highest over the hosts, a queue's size the
   largest it reported in a bucket, added up over the queues.

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'title' => 'Queries',
+    'title' => 'Database',
     'stats' => [
         'calls' => 'Queries',
         'distinct' => ':count distinct, grouped by SQL',

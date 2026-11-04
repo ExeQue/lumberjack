@@ -95,10 +95,8 @@ export function useNavigation(
               item(t('common.nav.issues'), issuesIndex(project.uuid).url, {
                   count: counts?.issues,
               }),
-              group(t('common.nav.performance'), [
-                  item(t('common.nav.routes'), routesIndex(project.uuid).url),
-                  item(t('common.nav.queries'), queriesIndex(project.uuid).url),
-              ]),
+              item(t('common.nav.routes'), routesIndex(project.uuid).url),
+              item(t('common.nav.queries'), queriesIndex(project.uuid).url),
               group(t('common.nav.console'), [
                   item(t('common.nav.jobs'), jobsIndex(project.uuid).url, {
                       count: counts?.jobs,

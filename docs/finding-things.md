@@ -5,14 +5,13 @@
 The sidebar keeps related pages behind one entry; each of them shows the others as tabs
 under the top bar:
 
-| Entry       | Tabs                          |
-| ----------- | ----------------------------- |
-| Performance | Routes, Queries               |
-| Console     | Jobs, Schedule, Commands      |
-| Screens     | Screens, Displays             |
-| Team        | Members and tokens, Retention |
+| Entry   | Tabs                          |
+| ------- | ----------------------------- |
+| Console | Jobs, Schedule, Commands      |
+| Screens | Screens, Displays             |
+| Team    | Members and tokens, Retention |
 
-Overview, Issues, Logs, Health and Releases (the project), and Projects and Alerts (the
+Overview, Issues, Requests, Database, Logs, Health and Releases (the project), and Projects and Alerts (the
 team) are pages of their own. An entry's badge adds up its tabs' counts; each tab shows
 its own.
 
@@ -38,7 +37,7 @@ Type at least two characters and the palette also searches the project you are i
 | What            | Matched on                                        | Opens                            |
 | --------------- | ------------------------------------------------- | -------------------------------- |
 | Issues          | title, message or number (`DEMO-42`, `#42`, `42`) | the issue                        |
-| Routes          | route, route name or URL, seen in the last 7 days | the route on the Routes page     |
+| Routes          | route, route name or URL, seen in the last 7 days | the route on the Requests page   |
 | Jobs            | class name, run in the last 7 days                | the job on the Jobs page         |
 | Commands        | command name, run in the last 7 days              | the command on the Commands page |
 | Scheduled tasks | task name                                         | the Schedule page                |
