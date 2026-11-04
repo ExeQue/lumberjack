@@ -220,9 +220,9 @@
      * Utilities (transition-*, duration-*) still override this.
      */
     /*
-     * A menu entry: its left corners square while chosen, for the amber bar. Leaving the
-     * choice they round only after the bar has faded (150ms), and turn square at once on
-     * the way in, so the bar is never seen bent around a corner.
+     * A menu entry: its left corners only as round as the amber bar is wide while chosen.
+     * Leaving the choice they round fully only after the bar has faded (150ms), and turn
+     * tight at once on the way in, so the bar is never seen bent around a big corner.
      */
     .lj-nav-item {
         transition-property: color, background-color, box-shadow, border-radius;

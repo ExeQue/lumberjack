@@ -312,11 +312,12 @@ export const thClass =
     'border-b border-line px-3 py-2.5 text-left text-[11px] font-medium tracking-wide whitespace-nowrap text-ink-3 uppercase';
 /**
  * The chosen entry of a menu (on a .lj-nav-item, whose corners wait for the amber bar):
- * a quiet background, square on the left where an amber bar runs its
- * full height. The text keeps its weight, so nothing moves when the choice changes.
+ * a quiet background and an amber bar the full height of its left side, drawn on its own
+ * (not as a shadow, which would bend along the corner) with ends as round as it is wide. The text keeps its weight, so nothing moves when the
+ * choice changes.
  */
 export const navActiveClass =
-    'lj-nav-active rounded-l-none bg-panel-2 text-ink shadow-[inset_3px_0_0_var(--lj-amber)]';
+    'lj-nav-active relative rounded-l-none bg-panel-2 text-ink before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:rounded-full before:bg-amber';
 
 export const tdClass = 'border-b border-line/60 px-3 py-2.5 align-middle';
 export const numClass = 'text-right font-mono tabular-nums whitespace-nowrap';
