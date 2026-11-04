@@ -48,7 +48,8 @@ class GetIssue extends Tool
             ...$this->presenter->summary($issue),
             'latest_occurrence' => $occurrence !== null ? $this->presenter->occurrence($occurrence) : null,
             'history' => $this->presenter->history($issue, 50),
-            'notes' => $issue->notes()->with(['user', 'mcpToken'])->latest()->limit(20)->get()->map(fn (IssueNote $n): array => $this->presenter->note($n))->all(),
+            // Loaded with the history above.
+            'notes' => $issue->notes->take(20)->map(fn (IssueNote $n): array => $this->presenter->note($n))->all(),
         ]);
     }
 }
