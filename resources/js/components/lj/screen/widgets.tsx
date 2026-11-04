@@ -31,7 +31,11 @@ const SCROLL_PAUSE_MS = 4000;
  * wall shows every row without anyone touching it. Off with reduced motion, and while
  * the pointer is over it (someone is reading).
  */
-function useAutoScroll<T extends HTMLElement>(enabled: boolean) {
+function useAutoScroll<T extends HTMLElement>(
+    enabled: boolean,
+    /** 'x' glides sideways, for a widget wider than tall. */
+    axis: 'x' | 'y' = 'y',
+) {
     const ref = useRef<T>(null);
 
     useEffect(() => {
@@ -50,20 +54,31 @@ function useAutoScroll<T extends HTMLElement>(enabled: boolean) {
         let direction = 1;
         let restUntil = performance.now() + SCROLL_PAUSE_MS;
         let hovered = false;
-        let position = el.scrollTop;
+        const horizontal = axis === 'x';
+        const read = () => (horizontal ? el.scrollLeft : el.scrollTop);
+        const write = (to: number) => {
+            if (horizontal) {
+                el.scrollLeft = to;
+            } else {
+                el.scrollTop = to;
+            }
+        };
+        let position = read();
         const enter = () => (hovered = true);
         const leave = () => (hovered = false);
         el.addEventListener('pointerenter', enter);
         el.addEventListener('pointerleave', leave);
 
         const step = (now: number) => {
-            const room = el.scrollHeight - el.clientHeight;
+            const room = horizontal
+                ? el.scrollWidth - el.clientWidth
+                : el.scrollHeight - el.clientHeight;
             const dt = last ? (now - last) / 1000 : 0;
             last = now;
 
             if (room <= 1) {
                 position = 0;
-                el.scrollTop = 0;
+                write(0);
             } else if (!hovered && now >= restUntil) {
                 position = Math.min(
                     room,
@@ -72,7 +87,7 @@ function useAutoScroll<T extends HTMLElement>(enabled: boolean) {
                         position + direction * SCROLL_PX_PER_SECOND * dt,
                     ),
                 );
-                el.scrollTop = position;
+                write(position);
 
                 if (position <= 0 || position >= room) {
                     direction = -direction;
@@ -90,7 +105,7 @@ function useAutoScroll<T extends HTMLElement>(enabled: boolean) {
             el.removeEventListener('pointerenter', enter);
             el.removeEventListener('pointerleave', leave);
         };
-    }, [enabled]);
+    }, [enabled, axis]);
 
     return ref;
 }
@@ -1821,8 +1836,11 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
     const word = (state: string) => t(`screens.states.${state}`);
     // Every check, scrolling slowly through what does not fit; off: "+N more" at the end.
     const autoScroll = opt<boolean>('auto_scroll') !== false && !detail;
+    // Wider than tall: the cards glide sideways, in columns, instead of down.
+    const sideways = view === 'cards' && widget.w > widget.h;
     const cardScroller = useAutoScroll<HTMLDivElement>(
         autoScroll && view === 'cards',
+        sideways ? 'x' : 'y',
     );
     const listScroller = useAutoScroll<HTMLUListElement>(
         autoScroll && view === 'list',
@@ -1948,8 +1966,9 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
         ? checks.length
         : (view === 'cards' ? cardCols : 1) * rows;
     const more = checks.length > fit ? checks.length - fit + 1 : 0;
-    // A card is one grid cell high, also among cards scrolled into view.
+    // A card is one grid cell, also among cards scrolled into view.
     const cardPx = Math.max(0, (size.h - gap * (rows - 1)) / rows);
+    const cardWidthPx = Math.max(0, (size.w - gap * (cardCols - 1)) / cardCols);
     const visible = checks.slice(0, more ? fit - 1 : fit);
     // What the "more" entry hides that needs attention, worst first.
     const hidden = checks.slice(visible.length);
@@ -1969,7 +1988,19 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
     ].join(' · ');
 
     return (
-        <div ref={ref} className="min-h-0 w-full flex-1 overflow-hidden">
+        <div
+            ref={ref}
+            className={cn(
+                'min-h-0 w-full flex-1 overflow-hidden',
+                // Cards run to the tile's edges, past its padding (0.8em 1em), under the title.
+                view === 'cards' &&
+                    checks.length > 0 &&
+                    cn(
+                        '-mx-[1em] -mb-[0.8em] w-[calc(100%+2em)]',
+                        opt<boolean>('show_title') === false && '-mt-[0.8em]',
+                    ),
+            )}
+        >
             {checks.length === 0 && (
                 <span
                     className="lj-tile-small"
@@ -1982,12 +2013,24 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                 <div
                     ref={cardScroller}
                     className="grid h-full content-start overflow-hidden"
-                    style={{
-                        gap,
-                        // The widget's own cells: a few checks leave the rest empty.
-                        gridTemplateColumns: `repeat(${cardCols}, minmax(0, 1fr))`,
-                        gridAutoRows: cardPx ? `${cardPx}px` : '1fr',
-                    }}
+                    style={
+                        sideways && autoScroll
+                            ? {
+                                  gap,
+                                  // Columns of the widget's height, one cell wide each.
+                                  gridAutoFlow: 'column',
+                                  gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+                                  gridAutoColumns: cardWidthPx
+                                      ? `${cardWidthPx}px`
+                                      : '1fr',
+                              }
+                            : {
+                                  gap,
+                                  // The widget's own cells: a few checks leave the rest empty.
+                                  gridTemplateColumns: `repeat(${cardCols}, minmax(0, 1fr))`,
+                                  gridAutoRows: cardPx ? `${cardPx}px` : '1fr',
+                              }
+                    }
                 >
                     {visible.map((c) => (
                         // Each card is a small single health tile: the name, the state
