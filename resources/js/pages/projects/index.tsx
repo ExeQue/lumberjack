@@ -169,23 +169,26 @@ export default function ProjectsIndex({
                                                 {project.slug}
                                             </span>
                                         </div>
+                                        {/* The open issues are in the figures below; the badge
+                                            says what they do not: agents, or all calm. */}
                                         {offline ? (
                                             <Badge tone="warn">
-                                                {t('projects.agent_offline')}
-                                            </Badge>
-                                        ) : project.open_issues > 0 ? (
-                                            <Badge tone="err">
-                                                {t('projects.status_open', {
-                                                    count: project.open_issues,
-                                                })}
+                                                {t(
+                                                    'projects.agent_offline',
+                                                    {},
+                                                    project.offline_agents
+                                                        .length,
+                                                )}
                                             </Badge>
                                         ) : (
-                                            <Badge tone="ok">
-                                                {t('projects.status_calm')}
-                                            </Badge>
+                                            project.open_issues === 0 && (
+                                                <Badge tone="ok">
+                                                    {t('projects.status_calm')}
+                                                </Badge>
+                                            )
                                         )}
                                     </div>
-                                    <dl className="grid grid-cols-4 gap-3">
+                                    <dl className="grid grid-cols-[repeat(4,auto)] justify-between gap-x-4 gap-y-3">
                                         {[
                                             {
                                                 label: t(
@@ -234,13 +237,13 @@ export default function ProjectsIndex({
                                                 key={metric.label}
                                                 className="flex flex-col gap-1"
                                             >
-                                                <dt>
+                                                <dt className="whitespace-nowrap">
                                                     <Eyebrow>
                                                         {metric.label}
                                                     </Eyebrow>
                                                 </dt>
                                                 <dd
-                                                    className={`font-mono text-lg ${metric.tone}`}
+                                                    className={`font-mono text-lg whitespace-nowrap ${metric.tone}`}
                                                 >
                                                     {metric.value}
                                                 </dd>
@@ -263,24 +266,11 @@ export default function ProjectsIndex({
                                             height={40}
                                         />
                                         <div className="flex justify-between gap-2 text-[11px] text-ink-3">
-                                            <span>
+                                            <span className="whitespace-nowrap">
                                                 {t('projects.errors_per_hour')}
                                             </span>
-                                            <span
-                                                className={
-                                                    offline ? 'text-warn' : ''
-                                                }
-                                            >
-                                                {offline ? (
-                                                    t(
-                                                        'projects.agent_missing',
-                                                        {
-                                                            hosts: project.offline_agents.join(
-                                                                ', ',
-                                                            ),
-                                                        },
-                                                    )
-                                                ) : (
+                                            {!offline && (
+                                                <span className="truncate">
                                                     <WithRelative
                                                         iso={
                                                             project.last_agent_seen_at
@@ -294,9 +284,24 @@ export default function ProjectsIndex({
                                                             )
                                                         }
                                                     </WithRelative>
-                                                )}
-                                            </span>
+                                                </span>
+                                            )}
                                         </div>
+                                        {offline && (
+                                            // One line; the whole list on hover.
+                                            <span
+                                                className="truncate text-[11px] text-warn"
+                                                title={project.offline_agents.join(
+                                                    ', ',
+                                                )}
+                                            >
+                                                {t('projects.agent_missing', {
+                                                    hosts: project.offline_agents.join(
+                                                        ', ',
+                                                    ),
+                                                })}
+                                            </span>
+                                        )}
                                     </div>
                                 </Link>
                             );

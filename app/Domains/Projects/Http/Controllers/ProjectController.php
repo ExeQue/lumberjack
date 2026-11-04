@@ -46,11 +46,14 @@ class ProjectController
                 'name' => $project->name,
                 ...$stats[$project->id],
                 'agents' => $project->agents->count(),
-                // Named by agent and host: one host can run several agents, and one of them
-                // being offline does not mean the host is.
-                'offline_agents' => $offline->map(fn (ProjectAgent $a): string => $a->name !== ''
-                    ? __('ui/projects.agent_on_host', ['agent' => $a->name, 'host' => $a->host])
-                    : __('ui/projects.unnamed_agent_on_host', ['host' => $a->host]))->values()->all(),
+                // By host when the agents all share one name (the usual case); by agent and
+                // host when they differ, as one host can run several and one being offline
+                // does not mean the host is.
+                'offline_agents' => $offline->pluck('name')->unique()->count() <= 1
+                    ? $offline->pluck('host')->unique()->values()->all()
+                    : $offline->map(fn (ProjectAgent $a): string => $a->name !== ''
+                        ? __('ui/projects.agent_on_host', ['agent' => $a->name, 'host' => $a->host])
+                        : __('ui/projects.unnamed_agent_on_host', ['host' => $a->host]))->values()->all(),
                 'last_agent_seen_at' => $project->agents->max('last_seen_at')?->toIso8601String(),
             ];
         });
