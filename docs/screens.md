@@ -99,7 +99,7 @@ landscape or portrait (a 16:9 portrait screen is 9:16). The grid in the designer
 that shape, as large as fits, so a widget's text reads as it will on that display.
 
 The designer draws the screen as the TV does, header, gaps and type sizes included.
-**Show header** turns the TV's header (the screen's name, its projects and period, how
+**Show header** in the screen settings turns the TV's header (the screen's name, its projects and period, how
 many widgets need attention, live or offline, and the clock) on or off; without it the
 grid takes the whole screen, and the offline notice lies over its top.
 
@@ -145,7 +145,8 @@ it happens for real. **Live data** goes back to the real numbers.
 With no widget selected (click the grid's background, the toolbar's Screen settings button, or press Escape anywhere) the right side
 shows the screen's own settings: its name, the projects, environment and period every
 widget shows unless it picks its own (no project ticked means every project of the team,
-new ones included), and the time zone for the clock and the theme schedule.
+new ones included), the time zone for the clock and the theme schedule, whether the
+header shows, the [theme](#theme) and how the screen fits a display of another shape.
 
 ## Widgets
 
