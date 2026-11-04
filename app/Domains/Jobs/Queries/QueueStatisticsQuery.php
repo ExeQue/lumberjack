@@ -55,7 +55,11 @@ class QueueStatisticsQuery
             FROM job_runs WHERE {$where} GROUP BY connection, queue ORDER BY connection, queue LIMIT ".self::LIMIT, $bindings))
             ->map(fn (object $r): array => (array) $r)->keyBy($key);
 
-        return array_values($latest->keys()->merge($waits->keys())->unique()->sort()->take(self::LIMIT)->map(function (string $key) use ($latest, $waits, $projectId, $period): array {
+        // The size over the period of every sampled queue, in one query.
+        $sampled = array_values($latest->keys()->all());
+        $series = $sampled === [] ? [] : TimeSeries::countBy(DB::table('queue_samples')->where('project_id', $projectId), $period, "connection || ':' || queue", $sampled, 'sampled_at', 'MAX(size)');
+
+        return array_values($latest->keys()->merge($waits->keys())->unique()->sort()->take(self::LIMIT)->map(function (string $key) use ($latest, $waits, $series): array {
             $sample = $latest->get($key);
             $wait = $waits->get($key);
             [$connection, $queue] = explode(':', $key, 2);
@@ -68,9 +72,7 @@ class QueueStatisticsQuery
                 'workers' => isset($sample['workers']) ? (int) $sample['workers'] : null,
                 'sampled_at' => $sample !== null ? CarbonImmutable::parse($sample['sampled_at'])->toIso8601String() : null,
                 'p95_wait' => isset($wait['p95_wait']) ? (int) $wait['p95_wait'] : null,
-                'series' => $sample !== null
-                    ? TimeSeries::count(DB::table('queue_samples')->where('project_id', $projectId)->where('connection', $connection)->where('queue', $queue), $period, 'sampled_at', 'MAX(size)')
-                    : [],
+                'series' => $series[$key] ?? [],
             ];
         })->all());
     }

@@ -11,11 +11,12 @@ use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\Shared\ReadsQueryCounts;
 use Tests\Support\Teams\CreatesTeamMembers;
 
 covers(ProjectSettingsController::class);
 
-uses(CreatesTeamMembers::class);
+uses(CreatesTeamMembers::class, ReadsQueryCounts::class);
 
 describe('project administration', function () {
     it('is closed to members', function () {
@@ -117,6 +118,20 @@ describe('agents', function () {
                 ->where('agents.0.metrics.cpu_load_1m', 0.5)
                 ->where('agents.0.metrics.memory_series', fn ($series) => max($series->all()) === 0.95 && in_array(0.5, $series->all(), true))
                 ->where('agents.0.metrics.load_series', fn ($series) => max($series->all()) == 3));
+    });
+
+    it('reads the series of every agent in the same few queries', function () {
+        ['user' => $user, 'project' => $project] = $this->memberWithProject(TeamRole::Owner);
+        $page = fn () => $this->actingAs($user)->get(route('projects.settings', $project))->assertOk();
+        HostSample::factory()->for(ProjectAgent::factory()->for($project)->onHost('web-0'), 'agent')->create();
+        $one = $this->queriesRunBy($page);
+
+        foreach (['web-1', 'web-2', 'web-3'] as $host) {
+            HostSample::factory()->for(ProjectAgent::factory()->for($project)->onHost($host), 'agent')->create();
+        }
+
+        expect($this->queriesRunBy($page))->toBe($one);
+        $page()->assertInertia(fn (Assert $page) => $page->where('agents.3.metrics.load_series', fn ($series) => max($series->all()) == 0.8));
     });
 });
 
