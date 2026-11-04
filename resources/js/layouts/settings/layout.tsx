@@ -48,7 +48,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                     href={section.href}
                                     aria-current={current ? 'page' : undefined}
                                     className={cn(
-                                        'rounded-md px-2.5 py-1.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink',
+                                        'rounded-r-md px-2.5 py-1.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink',
                                         current && navActiveClass,
                                     )}
                                 >
