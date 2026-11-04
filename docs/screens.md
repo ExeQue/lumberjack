@@ -376,7 +376,7 @@ paired into another team becomes a device of its own there.
 
 ## Displays
 
-**Displays** in the sidebar (Team settings) lists the team's paired devices, one card
+**Screens > Displays** lists the team's paired devices, one card
 each: its name, the browser it runs in, how many windows it has, and whether it is
 online (any of its windows heard from in the last three minutes) or when it was last
 seen. Under it, its windows: the window number, the screen it shows, the seconds per

@@ -14,7 +14,7 @@ every team (see [Setup and system administration](./administration)).
 
 ## The team page
 
-**Members and tokens** in the sidebar shows the team.
+**Team** in the sidebar shows the team, on its **Members and tokens** tab.
 
 ![The team page with its members, an invitation form and the MCP tokens](./screenshots/team.png)
 
@@ -24,7 +24,7 @@ every team (see [Setup and system administration](./administration)).
 - **Invite by email:** as Admin or Member. Open invitations show when they expire
   (after 7 days), and can be sent again or revoked.
 - **API and MCP tokens:** see [MCP](./mcp#tokens) and the [metrics API](./metrics-api#authentication).
-- **Retention:** its own page in the sidebar: the team's [retention](./projects#retention),
+- **Retention:** the Team entry's second tab: the team's [retention](./projects#retention),
   read only for members.
 
 Anyone can **Create a team**: it starts empty, with them as the owner. The team switcher

@@ -5,7 +5,7 @@ owners and admins can change its settings.
 
 ## The projects list
 
-**All projects** shows every project of the team with its open issues, errors, p95
+**Projects** in the sidebar shows every project of the team with its open issues, errors, p95
 and job failures of the last 24 hours, its errors per hour, and a status: **3 open** or **Calm**. **Agent offline** and **Not seen** warn when the project's
 [agents](#agents) stopped checking in, naming each agent with its host ("queue on
 web-2", or "unnamed agent on web-2"). **Search projects** filters the list.
@@ -154,7 +154,7 @@ default for the one below it and the most it may keep:
 
 1. **Application**, the whole Lumberjack: **Administration > Retention**, for system
    administrators. Empty uses the built-in default and sets no maximum.
-2. **Team**: **Retention** in the sidebar, for team owners and admins (members can read
+2. **Team**: **Team > Retention** in the sidebar, for team owners and admins (members can read
    it). At most the application value.
 3. **Project**: the project's settings, for whoever administers the project. At most
    the team value; job classes and log channels can have their own, also at most the
