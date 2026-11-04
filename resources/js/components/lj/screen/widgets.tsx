@@ -888,9 +888,6 @@ function curve(pts: [number, number][], smooth: boolean): string {
     return path;
 }
 
-/** The least height of a health card: its name, state and age, in the tile's em. */
-const CARD_MIN_EM = 3.8;
-
 /** How long a rotating tile's value takes to leave, and then to come in. */
 const SWITCH_MS = 300;
 
@@ -1811,20 +1808,25 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
               metrics?: Record<string, number>;
           })
         | null;
-    // Cards keep a readable minimum width (140px, more on a big TV).
-    const cardCols = Math.max(
-        1,
-        Math.floor((size.w + 6) / (Math.max(140, 9 * size.em) + 6)),
-    );
+    // One card per grid cell the widget covers, so a card is the size of a 1 x 1 tile.
+    const cardCols = Math.max(1, widget.w);
     const view =
         (opt<string>('view') ?? 'auto') !== 'auto'
             ? opt<string>('view')
             : widget.w * widget.h <= 1
               ? 'summary'
-              : cardCols >= 2
+              : widget.w >= 2
                 ? 'cards'
                 : 'list';
     const word = (state: string) => t(`screens.states.${state}`);
+    // Every check, scrolling slowly through what does not fit; off: "+N more" at the end.
+    const autoScroll = opt<boolean>('auto_scroll') !== false && !detail;
+    const cardScroller = useAutoScroll<HTMLDivElement>(
+        autoScroll && view === 'cards',
+    );
+    const listScroller = useAutoScroll<HTMLUListElement>(
+        autoScroll && view === 'list',
+    );
 
     if (detail) {
         const state = fix(detail.state);
@@ -1936,20 +1938,18 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
         );
     }
 
-    // Cards fill the tile: as many rows of at least CARD_MIN_EM as fit, stretched to its height.
-    // A list row is 1.7em of its 0.85em text.
+    // Cards: one row per grid row the widget covers. A list row is 1.7em of its 0.85em text.
     const gap = 6;
     const rows =
         view === 'cards'
-            ? Math.max(
-                  1,
-                  Math.floor((size.h + gap) / (size.em * CARD_MIN_EM + gap)),
-              )
+            ? Math.max(1, widget.h)
             : Math.max(1, Math.floor(size.h / (size.em * 0.85 * 1.7)));
-    const fit = (view === 'cards' ? cardCols : 1) * rows;
+    const fit = autoScroll
+        ? checks.length
+        : (view === 'cards' ? cardCols : 1) * rows;
     const more = checks.length > fit ? checks.length - fit + 1 : 0;
-    // Every row of cards in use: they stretch to fill the tile.
-    const full = checks.length >= fit;
+    // A card is one grid cell high, also among cards scrolled into view.
+    const cardPx = Math.max(0, (size.h - gap * (rows - 1)) / rows);
     const visible = checks.slice(0, more ? fit - 1 : fit);
     // What the "more" entry hides that needs attention, worst first.
     const hidden = checks.slice(visible.length);
@@ -1980,18 +1980,13 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
             )}
             {view === 'cards' ? (
                 <div
-                    className={cn('grid content-start', full && 'h-full')}
+                    ref={cardScroller}
+                    className="grid h-full content-start overflow-hidden"
                     style={{
                         gap,
+                        // The widget's own cells: a few checks leave the rest empty.
                         gridTemplateColumns: `repeat(${cardCols}, minmax(0, 1fr))`,
-                        // Full: the rows share the tile's height. A few checks: cards of
-                        // their own height from the top.
-                        gridTemplateRows: full
-                            ? `repeat(${rows}, minmax(0, 1fr))`
-                            : undefined,
-                        gridAutoRows: full
-                            ? undefined
-                            : `${CARD_MIN_EM + 0.4}em`,
+                        gridAutoRows: cardPx ? `${cardPx}px` : '1fr',
                     }}
                 >
                     {visible.map((c) => (
@@ -2000,7 +1995,7 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                         <div
                             key={c.uuid}
                             title={c.name}
-                            className="flex min-h-0 min-w-0 flex-col items-center justify-center gap-[0.15em] overflow-hidden rounded-md border px-2 text-center"
+                            className="[container-type:size] flex min-h-0 min-w-0 flex-col items-center justify-center gap-[0.15em] overflow-hidden rounded-md border px-2 text-center"
                             style={{
                                 background:
                                     CARD_BG[c.state] ?? 'var(--s-panel-2)',
@@ -2014,8 +2009,12 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                                 {c.name}
                             </span>
                             <span
-                                className="font-mono text-[1.35em] leading-none font-bold"
-                                style={{ color: STATE_COLOR[c.state] }}
+                                className="font-mono leading-none font-bold"
+                                // Grows with the card, as the state does on a 1 x 1 tile.
+                                style={{
+                                    color: STATE_COLOR[c.state],
+                                    fontSize: 'max(1.2em, min(32cqh, 18cqw))',
+                                }}
                             >
                                 {word(c.state)}
                             </span>
@@ -2035,7 +2034,10 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                 </div>
             ) : (
                 // Columns that line up: the dot, the name (it gives way), the state, how long.
-                <ul className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] content-start gap-x-[0.6em] text-[0.85em]">
+                <ul
+                    ref={listScroller}
+                    className="grid h-full grid-cols-[auto_minmax(0,1fr)_auto_auto] content-start gap-x-[0.6em] overflow-hidden text-[0.85em]"
+                >
                     {visible.map((c) => (
                         <li key={c.uuid} className="contents">
                             <span
