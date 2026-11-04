@@ -1,10 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type {
-    ComponentProps,
-    CSSProperties,
-    ReactNode,
-    RefObject,
-} from 'react';
+import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { formatBytes, formatNumber, formatPercent } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
