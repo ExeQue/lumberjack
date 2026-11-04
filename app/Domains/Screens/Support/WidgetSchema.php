@@ -466,6 +466,7 @@ final class WidgetSchema
                     $toggle('show_timeline', true),
                     $toggle('show_message', true),
                     $select('stale_as', ['stale', 'degraded', 'ok'], 'stale', false, 2),
+                    $toggle('auto_scroll', true),
                 ]),
                 $rotation, $scope(false), $display(true),
             ],
