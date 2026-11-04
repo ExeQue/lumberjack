@@ -8,7 +8,7 @@ under the top bar:
 | Entry       | Tabs                          |
 | ----------- | ----------------------------- |
 | Performance | Routes, Queries               |
-| Jobs        | Jobs, Schedule, Commands      |
+| Console     | Jobs, Schedule, Commands      |
 | Screens     | Screens, Displays             |
 | Team        | Members and tokens, Retention |
 

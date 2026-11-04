@@ -38,6 +38,7 @@ return [
         'all_projects' => 'All projects',
         'projects' => 'Projects',
         'performance' => 'Performance',
+        'console' => 'Console',
         'team_page' => 'Team',
         'project_settings' => 'Project settings',
         'sections' => 'Pages of this section',
