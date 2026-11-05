@@ -48,3 +48,6 @@ yarn-error.log
 .env.before_lerd
 .vitepress/dist/
 .vitepress/cache/
+
+/.ai/*
+!/.ai/rules/
