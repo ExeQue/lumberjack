@@ -82,6 +82,11 @@ A busy app may record only a share of its requests, and the pages then say, for 
 **Estimated from a 10% sample**. Request counts and error rates stay exact; percentiles
 come from the sampled requests. See [Performance and traces](../performance.md).
 
+::: tip Profiling during development
+Lumberjack watches production. To profile a request, job or command in depth on your own
+machine, use [Monocle](https://github.com/ExeQue/laravel-monocle).
+:::
+
 ## Reference
 
 - [Performance and traces](../performance.md): every page, Apdex, sampling and traces.

@@ -3,6 +3,11 @@
 These pages show how the app performs: requests, database queries, browser speed, jobs,
 scheduled tasks, commands and logs. Each one links to the traces behind it.
 
+::: tip Profiling during development
+Lumberjack watches production. To profile a request, job or command in depth on your own
+machine, use [Monocle](https://github.com/ExeQue/laravel-monocle).
+:::
+
 ## Period and environment
 
 Every page has two pickers at the top:
