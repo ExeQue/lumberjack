@@ -44,6 +44,7 @@ import { DATA_KINDS, LAYOUT_KINDS } from '@/components/lj/screen/types';
 import { SharePanel } from '@/components/lj/screen/share-panel';
 import type { Sharing } from '@/components/lj/screen/share-panel';
 import { TvInstructions } from '@/components/lj/screen/tv-instructions';
+import { update as displayUpdate } from '@/routes/displays';
 import type { TvInstructionsProps } from '@/components/lj/screen/tv-instructions';
 import { useScreenData } from '@/components/lj/screen/use-screen-data';
 import { WidgetTile } from '@/components/lj/screen/widgets';
@@ -92,6 +93,8 @@ type Props = {
     };
     sharing: Sharing;
     tv: TvInstructionsProps;
+    /** The team's paired TVs, for team admins: put this screen on one. */
+    paired: { uuid: string; name: string; shows_this: boolean }[];
     /** The display shapes a screen can be designed for (ScreenAspect), landscape. */
     aspects: string[];
     /** Ready layouts an empty screen can be filled from. */
@@ -1271,7 +1274,60 @@ export default function EditScreen(props: Props) {
                             sharing={props.sharing}
                         />
                     ) : (
-                        <TvInstructions {...props.tv} />
+                        <>
+                            <TvInstructions {...props.tv} />
+                            {props.paired.length > 0 && (
+                                <section className="flex flex-col gap-2 border-t border-line pt-4">
+                                    <h3 className="text-sm font-semibold">
+                                        {t('screens.open_tv.paired')}
+                                    </h3>
+                                    <ul className="flex flex-col gap-1">
+                                        {props.paired.map((display) => (
+                                            <li
+                                                key={display.uuid}
+                                                className="flex items-center justify-between gap-3 text-sm"
+                                            >
+                                                <span className="min-w-0 truncate">
+                                                    {display.name}
+                                                </span>
+                                                {display.shows_this ? (
+                                                    <span className="text-xs text-ink-3">
+                                                        {t(
+                                                            'screens.open_tv.shows_this',
+                                                        )}
+                                                    </span>
+                                                ) : (
+                                                    <Button
+                                                        variant="ghost"
+                                                        onClick={() =>
+                                                            router.put(
+                                                                displayUpdate(
+                                                                    display.uuid,
+                                                                ).url,
+                                                                {
+                                                                    screen: screen.uuid,
+                                                                },
+                                                                {
+                                                                    preserveScroll: true,
+                                                                    preserveState: true,
+                                                                },
+                                                            )
+                                                        }
+                                                    >
+                                                        {t(
+                                                            'screens.open_tv.show_here',
+                                                        )}
+                                                    </Button>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <p className="text-xs text-ink-3">
+                                        {t('screens.open_tv.paired_hint')}
+                                    </p>
+                                </section>
+                            )}
+                        </>
                     )}
                 </DialogContent>
             </Dialog>

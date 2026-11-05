@@ -629,6 +629,10 @@ return [
         'code' => 'Code on the TV',
         // Button.
         'continue' => 'Continue',
+        'paired' => 'Or on a TV already paired',
+        'show_here' => 'Show here',
+        'shows_this' => 'Shows this screen',
+        'paired_hint' => 'It shows this screen instead of what it showed, playlist included, within a second.',
     ],
 
     // The share link panel of the designer.

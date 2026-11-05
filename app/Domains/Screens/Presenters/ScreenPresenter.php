@@ -161,6 +161,28 @@ class ScreenPresenter
     }
 
     /**
+     * The team's paired displays, to put the screen on one from the designer: only for
+     * whoever may change displays (team admins).
+     *
+     * @return list<array{uuid: string, name: string, shows_this: bool}>
+     */
+    public function pairedDisplays(Screen $screen, User $user): array
+    {
+        if (! $user->canAdministerTeam($screen->team)) {
+            return [];
+        }
+
+        $displays = Display::query()->whereTeam($screen->team)->with('device')->get()
+            ->sortBy(fn (Display $d): string => $d->device->name.'|'.$d->slot);
+
+        return array_values($displays->map(fn (Display $d): array => [
+            'uuid' => $d->uuid,
+            'name' => $d->fullName(),
+            'shows_this' => in_array($screen->id, $d->screenIds(), true),
+        ])->all());
+    }
+
+    /**
      * What the designer offers to pick from besides the catalog: the team's environments,
      * health checks and data sources, and the grid's limits.
      *
