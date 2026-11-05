@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { HighlightedCode } from '@/components/lj/highlighted-code';
 import { TopBar } from '@/components/lj/top-bar';
 import {
@@ -16,7 +16,7 @@ import { useT } from '@/lib/i18n';
 import { show as issueShow } from '@/routes/issues';
 import { show as projectShow } from '@/routes/projects';
 import { index as routesIndex } from '@/routes/routes';
-import type { ProjectHeader } from '@/types/lumberjack';
+import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
 
 type Entry = {
     type: 'query' | 'span' | 'log' | 'exception';
@@ -113,6 +113,7 @@ const barColor: Record<Tone, string> = {
 
 export default function TraceShow({ project, trace }: Props) {
     const t = useT();
+    const { team } = usePage<{ team: TeamShared }>().props;
     const request = trace.requests[0];
     const job = trace.jobs[0];
     const run = trace.runs[0];
@@ -152,6 +153,7 @@ export default function TraceShow({ project, trace }: Props) {
             <Head title={`${t('traces.title')} ${trace.id}`} />
             <TopBar
                 crumbs={[
+                    { label: team.name },
                     {
                         label: project.name,
                         href: projectShow(project.uuid).url,

@@ -12,10 +12,26 @@ import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 
 const sections = [
-    { key: 'profile', href: edit() },
-    { key: 'notifications', href: editNotifications() },
-    { key: 'security', href: editSecurity() },
-    { key: 'appearance', href: editAppearance() },
+    {
+        key: 'profile',
+        href: edit(),
+        description: 'settings.account.profile_description',
+    },
+    {
+        key: 'notifications',
+        href: editNotifications(),
+        description: 'settings.notifications.description',
+    },
+    {
+        key: 'security',
+        href: editSecurity(),
+        description: 'settings.account.security_description',
+    },
+    {
+        key: 'appearance',
+        href: editAppearance(),
+        description: 'settings.account.appearance_description',
+    },
 ] as const;
 
 /**
@@ -50,7 +66,9 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
             <PageBody>
                 <PageTitle
                     title={title}
-                    description={t('settings.account.description')}
+                    description={t(
+                        current?.description ?? 'settings.account.description',
+                    )}
                 />
                 <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
                     <nav

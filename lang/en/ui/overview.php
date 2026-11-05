@@ -18,9 +18,8 @@ return [
         'open_issues_note' => 'All environments, regardless of period',
         'health' => 'Health checks',
         'health_value' => ':ok of :total ok',
-        // The big value once a check is down, degraded or stale, e.g. "3 problems · 6 stale".
+        // The big value once a check is down or degraded; stale checks are in the note.
         'health_problems' => '{1} 1 problem|[2,*] :count problems',
-        'health_stale' => ':count stale',
         'health_note' => ':down down, :degraded degraded, :stale stale',
         'health_all_ok' => 'Every check passes',
     ],
@@ -38,6 +37,8 @@ return [
         'latency_summary' => 'Highest p95 :p95, highest p50 :p50 in the period.',
         'peak' => 'Peak :value, :time',
         'no_data' => 'No data in this period',
+        // Legend of the shaded buckets in the response times chart.
+        'no_requests' => 'No requests',
         'summary' => ':total :unit in the period. :peak',
     ],
     'latest_issues' => [

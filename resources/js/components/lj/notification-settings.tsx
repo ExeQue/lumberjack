@@ -1,6 +1,5 @@
 import { useForm } from '@inertiajs/react';
 import { Fragment } from 'react';
-import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -218,11 +217,6 @@ export function NotificationSettings({
 
     return (
         <div className="space-y-6">
-            <Heading
-                variant="small"
-                title={t('settings.notifications.title')}
-                description={t('settings.notifications.description')}
-            />
             <form
                 className="space-y-4"
                 onSubmit={(e) => {

@@ -66,6 +66,10 @@ return [
         'notifications' => 'Notifications',
         'security' => 'Security',
         'appearance' => 'Appearance',
+        // One line under each tab's title.
+        'profile_description' => 'Your name and email address, and deleting your account.',
+        'security_description' => 'Your password and two-factor authentication.',
+        'appearance_description' => 'How Lumberjack looks for you: light, dark or following your system.',
     ],
     'general' => [
         'title' => 'General',
