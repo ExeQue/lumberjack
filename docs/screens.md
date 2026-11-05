@@ -391,7 +391,7 @@ A code lasts 10 minutes and works once; the TV shows a new one when it runs out.
 team admins pair TVs. **Open on a TV** in the designer shows the same steps, with the
 `/tv` address as a QR code for a TV stick or kiosk browser with a camera. Below them, team
 admins see the TVs already paired: **Show here** puts the screen on one at once, in place of
-what it showed (a playlist included).
+what it showed (a playlist included), and each one's rotation can be set there too.
 
 ### Several screens on one computer
 

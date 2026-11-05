@@ -236,12 +236,12 @@ describe('the pages', function () {
         $admin = User::factory()->inTeam($this->screen->team, TeamRole::Admin)->create();
         $pc = Device::factory()->for($this->screen->team)->create(['name' => 'Office PC']);
         $hall = Display::factory()->onDevice($pc, 1)->create(['name' => 'Hall', 'playlist' => [$this->screen->id]]);
-        $lobby = Display::factory()->onDevice($pc, 2)->create(['name' => 'Lobby']);
+        $lobby = Display::factory()->onDevice($pc, 2)->rotated(90)->create(['name' => 'Lobby']);
         Display::factory()->create(['name' => 'Another team']);
 
         $this->actingAs($admin)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page->where('paired', [
-            ['uuid' => $hall->uuid, 'name' => 'Office PC, Hall', 'shows_this' => true],
-            ['uuid' => $lobby->uuid, 'name' => 'Office PC, Lobby', 'shows_this' => false],
+            ['uuid' => $hall->uuid, 'name' => 'Office PC, Hall', 'shows_this' => true, 'rotation' => 0],
+            ['uuid' => $lobby->uuid, 'name' => 'Office PC, Lobby', 'shows_this' => false, 'rotation' => 90],
         ]));
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page->where('paired', []));
 

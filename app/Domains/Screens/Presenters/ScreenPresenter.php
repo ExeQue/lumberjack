@@ -164,7 +164,7 @@ class ScreenPresenter
      * The team's paired displays, to put the screen on one from the designer: only for
      * whoever may change displays (team admins).
      *
-     * @return list<array{uuid: string, name: string, shows_this: bool}>
+     * @return list<array{uuid: string, name: string, shows_this: bool, rotation: int}>
      */
     public function pairedDisplays(Screen $screen, User $user): array
     {
@@ -179,6 +179,7 @@ class ScreenPresenter
             'uuid' => $d->uuid,
             'name' => $d->fullName(),
             'shows_this' => in_array($screen->id, $d->screenIds(), true),
+            'rotation' => (int) $d->rotation,
         ])->all());
     }
 
