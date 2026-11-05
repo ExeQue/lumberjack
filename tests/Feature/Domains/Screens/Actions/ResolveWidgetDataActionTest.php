@@ -234,15 +234,18 @@ describe('the edges of each type', function () {
         expect($empty['value'])->toBeNull()->and($empty['state'])->toBeNull()->and($empty)->not->toHaveKey('release');
     });
 
-    it('overlays the previous period on a chart, moved onto its own times', function () {
+    it('overlays the previous period on a chart, moved onto its own times', function (array $options) {
         $this->createRequestCount($this->project, 5, minute: now()->subDay()->subHours(2)->startOfMinute());
 
-        $series = collect(($this->resolve)(WidgetType::Chart, 'requests', ['overlay_previous' => true])['series'])->keyBy('name');
+        $series = collect(($this->resolve)(WidgetType::Chart, 'requests', ['overlay_previous' => true, ...$options])['series'])->keyBy('name');
 
         expect($series->has('previous'))->toBeTrue()
             ->and(collect($series['previous']['points'])->sum('v'))->toEqual(5)
             ->and(collect($series['previous']['points'])->every(fn (array $p): bool => $p['t'] >= now()->subDay()->subHour()->toIso8601ZuluString()))->toBeTrue();
-    });
+    })->with([
+        'without a split' => [[]],
+        'split by nothing, as the designer stores it' => [['split_by' => 'none']],
+    ]);
 
     it('colors scheduled tasks by how they last ran, failed first', function () {
         ScheduledTask::factory()->for($this->project)->create(['name' => 'fine', 'last_status' => ScheduledRunStatus::Finished]);

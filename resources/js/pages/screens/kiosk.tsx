@@ -237,12 +237,14 @@ export default function Kiosk({
                     shown.map((widget) => (
                         <WidgetTile
                             key={widget.id}
+                            data-widget={widget.id}
                             widget={widget}
                             schema={schema}
                             sources={sources}
                             data={data[widget.id]}
                             now={now}
                             timezone={screen.timezone}
+                            clockFormat={screen.clock_format}
                             flash={flashing[widget.id]}
                             onStatus={onStatus}
                             aria-hidden={widget.type === 'empty' || undefined}
