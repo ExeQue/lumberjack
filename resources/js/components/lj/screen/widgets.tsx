@@ -1739,7 +1739,10 @@ function List({ widget, schema, data, now, t }: BodyProps) {
             ? // A calendar's key is short but can be "Mon All day": all of it.
               narrow || data.source === 'calendar'
                 ? 'minmax(0, max-content)'
-                : 'minmax(0, 6.5em)'
+                : // An alert channel ("On-call infra", "#shop-alerts") needs more.
+                  data.source === 'alert_feed'
+                  ? 'fit-content(13em)'
+                  : 'minmax(0, 6.5em)'
             : null,
         'minmax(0, 1fr)',
         columns.tag ? 'max-content' : null,
@@ -2145,43 +2148,67 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                               }
                     }
                 >
-                    {visible.map((c) => (
-                        // Each card is a small single health tile: the name, the state
-                        // large in its color, and how long it has been so.
-                        <div
-                            key={c.uuid}
-                            title={c.name}
-                            className="[container-type:size] flex min-h-0 min-w-0 flex-col items-center justify-center gap-[0.15em] overflow-hidden rounded-md border px-2 text-center"
-                            style={{
-                                background:
-                                    CARD_BG[c.state] ?? 'var(--s-panel-2)',
-                                borderColor:
-                                    c.state === 'ok'
-                                        ? 'var(--s-green-line)'
-                                        : STATE_COLOR[c.state],
-                            }}
-                        >
-                            <span className="max-w-full truncate text-[0.75em] font-semibold">
-                                {c.name}
-                            </span>
-                            <span
-                                className="font-mono leading-none font-bold"
-                                // Grows with the card, as the state does on a 1 x 1 tile.
+                    {visible.map((c) => {
+                        // Stale or pending says nothing about the check: quiet, so down
+                        // and degraded stand out.
+                        const quiet =
+                            c.state === 'stale' || c.state === 'pending';
+
+                        return (
+                            // Each card is a small single health tile: the name, the state
+                            // large in its color, and how long it has been so.
+                            <div
+                                key={c.uuid}
+                                title={c.name}
+                                className="[container-type:size] flex min-h-0 min-w-0 flex-col items-center justify-center gap-[0.15em] overflow-hidden rounded-md border px-2 text-center"
                                 style={{
-                                    color: STATE_COLOR[c.state],
-                                    fontSize: 'max(1.2em, min(32cqh, 18cqw))',
+                                    background:
+                                        CARD_BG[c.state] ?? 'var(--s-panel-2)',
+                                    borderColor:
+                                        c.state === 'ok'
+                                            ? 'var(--s-green-line)'
+                                            : quiet
+                                              ? 'var(--s-line)'
+                                              : STATE_COLOR[c.state],
                                 }}
                             >
-                                {word(c.state)}
-                            </span>
-                            <span
-                                className="max-w-full truncate text-[0.68em]"
-                                style={{ color: STATE_COLOR[c.state] }}
-                            >
-                                {c.since ? lasted(c.since, now) : '\u00a0'}
-                            </span>
-                        </div>
-                    ))}
+                                <span
+                                    className="max-w-full truncate text-[0.9em] font-semibold"
+                                    style={{
+                                        color: quiet
+                                            ? 'var(--s-ink-3)'
+                                            : undefined,
+                                    }}
+                                >
+                                    {c.name}
+                                </span>
+                                <span
+                                    className="font-mono leading-none font-bold"
+                                    // Grows with the card, as the state does on a 1 x 1 tile.
+                                    style={{
+                                        color: quiet
+                                            ? 'var(--s-ink-4)'
+                                            : STATE_COLOR[c.state],
+                                        fontSize: quiet
+                                            ? 'max(1em, min(16cqh, 9cqw))'
+                                            : 'max(1.2em, min(32cqh, 18cqw))',
+                                    }}
+                                >
+                                    {word(c.state)}
+                                </span>
+                                <span
+                                    className="max-w-full truncate text-[0.8em]"
+                                    style={{
+                                        color: quiet
+                                            ? 'var(--s-ink-4)'
+                                            : STATE_COLOR[c.state],
+                                    }}
+                                >
+                                    {c.since ? lasted(c.since, now) : '\u00a0'}
+                                </span>
+                            </div>
+                        );
+                    })}
                     {more > 0 && (
                         <div className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-md border border-(--s-line) bg-(--s-panel-2) px-2 text-center text-[0.8em] text-(--s-ink-2)">
                             <span className="truncate">{moreText}</span>

@@ -273,7 +273,7 @@ function DeviceCard({
     };
 
     return (
-        <Card aria-labelledby={headingId}>
+        <Card aria-labelledby={headingId} className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
                 <div className="flex min-w-0 flex-col gap-1">
                     <h2
@@ -349,7 +349,7 @@ function DeviceCard({
                     </div>
                 )}
             </div>
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
                 <table className={tableClass}>
                     <thead>
                         <tr>
@@ -430,7 +430,10 @@ function DeviceCard({
                                         {canManage && (
                                             <button
                                                 type="button"
-                                                className="text-amber hover:underline"
+                                                title={t(
+                                                    'screens.displays.rotate_hint',
+                                                )}
+                                                className="min-h-6 cursor-pointer text-amber hover:underline"
                                                 onClick={() =>
                                                     onPlaylist(display)
                                                 }
@@ -504,7 +507,7 @@ function DeviceCard({
                                               'screens.displays.unknown_viewport',
                                           )}
                                 </td>
-                                <td className={tdClass}>
+                                <td className={`${tdClass} whitespace-nowrap`}>
                                     <Status
                                         online={display.online}
                                         lastSeen={display.last_seen_at}

@@ -58,6 +58,12 @@ import {
     DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { xsrf } from '@/lib/http';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -399,6 +405,8 @@ export default function EditScreen(props: Props) {
     const [incident, setIncident] = useState(false);
     const [query, setQuery] = useState('');
     const [closed, setClosed] = useState<string[]>([]);
+    // Narrow screens stack the panes, the grid first: the palette waits behind its title.
+    const [palette, setPalette] = useState(false);
     const [dialog, setDialog] = useState<'tv' | 'share' | null>(null);
     // What is dragged: a palette kind or a widget, its size, and which of its cells is held.
     const drag = useRef<{
@@ -1199,7 +1207,10 @@ export default function EditScreen(props: Props) {
                     aria-label={t('common.breadcrumb')}
                     className="flex items-center gap-2.5 text-ink-2"
                 >
-                    <Link href={screensIndex().url} className="hover:text-ink">
+                    <Link
+                        href={screensIndex().url}
+                        className="inline-flex min-h-6 items-center hover:text-ink"
+                    >
                         {t('screens.title')}
                     </Link>
                     <span aria-hidden="true">/</span>
@@ -1228,46 +1239,54 @@ export default function EditScreen(props: Props) {
                         />
                         {statusText}
                     </span>
-                    <Button
-                        title={t('screens.designer.reload_hint')}
-                        onClick={async () => {
-                            const response = await fetch(
-                                reloadRoute(screen.uuid).url,
-                                {
-                                    method: 'POST',
-                                    credentials: 'same-origin',
-                                    headers: {
-                                        Accept: 'application/json',
-                                        'X-XSRF-TOKEN': xsrf(),
-                                    },
-                                },
-                            ).catch(() => null);
-                            const json = (await response
-                                ?.json()
-                                .catch(() => null)) as {
-                                message?: string;
-                            } | null;
-                            const message =
-                                json?.message ??
-                                t('screens.designer.reload_failed');
+                    <DropdownMenu>
+                        <DropdownMenuTrigger className={buttonClass()}>
+                            {t('screens.actions.more')}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                                title={t('screens.designer.reload_hint')}
+                                onSelect={async () => {
+                                    const response = await fetch(
+                                        reloadRoute(screen.uuid).url,
+                                        {
+                                            method: 'POST',
+                                            credentials: 'same-origin',
+                                            headers: {
+                                                Accept: 'application/json',
+                                                'X-XSRF-TOKEN': xsrf(),
+                                            },
+                                        },
+                                    ).catch(() => null);
+                                    const json = (await response
+                                        ?.json()
+                                        .catch(() => null)) as {
+                                        message?: string;
+                                    } | null;
+                                    const message =
+                                        json?.message ??
+                                        t('screens.designer.reload_failed');
 
-                            if (response?.ok) {
-                                toast.success(message);
-                            } else {
-                                toast.error(message);
-                            }
-                        }}
-                    >
-                        {t('screens.designer.reload')}
-                    </Button>
-                    <a
-                        href={exportRoute(screen.uuid).url}
-                        download
-                        title={t('screens.actions.export_hint')}
-                        className={buttonClass()}
-                    >
-                        {t('screens.actions.export')}
-                    </a>
+                                    if (response?.ok) {
+                                        toast.success(message);
+                                    } else {
+                                        toast.error(message);
+                                    }
+                                }}
+                            >
+                                {t('screens.designer.reload')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <a
+                                    href={exportRoute(screen.uuid).url}
+                                    download
+                                    title={t('screens.actions.export_hint')}
+                                >
+                                    {t('screens.actions.export')}
+                                </a>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button onClick={() => setDialog('tv')}>
                         {t('screens.open_tv.button')}
                     </Button>
@@ -1429,101 +1448,125 @@ export default function EditScreen(props: Props) {
                 </DialogContent>
             </Dialog>
 
-            {/* Wide screens: the top bar, then three columns that fill the rest and scroll on their own. */}
+            {/* Wide screens: the top bar, then three columns that fill the rest and scroll on their own.
+                Narrow ones stack them: the grid, the palette, then the settings. */}
             <div className="flex min-h-0 flex-1 flex-wrap lg:flex-nowrap">
                 <aside
                     aria-label={t('screens.palette.title')}
-                    className="flex w-full flex-col gap-2 border-line p-5 lg:w-[240px] lg:flex-none lg:[scrollbar-gutter:stable] lg:overflow-y-auto lg:border-r"
+                    className="order-1 flex w-full flex-col gap-2 border-b border-line p-5 lg:order-none lg:w-[200px] lg:flex-none lg:[scrollbar-gutter:stable] lg:overflow-y-auto lg:border-r lg:border-b-0 2xl:w-[240px]"
                 >
                     <h2 className="text-[11px] font-semibold tracking-wide text-ink-3 uppercase">
-                        {t('screens.palette.title')}
+                        <button
+                            type="button"
+                            aria-expanded={palette}
+                            onClick={() => setPalette((open) => !open)}
+                            className="flex min-h-6 w-full items-center justify-between uppercase lg:pointer-events-none"
+                        >
+                            {t('screens.palette.title')}
+                            <span aria-hidden="true" className="lg:hidden">
+                                {palette ? '▾' : '▸'}
+                            </span>
+                        </button>
                     </h2>
-                    <Input
-                        type="search"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder={t('screens.palette.search')}
-                        aria-label={t('screens.palette.search')}
-                    />
-                    {groups.map((group) => {
-                        const open = q ? true : !closed.includes(group.id);
-
-                        return (
-                            <div
-                                key={group.id}
-                                role="group"
-                                aria-label={t(`screens.palette.${group.id}`)}
-                                className="flex flex-col gap-1.5"
-                            >
-                                <button
-                                    type="button"
-                                    aria-expanded={open}
-                                    onClick={() =>
-                                        setClosed((c) =>
-                                            c.includes(group.id)
-                                                ? c.filter(
-                                                      (x) => x !== group.id,
-                                                  )
-                                                : [...c, group.id],
-                                        )
-                                    }
-                                    className="flex items-center justify-between pt-1.5 text-xs font-semibold tracking-wide text-ink-2"
-                                >
-                                    <span>
-                                        {t(`screens.palette.${group.id}`)}
-                                    </span>
-                                    <span
-                                        className="text-ink-3"
-                                        aria-hidden="true"
-                                    >
-                                        {group.items.length} {open ? '▾' : '▸'}
-                                    </span>
-                                </button>
-                                {open &&
-                                    group.items.map((kind) => (
-                                        <button
-                                            key={kind}
-                                            type="button"
-                                            draggable
-                                            onDragStart={(e) => {
-                                                e.dataTransfer.setData(
-                                                    'text/plain',
-                                                    kind,
-                                                );
-                                                e.dataTransfer.effectAllowed =
-                                                    'copy';
-                                                startDrag({
-                                                    kind,
-                                                    w: 1,
-                                                    h: 1,
-                                                    dx: 0,
-                                                    dy: 0,
-                                                });
-                                            }}
-                                            onDragEnd={endDrag}
-                                            onClick={() => add(kind)}
-                                            // Its own layer: the drag picture keeps the rounded corners clear.
-                                            className="flex transform-gpu cursor-grab flex-col gap-0.5 rounded-lg border border-line bg-panel px-3 py-2 text-left hover:border-amber"
-                                        >
-                                            <span className="text-sm font-semibold">
-                                                {t(`screens.kinds.${kind}`)}
-                                            </span>
-                                            <span className="text-xs text-ink-3">
-                                                {t(`screens.hints.${kind}`)}
-                                            </span>
-                                        </button>
-                                    ))}
-                            </div>
-                        );
-                    })}
-                    {groups.length === 0 && (
-                        <span className="text-xs text-ink-3">
-                            {t('screens.palette.none')}
+                    <div
+                        className={cn(
+                            'flex flex-col gap-2',
+                            !palette && 'max-lg:hidden',
+                        )}
+                    >
+                        <span className="hidden text-xs text-ink-3 pointer-coarse:block">
+                            {t('screens.palette.tap_hint')}
                         </span>
-                    )}
-                    <span className="text-xs text-ink-3">
-                        {t('screens.palette.hint')}
-                    </span>
+                        <Input
+                            type="search"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder={t('screens.palette.search')}
+                            aria-label={t('screens.palette.search')}
+                        />
+                        {groups.map((group) => {
+                            const open = q ? true : !closed.includes(group.id);
+
+                            return (
+                                <div
+                                    key={group.id}
+                                    role="group"
+                                    aria-label={t(
+                                        `screens.palette.${group.id}`,
+                                    )}
+                                    className="flex flex-col gap-1.5"
+                                >
+                                    <button
+                                        type="button"
+                                        aria-expanded={open}
+                                        onClick={() =>
+                                            setClosed((c) =>
+                                                c.includes(group.id)
+                                                    ? c.filter(
+                                                          (x) => x !== group.id,
+                                                      )
+                                                    : [...c, group.id],
+                                            )
+                                        }
+                                        className="flex min-h-6 items-center justify-between pt-1.5 text-xs font-semibold tracking-wide text-ink-2"
+                                    >
+                                        <span>
+                                            {t(`screens.palette.${group.id}`)}
+                                        </span>
+                                        <span
+                                            className="text-ink-3"
+                                            aria-hidden="true"
+                                        >
+                                            {group.items.length}{' '}
+                                            {open ? '▾' : '▸'}
+                                        </span>
+                                    </button>
+                                    {open &&
+                                        group.items.map((kind) => (
+                                            <button
+                                                key={kind}
+                                                type="button"
+                                                draggable
+                                                onDragStart={(e) => {
+                                                    e.dataTransfer.setData(
+                                                        'text/plain',
+                                                        kind,
+                                                    );
+                                                    e.dataTransfer.effectAllowed =
+                                                        'copy';
+                                                    startDrag({
+                                                        kind,
+                                                        w: 1,
+                                                        h: 1,
+                                                        dx: 0,
+                                                        dy: 0,
+                                                    });
+                                                }}
+                                                onDragEnd={endDrag}
+                                                onClick={() => add(kind)}
+                                                // Its own layer: the drag picture keeps the rounded corners clear.
+                                                className="flex transform-gpu cursor-grab flex-col gap-0.5 rounded-lg border border-line bg-panel px-3 py-2 text-left hover:border-amber"
+                                            >
+                                                <span className="text-sm font-semibold">
+                                                    {t(`screens.kinds.${kind}`)}
+                                                </span>
+                                                <span className="text-xs text-ink-3">
+                                                    {t(`screens.hints.${kind}`)}
+                                                </span>
+                                            </button>
+                                        ))}
+                                </div>
+                            );
+                        })}
+                        {groups.length === 0 && (
+                            <span className="text-xs text-ink-3">
+                                {t('screens.palette.none')}
+                            </span>
+                        )}
+                        <span className="text-xs text-ink-3 pointer-coarse:hidden">
+                            {t('screens.palette.hint')}
+                        </span>
+                    </div>
                 </aside>
 
                 <section
@@ -1908,7 +1951,7 @@ export default function EditScreen(props: Props) {
 
                 <aside
                     aria-label={t('screens.inspector.label')}
-                    className="flex w-full flex-col gap-4 border-line bg-panel p-5 lg:w-[340px] lg:flex-none lg:[scrollbar-gutter:stable] lg:overflow-y-auto lg:border-l"
+                    className="order-2 flex w-full flex-col gap-4 border-line bg-panel p-5 lg:order-none lg:w-[320px] lg:flex-none lg:[scrollbar-gutter:stable] lg:overflow-y-auto lg:border-l 2xl:w-[340px]"
                 >
                     {current ? (
                         <WidgetInspector
