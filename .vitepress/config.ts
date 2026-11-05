@@ -37,6 +37,7 @@ export default defineConfig({
     // Only README.md and docs/ are pages; everything else in the repository is code.
     srcExclude: [
         '.ai/**',
+        'AGENTS.md',
         '.github/**',
         'app/**',
         'bootstrap/**',
