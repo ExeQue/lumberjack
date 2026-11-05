@@ -69,4 +69,16 @@ class ScreenFactory extends Factory
             'rotate' => [['source' => 'checks', 'seconds' => 20, 'options' => ['checks' => [$checks[0]->uuid]], 'scope' => ['projects' => [$checks[0]->project->uuid]]]],
         ]]]);
     }
+
+    /**
+     * Plus a QR code widget on row 3 with these options (content, url, ssid and the rest).
+     *
+     * @param  array<string, mixed>  $options
+     */
+    public function withQrWidget(array $options = []): static
+    {
+        return $this->state(fn (array $attributes) => ['widgets' => [...$attributes['widgets'], [
+            'id' => 'qr', 'type' => 'qr', 'source' => null, 'rotate' => [], 'x' => 3, 'y' => 3, 'w' => 1, 'h' => 1, 'title' => null, 'options' => $options, 'scope' => [],
+        ]]]);
+    }
 }

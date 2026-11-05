@@ -304,3 +304,9 @@
 .lj-kiosk[data-idle='true'] * {
     cursor: none !important;
 }
+
+/* A QR code widget carries both pictures; the screen's theme shows one. */
+.lj-screen[data-theme='light'] .lj-qr-dark,
+.lj-screen:not([data-theme='light']) .lj-qr-light {
+    display: none;
+}

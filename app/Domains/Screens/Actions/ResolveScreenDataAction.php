@@ -7,6 +7,7 @@ namespace App\Domains\Screens\Actions;
 use App\Domains\Screens\Data\WidgetScope;
 use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Screens\Support\ScreenQr;
 use App\Domains\Screens\Support\WidgetSchema;
 use App\Domains\Screens\Support\WidgetSources;
 use Illuminate\Support\Facades\Cache;
@@ -16,7 +17,7 @@ use Throwable;
  * The data of a screen's widgets in one go, or of one widget when only its settings
  * changed: per widget, per source it shows (the picked one and those it rotates
  * through, each with its own settings over the widget's, see WidgetSchema::rotation()),
- * what ResolveWidgetDataAction answers. Identical questions are answered from a short
+ * what ResolveWidgetDataAction answers; a QR code widget's picture under qr. Identical questions are answered from a short
  * cache, so a wall of kiosks asks Postgres once, not once per kiosk.
  */
 class ResolveScreenDataAction
@@ -38,7 +39,17 @@ class ResolveScreenDataAction
         foreach ($screen->widgets as $widget) {
             $type = WidgetType::tryFrom((string) ($widget['type'] ?? ''));
 
-            if ($type === null || ($widgetId !== null && $widget['id'] !== $widgetId)) {
+            if ($widgetId !== null && $widget['id'] !== $widgetId) {
+                continue;
+            }
+
+            if (($widget['type'] ?? null) === 'qr') {
+                $data[$widget['id']]['qr'] = $this->qr((array) ($widget['options'] ?? []));
+
+                continue;
+            }
+
+            if ($type === null) {
                 continue;
             }
 
@@ -122,5 +133,25 @@ class ResolveScreenDataAction
         ksort($options);
 
         return $options;
+    }
+
+    /**
+     * {svg, light}: the picture for a dark screen and for a light one (a scheduled theme
+     * switches between them); null while there is nothing to encode; the whole answer null when it cannot
+     * be encoded (a link that is not one). The same options draw the same picture, so it
+     * is kept for a day.
+     *
+     * @param  array<string, mixed>  $options
+     * @return array{svg: string|null, light: string|null}|null
+     */
+    private function qr(array $options): ?array
+    {
+        return Cache::remember('screen-qr:'.md5(serialize($options)), 86400, function () use ($options): ?array {
+            try {
+                return ['svg' => ScreenQr::widgetSvg($options), 'light' => ScreenQr::widgetSvg($options, 'lumberjack-light')];
+            } catch (Throwable) {
+                return null;
+            }
+        });
     }
 }

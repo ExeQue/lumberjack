@@ -506,6 +506,8 @@ export function WidgetTile({
                 {t('screens.kinds.empty')}
             </span>
         ) : null;
+    } else if (widget.type === 'qr') {
+        body = <QrCodeTile widget={widget} schema={schema} data={data?.qr} />;
     } else if (widget.type === 'clock') {
         body = (
             <Clock
@@ -2142,6 +2144,57 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                 </ul>
             )}
         </div>
+    );
+}
+
+/** A link, wifi network or text as a QR code, drawn on the server, with a line under it. */
+function QrCodeTile({
+    widget,
+    schema,
+    data,
+}: {
+    widget: Widget;
+    schema: Schema;
+    data: Record<string, unknown> | null | undefined;
+}) {
+    const t = useT();
+    const caption = option<string>(schema, widget, 'caption');
+    const svg = typeof data?.svg === 'string' ? data.svg : null;
+    const light = typeof data?.light === 'string' ? data.light : svg;
+    const box =
+        'aspect-square min-h-0 w-auto max-w-full flex-1 self-center overflow-hidden rounded-[0.4em] [&_svg]:size-full';
+
+    return (
+        <>
+            {svg ? (
+                // Both pictures: a scheduled theme switches without asking again.
+                <>
+                    <div
+                        className={cn(box, 'lj-qr-dark')}
+                        dangerouslySetInnerHTML={{ __html: svg }}
+                    />
+                    <div
+                        className={cn(box, 'lj-qr-light')}
+                        dangerouslySetInnerHTML={{ __html: light ?? svg }}
+                    />
+                </>
+            ) : (
+                <span className="lj-tile-small m-auto">
+                    {t(
+                        data === undefined
+                            ? 'screens.widget.loading'
+                            : data === null
+                              ? 'screens.qr.invalid'
+                              : 'screens.qr.empty',
+                    )}
+                </span>
+            )}
+            {caption && (
+                <span className="lj-tile-small shrink-0 text-center">
+                    {caption}
+                </span>
+            )}
+        </>
     );
 }
 

@@ -31,6 +31,26 @@ final class ScreenQr
     }
 
     /**
+     * A QR code widget's picture, from its options: a link, a wifi network or any text.
+     * Null while there is nothing to encode yet.
+     *
+     * @param  array<string, mixed>  $options
+     * @param  'lumberjack'|'lumberjack-light'  $style  the dark screen's or the light one's
+     */
+    public static function widgetSvg(array $options, string $style = 'lumberjack'): ?string
+    {
+        $value = fn (string $key): string => trim((string) ($options[$key] ?? ''));
+
+        $qr = match ($options['content'] ?? 'link') {
+            'wifi' => $value('ssid') === '' ? null : Qr::wifi($value('ssid'), $value('password') ?: null, $value('security') ?: 'WPA', (bool) ($options['hidden_network'] ?? false)),
+            'text' => $value('qr_text') === '' ? null : Qr::text($value('qr_text')),
+            default => $value('url') === '' ? null : Qr::url($value('url')),
+        };
+
+        return $qr?->style($style)->logo(file: public_path('favicon.svg'), size: self::LOGO_SIZE, shape: 'circle')->svg()->contents();
+    }
+
+    /**
      * The on screen variant as PNG: what a camera sees of the SVG. The mark as PNG, since
      * GD, which the Docker image draws with, cannot read SVG.
      */

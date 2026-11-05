@@ -75,8 +75,9 @@ export function useScreenData(
     const [updatedAt, setUpdatedAt] = useState<number | null>(null);
     const fetched = useRef<Record<string, string>>({});
     const widgetsRef = useRef<Widget[]>([]);
-    const dataWidgets = screen.widgets.filter((w) =>
-        DATA_KINDS.includes(w.type),
+    // A QR code's picture is drawn on the server, so it comes with the data.
+    const dataWidgets = screen.widgets.filter(
+        (w) => DATA_KINDS.includes(w.type) || w.type === 'qr',
     );
     const keys = dataWidgets
         .map((w) => `${w.id}:${dataKey(schema, w)}`)

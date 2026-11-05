@@ -452,6 +452,16 @@ export function WidgetInspector({
         scope: boolean,
         target: Target = own,
     ): ReactNode => {
+        // A field for another choice (the QR code's wifi fields while it holds a link).
+        if (
+            field.when &&
+            !Object.entries(field.when).every(([key, values]) =>
+                values.includes(String(option(catalog.schema, widget, key))),
+            )
+        ) {
+            return null;
+        }
+
         const span = field.span === 2 ? 'col-span-2' : '';
         const id = (key: string) => `w-${widget.id}-${target.prefix}${key}`;
         const inherited = target.inherited;
@@ -974,9 +984,14 @@ export function WidgetInspector({
                                         ? t(
                                               `screens.fields.filter.all.${filterOn}`,
                                           )
-                                        : t(
-                                              `screens.fields.${field.key}.placeholder`,
-                                          )
+                                        : field.key === 'caption'
+                                          ? // What the line says fits what the code holds.
+                                            t(
+                                                `screens.fields.caption.placeholders.${option(catalog.schema, widget, 'content')}`,
+                                            )
+                                          : t(
+                                                `screens.fields.${field.key}.placeholder`,
+                                            )
                             }
                             onChange={(e) =>
                                 scope
