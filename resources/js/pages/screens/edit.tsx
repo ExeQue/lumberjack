@@ -1059,6 +1059,7 @@ export default function EditScreen(props: Props) {
                     data={data[widget.id]}
                     now={now}
                     timezone={screen.timezone}
+                    clockFormat={screen.clock_format}
                     pinned={widget.id === selected ? pinned : undefined}
                     incident={incident}
                     designer

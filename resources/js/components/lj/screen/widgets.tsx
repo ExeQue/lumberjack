@@ -290,11 +290,12 @@ function niceCeil(n: number): number {
     );
 }
 
-function timeOf(iso: string, withDate: boolean): string {
+function timeOf(iso: string, withDate: boolean, twelveHour: boolean): string {
     return new Intl.DateTimeFormat(document.documentElement.lang || 'en', {
         ...(withDate ? { day: 'numeric', month: 'short' } : {}),
         hour: '2-digit',
         minute: '2-digit',
+        hourCycle: twelveHour ? 'h12' : 'h23',
     }).format(new Date(iso));
 }
 
@@ -339,6 +340,8 @@ export type TileProps = {
     now: number;
     /** The screen's time zone, for a clock without its own; null: the browser's. */
     timezone?: string | null;
+    /** The screen's 24 or 12 hours, for the times on a chart's axis. */
+    clockFormat?: '24' | '12';
     /** The designer holds the selected tile on the value its inspector has open. */
     pinned?: number;
     incident?: boolean;
@@ -363,6 +366,7 @@ export function WidgetTile({
     data,
     now,
     timezone = null,
+    clockFormat = '24',
     pinned,
     incident = false,
     designer = false,
@@ -549,7 +553,15 @@ export function WidgetTile({
             <span className="lj-tile-small">{t('screens.widget.failed')}</span>
         );
     } else {
-        const bodyProps = { widget, schema, data: payload, now, t, textSize };
+        const bodyProps = {
+            widget,
+            schema,
+            data: payload,
+            now,
+            t,
+            textSize,
+            twelveHour: clockFormat === '12',
+        };
 
         body =
             widget.type === 'stat' ? (
@@ -753,6 +765,8 @@ type BodyProps = {
     now: number;
     t: Translate;
     textSize: string;
+    /** The screen's clock in 12 hours, for times the body draws. */
+    twelveHour: boolean;
 };
 
 /**
@@ -1202,7 +1216,7 @@ function seriesColor(source: string, i: number, split: boolean): string {
 
 type Series = { name: string; points: { t: string; v: number | null }[] };
 
-function Chart({ widget, schema, data, t }: BodyProps) {
+function Chart({ widget, schema, data, t, twelveHour }: BodyProps) {
     const opt = <T,>(key: string) => option<T>(schema, widget, key);
     const all = (data.series as Series[]) ?? [];
     const previous = all.find((s) => s.name === 'previous');
@@ -1250,6 +1264,7 @@ function Chart({ widget, schema, data, t }: BodyProps) {
                   withDate &&
                       spansDays &&
                       (previous === undefined || day(previous) !== day(iso)),
+                  twelveHour,
               )
             : '';
     // Four bands on a tile two rows or taller, two on a one row tile.
@@ -1721,7 +1736,8 @@ function List({ widget, schema, data, now, t }: BodyProps) {
     };
     const template = [
         columns.key
-            ? narrow
+            ? // A calendar's key is short but can be "Mon All day": all of it.
+              narrow || data.source === 'calendar'
                 ? 'minmax(0, max-content)'
                 : 'minmax(0, 6.5em)'
             : null,
@@ -2365,8 +2381,9 @@ function Overview({ widget, schema, data, t }: BodyProps) {
                                     : ROW_COLOR[p.state],
                         }}
                     >
+                        {/* A long name takes a second line before it is cut. */}
                         <span
-                            className="max-w-full truncate leading-tight font-semibold"
+                            className="line-clamp-2 max-w-full leading-tight font-semibold break-words"
                             style={{
                                 fontSize: 'max(0.75em, min(24cqh, 13cqw))',
                             }}
@@ -2760,8 +2777,25 @@ const MESSAGE_TONE: Record<string, Status> = {
 function Message({ widget, schema }: { widget: Widget; schema: Schema }) {
     const opt = <T,>(key: string) => option<T>(schema, widget, key);
     const text = opt<string | null>('message') ?? '';
+    const textSize = opt<string>('text_size') ?? 'auto';
+    const [ref, room] = useSize<HTMLDivElement>();
+    // Fit to tile: no larger than lets its characters fill the room under the title
+    // (about 0.55em wide and 1.25em high each), with some to spare for the line breaks.
+    const fit =
+        room.w * room.h > 0
+            ? Math.floor(
+                  0.85 *
+                      Math.sqrt(
+                          (room.w * room.h) /
+                              (Math.max(1, text.length) * 0.55 * 1.25),
+                      ),
+              )
+            : null;
     const size: CSSProperties = {
-        fontSize: BIG_SIZE[opt<string>('text_size') ?? 'auto'],
+        fontSize:
+            textSize === 'auto' && fit !== null
+                ? `min(${BIG_SIZE.auto}, ${fit}px)`
+                : BIG_SIZE[textSize],
     };
 
     if (opt<boolean>('scroll')) {
@@ -2778,9 +2812,17 @@ function Message({ widget, schema }: { widget: Widget; schema: Schema }) {
     }
 
     return (
-        <span className="font-semibold whitespace-pre-line" style={size}>
-            {text}
-        </span>
+        <div
+            ref={ref}
+            className={cn(
+                'flex min-h-0 w-full flex-1 flex-col overflow-hidden',
+                opt<string>('valign') === 'middle' && 'justify-center',
+            )}
+        >
+            <span className="font-semibold whitespace-pre-line" style={size}>
+                {text}
+            </span>
+        </div>
     );
 }
 

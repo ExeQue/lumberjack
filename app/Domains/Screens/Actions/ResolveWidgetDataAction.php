@@ -232,7 +232,8 @@ class ResolveWidgetDataAction
         $window = MetricWindow::forPeriod($scope->period);
         $metric = $source->metric ?? Metric::Requests;
         $top = max(1, min(20, (int) ($options['top'] ?? 5)));
-        $split = is_string($options['split_by'] ?? null) ? $options['split_by'] : null;
+        // The designer's default "none" splits nothing, like no split at all.
+        $split = is_string($options['split_by'] ?? null) && $options['split_by'] !== 'none' ? $options['split_by'] : null;
         $series = [];
 
         if ($split === 'project') {
