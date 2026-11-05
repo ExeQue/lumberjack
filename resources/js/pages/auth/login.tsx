@@ -49,7 +49,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                     {canResetPassword && (
                                         <TextLink
                                             href={request()}
-                                            className="ml-auto text-sm"
+                                            className="ml-auto inline-block py-1 text-sm"
                                             tabIndex={5}
                                         >
                                             Forgot your password?
@@ -73,7 +73,12 @@ export default function Login({ status, canResetPassword }: Props) {
                                     name="remember"
                                     tabIndex={3}
                                 />
-                                <Label htmlFor="remember">Remember me</Label>
+                                <Label
+                                    htmlFor="remember"
+                                    className="cursor-pointer py-2"
+                                >
+                                    Remember me
+                                </Label>
                             </div>
 
                             <Button

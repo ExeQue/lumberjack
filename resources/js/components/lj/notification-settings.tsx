@@ -159,7 +159,7 @@ export function NotificationMatrix({
                                     </div>
                                 </td>
                                 {VIAS.map((via) => (
-                                    <td key={via} className="py-2">
+                                    <td key={via} className="p-0">
                                         {value[kind]?.[via] === undefined ? (
                                             <span
                                                 className="text-muted-foreground"
@@ -175,13 +175,20 @@ export function NotificationMatrix({
                                                 </span>
                                             </span>
                                         ) : (
-                                            <Checkbox
-                                                checked={value[kind][via]}
-                                                onCheckedChange={(on) =>
-                                                    set(kind, via, on === true)
-                                                }
-                                                aria-label={`${t(`settings.notifications.${kind}.label`)}: ${t(`settings.notifications.${via}`)}`}
-                                            />
+                                            // The whole cell is the click target, not just the box.
+                                            <label className="flex min-h-11 w-full cursor-pointer items-center py-2">
+                                                <Checkbox
+                                                    checked={value[kind][via]}
+                                                    onCheckedChange={(on) =>
+                                                        set(
+                                                            kind,
+                                                            via,
+                                                            on === true,
+                                                        )
+                                                    }
+                                                    aria-label={`${t(`settings.notifications.${kind}.label`)}: ${t(`settings.notifications.${via}`)}`}
+                                                />
+                                            </label>
                                         )}
                                     </td>
                                 ))}

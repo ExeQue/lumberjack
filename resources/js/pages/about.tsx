@@ -25,7 +25,8 @@ export default function About({
     system,
 }: Props) {
     const t = useT();
-    const link = 'inline-flex items-center gap-1 text-amber hover:underline';
+    const link =
+        'inline-flex items-center gap-1 py-1 text-amber hover:underline';
 
     return (
         <>

@@ -35,6 +35,7 @@ import {
 import type {
     DashboardFilters,
     LogLine,
+    Period,
     ProjectHeader,
     TeamShared,
 } from '@/types/lumberjack';
@@ -66,6 +67,8 @@ const levels = [
     'error',
     'critical',
 ] as const;
+
+const periods: Period[] = ['1h', '24h', '7d', '30d'];
 
 const levelTone: Record<LogLine['level'], Tone> = {
     debug: 'neutral',
@@ -152,6 +155,7 @@ export default function LogsIndex({
         } as Parameters<typeof router.reload>[0]);
     };
 
+    const widerPeriod = periods[periods.indexOf(filters.period) + 1];
     const total = channels.reduce((sum, c) => sum + c.count, 0);
     const channelOptions = [
         { value: '', label: t('logs.all_channels'), count: total },
@@ -318,7 +322,21 @@ export default function LogsIndex({
                         <Card className="overflow-x-auto">
                             {lines.length === 0 ? (
                                 <EmptyState title={t('logs.empty_title')}>
-                                    {t('logs.empty_body')}
+                                    <p>{t('logs.empty_body')}</p>
+                                    {widerPeriod && (
+                                        <Button
+                                            className="mt-3"
+                                            onClick={() =>
+                                                apply({ period: widerPeriod })
+                                            }
+                                        >
+                                            {t('logs.widen_period', {
+                                                period: t(
+                                                    `common.periods.${widerPeriod}`,
+                                                ),
+                                            })}
+                                        </Button>
+                                    )}
                                 </EmptyState>
                             ) : (
                                 <table
