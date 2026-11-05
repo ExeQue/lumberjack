@@ -37,6 +37,13 @@ describe('the widget gallery seed', function () {
 
             expect($validator->errors()->all())->toBe([], "{$widget['id']} does not validate");
         }
+
+        $cells = collect($screen->widgets)->flatMap(fn (array $widget): array => collect(range($widget['x'], $widget['x'] + $widget['w'] - 1))
+            ->crossJoin(range($widget['y'], $widget['y'] + $widget['h'] - 1))
+            ->map(fn (array $cell): string => implode(',', $cell))
+            ->all());
+
+        expect($cells->duplicates()->all())->toBe([], 'widgets overlap');
     });
 
     it('gives the calendar widgets a feed with an event on now and more to come', function () {
