@@ -201,6 +201,8 @@ by topic (traffic, issues, jobs and queues, hosts and agents, databases, health)
 | Chart                | A series over the period: requests and errors, requests, requests per minute, error rate, p95, Apdex, users affected, queue size, wait or workers, failed jobs, host CPU, memory or disk, LCP, database size or connections. It can split by route, queue, host, database check, environment, release or project.                                                                                                                                                                                                                                                                                                                                                                |
 | List                 | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents, and the events of a calendar (see [Calendars](#calendars)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Health               | The health checks of the projects: a count at 1 x 1, a list when narrow (name, state and how long, in columns), cards when the widget is two or more cells wide (each like a single check's tile, one per grid cell the widget covers). The cards run to the widget's edges. What does not fit scrolls slowly into view, as in a list (sideways on a widget wider than tall); with **Scroll slowly** off it is counted at the end instead, with how many of those are down or degraded. With exactly one check picked, that check alone with its uptime, timeline and last message, and for a database check its connections (amber at 80% of the maximum, red at 90%) and size. |
+| Project overview     | Every project of the scope as a traffic light: one cell each with its name, green, amber or red, and why when it is not green (**2 checks down**, **Backlog on mail**, **3 new issues**). The cells share the tile in as square a grid as their count allows, problems first (**Problems first**); **Only what needs attention** leaves the green ones out. At 1 x 1 it shows how many are ok and the worst one. See [Project overview](#project-overview).                                                                                                                                                                                                                      |
+| SLO                  | One service level objective over the period: availability (requests without a 5xx) or latency (requests under a threshold), against a target of 99%, 99.5%, 99.9%, 99.95%, 99.99% or any other. It shows how much of the period met it, the error budget left as a bar, and the burn rate. See [SLOs](#slos).                                                                                                                                                                                                                                                                                                                                                                    |
 | Clock and text       | The time (12 or 24 hour, its own time zone or the screen's, with seconds or the date), a note for the room, or both, and the time in other cities under it (a world clock).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Countdown            | The time left to a moment (a release, an event, a deadline), in days and hours while far off and as a clock in the last day, with a line saying what it counts down to. Once past: the time since, zero, or only the line. In each TV's own time. Or it follows a calendar (an iCalendar data source): to the end of the event on, to the start of the next, or both, saying the event's title or "Busy until" and "Available until" for a meeting room door; all-day events are skipped.                                                                                                                                                                                        |
 | Message              | A note for the room, or a ticker running across the tile; plain, info (blue), warning (amber) or critical (red), which colors the tile like a status.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -226,7 +228,7 @@ in the corner** under Display turns the label off.
 
 Each widget's settings are grouped in sections that open and close:
 
-- **Value**, **Scale**, **Chart**, **Rows**, **Checks** or **Clock**: what the type
+- **Value**, **Scale**, **Chart**, **Rows**, **Checks**, **Projects**, **Objective** or **Clock**: what the type
   itself offers, such as the amber and red limits of a stat or gauge (empty uses the
   defaults shown; shares go from 0 to 1, durations are in milliseconds), whether a gauge
   marks each limit on its arc (with red hidden, amber runs to the end), whether low
@@ -305,6 +307,44 @@ Older screens may still have an **Empty cell** widget, from when widgets filled 
 in order and a gap needed a filler. It still works (dashed in the designer, invisible
 on the TV), but it is no longer offered: a free cell is empty on its own, so it can be
 removed.
+
+### Project overview
+
+A project's light is the worst of what it has:
+
+- **Red**: a health check is down, an issue is escalating (it escalated within the last
+  hour), or a queue is past its backlog thresholds.
+- **Amber**: a health check is degraded or stale (unless **Stale counts as** is Ok), a
+  queue is past half its backlog thresholds, or the period brought new issues: open ones
+  first seen in it, 3 or more by default (**Amber from new issues**: 1, 3, 5, 10 or 20).
+- **Green** otherwise, also for a project with nothing to report.
+
+Checks are judged as on the health widget, queues as on a list of queues (see above: the
+backlog rule's thresholds, or the queue's own, half of them amber; a muted queue stays
+green). The reason on a cell is its worst; **Show why** off shows the state word instead.
+The tile takes the color of its worst project. Every project of the scope is read in the
+same few queries, however many there are. Share links show project names, as charts split
+by project do.
+
+### SLOs
+
+An SLO widget follows one objective over its period (**Over**), for the requests of the
+scope (a route filter and domain narrow it):
+
+- **Availability**: the share of requests without a 5xx, from the SDK's request counts
+  (every request, not only the sampled ones).
+- **Latency**: the share of requests that took at most **Fast enough under** milliseconds
+  (500 by default). This reads the runs the SDK sampled, like the percentiles do, so it is
+  an estimate from the sample, and counts every status.
+
+The error budget is what the target leaves: 0.1% of the requests at 99.9%. **Budget left**
+is how much of it the period has not used (below zero once overspent, shown as **Budget
+spent**). The periods are rolling (the last hour, day, 7 or 30 days), so the burn rate
+reads the latest twenty-fourth of the period (the last hour of a day, at least five
+minutes): its share of bad requests over the budget. A burn rate of 1 spends exactly the
+budget over the period; 10 would spend it in a tenth of it. The tile turns red with no
+budget left, amber while the burn rate is over 1 or under a quarter of the budget is
+left, green otherwise; without requests it shows **No requests yet**.
 
 ### Calendars
 

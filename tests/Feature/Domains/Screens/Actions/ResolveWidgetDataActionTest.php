@@ -445,6 +445,105 @@ describe('health', function () {
     });
 });
 
+describe('the project overview', function () {
+    beforeEach(function () {
+        $this->overview = fn (array $options = [], ?Team $team = null): array => app(ResolveWidgetDataAction::class)
+            ->execute($team ?? $this->project->team, WidgetType::Overview, 'projects', new WidgetScope(), $options);
+        $this->sibling = fn (string $name): Project => Project::factory()->create(['team_id' => $this->project->team_id, 'name' => $name]);
+    });
+
+    it('judges each project by its checks, issues and queues, the worst reason first', function () {
+        $this->project->update(['name' => 'Alpha']);
+        HealthCheck::factory()->create(['project_id' => $this->project->id, 'slug' => 'disk', 'status' => HealthStatus::Down])
+            ->hosts()->create(['host' => 'web-1', 'status' => HealthStatus::Down, 'last_result_at' => now()]);
+        Issue::factory()->for($this->project)->count(3)->create();
+        QueueSample::factory()->forProject($backlogged = ($this->sibling)('Bravo'))->forQueue('mail')->waiting(600)->create(['sampled_at' => now()->subMinute()]);
+        Issue::factory()->for($escalating = ($this->sibling)('Charlie'))->escalating()->create();
+        Issue::factory()->for($busy = ($this->sibling)('Delta'))->count(3)->create();
+        Issue::factory()->for($busy)->create(['first_seen_at' => now()->subDays(3)]);
+        ($this->sibling)('Echo');
+        Issue::factory()->for(Project::factory()->create())->escalating()->create();
+
+        $data = ($this->overview)();
+        $cells = collect($data['projects'])->keyBy('name');
+
+        expect($data['summary'])->toBe(['total' => 5, 'ok' => 1, 'amber' => 2, 'red' => 2])
+            ->and($cells->map(fn (array $c): string => $c['state'])->all())->toBe(['Alpha' => 'red', 'Bravo' => 'amber', 'Charlie' => 'red', 'Delta' => 'amber', 'Echo' => 'ok'])
+            ->and(array_column($cells['Alpha']['reasons'], 'reason'))->toBe(['checks_down', 'new_issues'])
+            ->and($cells['Bravo']['reasons'])->toBe([['reason' => 'backlog', 'state' => 'amber', 'count' => 1, 'queue' => 'mail']])
+            ->and($cells['Charlie']['reasons'][0])->toMatchArray(['reason' => 'escalating', 'count' => 1])
+            ->and($cells['Delta']['reasons'][0])->toMatchArray(['reason' => 'new_issues', 'count' => 3])
+            ->and(collect(($this->overview)(['new_issues' => '5'])['projects'])->firstWhere('name', 'Delta')['state'])->toBe('ok');
+    });
+
+    it('turns a queue past the backlog rule red, and holds a stale check amber unless it counts as ok', function () {
+        QueueSample::factory()->forProject($this->project)->forQueue('mail')->waiting(1500)->create(['sampled_at' => now()->subMinute()]);
+        QueueSample::factory()->forProject($this->project)->forQueue('bulk')->waiting(700)->create(['sampled_at' => now()->subMinute()]);
+        QueueAlertThreshold::query()->create(['project_id' => $this->project->id, 'connection' => 'redis', 'queue' => 'bulk', 'muted' => true]);
+        $stale = ($this->sibling)('Stale');
+        HealthCheck::factory()->reported('cron')->create(['project_id' => $stale->id])
+            ->hosts()->create(['host' => 'web-1', 'status' => HealthStatus::Ok, 'last_result_at' => now()->subDays(2)]);
+
+        $cells = collect(($this->overview)()['projects'])->keyBy('project');
+
+        // Past the team's rule of 1,000 jobs; bulk is muted.
+        expect($cells[$this->project->slug]['reasons'])->toBe([['reason' => 'backlog', 'state' => 'red', 'count' => 1, 'queue' => 'mail']])
+            ->and($cells[$stale->slug]['reasons'])->toBe([['reason' => 'checks_degraded', 'state' => 'amber', 'count' => 1, 'queue' => null]])
+            ->and(collect(($this->overview)(['stale_as' => 'ok'])['projects'])->firstWhere('project', $stale->slug)['state'])->toBe('ok');
+    });
+
+    it('reads every project of the scope in the same few queries', function () {
+        $teamWith = function (int $projects): Team {
+            $team = Team::factory()->create();
+
+            foreach (range(1, $projects) as $i) {
+                $project = Project::factory()->for($team)->create();
+                HealthCheck::factory()->create(['project_id' => $project->id, 'slug' => "disk:{$i}"])
+                    ->hosts()->create(['host' => 'web-1', 'status' => HealthStatus::Ok, 'last_result_at' => now()]);
+                Issue::factory()->for($project)->escalating()->create();
+                QueueSample::factory()->forProject($project)->forQueue('mail')->waiting(800)->create(['sampled_at' => now()->subMinute()]);
+                QueueAlertThreshold::query()->create(['project_id' => $project->id, 'connection' => 'redis', 'queue' => 'mail', 'size' => 2000]);
+            }
+
+            return $team;
+        };
+        $queries = function (Team $team): int {
+            Cache::flush();
+            app()->forgetScopedInstances();
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            ($this->overview)([], $team);
+
+            return count(DB::getQueryLog());
+        };
+
+        expect($queries($teamWith(4)))->toBe($queries($teamWith(1)));
+    });
+});
+
+describe('an SLO', function () {
+    it('sets the good share of the period against its budget, and how fast it burns now', function () {
+        $this->createRequestCount($this->project, 1990, minute: now()->subHours(5)->startOfMinute());
+        $this->createRequestCount($this->project, 90, minute: now()->subMinutes(10)->startOfMinute());
+        $this->createRequestCount($this->project, 10, 500, minute: now()->subMinutes(10)->startOfMinute());
+        $slo = fn (array $options): array => ($this->resolve)(WidgetType::Slo, 'availability', $options, new WidgetScope(period: Period::Day));
+
+        // 10 of 2090 failed: 0.48% of a 1% budget used, and the last hour burns it ten times over.
+        expect($slo(['slo_target' => '99']))->toMatchArray(['target' => 0.99, 'budget_remaining' => 0.5215, 'burn_rate' => 10.0, 'burn_seconds' => 3600, 'state' => 'amber'])
+            ->and($slo(['slo_target' => '99'])['value'])->toEqualWithDelta(0.995215, 0.000001)
+            ->and($slo(['slo_target' => '99_9'])['state'])->toBe('red')
+            ->and($slo(['slo_target' => 'custom', 'slo_custom_target' => 50]))->toMatchArray(['target' => 0.5, 'burn_rate' => 0.2, 'state' => 'ok']);
+    });
+
+    it('counts the sampled requests under the threshold for latency', function () {
+        RequestRun::factory()->for($this->project)->count(3)->create(['duration_us' => 100_000, 'occurred_at' => now()->subMinutes(10)]);
+        RequestRun::factory()->for($this->project)->create(['duration_us' => 900_000, 'occurred_at' => now()->subMinutes(10)]);
+
+        expect(($this->resolve)(WidgetType::Slo, 'latency', ['slo_target' => '99']))->toMatchArray(['value' => 0.75, 'threshold_ms' => 500, 'state' => 'red'])
+            ->and(($this->resolve)(WidgetType::Slo, 'latency', ['threshold_ms' => 1000])['value'])->toEqual(1.0);
+    });
+});
+
 describe('database checks', function () {
     beforeEach(function () {
         $this->pgsql = HealthCheck::factory()->for($this->project)->create(['slug' => 'database:pgsql']);

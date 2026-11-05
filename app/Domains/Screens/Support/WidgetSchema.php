@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Support;
 
+use App\Domains\Screens\Actions\ResolveWidgetDataAction;
 use App\Domains\Screens\Enums\ReleaseScope;
 use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Models\Screen;
@@ -522,6 +523,27 @@ final class WidgetSchema
                     $toggle('auto_scroll', true),
                 ]),
                 $rotation, $scope(false), $display(true),
+            ],
+            // Each project a cell; the order and the filter are the tile's own (see overview()).
+            'overview' => [
+                $section('overview', [
+                    $toggle('problems_first', true),
+                    $toggle('only_problems', false),
+                    $toggle('show_reason', true),
+                    $select('new_issues', ['1', '3', '5', '10', '20'], (string) ResolveWidgetDataAction::NEW_ISSUES_AMBER, true),
+                    $select('stale_as', ['degraded', 'ok'], 'degraded', true),
+                ]),
+                $scope(true), $display(true),
+            ],
+            // A target from the list, or any share of good requests in percent.
+            'slo' => [
+                $section('objective', [
+                    $select('slo_target', [...ResolveWidgetDataAction::SLO_TARGETS, 'custom'], '99_9', true),
+                    ['key' => 'slo_custom_target', 'type' => 'number', 'default' => null, 'data' => true, 'span' => 1, 'min' => 50, 'max' => 99.999, 'when' => ['slo_target' => ['custom']]],
+                    // What counts as fast enough for the latency objective.
+                    ['key' => 'threshold_ms', 'type' => 'number', 'default' => ResolveWidgetDataAction::SLO_THRESHOLD_MS, 'data' => true, 'span' => 2, 'min' => 1, 'max' => 600000, 'sources' => ['latency']],
+                ]),
+                $scope(true), $display(true),
             ],
             'clock' => [
                 $section('clock', [

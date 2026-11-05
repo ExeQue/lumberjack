@@ -126,6 +126,13 @@ final class WidgetSources
 
             // Health: every check of the scope, or the picked ones.
             new WidgetSource(WidgetType::Health, 'checks', 'checks'),
+
+            // Overview: every project of the scope, judged by its checks, issues and queues.
+            new WidgetSource(WidgetType::Overview, 'projects', 'projects'),
+
+            // SLO: the share of good requests over the period against a target (see slo()).
+            new WidgetSource(WidgetType::Slo, 'availability', 'ratio', filterOn: 'route'),
+            new WidgetSource(WidgetType::Slo, 'latency', 'ratio', filterOn: 'route'),
         ];
 
         $byType = [];

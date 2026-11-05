@@ -465,7 +465,9 @@ export function WidgetTile({
             (widget.type === 'list' &&
                 ((payload.rows as unknown[]) ?? []).length === 0) ||
             (widget.type === 'health' &&
-                ((payload.checks as unknown[]) ?? []).length === 0));
+                ((payload.checks as unknown[]) ?? []).length === 0) ||
+            (widget.type === 'overview' &&
+                ((payload.projects as unknown[]) ?? []).length === 0));
     const hidden =
         (hideWhen === 'ok' &&
             payload &&
@@ -558,6 +560,10 @@ export function WidgetTile({
                 <Chart {...bodyProps} />
             ) : widget.type === 'list' ? (
                 <List {...bodyProps} />
+            ) : widget.type === 'overview' ? (
+                <Overview {...bodyProps} />
+            ) : widget.type === 'slo' ? (
+                <Slo {...bodyProps} colored={colored} />
             ) : (
                 <Health {...bodyProps} />
             );
@@ -2210,6 +2216,271 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                 </ul>
             )}
         </div>
+    );
+}
+
+type OverviewReason = {
+    reason: string;
+    state: 'red' | 'amber';
+    count: number;
+    queue: string | null;
+};
+
+type OverviewProject = {
+    project: string;
+    name: string;
+    state: 'ok' | 'amber' | 'red';
+    reasons: OverviewReason[];
+};
+
+/** A project's light in the words and colors of a health check. */
+const LIGHT_STATE: Record<string, string> = {
+    red: 'down',
+    amber: 'degraded',
+    ok: 'ok',
+};
+
+function reasonText(t: Translate, reason: OverviewReason): string {
+    return t(`screens.overview.reasons.${reason.reason}`, {
+        count: reason.count,
+        queue: reason.queue ?? '',
+    });
+}
+
+/**
+ * Every project of the scope as a cell, colored by its worst problem, with why. The
+ * cells share the tile in as square a grid as their count allows, problems first.
+ */
+function Overview({ widget, schema, data, t }: BodyProps) {
+    const opt = <T,>(key: string) => option<T>(schema, widget, key);
+    const [ref, size] = useSize<HTMLDivElement>();
+    const rank = { red: 0, amber: 1, ok: 2 };
+    const all = (data.projects as OverviewProject[]) ?? [];
+    const summary = data.summary as Record<string, number>;
+    const showReason = opt<boolean>('show_reason') !== false;
+    const projects = all
+        .filter(
+            (p) => opt<boolean>('only_problems') !== true || p.state !== 'ok',
+        )
+        .sort((a, b) =>
+            opt<boolean>('problems_first') !== false
+                ? rank[a.state] - rank[b.state]
+                : 0,
+        );
+    const word = (state: string) => t(`screens.states.${LIGHT_STATE[state]}`);
+
+    if (all.length === 0) {
+        return (
+            <span className="lj-tile-small">{t('screens.overview.none')}</span>
+        );
+    }
+
+    // One grid cell with several projects: how many are ok, and the worst one.
+    if (widget.w * widget.h <= 1 && all.length > 1) {
+        const worst = [...all].sort((a, b) => rank[a.state] - rank[b.state])[0];
+
+        return (
+            <>
+                <span
+                    className="lj-tile-big"
+                    style={{
+                        fontSize: 'min(30cqh, 14cqw)',
+                        color: ROW_COLOR[worst.state],
+                    }}
+                >
+                    {t('screens.overview.ok_of', {
+                        ok: summary.ok,
+                        total: summary.total,
+                    })}
+                </span>
+                <span
+                    className="lj-tile-small truncate"
+                    style={{
+                        color:
+                            worst.state === 'ok'
+                                ? undefined
+                                : ROW_COLOR[worst.state],
+                    }}
+                >
+                    {worst.state === 'ok'
+                        ? t('screens.overview.all_ok')
+                        : `${worst.name}: ${reasonText(t, worst.reasons[0])}`}
+                </span>
+            </>
+        );
+    }
+
+    if (projects.length === 0) {
+        return (
+            <span className="lj-tile-small" style={{ color: 'var(--s-green)' }}>
+                {t('screens.overview.all_ok')}
+            </span>
+        );
+    }
+
+    // As square cells as the tile's shape allows, every project in view.
+    // ponytail: past a few dozen projects the cells get small; scroll like health's cards if that hurts.
+    const gap = 6;
+    const ratio = size.h > 0 ? size.w / size.h : widget.w / widget.h;
+    const cols = Math.max(
+        1,
+        Math.min(
+            projects.length,
+            Math.round(Math.sqrt(projects.length * ratio)),
+        ),
+    );
+    const rows = Math.ceil(projects.length / cols);
+
+    return (
+        <div
+            ref={ref}
+            className={cn(
+                // Cells run to the tile's edges, past its padding (0.8em 1em), under the title.
+                '-mx-[1em] -mb-[0.8em] grid min-h-0 w-[calc(100%+2em)] flex-1 overflow-hidden',
+                opt<boolean>('show_title') === false && '-mt-[0.8em]',
+            )}
+            style={{
+                gap,
+                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+            }}
+        >
+            {projects.map((p) => {
+                const reasons = p.reasons.map((r) => reasonText(t, r));
+
+                return (
+                    <div
+                        key={p.project}
+                        title={[p.name, ...reasons].join(' · ')}
+                        className="[container-type:size] flex min-h-0 min-w-0 flex-col items-center justify-center gap-[0.1em] overflow-hidden rounded-md border px-2 text-center"
+                        style={{
+                            background:
+                                CARD_BG[LIGHT_STATE[p.state]] ??
+                                'var(--s-panel-2)',
+                            borderColor:
+                                p.state === 'ok'
+                                    ? 'var(--s-green-line)'
+                                    : ROW_COLOR[p.state],
+                        }}
+                    >
+                        <span
+                            className="max-w-full truncate leading-tight font-semibold"
+                            style={{
+                                fontSize: 'max(0.75em, min(24cqh, 13cqw))',
+                            }}
+                        >
+                            {p.name}
+                        </span>
+                        {/* The reason says what the color does, for those who cannot tell them apart. */}
+                        <span
+                            className="max-w-full truncate leading-tight"
+                            style={{
+                                color: ROW_COLOR[p.state],
+                                fontSize: 'max(0.62em, min(14cqh, 8cqw))',
+                            }}
+                        >
+                            {showReason && reasons.length > 0
+                                ? reasons[0] +
+                                  (reasons.length > 1
+                                      ? ` ${t('screens.overview.more', { count: reasons.length - 1 })}`
+                                      : '')
+                                : word(p.state)}
+                        </span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+/**
+ * One objective: the share of good requests over the period, against its target, the
+ * error budget left as a bar, and how fast it burns now.
+ */
+function Slo({ data, t, textSize, colored }: BodyProps & { colored: boolean }) {
+    const value = data.value as number | null;
+    const target = data.target as number;
+    const remaining = data.budget_remaining as number | null;
+    const burn = data.burn_rate as number | null;
+    const thresholdMs = data.threshold_ms as number | null;
+    // Enough digits to tell 99.95% from 99.9%.
+    const digits = Math.max(1, Math.ceil(-Math.log10(1 - target)) - 1);
+
+    if (value === null) {
+        return (
+            <span className="lj-tile-small">{t('screens.slo.no_traffic')}</span>
+        );
+    }
+
+    const shown = formatPercent(value, digits);
+    const color = valueColor(data.state, colored);
+
+    return (
+        <>
+            <span
+                className="lj-tile-big"
+                style={{
+                    fontSize:
+                        BIG_HEIGHT[textSize] !== undefined
+                            ? autoSize(
+                                  shown.length,
+                                  textSize === 'auto'
+                                      ? 32
+                                      : BIG_HEIGHT[textSize],
+                              )
+                            : BIG_SIZE[textSize],
+                    color,
+                }}
+            >
+                {shown}
+            </span>
+            <span className="lj-tile-small max-w-full truncate">
+                {[
+                    t('screens.slo.target', {
+                        target: formatPercent(target, digits),
+                    }),
+                    thresholdMs !== null
+                        ? t('screens.slo.latency', { ms: thresholdMs })
+                        : null,
+                    burn !== null
+                        ? t('screens.slo.burn', {
+                              rate: `${formatNumber(burn, burn < 10 ? 1 : 0)}x`,
+                          })
+                        : null,
+                ]
+                    .filter(Boolean)
+                    .join(' · ')}
+            </span>
+            {remaining !== null && (
+                <div className="mt-auto flex w-full flex-col gap-[0.2em]">
+                    <span
+                        className="lj-tile-small max-w-full truncate"
+                        style={{ color: colored ? color : undefined }}
+                    >
+                        {remaining <= 0
+                            ? t('screens.slo.exhausted')
+                            : t('screens.slo.budget', {
+                                  remaining: formatPercent(remaining, 0),
+                              })}
+                    </span>
+                    <div
+                        aria-hidden="true"
+                        className="h-[0.5em] w-full overflow-hidden rounded-full bg-(--s-line)"
+                    >
+                        <div
+                            className="h-full rounded-full"
+                            style={{
+                                width: `${Math.max(0, Math.min(1, remaining)) * 100}%`,
+                                background:
+                                    (colored &&
+                                        ROW_COLOR[String(data.state)]) ||
+                                    'var(--s-ink-3)',
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+        </>
     );
 }
 

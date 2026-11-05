@@ -160,8 +160,21 @@ export function statusOf(
         return null;
     }
 
-    if (kind === 'stat' || kind === 'gauge') {
+    if (kind === 'stat' || kind === 'gauge' || kind === 'slo') {
         return stateToStatus(data.state as string | null);
+    }
+
+    // The worst project's light; all green is ok.
+    if (kind === 'overview') {
+        const summary = data.summary as Record<string, number> | undefined;
+
+        return !summary || summary.total === 0
+            ? null
+            : summary.red > 0
+              ? 'down'
+              : summary.amber > 0
+                ? 'degraded'
+                : 'ok';
     }
 
     if (kind === 'list') {
@@ -403,6 +416,46 @@ export function incident(
             return limits && (limits.amber !== null || limits.red !== null)
                 ? { ...data, state: 'red' }
                 : data;
+        }
+        case 'slo':
+            return data.value === null || data.value === undefined
+                ? data
+                : { ...data, state: 'red', budget_remaining: 0 };
+        case 'overview': {
+            const projects = (data.projects as { state: string }[]) ?? [];
+            const summary = data.summary as Record<string, number>;
+
+            return projects.length === 0
+                ? data
+                : {
+                      ...data,
+                      projects: projects.map((p, i) =>
+                          i === 0
+                              ? {
+                                    ...p,
+                                    state: 'red',
+                                    reasons: [
+                                        {
+                                            reason: 'checks_down',
+                                            state: 'red',
+                                            count: 1,
+                                            queue: null,
+                                        },
+                                    ],
+                                }
+                              : p,
+                      ),
+                      summary: {
+                          ...summary,
+                          red:
+                              summary.red +
+                              (projects[0].state === 'red' ? 0 : 1),
+                          ok: summary.ok - (projects[0].state === 'ok' ? 1 : 0),
+                          amber:
+                              summary.amber -
+                              (projects[0].state === 'amber' ? 1 : 0),
+                      },
+                  };
         }
         case 'list': {
             const rows = (data.rows as ListRow[]) ?? [];
