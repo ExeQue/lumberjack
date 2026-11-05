@@ -486,13 +486,13 @@ final class WidgetSchema
             'qr' => [
                 $section('qr', [
                     $select('content', ['link', 'wifi', 'text'], 'link', true, 2),
-                    ...array_map(fn (array $field): array => [...$field, 'data' => true, 'when' => ['content' => [$field['when']]]], [
-                        ['key' => 'url', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => 'link'],
-                        ['key' => 'ssid', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => 'wifi'],
-                        ['key' => 'password', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => 'wifi'],
-                        ['key' => 'security', 'type' => 'select', 'options' => ['WPA', 'WEP', 'nopass'], 'default' => 'WPA', 'span' => 1, 'when' => 'wifi'],
-                        ['key' => 'hidden_network', 'type' => 'toggle', 'default' => false, 'span' => 1, 'when' => 'wifi'],
-                        ['key' => 'qr_text', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => 'text'],
+                    ...array_map(fn (array $field): array => [...$field, 'data' => true], [
+                        ['key' => 'url', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => ['content' => ['link']]],
+                        ['key' => 'ssid', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => ['content' => ['wifi']]],
+                        ['key' => 'security', 'type' => 'select', 'options' => ['WPA', 'WEP', 'nopass'], 'default' => 'WPA', 'span' => 1, 'when' => ['content' => ['wifi']]],
+                        ['key' => 'hidden_network', 'type' => 'toggle', 'default' => false, 'span' => 1, 'when' => ['content' => ['wifi']]],
+                        ['key' => 'password', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => ['content' => ['wifi'], 'security' => ['WPA', 'WEP']]],
+                        ['key' => 'qr_text', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => ['content' => ['text']]],
                     ]),
                     $text('caption', 2),
                 ]),
