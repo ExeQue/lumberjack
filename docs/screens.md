@@ -149,7 +149,8 @@ resizing and selecting widgets work the same in the preview. It is a view settin
 this browser, kept per screen, not part of the screen.
 
 - **Add**: drag a widget type from the left onto any free cell, or click it to add it
-  in the first free spot (row by row from the top left). The search field finds a type
+  in the first free spot (row by row from the top left). A new widget is 1 x 1, so any
+  free cell takes it; resize it from there. The search field finds a type
   by what it can show, so "queue" finds Stat, Gauge, Chart and List.
 - **Move**: drag a widget to other cells. While you drag, every cell of the grid shows
   as a drop zone and the widget's footprint follows the pointer: green where it fits,
