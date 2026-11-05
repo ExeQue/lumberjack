@@ -48,7 +48,10 @@ return [
         'rename' => 'Rename',
         'duplicate' => 'Duplicate',
         'delete' => 'Delete',
-        'delete_question' => 'Delete the screen :name? TVs showing it go blank.',
+        'delete_title' => 'Delete screen',
+        // :name is set in bold.
+        'delete_question' => 'Delete the screen :name? This cannot be undone.',
+        'delete_tvs' => '{0} No paired TV shows it.|{1} 1 paired TV goes blank.|[2,*] :count paired TVs go blank.',
         'save' => 'Save',
         // Downloads the screen as a JSON file.
         'export' => 'Export',
@@ -213,7 +216,8 @@ return [
         'incident' => 'Show an incident',
         'saving' => 'Saving...',
         'saved' => 'Saved',
-        'saved_live' => '{0} Saved, on no screen right now|{1} Saved, live on 1 screen|[2,*] Saved, live on :count screens',
+        // Badge next to the save state: kiosks, paired TVs and share links with it open now.
+        'live' => '{0} Not shown anywhere right now|{1} Shown in 1 place|[2,*] Shown in :count places',
         'error' => 'Not saved',
         'not_saved' => 'Not saved: :reason',
         'too_many' => 'A screen holds at most 48 widgets.',
@@ -664,6 +668,7 @@ return [
         'title' => 'Show a screen on a TV',
         'question' => 'Show a screen on this TV?',
         'enter' => 'Enter the code the TV shows',
+        'enter_hint' => 'Its 6 letters and digits; the dash is optional.',
         'code' => 'Code',
         // Button.
         'find' => 'Continue',
