@@ -1,12 +1,12 @@
 import { Relative } from '@/components/lj/relative';
-import { MessageSquare } from 'lucide-react';
+import { Check, Eye, MessageSquare, SlidersHorizontal } from 'lucide-react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ConfirmButton } from '@/components/lj/confirm-button';
 import { useEffect, useState } from 'react';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
     Button,
+    buttonClass,
     Card,
     EmptyState,
     Input,
@@ -20,6 +20,19 @@ import {
     tdClass,
     thClass,
 } from '@/components/lj/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { formatNumber, formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
@@ -57,6 +70,14 @@ type Filters = {
     watching: boolean;
 };
 
+type BulkStatus = 'resolved' | 'ignored' | 'open';
+
+const confirmLabels: Record<BulkStatus, string> = {
+    resolved: 'issues.resolve_selected',
+    ignored: 'issues.ignore_selected',
+    open: 'issues.reopen_selected',
+};
+
 type Props = {
     project: ProjectHeader;
     filters: Filters;
@@ -83,6 +104,28 @@ export default function IssuesIndex({
     }>().props;
     const [selected, setSelected] = useState<string[]>([]);
     const [search, setSearch] = useState(filters.search);
+    const [showFilters, setShowFilters] = useState(false);
+    // The bulk status change waiting for a yes.
+    const [asking, setAsking] = useState<BulkStatus | null>(null);
+
+    // Filters, search and paging keep the page's state: forget issues no longer listed.
+    useEffect(
+        () =>
+            setSelected((current) =>
+                current.filter((id) =>
+                    issues.data.some((issue) => issue.id === id),
+                ),
+            ),
+        [issues.data],
+    );
+    const activeFilters = [
+        filters.source,
+        filters.release,
+        filters.assigned,
+        filters.label,
+        filters.watching,
+        filters.sort !== 'last_seen',
+    ].filter(Boolean).length;
 
     useProjectLive(
         project.uuid,
@@ -194,81 +237,29 @@ export default function IssuesIndex({
                             ),
                         }))}
                     />
-                    <Segmented
-                        label={t('issues.source')}
-                        value={filters.source ?? ''}
-                        onChange={(source) => apply({ source: source || null })}
-                        options={[
-                            { value: '', label: t('issues.all_sources') },
-                            ...(['server', 'browser', 'log'] as const).map(
-                                (s) => ({
-                                    value: s,
-                                    label: t(`common.sources.${s}`),
-                                }),
-                            ),
-                        ]}
-                    />
-                    <label className="sr-only" htmlFor="issue-release">
-                        {t('issues.release')}
-                    </label>
-                    <Select
-                        id="issue-release"
-                        value={filters.release}
-                        onChange={(e) => apply({ release: e.target.value })}
-                    >
-                        <option value="">{t('issues.all_releases')}</option>
-                        {releases.map((release) => (
-                            <option key={release} value={release}>
-                                {release}
-                            </option>
-                        ))}
-                    </Select>
-                    <label className="sr-only" htmlFor="issue-assigned">
-                        {t('issues.assigned')}
-                    </label>
-                    <Select
-                        id="issue-assigned"
-                        value={filters.assigned}
-                        onChange={(e) => apply({ assigned: e.target.value })}
-                    >
-                        <option value="">{t('issues.assigned_all')}</option>
-                        <option value="me">{t('issues.assigned_me')}</option>
-                        <option value="none">
-                            {t('issues.assigned_none')}
-                        </option>
-                    </Select>
+                    {/* Below md the secondary filters fold away behind this button. */}
                     <Button
-                        aria-pressed={filters.watching}
-                        className={cn(
-                            filters.watching && 'border-accent text-accent',
-                        )}
-                        onClick={() => apply({ watching: !filters.watching })}
+                        className="md:hidden"
+                        aria-expanded={showFilters}
+                        aria-controls="issue-filters"
+                        onClick={() => setShowFilters(!showFilters)}
                     >
-                        {t('issues.watching')}
-                    </Button>
-                    {labels.length > 0 && (
-                        <>
-                            <label className="sr-only" htmlFor="issue-label">
-                                {t('issues.label')}
-                            </label>
-                            <Select
-                                id="issue-label"
-                                value={filters.label}
-                                onChange={(e) =>
-                                    apply({ label: e.target.value })
-                                }
+                        <SlidersHorizontal
+                            className="size-3.5"
+                            aria-hidden="true"
+                        />
+                        {t('issues.filters')}
+                        {activeFilters > 0 && (
+                            <span
+                                className="rounded-full bg-amber px-1.5 font-mono text-[11px] text-amber-ink"
+                                title={t('issues.filters_active', {
+                                    count: activeFilters,
+                                })}
                             >
-                                <option value="">
-                                    {t('issues.all_labels')}
-                                </option>
-                                {labels.map((label) => (
-                                    <option key={label.id} value={label.name}>
-                                        {label.name}
-                                    </option>
-                                ))}
-                            </Select>
-                        </>
-                    )}
+                                {activeFilters}
+                            </span>
+                        )}
+                    </Button>
                     <label className="sr-only" htmlFor="issue-search">
                         {t('issues.search')}
                     </label>
@@ -278,27 +269,133 @@ export default function IssuesIndex({
                         placeholder={t('issues.search')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="min-w-44 flex-1"
+                        className="min-w-44 flex-1 md:order-last"
                     />
-                    <label className="sr-only" htmlFor="issue-sort">
-                        {t('issues.sort.label')}
-                    </label>
-                    <Select
-                        id="issue-sort"
-                        value={filters.sort}
-                        onChange={(e) => apply({ sort: e.target.value })}
+                    <div
+                        id="issue-filters"
+                        className={cn(
+                            'contents',
+                            !showFilters && 'max-md:hidden',
+                        )}
                     >
-                        <option value="last_seen">
-                            {t('issues.sort.last_seen')}
-                        </option>
-                        <option value="occurrences">
-                            {t('issues.sort.occurrences')}
-                        </option>
-                        <option value="users">{t('issues.sort.users')}</option>
-                        <option value="first_seen">
-                            {t('issues.sort.first_seen')}
-                        </option>
-                    </Select>
+                        <Segmented
+                            label={t('issues.source')}
+                            value={filters.source ?? ''}
+                            onChange={(source) =>
+                                apply({ source: source || null })
+                            }
+                            options={[
+                                { value: '', label: t('issues.all_sources') },
+                                ...(['server', 'browser', 'log'] as const).map(
+                                    (s) => ({
+                                        value: s,
+                                        label: t(`common.sources.${s}`),
+                                    }),
+                                ),
+                            ]}
+                        />
+                        <label className="sr-only" htmlFor="issue-release">
+                            {t('issues.release')}
+                        </label>
+                        <Select
+                            id="issue-release"
+                            value={filters.release}
+                            onChange={(e) => apply({ release: e.target.value })}
+                        >
+                            <option value="">{t('issues.all_releases')}</option>
+                            {releases.map((release) => (
+                                <option key={release} value={release}>
+                                    {release}
+                                </option>
+                            ))}
+                        </Select>
+                        <label className="sr-only" htmlFor="issue-assigned">
+                            {t('issues.assigned')}
+                        </label>
+                        <Select
+                            id="issue-assigned"
+                            value={filters.assigned}
+                            onChange={(e) =>
+                                apply({ assigned: e.target.value })
+                            }
+                        >
+                            <option value="">{t('issues.assigned_all')}</option>
+                            <option value="me">
+                                {t('issues.assigned_me')}
+                            </option>
+                            <option value="none">
+                                {t('issues.assigned_none')}
+                            </option>
+                        </Select>
+                        <Button
+                            aria-pressed={filters.watching}
+                            className="aria-pressed:border-amber aria-pressed:bg-amber/15"
+                            onClick={() =>
+                                apply({ watching: !filters.watching })
+                            }
+                        >
+                            {filters.watching ? (
+                                <Check
+                                    className="size-3.5"
+                                    aria-hidden="true"
+                                />
+                            ) : (
+                                <Eye className="size-3.5" aria-hidden="true" />
+                            )}
+                            {t('issues.watching')}
+                        </Button>
+                        {labels.length > 0 && (
+                            <>
+                                <label
+                                    className="sr-only"
+                                    htmlFor="issue-label"
+                                >
+                                    {t('issues.label')}
+                                </label>
+                                <Select
+                                    id="issue-label"
+                                    value={filters.label}
+                                    onChange={(e) =>
+                                        apply({ label: e.target.value })
+                                    }
+                                >
+                                    <option value="">
+                                        {t('issues.all_labels')}
+                                    </option>
+                                    {labels.map((label) => (
+                                        <option
+                                            key={label.id}
+                                            value={label.name}
+                                        >
+                                            {label.name}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </>
+                        )}
+                        <label className="sr-only" htmlFor="issue-sort">
+                            {t('issues.sort.label')}
+                        </label>
+                        <Select
+                            id="issue-sort"
+                            value={filters.sort}
+                            onChange={(e) => apply({ sort: e.target.value })}
+                            className="md:order-last"
+                        >
+                            <option value="last_seen">
+                                {t('issues.sort.last_seen')}
+                            </option>
+                            <option value="occurrences">
+                                {t('issues.sort.occurrences')}
+                            </option>
+                            <option value="users">
+                                {t('issues.sort.users')}
+                            </option>
+                            <option value="first_seen">
+                                {t('issues.sort.first_seen')}
+                            </option>
+                        </Select>
+                    </div>
                 </div>
 
                 <Card className="overflow-x-auto">
@@ -593,13 +690,46 @@ export default function IssuesIndex({
                         })}
                     </span>
                     <div className="flex flex-wrap gap-2">
+                        {issues.prev_page_url && (
+                            <Link
+                                href={issues.prev_page_url}
+                                className="inline-flex h-8 items-center rounded-md border border-line-strong bg-panel-2 px-3 text-ink"
+                            >
+                                {t('common.previous')}
+                            </Link>
+                        )}
+                        {issues.next_page_url && (
+                            <Link
+                                href={issues.next_page_url}
+                                className="inline-flex h-8 items-center rounded-md border border-line-strong bg-panel-2 px-3 text-ink"
+                            >
+                                {t('common.next')}
+                            </Link>
+                        )}
+                    </div>
+                </div>
+
+                {/* Pinned to the bottom of the screen while issues are selected; being in the flow, it never covers the last row. */}
+                {selected.length > 0 && (
+                    <div
+                        role="region"
+                        aria-label={t('issues.selected', {}, selected.length)}
+                        className="sticky bottom-0 z-10 -mx-4 -mb-10 flex flex-wrap items-center gap-2 border-t border-line bg-panel px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-7 sm:px-7"
+                    >
+                        <span className="font-medium whitespace-nowrap text-ink">
+                            {t('issues.selected', {}, selected.length)}
+                        </span>
+                        <Button variant="ghost" onClick={() => setSelected([])}>
+                            {t('issues.clear_selection')}
+                        </Button>
+                        {/* On phones the pickers take their own row below the buttons. */}
                         <label className="sr-only" htmlFor="bulk-assign">
                             {t('issues.assign_selected')}
                         </label>
                         <Select
                             id="bulk-assign"
                             value=""
-                            disabled={selected.length === 0}
+                            className="max-sm:order-last max-sm:flex-1 max-sm:basis-[40%] sm:ml-auto"
                             onChange={(e) =>
                                 e.target.value && bulkAssignTo(e.target.value)
                             }
@@ -625,7 +755,7 @@ export default function IssuesIndex({
                                 <Select
                                     id="bulk-label"
                                     value=""
-                                    disabled={selected.length === 0}
+                                    className="max-sm:order-last max-sm:flex-1 max-sm:basis-[40%]"
                                     onChange={(e) =>
                                         e.target.value &&
                                         bulkLabel(e.target.value)
@@ -658,7 +788,7 @@ export default function IssuesIndex({
                             </>
                         )}
                         <Button
-                            disabled={selected.length === 0}
+                            className="max-sm:hidden"
                             onClick={() =>
                                 bulkPost(bulkWatch(project.uuid).url, {})
                             }
@@ -666,74 +796,119 @@ export default function IssuesIndex({
                             {t('issues.watch_selected')}
                         </Button>
                         <Button
-                            disabled={selected.length === 0}
+                            className="max-sm:hidden"
                             onClick={() => bulk('in_progress')}
                         >
                             {t('issues.start_selected')}
                         </Button>
-                        {filters.status !== 'resolved' && (
-                            <ConfirmButton
-                                variant="default"
-                                disabled={selected.length === 0}
-                                question={t(
-                                    'issues.bulk_question.resolved',
-                                    {},
-                                    selected.length,
-                                )}
-                                confirmLabel={t('issues.resolve_selected')}
-                                onConfirm={() => bulk('resolved')}
-                            >
-                                {t('issues.resolve_selected')}
-                            </ConfirmButton>
-                        )}
                         {filters.status !== 'ignored' && (
-                            <ConfirmButton
-                                variant="default"
-                                disabled={selected.length === 0}
-                                question={t(
-                                    'issues.bulk_question.ignored',
-                                    {},
-                                    selected.length,
-                                )}
-                                confirmLabel={t('issues.ignore_selected')}
-                                onConfirm={() => bulk('ignored')}
+                            <Button
+                                className="max-sm:hidden"
+                                onClick={() => setAsking('ignored')}
                             >
                                 {t('issues.ignore_selected')}
-                            </ConfirmButton>
+                            </Button>
                         )}
                         {filters.status !== 'open' && (
-                            <ConfirmButton
-                                variant="default"
-                                disabled={selected.length === 0}
-                                question={t(
-                                    'issues.bulk_question.open',
+                            <Button
+                                className="max-sm:hidden"
+                                onClick={() => setAsking('open')}
+                            >
+                                {t('issues.reopen_selected')}
+                            </Button>
+                        )}
+                        {filters.status !== 'resolved' && (
+                            <Button
+                                variant="primary"
+                                className="max-sm:ml-auto"
+                                onClick={() => setAsking('resolved')}
+                            >
+                                {t('issues.resolve_selected')}
+                            </Button>
+                        )}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger
+                                className={buttonClass(
+                                    'default',
+                                    cn(
+                                        'sm:hidden',
+                                        filters.status === 'resolved' &&
+                                            'ml-auto',
+                                    ),
+                                )}
+                            >
+                                {t('issues.more_actions')}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                    onSelect={() =>
+                                        bulkPost(
+                                            bulkWatch(project.uuid).url,
+                                            {},
+                                        )
+                                    }
+                                >
+                                    {t('issues.watch_selected')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onSelect={() => bulk('in_progress')}
+                                >
+                                    {t('issues.start_selected')}
+                                </DropdownMenuItem>
+                                {filters.status !== 'ignored' && (
+                                    <DropdownMenuItem
+                                        onSelect={() => setAsking('ignored')}
+                                    >
+                                        {t('issues.ignore_selected')}
+                                    </DropdownMenuItem>
+                                )}
+                                {filters.status !== 'open' && (
+                                    <DropdownMenuItem
+                                        onSelect={() => setAsking('open')}
+                                    >
+                                        {t('issues.reopen_selected')}
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                )}
+                <Dialog
+                    open={asking !== null}
+                    onOpenChange={(open) => !open && setAsking(null)}
+                >
+                    <DialogContent className="gap-5 border-line bg-panel sm:max-w-md [&>button:last-child]:hidden">
+                        <DialogTitle className="text-sm leading-relaxed font-normal text-ink">
+                            {asking &&
+                                t(
+                                    `issues.bulk_question.${asking}`,
                                     {},
                                     selected.length,
                                 )}
-                                confirmLabel={t('issues.reopen_selected')}
-                                onConfirm={() => bulk('open')}
+                        </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            {asking && t(confirmLabels[asking])}
+                        </DialogDescription>
+                        <DialogFooter>
+                            <Button onClick={() => setAsking(null)}>
+                                {t('common.cancel')}
+                            </Button>
+                            <Button
+                                variant="primary"
+                                autoFocus
+                                onClick={() => {
+                                    if (asking) {
+                                        bulk(asking);
+                                    }
+
+                                    setAsking(null);
+                                }}
                             >
-                                {t('issues.reopen_selected')}
-                            </ConfirmButton>
-                        )}
-                        {issues.prev_page_url && (
-                            <Link
-                                href={issues.prev_page_url}
-                                className="inline-flex h-8 items-center rounded-md border border-line-strong bg-panel-2 px-3 text-ink"
-                            >
-                                {t('common.previous')}
-                            </Link>
-                        )}
-                        {issues.next_page_url && (
-                            <Link
-                                href={issues.next_page_url}
-                                className="inline-flex h-8 items-center rounded-md border border-line-strong bg-panel-2 px-3 text-ink"
-                            >
-                                {t('common.next')}
-                            </Link>
-                        )}
-                    </div>
-                </div>
+                                {asking && t(confirmLabels[asking])}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </PageBody>
         </>
     );
