@@ -141,9 +141,16 @@ for (const candidate of issues) {
 }
 
 // The first status screen, for the designer and the kiosk.
-await open('/screens');
+await open('/present/screens');
 const screen = await href('a[href$="/edit"]');
 const kiosk = screen ? screen.replace(/\/edit$/, '') : null;
+// The seeded widget gallery (ShowcaseWidgetsSeeder), one tile of each widget for docs/widgets.md.
+const gallery = await page.evaluate(() => {
+    const link = [...document.querySelectorAll('a[href$="/edit"]')].find(
+        (a) => a.textContent?.trim() === 'Widget gallery',
+    );
+    return link ? new URL(link.href).pathname.replace(/\/edit$/, '') : null;
+});
 const tv = { width: 1920, height: 1080 };
 
 // A TV waiting to be paired (in the script's own browser), and its
@@ -154,6 +161,91 @@ const pairCode = await page
         el.getAttribute('aria-label').split(' ').pop().replace('-', ''),
     )
     .catch(() => null);
+
+// It fills its display: twice a TV's height gives each tile what a 12 x 6 screen would.
+const galleryView = { width: 1920, height: 2160 };
+// Health first: the seeded checks' agents report no more, and go stale within minutes.
+const galleryTiles = [
+    'health-cards',
+    'health-list',
+    'overview',
+    'stat',
+    'stat-sparkline',
+    'stat-release',
+    'gauge',
+    'chart-area',
+    'chart-split',
+    'chart-bars',
+    'list-issues',
+    'list-queues',
+    'list-calendar',
+    'slo-availability',
+    'slo-latency',
+    'clock-world',
+    'countdown',
+    'countdown-calendar',
+    'qr-wifi',
+    'media-image',
+    'message',
+    'message-ticker',
+];
+const galleryLight = ['stat-sparkline', 'chart-area', 'list-issues'];
+// A tile once its data is in: no loading text, a picture or a chart drawn where it has one.
+const galleryTile = (id, theme) => ({
+    path: gallery,
+    viewport: galleryView,
+    element: `[data-widget="${id}"]`,
+    // Lists and cards hold still at their top, as at rest; a ticker has to run.
+    reducedMotion: id !== 'message-ticker',
+    before: async () => {
+        await page.evaluate((mode) => {
+            const screen = document.querySelector('.lj-screen');
+            if (mode) {
+                screen.dataset.theme = mode;
+            }
+            // Only the app: a dev toolbar in a corner would sit on the corner tile.
+            const others = [
+                ...document.documentElement.children,
+                ...document.body.children,
+            ].filter(
+                (el) =>
+                    el !== document.head &&
+                    el !== document.body &&
+                    !el.contains(screen),
+            );
+            for (const el of others) {
+                el.style.visibility = 'hidden';
+            }
+        }, theme);
+        await page.waitForFunction(
+            (selector) => {
+                const tile = document.querySelector(selector);
+                const text = tile?.innerText ?? '';
+                const media = [...(tile?.querySelectorAll('img') ?? [])];
+                return (
+                    tile &&
+                    !text.includes('Loading...') &&
+                    media.every((img) => img.complete && img.naturalWidth > 0)
+                );
+            },
+            { timeout: 15_000 },
+            `[data-widget="${id}"]`,
+        );
+        // A ticker held where its text starts at the tile's left edge.
+        await page.evaluate((selector) => {
+            const ticker = document.querySelector(`${selector} .lj-ticker`);
+            const run = ticker?.getAnimations()[0];
+            if (run) {
+                const share =
+                    ticker.parentElement.clientWidth / ticker.offsetWidth;
+                run.pause();
+                run.currentTime =
+                    (share - 0.01) * run.effect.getTiming().duration;
+            }
+        }, `[data-widget="${id}"]`);
+        await sleep(1200);
+    },
+});
 
 const shots = {
     overview: { path: project },
@@ -215,7 +307,7 @@ const shots = {
     'team-alerts': { path: '/team/alerts', fullPage: true },
     team: { path: '/team' },
     'admin-retention': { path: '/admin/retention', fullPage: true },
-    screens: { path: '/screens' },
+    screens: { path: '/present/screens' },
     'screen-designer': { path: screen },
     // A widget dragged from the palette over the grid, never dropped: the cells and its footprint.
     'screen-designer-drop': {
@@ -290,7 +382,16 @@ const shots = {
         path: pairCode ? `/pair/${pairCode}` : null,
         viewport: { width: 390, height: 844 },
     },
-    displays: { path: '/team/displays' },
+    ...Object.fromEntries(
+        galleryTiles.map((id) => [`widget-${id}`, galleryTile(id)]),
+    ),
+    ...Object.fromEntries(
+        galleryLight.map((id) => [
+            `widget-${id}-light`,
+            galleryTile(id, 'light'),
+        ]),
+    ),
+    displays: { path: '/present/displays' },
     'command-palette': {
         path: project,
         before: async () => {
@@ -311,6 +412,12 @@ const take = async (name, shot) => {
     if (shot.viewport) {
         await page.setViewport(shot.viewport);
     }
+    await page.emulateMediaFeatures([
+        {
+            name: 'prefers-reduced-motion',
+            value: shot.reducedMotion ? 'reduce' : 'no-preference',
+        },
+    ]);
     await open(shot.path, shot.theme);
     await shot.before?.();
     await mask();
