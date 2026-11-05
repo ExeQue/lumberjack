@@ -52,7 +52,8 @@ final class ScreenQr
         // Transparent, so the tile shows through. Contrast is measured against white
         // when there is no background, which amber on a dark tile fails, so that guard
         // is off here; the rest still apply.
-        return $qr?->style($style)->background(null)->scanSafety(new ScanSafety(minContrast: null, inverted: null))->logo(file: public_path('favicon.svg'), size: self::LOGO_SIZE, shape: 'circle')->svg()->contents();
+        // The mark has no plate and draws in currentColor, which the screen sets.
+        return $qr?->style($style)->background(null)->scanSafety(new ScanSafety(minContrast: null, inverted: null))->logo(file: resource_path('images/qr-mark.svg'), size: self::LOGO_SIZE, shape: 'circle')->svg()->contents();
     }
 
     /**

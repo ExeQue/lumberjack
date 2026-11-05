@@ -146,7 +146,7 @@ class ResolveScreenDataAction
      */
     private function qr(array $options): ?array
     {
-        return Cache::remember('screen-qr:v2:'.md5(serialize([$options, config('qr.styles'), config('qr.colors')])), 86400, function () use ($options): ?array {
+        return Cache::remember('screen-qr:v3:'.md5(serialize([$options, config('qr.styles'), config('qr.colors')])), 86400, function () use ($options): ?array {
             try {
                 return ['svg' => ScreenQr::widgetSvg($options), 'light' => ScreenQr::widgetSvg($options, 'lumberjack-light')];
             } catch (Throwable) {

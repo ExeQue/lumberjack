@@ -310,3 +310,9 @@
 .lj-screen:not([data-theme='light']) .lj-qr-light {
     display: none;
 }
+
+/* The mark in its middle draws in currentColor: the screen's amber, light or dark. */
+.lj-qr-dark,
+.lj-qr-light {
+    color: var(--s-amber);
+}
