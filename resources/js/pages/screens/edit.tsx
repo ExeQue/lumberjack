@@ -666,13 +666,19 @@ export default function EditScreen(props: Props) {
 
         const dx = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
         const dy = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
-        // Shift and arrows resize, arrows move; either only into free cells.
+        // Shift and arrows resize, arrows move; either only into free cells. Resizing moves
+        // the right or bottom edge, unless the widget sits against the grid's right or
+        // bottom (and not also its left or top): then that side stays and the other moves.
+        const fromLeft = widget.x > 0 && widget.x + widget.w >= screen.cols;
+        const fromTop = widget.y > 0 && widget.y + widget.h >= screen.rows;
+        const w = Math.max(1, widget.w + (fromLeft ? -dx : dx));
+        const h = Math.max(1, widget.h + (fromTop ? -dy : dy));
         const box = e.shiftKey
             ? {
-                  x: widget.x,
-                  y: widget.y,
-                  w: Math.max(1, widget.w + dx),
-                  h: Math.max(1, widget.h + dy),
+                  x: fromLeft ? widget.x + widget.w - w : widget.x,
+                  y: fromTop ? widget.y + widget.h - h : widget.y,
+                  w,
+                  h,
               }
             : { x: widget.x + dx, y: widget.y + dy, w: widget.w, h: widget.h };
 
