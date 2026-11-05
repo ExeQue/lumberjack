@@ -40,7 +40,7 @@ curl -fsSL https://exeque.github.io/lumberjack/install.sh | sh
 
 [Running Lumberjack with Docker](https://exeque.github.io/lumberjack/docs/docker) has the whole setup. Your apps send data
 through a [library](https://exeque.github.io/lumberjack/docs/libraries), such as
-[`exeque/laravel-lumberjack`](https://github.com/ExeQue/laravel-lumberjack) for Laravel, or
+[`exeque/laravel-lumberjack`](https://exeque.github.io/laravel-lumberjack/) for Laravel, or
 straight to the [ingest API](https://exeque.github.io/lumberjack/docs/api) from any language or framework.
 
 ## Guides

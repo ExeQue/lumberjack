@@ -6,7 +6,7 @@ docs.
 
 | Library                                                                     | For                                 |
 | --------------------------------------------------------------------------- | ----------------------------------- |
-| [`exeque/laravel-lumberjack`](https://github.com/ExeQue/laravel-lumberjack) | Laravel 12 and 13, PHP 8.3 or newer |
+| [`exeque/laravel-lumberjack`](https://exeque.github.io/laravel-lumberjack/) | Laravel 12 and 13, PHP 8.3 or newer |
 
 The [browser script](./projects.md#browser-script) is served by Lumberjack itself and needs no
 library.
