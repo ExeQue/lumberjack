@@ -497,6 +497,12 @@ export function RulesCard(
 ) {
     const t = useT();
     const { channels, canAdminister } = props;
+    // Team rules on without a team channel; projects can still add their own, so one line, not a warning per rule.
+    const silent =
+        props.scope === 'team' && channels.length > 0
+            ? props.rules.filter((r) => r.enabled && r.channels.length === 0)
+                  .length
+            : 0;
 
     return (
         <Card aria-labelledby="h-rules">
@@ -506,6 +512,15 @@ export function RulesCard(
                 description={t(`alerts.rules.${props.scope}_description`)}
             />
             <div className="flex flex-col gap-3 p-4">
+                {silent > 0 && (
+                    <p className="text-xs text-ink-2">
+                        {t(
+                            'alerts.rules.without_team_channel',
+                            { count: silent },
+                            silent,
+                        )}
+                    </p>
+                )}
                 {props.rules.length === 0 ? (
                     <EmptyState title={t('alerts.rules.empty')} />
                 ) : props.scope === 'team' ? (
@@ -515,6 +530,7 @@ export function RulesCard(
                             rule={rule}
                             channels={channels}
                             disabled={!canAdminister}
+                            teamLevel
                         />
                     ))
                 ) : (
@@ -717,12 +733,15 @@ function RuleRow({
     disabled,
     badge,
     actions,
+    teamLevel = false,
 }: {
     rule: Rule;
     channels: Channel[];
     disabled: boolean;
     badge?: ReactNode;
     actions?: ReactNode;
+    /** A team rule with no channel ticked can still send through a project's add-ons. */
+    teamLevel?: boolean;
 }) {
     const t = useT();
     const [enabled, setEnabled] = useState(rule.enabled);
@@ -801,13 +820,13 @@ function RuleRow({
                     'relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-not-allowed disabled:opacity-50',
                     enabled
                         ? 'border-amber bg-amber'
-                        : 'border-line-strong bg-panel-2',
+                        : 'border-line-strong bg-ink-3/40',
                 )}
             >
                 <span
                     aria-hidden="true"
                     className={cn(
-                        'absolute top-0.5 size-[18px] rounded-full bg-ink transition-all',
+                        'absolute top-0.5 size-[18px] rounded-full bg-white shadow-sm transition-all',
                         enabled ? 'left-[22px]' : 'left-0.5',
                     )}
                 />
@@ -837,7 +856,7 @@ function RuleRow({
                     channels.map((channel) => (
                         <label
                             key={channel.id}
-                            className="inline-flex items-center gap-2"
+                            className="inline-flex items-center gap-2 pointer-coarse:min-h-10"
                         >
                             <input
                                 type="checkbox"
@@ -860,11 +879,14 @@ function RuleRow({
                         </label>
                     ))
                 )}
-                {enabled && selected.length === 0 && channels.length > 0 && (
-                    <p className="text-xs text-warn">
-                        {t('alerts.rules.on_without_channel')}
-                    </p>
-                )}
+                {!teamLevel &&
+                    enabled &&
+                    selected.length === 0 &&
+                    channels.length > 0 && (
+                        <p className="text-xs text-warn">
+                            {t('alerts.rules.on_without_channel')}
+                        </p>
+                    )}
             </fieldset>
             {rule.settings ? (
                 <fieldset
