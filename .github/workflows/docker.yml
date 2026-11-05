@@ -17,13 +17,20 @@ jobs:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
 
+      # For the build cache in GHCR (see the build job).
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: docker/build-push-action@v7
         with:
           context: .
           load: true
           tags: lumberjack:smoke
-          cache-from: type=gha,scope=linux-amd64
-          cache-to: type=gha,mode=max,scope=linux-amd64
+          # Reads the cache the amd64 build writes; it runs alongside, so only that one writes.
+          cache-from: type=registry,ref=ghcr.io/exeque/lumberjack-buildcache:linux-amd64
 
       - name: Smoke test
         run: |
@@ -92,8 +99,12 @@ jobs:
             LUMBERJACK_VERSION=${{ steps.meta.outputs.version }}
             LUMBERJACK_REVISION=${{ github.sha }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=${{ steps.scope.outputs.name }}
-          cache-to: type=gha,mode=max,scope=${{ steps.scope.outputs.name }}
+          # The cache lives in GHCR, not in the Actions cache: an Actions cache belongs to
+          # the ref that wrote it, and every release builds on a tag of its own, so no
+          # release could read the last one's. Unchanged layers (the PHP extensions,
+          # composer install, npm ci) are reused across releases this way.
+          cache-from: type=registry,ref=ghcr.io/exeque/lumberjack-buildcache:${{ steps.scope.outputs.name }}
+          cache-to: type=registry,ref=ghcr.io/exeque/lumberjack-buildcache:${{ steps.scope.outputs.name }},mode=max
 
       - name: Keep the digest
         run: |
