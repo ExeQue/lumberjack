@@ -116,7 +116,11 @@ function CodeForm() {
                 }
             }}
         >
-            <Field label={t('screens.pair.enter')} htmlFor="pair-code">
+            <Field
+                label={t('screens.pair.enter')}
+                htmlFor="pair-code"
+                hint={t('screens.pair.enter_hint')}
+            >
                 <Input
                     id="pair-code"
                     value={value}
@@ -130,10 +134,11 @@ function CodeForm() {
                     autoFocus
                 />
             </Field>
+            {/* Grey, not a faded amber, until the code is complete: readable either way. */}
             <Button
                 type="submit"
-                variant="primary"
-                className="h-11 justify-center text-base"
+                variant={normalized.length === 6 ? 'primary' : 'default'}
+                className="h-11 justify-center text-base disabled:text-ink-2 disabled:opacity-100"
                 disabled={normalized.length !== 6}
             >
                 {t('screens.pair.find')}

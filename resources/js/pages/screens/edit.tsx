@@ -51,7 +51,7 @@ import {
 import type { TvInstructionsProps } from '@/components/lj/screen/tv-instructions';
 import { useScreenData } from '@/components/lj/screen/use-screen-data';
 import { WidgetTile } from '@/components/lj/screen/widgets';
-import { Button, buttonClass, Input, Select } from '@/components/lj/ui';
+import { Badge, Button, buttonClass, Input, Select } from '@/components/lj/ui';
 import {
     Dialog,
     DialogContent,
@@ -982,9 +982,7 @@ export default function EditScreen(props: Props) {
             ? t('screens.designer.saving')
             : status === 'error'
               ? t('screens.designer.error')
-              : viewers !== null
-                ? t('screens.designer.saved_live', {}, viewers)
-                : t('screens.designer.saved');
+              : t('screens.designer.saved');
 
     // What the grid holds and does, the same at Fit and at a previewed size.
     const gridHandlers = {
@@ -1239,6 +1237,11 @@ export default function EditScreen(props: Props) {
                         />
                         {statusText}
                     </span>
+                    {viewers !== null && (
+                        <Badge title={t('screens.table.now_hint')}>
+                            {t('screens.designer.live', {}, viewers)}
+                        </Badge>
+                    )}
                     <DropdownMenu>
                         <DropdownMenuTrigger className={buttonClass()}>
                             {t('screens.actions.more')}

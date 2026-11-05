@@ -2,6 +2,7 @@ import { Form, Head, Link, router, usePage, usePoll } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { Relative } from '@/components/lj/relative';
+import { withSlot } from '@/components/lj/screen/qr';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
@@ -461,6 +462,70 @@ export default function Screens({
         })),
     ];
     const savedUuid = template.startsWith('saved:') ? template.slice(6) : null;
+    // A row's buttons: in their own column from md, under the name below it.
+    const rowActions = (screen: Row, narrow: boolean) => (
+        <div
+            className={`flex gap-1.5 ${narrow ? 'mt-2 md:hidden' : 'justify-end'}`}
+        >
+            <a
+                href={show(screen.uuid).url}
+                target="_blank"
+                rel="noreferrer"
+                className={buttonClass()}
+            >
+                {t('screens.actions.open')}
+            </a>
+            <LinkButton href={edit(screen.uuid).url}>
+                {t('screens.actions.edit')}
+            </LinkButton>
+            <DropdownMenu>
+                <DropdownMenuTrigger className={buttonClass()}>
+                    {t('screens.actions.more')}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => setRenaming(screen)}>
+                        {t('screens.actions.rename')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        onSelect={() =>
+                            router.post(
+                                duplicate(screen.uuid).url,
+                                {},
+                                {
+                                    preserveScroll: true,
+                                },
+                            )
+                        }
+                    >
+                        {t('screens.actions.duplicate')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <a
+                            href={exportMethod(screen.uuid).url}
+                            download
+                            title={t('screens.actions.export_hint')}
+                        >
+                            {t('screens.actions.export')}
+                        </a>
+                    </DropdownMenuItem>
+                    {otherTeams.length > 0 && (
+                        <DropdownMenuItem onSelect={() => setCopying(screen)}>
+                            {t('screens.copy.button')}
+                        </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onSelect={() => setSaving(screen)}>
+                        {t('screens.saved_templates.save')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        variant="destructive"
+                        onSelect={() => setDeleting(screen)}
+                    >
+                        {t('screens.actions.delete')}
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+    );
 
     return (
         <>
@@ -515,7 +580,9 @@ export default function Screens({
                                         <th className={thClass}>
                                             {t('screens.table.updated')}
                                         </th>
-                                        <th className={thClass}>
+                                        <th
+                                            className={`${thClass} hidden md:table-cell`}
+                                        >
                                             <span className="sr-only">
                                                 {t('screens.table.actions')}
                                             </span>
@@ -532,6 +599,7 @@ export default function Screens({
                                                 >
                                                     {screen.name}
                                                 </Link>
+                                                {rowActions(screen, true)}
                                             </td>
                                             <td
                                                 className={`${tdClass} font-mono whitespace-nowrap`}
@@ -612,127 +680,10 @@ export default function Screens({
                                                     iso={screen.updated_at}
                                                 />
                                             </td>
-                                            <td className={tdClass}>
-                                                <div className="flex justify-end gap-1.5">
-                                                    <a
-                                                        href={
-                                                            show(screen.uuid)
-                                                                .url
-                                                        }
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className={buttonClass()}
-                                                    >
-                                                        {t(
-                                                            'screens.actions.open',
-                                                        )}
-                                                    </a>
-                                                    <LinkButton
-                                                        href={
-                                                            edit(screen.uuid)
-                                                                .url
-                                                        }
-                                                    >
-                                                        {t(
-                                                            'screens.actions.edit',
-                                                        )}
-                                                    </LinkButton>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger
-                                                            className={buttonClass()}
-                                                        >
-                                                            {t(
-                                                                'screens.actions.more',
-                                                            )}
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem
-                                                                onSelect={() =>
-                                                                    setRenaming(
-                                                                        screen,
-                                                                    )
-                                                                }
-                                                            >
-                                                                {t(
-                                                                    'screens.actions.rename',
-                                                                )}
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                onSelect={() =>
-                                                                    router.post(
-                                                                        duplicate(
-                                                                            screen.uuid,
-                                                                        ).url,
-                                                                        {},
-                                                                        {
-                                                                            preserveScroll: true,
-                                                                        },
-                                                                    )
-                                                                }
-                                                            >
-                                                                {t(
-                                                                    'screens.actions.duplicate',
-                                                                )}
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                asChild
-                                                            >
-                                                                <a
-                                                                    href={
-                                                                        exportMethod(
-                                                                            screen.uuid,
-                                                                        ).url
-                                                                    }
-                                                                    download
-                                                                    title={t(
-                                                                        'screens.actions.export_hint',
-                                                                    )}
-                                                                >
-                                                                    {t(
-                                                                        'screens.actions.export',
-                                                                    )}
-                                                                </a>
-                                                            </DropdownMenuItem>
-                                                            {otherTeams.length >
-                                                                0 && (
-                                                                <DropdownMenuItem
-                                                                    onSelect={() =>
-                                                                        setCopying(
-                                                                            screen,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {t(
-                                                                        'screens.copy.button',
-                                                                    )}
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                            <DropdownMenuItem
-                                                                onSelect={() =>
-                                                                    setSaving(
-                                                                        screen,
-                                                                    )
-                                                                }
-                                                            >
-                                                                {t(
-                                                                    'screens.saved_templates.save',
-                                                                )}
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                variant="destructive"
-                                                                onSelect={() =>
-                                                                    setDeleting(
-                                                                        screen,
-                                                                    )
-                                                                }
-                                                            >
-                                                                {t(
-                                                                    'screens.actions.delete',
-                                                                )}
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
+                                            <td
+                                                className={`${tdClass} hidden md:table-cell`}
+                                            >
+                                                {rowActions(screen, false)}
                                             </td>
                                         </tr>
                                     ))}
@@ -1059,21 +1010,33 @@ export default function Screens({
                 open={deleting !== null}
                 onOpenChange={(open) => !open && setDeleting(null)}
             >
-                <DialogContent className="gap-5 border-line bg-panel sm:max-w-md [&>button:last-child]:hidden">
-                    <DialogTitle className="text-sm leading-relaxed font-normal text-ink">
-                        {t('screens.actions.delete_question', {
-                            name: lastDeleting.current?.name ?? '',
-                        })}
-                    </DialogTitle>
-                    <DialogDescription className="sr-only">
-                        {t('screens.actions.delete')}
-                    </DialogDescription>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {t('screens.actions.delete_title')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {withSlot(
+                                (r) => t('screens.actions.delete_question', r),
+                                'name',
+                                <strong className="font-semibold text-ink">
+                                    {lastDeleting.current?.name}
+                                </strong>,
+                            )}{' '}
+                            {t(
+                                'screens.actions.delete_tvs',
+                                {},
+                                lastDeleting.current?.displays ?? 0,
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
                     <DialogFooter>
                         <Button onClick={() => setDeleting(null)}>
                             {t('common.cancel')}
                         </Button>
                         <Button
                             variant="danger"
+                            className="border-err bg-err text-panel hover:brightness-110"
                             autoFocus
                             onClick={() => {
                                 if (deleting) {
