@@ -294,7 +294,7 @@ export type HealthCheckRow = {
         down_s: number;
         down_since: string | null;
     } | null;
-    strip: { t: string; s: 'ok' | 'degraded' | 'down' | null }[];
+    strip: { t: string; s: 'ok' | 'degraded' | 'down' | 'stale' | null }[];
     hosts: HealthHost[];
 };
 

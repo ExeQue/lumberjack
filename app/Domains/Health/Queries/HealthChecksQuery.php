@@ -285,7 +285,7 @@ class HealthChecksQuery
 
     /**
      * One segment per period bucket, colored by the worst the check was in it; null
-     * before the check existed.
+     * before the check existed, "stale" after the last result of a check that went quiet.
      *
      * @param  Collection<int, HealthOutage>  $outages
      * @return list<array{t: string, s: string|null}>
@@ -295,6 +295,7 @@ class HealthChecksQuery
         $size = $period->bucketSeconds();
         $start = intdiv($period->since()->getTimestamp(), $size) * $size;
         $created = ($check->created_at ?? now())->getTimestamp();
+        $quietSince = $check->isStale() ? ($check->last_result_at ?? $check->hosts->max('last_result_at'))?->getTimestamp() : null;
         $strip = [];
 
         for ($i = 0; $i <= $period->buckets(); $i++) {
@@ -309,7 +310,11 @@ class HealthChecksQuery
                 ->filter(fn (HealthOutage $o): bool => $o->started_at->getTimestamp() < $to && ($o->ended_at === null || $o->ended_at->getTimestamp() >= $from))
                 ->map(fn (HealthOutage $o): HealthStatus => $o->status));
 
-            $strip[] = ['t' => date(DATE_ATOM, $from), 's' => $to <= $created ? null : ($worst ?? HealthStatus::Ok)->value];
+            $strip[] = ['t' => date(DATE_ATOM, $from), 's' => match (true) {
+                $to <= $created => null,
+                $quietSince !== null && $from > $quietSince => 'stale',
+                default => ($worst ?? HealthStatus::Ok)->value,
+            }];
         }
 
         return $strip;

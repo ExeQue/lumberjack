@@ -6,6 +6,9 @@ return [
     'title' => 'Health',
     'description' => '{0} No health checks yet.|{1} 1 health check.|[2,*] :count health checks.',
     'attention' => ':down down, :degraded degraded.',
+    'attention_stale' => '{1} 1 stale: it stopped reporting.|[2,*] :count stale: they stopped reporting.',
+    // Title on the Stale badge.
+    'stale_hint' => 'No report within its expected interval: 2.5 times the interval the app sends, or three times its usual interval without one.',
     'add' => 'Add check',
     'states' => ['ok' => 'OK', 'recovering' => 'Recovering', 'degraded' => 'Degraded', 'down' => 'Down', 'stale' => 'Stale', 'pending' => 'Pending'],
     'result_statuses' => ['ok' => 'OK', 'warning' => 'Warning', 'failed' => 'Failed'],

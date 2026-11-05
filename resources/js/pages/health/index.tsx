@@ -80,6 +80,7 @@ const stripColor: Record<string, string> = {
     ok: 'bg-ok',
     degraded: 'bg-warn',
     down: 'bg-err',
+    stale: 'bg-ink-3/50',
 };
 
 /** The latency the check measured itself, else how long the check took. */
@@ -167,7 +168,14 @@ function When({ iso }: { iso: string | null }) {
 function StateBadge({ state }: { state: HealthState }) {
     const t = useT();
 
-    return <Badge tone={stateTone[state]}>{t(`health.states.${state}`)}</Badge>;
+    return (
+        <Badge
+            tone={stateTone[state]}
+            title={state === 'stale' ? t('health.stale_hint') : undefined}
+        >
+            {t(`health.states.${state}`)}
+        </Badge>
+    );
 }
 
 /**
@@ -186,7 +194,7 @@ function StatusStrip({
         <span
             role="img"
             aria-label={t('health.strip_label')}
-            className="flex h-4 min-w-32 items-stretch gap-px"
+            className="flex h-4 min-w-20 items-stretch gap-px lg:min-w-32"
         >
             {strip.map((bucket, i) => (
                 <span
@@ -337,7 +345,7 @@ function ChecksTable({
                                 <When iso={check.last_result_at} />
                                 {check.last_message && (
                                     <span
-                                        className="block truncate text-ink-3"
+                                        className="block max-w-48 truncate text-ink-3 lg:max-w-72"
                                         title={check.last_message}
                                     >
                                         {check.last_message}
@@ -387,6 +395,7 @@ export default function HealthIndex({
     const degraded = active.filter(
         (check) => check.state === 'degraded',
     ).length;
+    const stale = active.filter((check) => check.state === 'stale').length;
 
     useProjectLive(project.uuid, ['health.changed'], ['checks', 'detail']);
 
@@ -439,25 +448,38 @@ export default function HealthIndex({
                     }
                 />
 
-                {down + degraded > 0 && (
+                {down + degraded + stale > 0 && (
                     <div
                         role="status"
                         className={cn(
                             'flex items-center gap-2.5 rounded-lg border px-4 py-3',
                             down > 0
                                 ? 'border-err-line bg-err-bg'
-                                : 'border-warn-line bg-warn-bg',
+                                : degraded > 0
+                                  ? 'border-warn-line bg-warn-bg'
+                                  : 'border-line bg-panel',
                         )}
                     >
                         <TriangleAlert
                             className={cn(
                                 'size-4 shrink-0',
-                                down > 0 ? 'text-err' : 'text-warn',
+                                down > 0
+                                    ? 'text-err'
+                                    : degraded > 0
+                                      ? 'text-warn'
+                                      : 'text-ink-3',
                             )}
                             aria-hidden="true"
                         />
                         <strong className="font-semibold">
-                            {t('health.attention', { down, degraded })}
+                            {[
+                                down + degraded > 0 &&
+                                    t('health.attention', { down, degraded }),
+                                stale > 0 &&
+                                    t('health.attention_stale', {}, stale),
+                            ]
+                                .filter(Boolean)
+                                .join(' ')}
                         </strong>
                     </div>
                 )}
