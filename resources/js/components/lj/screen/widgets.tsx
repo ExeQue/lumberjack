@@ -513,7 +513,14 @@ export function WidgetTile({
             </span>
         ) : null;
     } else if (widget.type === 'countdown') {
-        body = <Countdown widget={widget} schema={schema} now={now} />;
+        body = (
+            <Countdown
+                widget={widget}
+                schema={schema}
+                now={now}
+                data={data?.countdown}
+            />
+        );
     } else if (widget.type === 'message') {
         body = <Message widget={widget} schema={schema} />;
     } else if (widget.type === 'media') {
@@ -2504,6 +2511,70 @@ function Message({ widget, schema }: { widget: Widget; schema: Schema }) {
     );
 }
 
+type CalendarEvent = { title: string | null; start: string; end: string };
+
+/**
+ * What a countdown on a calendar runs to and says: to the end of the event on (count
+ * end or both), else to the start of the next (count start or both). It says the
+ * event's title, or whether the room is busy or available until when. Null without
+ * any event to speak of.
+ */
+function calendarMoment(
+    events: CalendarEvent[],
+    now: number,
+    count: string,
+    status: boolean,
+    t: Translate,
+): { at: string | null; line: string | null } | null {
+    const time = (iso: string) =>
+        new Intl.DateTimeFormat(document.documentElement.lang || 'en', {
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(new Date(iso));
+    const on = events.find(
+        (e) => Date.parse(e.start) <= now && now < Date.parse(e.end),
+    );
+    const next = events.find((e) => Date.parse(e.start) > now);
+
+    if (on && count !== 'start') {
+        return {
+            at: on.end,
+            line: status
+                ? t('screens.countdown.busy_until', { time: time(on.end) })
+                : on.title,
+        };
+    }
+
+    if (next && count !== 'end') {
+        return {
+            at: next.start,
+            line: status
+                ? on
+                    ? t('screens.countdown.busy_until', { time: time(on.end) })
+                    : t('screens.countdown.available_until', {
+                          time: time(next.start),
+                      })
+                : next.title,
+        };
+    }
+
+    // Counting to ends only, with nothing on: say so, without a number.
+    if (!on && count === 'end') {
+        return {
+            at: null,
+            line: status
+                ? next
+                    ? t('screens.countdown.available_until', {
+                          time: time(next.start),
+                      })
+                    : t('screens.countdown.available')
+                : t('screens.countdown.nothing_on'),
+        };
+    }
+
+    return null;
+}
+
 /**
  * The time left until a moment, in each TV's own time: days and hours while far off,
  * a clock in the last day. After it: the time since, zero, or nothing.
@@ -2512,16 +2583,57 @@ function Countdown({
     widget,
     schema,
     now,
+    data,
 }: {
     widget: Widget;
     schema: Schema;
     now: number;
+    data: Record<string, unknown> | null | undefined;
 }) {
     const t = useT();
     const opt = <T,>(key: string) => option<T>(schema, widget, key);
-    const target = opt<string | null>('target');
-    const label = opt<string | null>('countdown_label');
-    const after = opt<string>('after') ?? 'since';
+    const calendar = opt<string>('counts_to') === 'calendar';
+    const moment = calendar
+        ? calendarMoment(
+              (data?.events as CalendarEvent[] | undefined) ?? [],
+              now,
+              opt<string>('calendar_count') ?? 'both',
+              opt<string>('calendar_text') === 'status',
+              t,
+          )
+        : null;
+
+    if (calendar && moment === null) {
+        return (
+            <span className="lj-tile-small m-auto">
+                {t(
+                    data === undefined
+                        ? 'screens.widget.loading'
+                        : 'screens.countdown.no_event',
+                )}
+            </span>
+        );
+    }
+
+    const target = calendar
+        ? (moment?.at ?? null)
+        : opt<string | null>('target');
+    const label = calendar
+        ? (moment?.line ?? null)
+        : opt<string | null>('countdown_label');
+    // A calendar moves on to its next event; only a moment of its own is ever past.
+    const after = calendar ? 'zero' : (opt<string>('after') ?? 'since');
+
+    if (calendar && target === null) {
+        return (
+            <span
+                className="font-semibold text-(--s-ink-2)"
+                style={{ fontSize: 'min(20cqh, 8cqw)' }}
+            >
+                {label}
+            </span>
+        );
+    }
     const seconds = opt<boolean>('seconds') !== false;
     const size: CSSProperties = {
         fontSize: BIG_SIZE[opt<string>('text_size') ?? 'auto'],

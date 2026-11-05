@@ -538,9 +538,14 @@ final class WidgetSchema
             ],
             'countdown' => [
                 $section('countdown', [
-                    ['key' => 'target', 'type' => 'datetime', 'default' => null, 'data' => false, 'span' => 2],
-                    $text('countdown_label', 2),
-                    $select('after', ['since', 'zero', 'hide'], 'since', false, 2),
+                    // A moment of its own, or a calendar's events as they come.
+                    $select('counts_to', ['moment', 'calendar'], 'moment', true, 2),
+                    ['key' => 'target', 'type' => 'datetime', 'default' => null, 'data' => false, 'span' => 2, 'when' => ['counts_to' => ['moment']]],
+                    ['key' => 'data_source', 'type' => 'data_source', 'default' => null, 'data' => true, 'span' => 2, 'when' => ['counts_to' => ['calendar']]],
+                    ['key' => 'calendar_count', 'type' => 'select', 'options' => ['both', 'end', 'start'], 'default' => 'both', 'data' => false, 'span' => 2, 'when' => ['counts_to' => ['calendar']]],
+                    ['key' => 'calendar_text', 'type' => 'select', 'options' => ['title', 'status'], 'default' => 'title', 'data' => false, 'span' => 2, 'when' => ['counts_to' => ['calendar']]],
+                    ['key' => 'countdown_label', 'type' => 'text', 'default' => null, 'data' => false, 'span' => 2, 'when' => ['counts_to' => ['moment']]],
+                    ['key' => 'after', 'type' => 'select', 'options' => ['since', 'zero', 'hide'], 'default' => 'since', 'data' => false, 'span' => 2, 'when' => ['counts_to' => ['moment']]],
                     $toggle('seconds', true),
                 ]),
                 $display(false),

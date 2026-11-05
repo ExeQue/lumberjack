@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Actions;
 
+use App\Domains\DataSources\Enums\DataSourceFormat;
+use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Queries\DataSourceValuesQuery;
 use App\Domains\Screens\Data\WidgetScope;
 use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Models\Screen;
@@ -17,7 +20,8 @@ use Throwable;
  * The data of a screen's widgets in one go, or of one widget when only its settings
  * changed: per widget, per source it shows (the picked one and those it rotates
  * through, each with its own settings over the widget's, see WidgetSchema::rotation()),
- * what ResolveWidgetDataAction answers; a QR code widget's picture under qr. Identical questions are answered from a short
+ * what ResolveWidgetDataAction answers; a QR code widget's picture under qr, and a
+ * countdown's calendar events under countdown. Identical questions are answered from a short
  * cache, so a wall of kiosks asks Postgres once, not once per kiosk.
  */
 class ResolveScreenDataAction
@@ -26,6 +30,7 @@ class ResolveScreenDataAction
 
     public function __construct(
         private readonly ResolveWidgetDataAction $resolveWidgetData,
+        private readonly DataSourceValuesQuery $dataSources,
     ) {
     }
 
@@ -45,6 +50,16 @@ class ResolveScreenDataAction
 
             if (($widget['type'] ?? null) === 'qr') {
                 $data[$widget['id']]['qr'] = $this->qr((array) ($widget['options'] ?? []));
+
+                continue;
+            }
+
+            if (($widget['type'] ?? null) === 'countdown') {
+                $options = (array) ($widget['options'] ?? []);
+
+                if (($options['counts_to'] ?? null) === 'calendar') {
+                    $data[$widget['id']]['countdown'] = $this->calendarEvents($screen, $options, $aggregatesOnly);
+                }
 
                 continue;
             }
@@ -157,5 +172,44 @@ class ResolveScreenDataAction
                 return null;
             }
         });
+    }
+
+    /**
+     * {events}: the calendar's event on now and the next few, in the coming month, each
+     * {title, start, end} (ISO 8601), so a countdown runs to the end of the one on, else to
+     * the start of the next, and moves on by itself. All-day events are left out (holidays
+     * and the like are no moment to count to). A share link without names gets no titles.
+     *
+     * @param  array<string, mixed>  $options
+     * @return array{events: list<array{title: string|null, start: string, end: string}>}
+     */
+    private function calendarEvents(Screen $screen, array $options, bool $aggregatesOnly): array
+    {
+        $uuid = $options['data_source'] ?? null;
+        $source = is_string($uuid) ? DataSource::query()
+            ->whereIn('project_id', $screen->team->projects->modelKeys())
+            ->where('uuid', $uuid)
+            ->where('format', DataSourceFormat::Ical)
+            ->first() : null;
+
+        if ($source === null) {
+            return ['events' => []];
+        }
+
+        $now = now()->getTimestamp();
+        // By the hour, so the parsed window is shared for an hour (see events()).
+        $from = now($screen->timezone ?? config('app.timezone'))->startOfHour()->subDay()->toImmutable();
+
+        $events = array_values(collect($this->dataSources->events($source, $from, $from->addDays(32)))
+            ->filter(fn (array $e): bool => ! $e['all_day'] && $e['end'] > $now)
+            ->sortBy('start')
+            ->take(3)
+            ->map(fn (array $e): array => [
+                'title' => $aggregatesOnly ? null : $e['title'],
+                'start' => date(DATE_ATOM, $e['start']),
+                'end' => date(DATE_ATOM, $e['end']),
+            ])->all());
+
+        return ['events' => $events];
     }
 }

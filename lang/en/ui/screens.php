@@ -410,7 +410,10 @@ return [
         'date' => ['label' => 'Date'],
         'text' => ['label' => 'Text', 'placeholder' => 'A note for the room'],
         'zones' => ['label' => 'Other time zones', 'hint' => 'Each shows its city and time under the clock.'],
-        'target' => ['label' => 'Counts down to', 'placeholder' => ''],
+        'counts_to' => ['label' => 'Counts down to', 'options' => ['moment' => 'A moment', 'calendar' => 'A calendar\'s events']],
+        'calendar_count' => ['label' => 'Count', 'options' => ['both' => 'To the end of the event on, else to the next start', 'end' => 'Only to the end of the event on', 'start' => 'Only to the next start']],
+        'calendar_text' => ['label' => 'Says', 'options' => ['title' => 'The event\'s title', 'status' => 'Busy until or available until']],
+        'target' => ['label' => 'When', 'placeholder' => ''],
         'countdown_label' => ['label' => 'What it counts down to', 'placeholder' => 'Release 2.0'],
         'after' => ['label' => 'Once it is past', 'options' => ['since' => 'Count the time since', 'zero' => 'Stay at zero', 'hide' => 'Show only the text']],
         'message' => ['label' => 'Message', 'placeholder' => 'Deploy freeze from Friday noon'],
@@ -470,6 +473,11 @@ return [
         'days' => '{1} 1 day|[2,*] :count days',
         'since' => 'Since :label',
         'since_then' => 'Since then',
+        'no_event' => 'No event coming up.',
+        'nothing_on' => 'Nothing on now',
+        'available' => 'Available',
+        'available_until' => 'Available until :time',
+        'busy_until' => 'Busy until :time',
     ],
 
     'media' => [
