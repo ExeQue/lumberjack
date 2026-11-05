@@ -1,30 +1,32 @@
 # Projects
 
-A project is one app. It belongs to a team; every member of the team can see it, and
-owners and admins can change its settings.
+A project is one app you monitor. It belongs to a team. Every member of the team can see
+it, and team owners and admins change its settings.
 
 ## The projects list
 
-**Projects** in the sidebar shows every project of the team with its open issues, errors, p95
-and failed jobs of the last 24 hours and its errors per hour. **Calm** marks a project
-with no open issues and every agent checking in. **2 agents offline** and **Not seen**
-under the chart warn when the project's [agents](#agents) stopped checking in: by host
-when they share a name ("api-1, api-2"), else by agent and host ("queue on web-2", or
-"unnamed agent on web-2"); the whole list shows on hover. **Search projects** filters the list.
+**Projects** in the sidebar shows a card for each project of the team:
+
+- open issues, and the errors, p95 and failed jobs of the last 24 hours;
+- a chart of errors per hour;
+- **Calm** when the project has no open issues and every agent checks in;
+- **Agent offline** (or **2 agents offline**) and **Not seen: …** when an
+  [agent](#agents) stopped checking in, with the hosts it ran on. Hover for the full list.
+
+**Search projects** filters the cards.
 
 ## Live updates
 
-Every page updates in place when what it shows changes, whoever changed it: another
-member, an MCP tool, a scheduled job or data arriving from the SDK. Your own changes
-show at once and are not loaded twice.
+Every page updates in place when what it shows changes: another member edits something,
+an MCP tool acts, or new data arrives from the app.
 
 - **Project pages**: the overview, issues and an issue, routes, queries, releases,
-  jobs, schedule, commands, logs and health, as data arrives (performance at most every
-  10 seconds), and when a health check, scheduled task, label or queue alert is changed.
+  jobs, schedule, commands, logs and health, as data arrives and when a health check,
+  scheduled task, label or queue alert is changed.
 - **Sidebar**: the badge counts of issues, jobs, schedule, health and commands, and the
   team's projects.
 - **Projects list**: new, renamed and removed projects, and each card's figures as its
-  issues, jobs and agents change. The day's figures may trail by up to a minute.
+  issues, jobs and agents change.
 - **Project settings**: keys, labels, log channels, agents, retention, alerts and the
   repository, and what the project inherits from the team.
 - **Team**: members, invitations, MCP tokens, alert channels and rules, and retention.
@@ -32,81 +34,119 @@ show at once and are not loaded twice.
   is changed (see [Status screens](./screens)).
 - **Administration**: teams, users, the audit log and retention.
 
-A settings page you are typing into is not changed under your hands: it says **This
-page changed elsewhere** with a **Reload** button, which loads the new state and drops
-your unsaved edits. Saving keeps your edits and brings in the rest.
+While you edit a settings page, it does not change under you. It says **This page
+changed elsewhere** with a **Reload** button instead. **Reload** loads the new state and
+drops your unsaved edits. Saving keeps your edits and loads the rest.
 
 ## Creating a project
 
-Team owners and admins create projects. Give it a name and an issue prefix. The prefix
-is suggested from the name (initials for several words, the word itself for one) and is
-used for [issue numbers](./issues#issue-numbers): 2 to 8 letters and digits, starting
-with a letter, upper-cased, unique in the team.
+Team owners and admins create projects with **New project**. Give it a **Name** and an
+**Issue prefix**. The prefix is suggested from the name and starts every
+[issue number](./issues#issue-numbers). It has 2 to 8 capital letters and digits, starts
+with a letter and is unique in the team.
 
-The new project opens on its **Installation** settings, which show how to install the
+The new project opens on its **Installation** settings. They show how to install the
 SDK, the `.env` values, the agent setup, the browser script and a test command. The
-server token is shown once, right after creating; copy it then or rotate it later.
+server token is shown only once, right after you create the project. Copy it then, or
+rotate it later.
 
 ## Switching project
 
-Pick another project in the sidebar or the [command palette](./finding-things) and you
-land on the same page in it: from the issues to its issues, from a job to its jobs.
-Pages that belong to one thing, like a trace, open the other project's overview.
+Pick another project in the sidebar or the [command palette](./finding-things) to open
+the same page in it: from the issues to its issues, from a job to its jobs. A page about
+one thing, like a trace, opens the other project's overview.
 
 ## Settings
 
 Only team owners and admins change settings, labels, log channels, agents, retention
 and the repository. Members see everything and work on issues.
 
-The settings are in sections, one open at a time; the address keeps which (for example
-`#agents`), so a link opens the right one.
+The settings are split into sections, one open at a time. The address names the open
+section (for example `#agents`), so you can link to it.
 
-- **General:** the name, the **slug** (used in URLs and as the project argument in
-  MCP; letters, digits, `-` and `_`, unique in the team), the issue prefix, allowed
-  origins and extra secret fields.
+- **General:** the name, the **slug**, the issue prefix, allowed origins and extra
+  secret fields. The slug is used in URLs and as the project argument in MCP. It takes
+  letters, digits, `-` and `_`, and is unique in the team.
 - **Installation:** what to install and set, as when the project was created.
-- **Keys:** the server token (for the agent), the public key (for browser errors) and
-  public stats, a secret URL serving the project's aggregates on the
-  [metrics API](./metrics-api#authentication) without a token, off by default.
-  All three can be rotated; the server token is shown only once.
-- **Allowed origins:** browser errors are only accepted from these origins (up to 50,
-  each an origin such as `https://shop.example.com`, without a path). Until one is
-  added, browser errors are refused.
-- **Extra secret fields:** masked as `[filtered]` before storage in headers, session,
-  Context and log context, on top of the fields that are always masked (`password`,
-  `passwd`, `pwd`, `secret`, `token`, `authorization`, `cookie`, `api_key`, `apikey`,
-  `access_key`, `private_key`, `jwt`, `dsn`, `credit_card`, `card_number`, `cvv`,
-  `session_id`). Values that look like secrets are masked too, whatever their key; see
-  [Security](./administration#security). A plain word masks every key
-  containing it (`cpr`), `*` is a wildcard on the key name (`card_*`), and a dotted
-  pattern matches the full path (`session.checkout.*`). Up to 50, each at most 64
-  characters.
-- <a id="agents"></a>**Agents:** each server's agent checks in every minute with what it runs (SDK and
-  runtime, e.g. "Laravel 0.1.0 · PHP 8.5.1"; hover for the agent and framework). One
-  that has not checked in for 5 minutes is shown as offline, and is removed after 24 hours without a heartbeat,
-  since its server or pod is most likely gone (Kubernetes names every pod for
-  itself). **Remove** forgets one right away; it comes back if it checks in again.
-  The heartbeat also reports the size of the app's queues (the queues the SDK
-  is set to watch), kept for 30 days by default for the [Jobs page](./performance#queues), and how busy
-  its host is: the table shows the 1 minute load against the cores, memory and disk
-  in use (hover for the bytes), with the highest load and memory per hour over the
-  last day. Memory and disk turn amber past 90%, load past the number of cores. In a
-  container the container's own limits count. Host samples are kept for 7 days by
-  default. Both follow [retention](#retention).
+- **Keys:** the server token for the agent, the public key for browser errors, and
+  public stats. Public stats is a secret URL that serves the project's figures on the
+  [metrics API](./metrics-api#authentication) without a token. It is off by default.
+  You can rotate all three. The server token is shown only once.
+- **Allowed origins:** browser errors are accepted only from these origins, such as
+  `https://shop.example.com` without a path. Until you add one, browser errors are
+  rejected.
+- **Extra secret fields:** keys whose values are replaced with `[filtered]` before they
+  are stored, in headers, session, Context and log context. These come on top of the
+  keys that are always masked: `password`, `passwd`, `pwd`, `secret`, `token`,
+  `authorization`, `cookie`, `api_key`, `apikey`, `access_key`, `private_key`, `jwt`,
+  `dsn`, `credit_card`, `card_number`, `cvv` and `session_id`. Values that look like
+  secrets are masked whatever their key, see [Security](./administration#security).
+  - A plain word masks every key that contains it: `cpr`.
+  - `*` is a wildcard in the key name: `card_*`.
+  - A dotted pattern matches the full path: `session.checkout.*`.
+- **Agents:** the servers that send data, see [Agents](#agents).
 - **Alerts:** the project's [own channels, and its rules](./alerts#team-rules-and-project-overrides): the team's by default, or customized for the project.
 - **Log channels:** the channels the project's log lines go to, with the lines of the
-  last 24 hours and their own [retention](#retention). Names are kebab-case, at most 64
-  characters. Lines sent to a channel the project does not have land in `default`,
-  which cannot be deleted; deleting another channel moves its lines there. Channels
-  that lines were sent to in the last 7 days get a **Create** button here and a banner
-  on the Logs page.
+  last 24 hours and each channel's own [retention](#retention). Names are kebab-case.
+  Lines sent to a channel the project does not have go to `default`, which cannot be
+  deleted. Deleting another channel moves its lines to `default`. A channel that
+  received lines in the last 7 days but does not exist yet gets a **Create** button
+  here and a banner on the Logs page.
 - **Labels:** rename, recolor or delete [issue labels](./issues#working-on-an-issue).
-- **Retention:** see below.
-- **Repository integration:** see [below](#repository-integration).
+- **Retention:** see [Retention](#retention).
+- **Repository integration:** see [Repository integration](#repository-integration).
 - **Automatic triage:** see [MCP](./mcp#automatic-triage).
 - **Danger zone:** see [Deleting a project](#deleting-a-project).
 
+The project's [data sources](./data-sources.md) are listed in the settings menu too.
+
+## Agents
+
+An agent is a small process from the SDK that runs once on every server of the app,
+under Supervisor. It sends the app's data to Lumberjack and checks in every minute.
+Install it as the **Installation** settings show.
+
+**Agents** in the settings lists every agent that has checked in:
+
+| Column        | Shows                                                                                         |
+| ------------- | --------------------------------------------------------------------------------------------- |
+| **Host**      | The server or pod it runs on.                                                                 |
+| **Name**      | The agent's name, when it has one.                                                            |
+| **Running**   | SDK and runtime, e.g. "Laravel 0.1.0 · PHP 8.5.1". Hover for the agent and framework version. |
+| **Last seen** | Its last check-in.                                                                            |
+| **Load**      | The 1 minute load against the number of cores, and the highest load per hour over 24 hours.   |
+| **Memory**    | Memory in use, and the highest use per hour over 24 hours. Hover for the bytes.               |
+| **Disk**      | Disk in use. Hover for the bytes.                                                             |
+| **Status**    | **Online** or **Offline**.                                                                    |
+
+Memory and disk turn amber above 90%, load above the number of cores. In a container,
+the container's own limits count.
+
 ![The Agents section of a project's settings, with the load, memory and disk of each server](./screenshots/settings-agents.png)
+
+### Offline agents
+
+- An agent that has not checked in for **5 minutes** is **Offline**. The projects list
+  warns about it.
+- Every team member who can see the project gets an **Agents** notification, once per
+  project, however many agents went offline. It is on in the app by default. Each
+  member can turn it on or off for mail, the app and the browser in their
+  [notification settings](./teams#notifications). When the agent checks in again and
+  later goes offline, members are told again.
+- An agent that has not checked in for **24 hours** is removed: its server or pod is
+  most likely gone.
+- **Remove** removes an agent right away. It comes back if it checks in again.
+
+### What agents report
+
+With each check-in, an agent reports:
+
+- the size of the app's queues that the SDK watches, shown on the
+  [Jobs page](./performance#queues) and used by [queue backlog alerts](./alerts#queue-backlog);
+- how busy its host is: load, memory and disk, shown in the table above.
+
+Queue sizes are kept for 30 days and host metrics for 7 days by default. Both follow
+[retention](#retention).
 
 ## Browser script
 
@@ -132,11 +172,10 @@ The project settings show the script tag for browser errors:
 | `data-vitals`      | `false` stops measuring [Web Vitals](./performance#browser).            |
 | `data-endpoint`    | Where to send, instead of `/api/ingest/browser` on the script's server. |
 
-Crawlers and automated browsers are skipped, in the browser and again on the server.
+Crawlers and automated browsers are ignored.
 
-With each page view's Web Vitals the script sends the class of device it ran on
-(mobile, tablet or desktop): from the browser's client hints where it has them, else
-from its user agent and touch screen.
+With each page view's Web Vitals, the script sends the class of device: mobile, tablet
+or desktop.
 
 The script also has a small API on `window.Lumberjack`:
 
@@ -148,83 +187,92 @@ The script also has a small API on `window.Lumberjack`:
 | `Lumberjack.flush()`                          | Sends what is waiting now.                                                                               |
 | `Lumberjack.version`                          | The script's version.                                                                                    |
 
-A page view sends at most 100 errors, and at most 5 of the same name and message.
-Noise is dropped: "Script error.", "ResizeObserver loop", "Non-Error promise rejection
-captured", "Uncaught (in promise)", and errors whose frames all come from browser
-extensions.
+The script ignores common noise: "Script error.", "ResizeObserver loop",
+"Non-Error promise rejection captured", "Uncaught (in promise)", and errors that come
+only from browser extensions.
 
 ## Retention
 
-Every kind of data has its own retention, set on three levels. Each level is the
-default for the one below it and the most it may keep:
+Retention sets how long each kind of data is kept. You set it on three levels. Each
+level is the default for the level below it, and the most that level may keep:
 
 1. **Application**, the whole Lumberjack: **Administration > Retention**, for system
    administrators. Empty uses the built-in default and sets no maximum.
-2. **Team**: **Team > Retention** in the sidebar, for team owners and admins (members can read
-   it). At most the application value.
-3. **Project**: the project's settings, for whoever administers the project. At most
-   the team value; job classes and log channels can have their own, also at most the
-   team value.
+2. **Team**: **Team > Retention** in the sidebar, for team owners and admins. Members
+   can read it. At most the application value.
+3. **Project**: **Retention** in the project's settings, for team owners and admins. At
+   most the team value. Job classes and log channels can have their own value, also at
+   most the team value.
 
-Each value is a number of days (1 to 3650), empty to inherit, or **forever**. A team or
-project can only choose forever when the application keeps that data forever itself
-(and the team sets no number for its projects); the built-in defaults are never forever.
-A team or project value of forever stored earlier falls back to the application value
-(or the built-in default) until the application keeps it forever.
+Each value is a number of days from 1 to 3650, empty to inherit, or **Forever**. A team
+or project can choose **Forever** only when the application keeps that data forever, and
+the team sets no number for its projects. The built-in defaults are never forever.
 
-Saving more than a level above allows is refused, naming the limit. Lowering a level
-does not change what the levels below store: their values are capped right away, shown
-as capped, and come back once the limit is raised again. A level that stores nothing
-sets no limit, so a project can keep longer than the built-in default as long as
-neither its team nor the application says otherwise.
+A value above the limit is rejected, with the limit named. When you lower a level, the
+levels below it are capped at once and show as **Capped**. Their own values come back
+when the limit is raised again. A level with no value sets no limit, so a project can
+keep data longer than the built-in default when neither its team nor the application
+sets a limit.
 
 ![The retention table of a project, with the limit from the team and what is stored](./screenshots/settings-retention.png)
 
-Each table shows per data type what the level inherits, the limit from above, how many
-rows are stored (counted up to 100,000; an estimate on the application page) with the
-age of the oldest, and the date the daily prune would delete up to.
+For each data type, the table shows the **Default** the level inherits, the value of
+**This level**, the limit from above, the **Rows** stored, the age of the **Oldest** row,
+and **Deletes before**: the date up to which data is deleted next. Data is deleted once
+a day.
 
-| Group          | Data type            | Default  | Holds                                                                                                                   |
-| -------------- | -------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Errors         | Occurrences          | 90 days  | Each time an error happened, with stack trace and context                                                               |
-| Performance    | Requests             | 14 days  | One row per HTTP request: route, status and duration                                                                    |
-| Performance    | Queries              | 14 days  | Database queries recorded with their requests and jobs                                                                  |
-| Performance    | Spans                | 14 days  | Trace spans: outgoing HTTP, cache and custom timings                                                                    |
-| Performance    | Web vitals           | 30 days  | Page load metrics from browsers                                                                                         |
-| Jobs           | Job runs             | 30 days  | Each queued job attempt; can be set per job class                                                                       |
-| Jobs           | Scheduled task runs  | 30 days  | Each run of a scheduled task                                                                                            |
-| Jobs           | Command runs         | 30 days  | Each console command run                                                                                                |
-| Logs           | Logs                 | 14 days  | Log lines; can be set per channel                                                                                       |
-| Health         | Health results       | 14 days  | Each health check probe and its latency                                                                                 |
-| Health         | Health outages       | 365 days | Periods a check was down or degraded; uptime is counted from them                                                       |
-| Infrastructure | Queue size samples   | 30 days  | Queue length and oldest job age, sampled by the agent                                                                   |
-| Infrastructure | Host metrics         | 7 days   | CPU, memory and disk samples from the agent                                                                             |
-| Alerts         | Alert history        | 90 days  | Every alert sent, to which channel, and whether it got through                                                          |
-| Administration | Audit log            | 365 days | What administrators did; set on the application level only                                                              |
-| Administration | Notification history | 90 days  | Everyone's [notification center](./teams#notification-center), read and unread alike; set on the application level only |
+| Data type            | Default  | What it is                                                         |
+| -------------------- | -------- | ------------------------------------------------------------------ |
+| Occurrences          | 90 days  | Each time an error happened, with its stack trace and context      |
+| Requests             | 14 days  | Recorded HTTP requests and the request counts per minute           |
+| Queries              | 14 days  | Database queries recorded with requests and jobs                   |
+| Spans                | 14 days  | Outgoing HTTP calls, cache operations and custom timings in traces |
+| Web vitals           | 30 days  | Page load metrics from browsers                                    |
+| Job runs             | 30 days  | Each attempt of a queued job. Can be set per job class             |
+| Scheduled task runs  | 30 days  | Each run of a scheduled task                                       |
+| Command runs         | 30 days  | Each console command run                                           |
+| Logs                 | 14 days  | Log lines. Can be set per channel                                  |
+| Health results       | 14 days  | Each health check result and its latency                           |
+| Health outages       | 365 days | Periods a check was down or degraded. Uptime is counted from them  |
+| Data source history  | 30 days  | What each [data source](./data-sources.md) answered, for charts    |
+| Queue size samples   | 30 days  | Queue length and oldest job age, reported by the agents            |
+| Host metrics         | 7 days   | CPU, memory and disk, reported by the agents                       |
+| Alert history        | 90 days  | Every alert sent, to which channel, and whether it got through     |
+| Audit log            | 365 days | What administrators did. Application level only                    |
+| Notification history | 90 days  | Everyone's [notification center](./teams#notification-center). Application level only |
 
-Issues themselves are never pruned, only their occurrences. Failed job runs, failed or
-missed scheduled runs and failed command runs stay at least as long as occurrences.
-Open outages are kept until they end. Data is pruned once a day, at 03:15
-Europe/Copenhagen.
-
-Upgrading keeps what was set: an old Errors value became Occurrences (and Health
-outages when it was longer than a year), Performance became Requests, Queries, Spans,
-Web vitals and Health results, Jobs became Job runs, Scheduled task runs and Command
-runs, and Logs stayed Logs.
+Issues themselves are never deleted, only their occurrences. Failed job runs, failed or
+missed scheduled runs and failed command runs are kept at least as long as occurrences.
+An outage is kept until it ends.
 
 ## Repository integration
 
-Link a GitHub repository to create GitHub issues from Lumberjack issues, by button or
-through MCP. It needs a fine-grained token with only **Issues: read and write** on that
-repository; **Create token on GitHub** opens GitHub with the right settings filled in.
-Lumberjack warns 14 days before the token expires (GitHub's form is filled in with 90
-days). **Test connection** checks the token and says whether the repository is private
-or public; creating issues in a public repository has to be allowed explicitly.
-Created issues get the labels you list (comma separated).
+Link a GitHub repository to create GitHub issues from Lumberjack issues, with a button
+or through MCP.
+
+1. Enter the **Repository** as `owner/name`.
+2. Create a fine-grained token with only **Issues: read and write** on that repository.
+   **Create token on GitHub** opens GitHub with these settings filled in. Paste it under
+   **Fine-grained token**.
+3. Click **Test connection**. It checks the token and says whether the repository is
+   private or public.
+4. For a public repository, tick **Allow creating issues in a public repository**.
+5. Optionally list **Labels**, comma separated, for the created issues.
+
+Lumberjack warns 14 days before the token expires.
 
 ## Deleting a project
 
-The danger zone deletes the project and all its data, after you type the project's
-name. Raw data is removed in the
-background in batches and can take several minutes.
+The **Danger zone** deletes the project and all its data, after you type the project's
+name. Deleting the data can take several minutes.
+
+## Limits
+
+| What                                      | Limit             |
+| ----------------------------------------- | ----------------- |
+| Allowed origins                           | 50                |
+| Extra secret fields                       | 50, 64 characters |
+| Log channel name                          | 64 characters     |
+| Browser errors per page view              | 100               |
+| Same browser error per page view          | 5                 |
+| Retention value                           | 1 to 3650 days    |

@@ -1,45 +1,48 @@
 # Metrics API
 
-A read-only JSON API for charting Lumberjack's data in Grafana, or reading it from any
+A read-only JSON API for charting Lumberjack's data in Grafana or reading it from any
 HTTP client: requests, errors, latency, issues, jobs, queues, hosts, web vitals and
 releases. It also serves the current gauges in the Prometheus text format, for scraping
 and alerting.
 
 ## Authentication
 
-Two ways in, both read only:
+Use either of these. Both only read.
 
-- **A team token**, as a bearer token: `Authorization: Bearer lj_mcp_...`. These are the
-  tokens under **API and MCP tokens** on the team page (see [MCP](./mcp#tokens)); a
-  token of either scope reads the projects it lists that its creator may see (and that
-  are still in its team), and nothing of any other project.
-  Its expiry, revocation and "last used" work as for MCP.
-- **Public stats**, without a header. In a project's **Settings, Keys**, an owner or
-  admin turns on **Public stats**. That creates an unguessable URL,
+- **A team token**, sent as `Authorization: Bearer lj_mcp_...`. Create it under **API
+  and MCP tokens** on the team page, as described in [MCP](./mcp#tokens). The token
+  reads the projects it lists that its creator may see. Expiry, revocation and
+  "last used" work as for MCP.
+- **Public stats**, without a header. An owner or admin turns on **Public stats** in a
+  project's **Settings, Keys**. That creates a secret URL,
   `https://your-lumberjack/api/v1/public/ps_.../`, which serves the same endpoints for
-  that one project. Public stats are off by default, can be rotated (the old URL stops
-  working at once) or turned off again, and every change goes in the
-  [audit log](./administration). They are aggregates only: no issue messages, stack
-  traces, user ids, query strings or host names (hosts show as `host 1`, `host 2`).
-  Issue titles are left out too, unless **Include issue titles** is ticked.
+  that one project. Public stats are off by default. You can rotate the URL, which
+  stops the old one at once, or turn it off. Every change goes into the
+  [audit log](./administration).
 
-Everything below is relative to `https://your-lumberjack/api/v1` with a token, or to the
+Public stats show aggregates only. They leave out issue messages, stack traces, user
+ids, query strings and host names. Hosts show as `host 1`, `host 2`. Issue titles are
+left out unless **Include issue titles** is ticked.
+
+Paths below are relative to `https://your-lumberjack/api/v1` with a token, or to the
 public stats URL without one.
 
-## Limits and caching
+## Limits and errors
 
 | What                               | Limit                                   |
 | ---------------------------------- | --------------------------------------- |
-| Requests per token or public key   | 120 a minute, then a 429                |
-| Unknown tokens or keys per address | 30 a minute, then a 429 for that minute |
-| Identical questions                | answered from a 30 second cache         |
-| Time range of a series             | at most 90 days, at most 2,000 points   |
+| Requests per token or public key   | 120 a minute, then `429`                |
+| Unknown tokens or keys per address | 30 a minute, then `429` for that minute |
+| Time range of a series             | at most 90 days and 2,000 points        |
+| Freshness                          | answers can be up to 30 seconds old     |
 
-A wrong or missing token gets a 401, an unknown public key or a project the credential
-does not read a 404, invalid parameters a 422. Series times are rounded down to 30
-seconds, so a wall of panels refreshing every few seconds asks Postgres once per 30
-seconds, not once per panel and refresh. Data past a project's
-[retention](./projects#retention) is gone and does not show.
+| Status | When                                                         |
+| ------ | ------------------------------------------------------------ |
+| `401`  | The token is wrong or missing.                               |
+| `404`  | The public key is unknown, or the credential cannot read the project. |
+| `422`  | A parameter is invalid.                                      |
+
+Data past a project's [retention](./projects#retention) is deleted and does not show.
 
 ## Endpoints
 
@@ -56,10 +59,16 @@ seconds, not once per panel and refresh. Data past a project's
 | `GET /projects/{p}/releases`        | Release health: requests, error rate, p95, occurrences, new issues, regressions.                                                                                                                      |
 | `GET /metrics`                      | Prometheus text format of the current gauges of every project.                                                                                                                                        |
 
-`{p}` is a project's slug or uuid. The summary and tables cover a `period` ending now:
-`1h`, `24h` (default), `7d` or `30d`, as on the project pages, with an optional
-`environment`; the tables take a `limit` (100 by default, 50 for releases, at most 500).
-Durations are in milliseconds, rates and shares are fractions from 0 to 1, sizes in bytes.
+`{p}` is a project's slug or uuid. The summary and tables take:
+
+| Parameter     | Values                                                                 |
+| ------------- | ---------------------------------------------------------------------- |
+| `period`      | `1h`, `24h` (default), `7d` or `30d`, ending now                       |
+| `environment` | Optional. Only this environment.                                       |
+| `limit`       | Tables only. 100 by default, 50 for releases, at most 500.             |
+
+Durations are in milliseconds, rates and shares are fractions from 0 to 1, and sizes are
+in bytes.
 
 Tables come as typed columns and rows:
 
@@ -98,23 +107,23 @@ Tables come as typed columns and rows:
 | `db_connections`                       | count | environment, check                        |
 | `db_connections_used`                  | ratio | environment, check                        |
 
-Query parameters, named so Grafana's macros drop straight in:
+Query parameters, which match Grafana's macros:
 
 - `from`, `to`: epoch milliseconds (`${__from}`, `${__to}`) or ISO 8601. The last 24
   hours by default.
 - `interval`: the bucket size, such as `30s`, `5m`, `1h` or `1d` (`${__interval}`), or
-  `auto` (the default) for about 300 points. At least a minute, rounded up to whole
-  minutes, and raised so a series has at most 2000 points; the answer's `interval` says
-  what was used.
+  `auto` (the default) for about 300 points. The interval is at least a minute, rounded
+  up to whole minutes, and raised so a series has at most 2,000 points. The answer's
+  `interval` says what was used.
 - `environment`, `route`, `domain`, `queue`, `job`, `host`, `release`, `check`: filters.
   `route`, `domain`, `queue`, `job`, `host` and `check` (a health check's slug, such as
   `database:pgsql`) take `*` as a wildcard (`/api/*`, `*.example.com`). `route` matches a
-  route's URI or its name (`orders.*`); `domain` the host the request was made to. A filter a metric's data does not
-  carry, such as a route for a queue's size, is ignored; except `host`, which is refused
-  (422) on a metric that cannot be split by host, as requests and errors are counted
-  without one.
-- `group_by`: one series per environment, route, domain, host, queue, release or check, the busiest
-  `top` (10 by default, at most 50) of them.
+  route's URI or its name (`orders.*`). `domain` matches the host the request was made
+  to. A filter that does not apply to a metric, such as `route` on `queue_size`, is
+  ignored. The exception is `host`: on a metric that cannot be split by host, it is
+  rejected with 422.
+- `group_by`: one series per environment, route, domain, host, queue, release or check.
+  Only the busiest `top` are returned, 10 by default and at most 50.
 
 ```json
 {
@@ -129,29 +138,29 @@ Query parameters, named so Grafana's macros drop straight in:
 }
 ```
 
-Counts are zero in a bucket without data; other metrics have no point there. Without
+In a bucket without data, counts are zero and other metrics have no point. Without
 `group_by`, `series` is the metric's name.
 
-How the numbers are counted:
+#### How the numbers are counted
 
-- Request totals and error rates come from every request the SDK counted, sampled or
-  not; percentiles and the Apdex split only from the runs the SDK picked (see
-  [Sampling](./performance#sampling)). Asking for a `release` reads the runs weighed by
-  their sample rate instead, as the per-minute counts carry no release.
+- Request totals and error rates count every request, sampled or not. Percentiles and
+  Apdex use only the sampled runs. See [Sampling](./performance#sampling). With a
+  `release` filter or split, totals are estimated from the sampled runs and their
+  sample rate.
 - Apdex uses a 500 ms target, as on the Requests page.
 - `cpu_load` is the 1 minute load per core (1 is every core busy); memory and disk are
-  the share in use. A host metric is the highest over the hosts, a queue's size the
-  largest it reported in a bucket, added up over the queues.
-- The database metrics read what [database health checks](./health#database-metrics)
-  report: a check's largest figure in a bucket (several servers reporting one database
-  count once), added up over the checks; `db_connections_used` is `connections` over
+  the share in use. A host metric is the highest value over the hosts. A queue's size
+  is the largest it reported in a bucket, summed over the queues.
+- The database metrics come from [database health checks](./health#database-metrics).
+  Each check counts its largest figure in a bucket, summed over the checks. A database
+  reported by several servers counts once. `db_connections_used` is `connections` over
   `max_connections`, the highest over the checks.
 
 ### Prometheus
 
-`GET /metrics` serves gauges for every project the token reads (or the public stats
-project), labeled with the project's slug. Counts and rates cover the last hour; the
-database gauges are each database check's latest report.
+`GET /metrics` serves gauges for every project the credential reads, labeled with the
+project's slug. Counts and rates cover the last hour. The database gauges show each
+database check's latest report.
 
 | Gauge                                     | Labels                            |
 | ----------------------------------------- | --------------------------------- |
@@ -190,7 +199,7 @@ For public stats, drop `authorization` and set `metrics_path` to
 ## Grafana
 
 1. Install the [Infinity data source](https://grafana.com/grafana/plugins/yesoreyeram-infinity-datasource/)
-   and add one. Under **Authentication** pick **Bearer token** and paste the token, and
+   and add one. Under **Authentication**, pick **Bearer token**, paste the token, and
    add your Lumberjack's address to **Allowed hosts**. For public stats, leave
    authentication off.
 2. In a panel, pick the data source, type **JSON**, source **URL**, format **Time
@@ -209,6 +218,6 @@ For public stats, drop `authorization` and set `metrics_path` to
 For alerting on gauges, add a Prometheus data source over a Prometheus that scrapes
 `/api/v1/metrics` as above.
 
-[`docs/grafana/lumberjack.json`](./grafana/lumberjack.json) is a dashboard to import
-(**Dashboards, New, Import**): requests, error rate, p95 per route and the routes table
-for one project, picked with the `project` variable.
+To start quickly, import [`docs/grafana/lumberjack.json`](./grafana/lumberjack.json)
+under **Dashboards, New, Import**. It shows requests, error rate, p95 per route and the
+routes table for the project picked in the `project` variable.
