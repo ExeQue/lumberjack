@@ -551,6 +551,8 @@ export function WidgetTile({
             {...props}
             className={cn('lj-tile', className)}
             data-kind={widget.type}
+            // No card: no background or border while calm; a problem still brings them.
+            data-plain={opt<boolean>('card') === false || undefined}
             // Media to the tile's edges; its title and line keep their room.
             data-bare={
                 (widget.type === 'media' &&
