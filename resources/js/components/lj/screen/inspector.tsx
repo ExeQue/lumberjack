@@ -953,6 +953,7 @@ export function WidgetInspector({
                                 <Input
                                     id={id(`${field.key}-${i}`)}
                                     type="url"
+                                    className="min-w-0 flex-1"
                                     value={url}
                                     placeholder={t(
                                         `screens.fields.${field.key}.placeholder`,
