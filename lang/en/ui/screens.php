@@ -172,6 +172,7 @@ return [
         'layout' => 'Layout',
         'none' => 'No widget matches.',
         'hint' => 'Drag onto any free cell of the grid, or click to add in the first free spot.',
+        'tap_hint' => 'Tap a widget to add it in the first free spot, then drag it on the grid to move it.',
     ],
 
     'designer' => [
@@ -773,6 +774,7 @@ return [
         'add_window' => 'Add a window: open :url in another browser window on this device and pair it.',
         // Button; opens the playlist of a display.
         'rotate' => 'In turn',
+        'rotate_hint' => 'Pick several screens for this window to rotate through, one after another.',
         'rotating' => '{1} 1 screen|[2,*] :count screens in turn',
         'playlist_title' => 'Screens in turn on :name',
         'playlist_hint' => 'Tick the screens to show one after another, in this order. Fewer than two shows one screen.',

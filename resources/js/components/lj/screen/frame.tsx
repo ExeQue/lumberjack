@@ -24,12 +24,18 @@ export function ratioOf(
 /**
  * The box a screen is laid out in on a display of this size: all of it when the screen
  * fills any display, or when the display's shape is within 2% of the screen's; else
- * the largest box of the screen's shape, centered, the rest left as ground.
+ * the largest box of the screen's shape, centered, the rest left as ground. A landscape
+ * screen on an upright display (a tablet or phone held up) takes all of it too: kept to
+ * its shape it would be a thin band of unreadable type.
  */
 export function fitBox(view: Size, ratio: number, fit: Screen['fit']): Size {
     const shape = view.w / view.h;
 
-    if (fit === 'fill' || Math.abs(shape / ratio - 1) <= 0.02) {
+    if (
+        fit === 'fill' ||
+        Math.abs(shape / ratio - 1) <= 0.02 ||
+        (shape < 1 && ratio > 1)
+    ) {
         return view;
     }
 
@@ -154,15 +160,15 @@ export function KioskFrame({
                         <div className="flex min-w-0 items-center gap-[0.9cqw]">
                             <span
                                 aria-hidden="true"
-                                className="flex size-[2.3cqw] items-center justify-center rounded-[0.5cqw] bg-(--s-panel) [&_svg]:size-[1.5cqw]"
+                                className="flex size-[max(1.75rem,2.3cqw)] items-center justify-center rounded-[0.5cqw] bg-(--s-panel) [&_svg]:size-[max(1.1rem,1.5cqw)]"
                             >
                                 <LogMark />
                             </span>
                             <div className="flex min-w-0 flex-col">
-                                <h1 className="truncate text-[1.5cqw] leading-tight font-bold">
+                                <h1 className="truncate text-[max(1rem,1.5cqw)] leading-tight font-bold">
                                     {header.title}
                                 </h1>
-                                <span className="truncate text-[0.85cqw] text-(--s-ink-2)">
+                                <span className="truncate text-[max(0.75rem,0.85cqw)] text-(--s-ink-2)">
                                     {header.subtitle}
                                 </span>
                             </div>
@@ -318,12 +324,12 @@ export function KioskStatus({
     return (
         <>
             {attention > 0 && offline === null && (
-                <span className="rounded-full bg-(--s-red) px-[0.85cqw] py-[0.4cqw] text-[0.95cqw] font-bold text-(--s-ground)">
+                <span className="rounded-full bg-(--s-red) px-[0.85cqw] py-[0.4cqw] text-[max(0.75rem,0.95cqw)] font-bold whitespace-nowrap text-(--s-ground)">
                     {t('screens.kiosk.attention', {}, attention)}
                 </span>
             )}
             {offline === null ? (
-                <span className="flex items-center gap-[0.4cqw] text-[0.85cqw] text-(--s-green)">
+                <span className="flex items-center gap-[0.4cqw] text-[max(0.75rem,0.85cqw)] text-(--s-green)">
                     <span
                         aria-hidden="true"
                         className="size-[0.55cqw] rounded-full bg-(--s-green)"
@@ -331,7 +337,7 @@ export function KioskStatus({
                     {t('screens.kiosk.live')}
                 </span>
             ) : (
-                <span className="flex items-center gap-[0.4cqw] text-[0.95cqw] font-semibold text-(--s-amber)">
+                <span className="flex items-center gap-[0.4cqw] text-[max(0.75rem,0.95cqw)] font-semibold text-(--s-amber)">
                     <span
                         aria-hidden="true"
                         className="size-[0.55cqw] rounded-full bg-(--s-amber)"
@@ -340,7 +346,7 @@ export function KioskStatus({
                 </span>
             )}
             {clock !== null && (
-                <span className="font-mono text-[2.1cqw] font-semibold">
+                <span className="font-mono text-[max(1.25rem,2.1cqw)] font-semibold">
                     {clock}
                 </span>
             )}

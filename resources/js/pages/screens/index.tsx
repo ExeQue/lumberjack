@@ -1,5 +1,5 @@
 import { Form, Head, Link, router, usePage, usePoll } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { Relative } from '@/components/lj/relative';
 import { TopBar } from '@/components/lj/top-bar';
@@ -444,6 +444,10 @@ export default function Screens({
     const [creating, setCreating] = useState(false);
     const [template, setTemplate] = useState('overview');
     const [renaming, setRenaming] = useState<Row | null>(null);
+    const [deleting, setDeleting] = useState<Row | null>(null);
+    // The dialog keeps its text while it animates closed.
+    const lastDeleting = useRef<Row | null>(null);
+    lastDeleting.current = deleting ?? lastDeleting.current;
     const [importing, setImporting] = useState(false);
     const [copying, setCopying] = useState<Row | null>(null);
     const [saving, setSaving] = useState<Row | null>(null);
@@ -489,7 +493,7 @@ export default function Screens({
                             {t('screens.empty.body')}
                         </EmptyState>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="relative overflow-x-auto">
                             <table className={tableClass}>
                                 <thead>
                                     <tr>
@@ -530,7 +534,7 @@ export default function Screens({
                                                 </Link>
                                             </td>
                                             <td
-                                                className={`${tdClass} font-mono`}
+                                                className={`${tdClass} font-mono whitespace-nowrap`}
                                             >
                                                 {`${screen.cols} × ${screen.rows}`}
                                             </td>
@@ -617,7 +621,7 @@ export default function Screens({
                                                         }
                                                         target="_blank"
                                                         rel="noreferrer"
-                                                        className="inline-flex h-8 items-center rounded-md border border-line-strong bg-panel-2 px-3 font-medium hover:bg-line"
+                                                        className={buttonClass()}
                                                     >
                                                         {t(
                                                             'screens.actions.open',
@@ -633,32 +637,6 @@ export default function Screens({
                                                             'screens.actions.edit',
                                                         )}
                                                     </LinkButton>
-                                                    <Button
-                                                        onClick={() =>
-                                                            setRenaming(screen)
-                                                        }
-                                                    >
-                                                        {t(
-                                                            'screens.actions.rename',
-                                                        )}
-                                                    </Button>
-                                                    <Button
-                                                        onClick={() =>
-                                                            router.post(
-                                                                duplicate(
-                                                                    screen.uuid,
-                                                                ).url,
-                                                                {},
-                                                                {
-                                                                    preserveScroll: true,
-                                                                },
-                                                            )
-                                                        }
-                                                    >
-                                                        {t(
-                                                            'screens.actions.duplicate',
-                                                        )}
-                                                    </Button>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger
                                                             className={buttonClass()}
@@ -668,6 +646,34 @@ export default function Screens({
                                                             )}
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                onSelect={() =>
+                                                                    setRenaming(
+                                                                        screen,
+                                                                    )
+                                                                }
+                                                            >
+                                                                {t(
+                                                                    'screens.actions.rename',
+                                                                )}
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onSelect={() =>
+                                                                    router.post(
+                                                                        duplicate(
+                                                                            screen.uuid,
+                                                                        ).url,
+                                                                        {},
+                                                                        {
+                                                                            preserveScroll: true,
+                                                                        },
+                                                                    )
+                                                                }
+                                                            >
+                                                                {t(
+                                                                    'screens.actions.duplicate',
+                                                                )}
+                                                            </DropdownMenuItem>
                                                             <DropdownMenuItem
                                                                 asChild
                                                             >
@@ -712,30 +718,20 @@ export default function Screens({
                                                                     'screens.saved_templates.save',
                                                                 )}
                                                             </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                variant="destructive"
+                                                                onSelect={() =>
+                                                                    setDeleting(
+                                                                        screen,
+                                                                    )
+                                                                }
+                                                            >
+                                                                {t(
+                                                                    'screens.actions.delete',
+                                                                )}
+                                                            </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
-                                                    <ConfirmButton
-                                                        question={t(
-                                                            'screens.actions.delete_question',
-                                                            {
-                                                                name: screen.name,
-                                                            },
-                                                        )}
-                                                        confirmLabel={t(
-                                                            'screens.actions.delete',
-                                                        )}
-                                                        onConfirm={() =>
-                                                            router.delete(
-                                                                destroy(
-                                                                    screen.uuid,
-                                                                ).url,
-                                                            )
-                                                        }
-                                                    >
-                                                        {t(
-                                                            'screens.actions.delete',
-                                                        )}
-                                                    </ConfirmButton>
                                                 </div>
                                             </td>
                                         </tr>
@@ -756,7 +752,7 @@ export default function Screens({
                                 {t('screens.saved_templates.list_hint')}
                             </p>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="relative overflow-x-auto">
                             <table className={tableClass}>
                                 <thead>
                                     <tr>
@@ -1056,6 +1052,40 @@ export default function Screens({
                             </>
                         )}
                     </Form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={deleting !== null}
+                onOpenChange={(open) => !open && setDeleting(null)}
+            >
+                <DialogContent className="gap-5 border-line bg-panel sm:max-w-md [&>button:last-child]:hidden">
+                    <DialogTitle className="text-sm leading-relaxed font-normal text-ink">
+                        {t('screens.actions.delete_question', {
+                            name: lastDeleting.current?.name ?? '',
+                        })}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {t('screens.actions.delete')}
+                    </DialogDescription>
+                    <DialogFooter>
+                        <Button onClick={() => setDeleting(null)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button
+                            variant="danger"
+                            autoFocus
+                            onClick={() => {
+                                if (deleting) {
+                                    router.delete(destroy(deleting.uuid).url);
+                                }
+
+                                setDeleting(null);
+                            }}
+                        >
+                            {t('screens.actions.delete')}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 

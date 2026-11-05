@@ -122,30 +122,32 @@ export default function TvPair({
 
     return (
         <div
-            className="lj-screen fixed inset-0 flex flex-col overflow-hidden px-[5vw] py-[3.3vw]"
+            className="lj-screen fixed inset-0 flex flex-col gap-[4vmin] overflow-y-auto px-[max(1rem,5vw)] py-[max(1rem,5.5vmin)]"
             data-theme="dark"
         >
             <Head title={t('screens.tv.title')} />
-            <div className="flex items-center gap-[0.8vw]">
+            <div className="flex items-center gap-[1.4vmin]">
                 <span
                     aria-hidden="true"
-                    className="flex size-[2.3vw] items-center justify-center rounded-[0.5vw] bg-(--s-panel) [&_svg]:size-[1.5vw]"
+                    className="flex size-[max(1.75rem,4vmin)] items-center justify-center rounded-[0.9vmin] bg-(--s-panel) [&_svg]:size-[max(1.1rem,2.7vmin)]"
                 >
                     <LogMark />
                 </span>
-                <span className="text-[1.6vw] font-bold">Lumberjack</span>
+                <span className="text-[max(1rem,2.8vmin)] font-bold">
+                    Lumberjack
+                </span>
                 {slot > 1 && (
-                    <span className="ml-[0.6vw] rounded-full border border-(--s-line-strong) px-[0.8vw] py-[0.2vw] text-[1.1vw] text-(--s-ink-2)">
+                    <span className="ml-[1vmin] rounded-full border border-(--s-line-strong) px-[1.4vmin] py-[0.4vmin] text-[max(0.8rem,2vmin)] text-(--s-ink-2)">
                         {t('screens.tv.window', { slot })}
                     </span>
                 )}
             </div>
-            <main className="flex flex-1 flex-wrap items-center justify-center gap-[6vw]">
-                <div className="flex max-w-[40vw] flex-col gap-[1.5vw]">
-                    <h1 className="text-[2.9vw] leading-tight font-bold">
+            <main className="flex flex-1 items-center justify-center gap-[10vmin] portrait:flex-col portrait:gap-[6vmin]">
+                <div className="flex max-w-[72vmin] flex-col gap-[2.7vmin] portrait:max-w-full">
+                    <h1 className="text-[max(1.4rem,5.2vmin)] leading-tight font-bold text-balance">
                         {t('screens.tv.title')}
                     </h1>
-                    <ol className="flex list-decimal flex-col gap-[0.7vw] pl-[1.9vw] text-[1.45vw] text-(--s-ink-2)">
+                    <ol className="flex list-decimal flex-col gap-[1.3vmin] pl-[1.3em] text-[max(1rem,2.6vmin)] text-(--s-ink-2)">
                         <li>
                             {withSlot(
                                 (r) => t('screens.tv.step_scan', r),
@@ -161,14 +163,14 @@ export default function TvPair({
                     <div
                         role="img"
                         aria-label={t('screens.tv.code_label', { code })}
-                        className="mt-[0.6vw] flex gap-[0.75vw]"
+                        className="mt-[1vmin] flex gap-[1.3vmin]"
                     >
                         {code.split('').map((ch, i) =>
                             ch === '-' ? (
                                 <span
                                     key={i}
                                     aria-hidden="true"
-                                    className="flex w-[2vw] items-center justify-center font-mono text-[4vw] font-bold"
+                                    className="flex w-[3.6vmin] items-center justify-center font-mono text-[max(1.5rem,7vmin)] font-bold"
                                 >
                                     -
                                 </span>
@@ -176,7 +178,7 @@ export default function TvPair({
                                 <span
                                     key={i}
                                     aria-hidden="true"
-                                    className="flex h-[6.2vw] w-[5vw] items-center justify-center rounded-[0.75vw] border-2 border-(--s-line-strong) bg-(--s-panel) font-mono text-[4vw] font-bold"
+                                    className="flex h-[max(2.6rem,11vmin)] w-[max(2.1rem,9vmin)] items-center justify-center rounded-[1.3vmin] border-2 border-(--s-line-strong) bg-(--s-panel) font-mono text-[max(1.5rem,7vmin)] font-bold"
                                 >
                                     {ch}
                                 </span>
@@ -185,31 +187,31 @@ export default function TvPair({
                     </div>
                     <span
                         role="status"
-                        className="flex items-center gap-[0.6vw] text-[1.25vw] text-(--s-ink-2)"
+                        className="flex items-center gap-[1vmin] text-[max(0.9rem,2.2vmin)] text-(--s-ink-2)"
                     >
                         <span
                             aria-hidden="true"
-                            className="size-[0.75vw] animate-pulse rounded-full bg-(--s-amber)"
+                            className="size-[max(0.5rem,1.3vmin)] flex-none animate-pulse rounded-full bg-(--s-amber)"
                         />
                         {paired
                             ? t('screens.tv.paired')
                             : `${t('screens.tv.waiting')} · ${t('screens.tv.new_code_in', { time: `${minutes}:${String(seconds).padStart(2, '0')}` })}`}
                     </span>
                 </div>
-                <div className="flex flex-col items-center gap-[0.9vw]">
+                <div className="flex flex-col items-center gap-[1.6vmin]">
                     <QrCode
                         svg={qr}
                         label={t('screens.tv.qr_label', {
                             url: bareUrl(pair_url),
                         })}
-                        className="size-[22vw]"
+                        className="size-[39vmin] portrait:size-[55vmin]"
                     />
-                    <span className="font-mono text-[1.15vw] text-(--s-ink-2)">
+                    <span className="font-mono text-[max(0.8rem,2vmin)] break-all text-(--s-ink-2)">
                         {bareUrl(pair_url)}
                     </span>
                 </div>
             </main>
-            <p className="text-[1.05vw] text-(--s-ink-3)">
+            <p className="text-[max(0.8rem,1.9vmin)] text-(--s-ink-3)">
                 {withSlot(
                     (r) => t('screens.tv.start_page', r),
                     'url',

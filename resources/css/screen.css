@@ -101,13 +101,14 @@
 
 /*
  * The grid is the container a tile's type scales with: one cell's share of it, so the
- * designer's grid is a true small TV and the TV gets large type.
+ * designer's grid is a true small TV and the TV gets large type, read across a room
+ * (about 17px a cell on a 1080p TV of 8 columns). Never under 12px, on a phone or tablet.
  */
 .lj-grid {
     container-type: size;
     --lj-cell-font: clamp(
-        10px,
-        min(calc(11cqh / var(--lj-rows)), calc(5.5cqw / var(--lj-cols))),
+        12px,
+        min(calc(11cqh / var(--lj-rows)), calc(7.5cqw / var(--lj-cols))),
         44px
     );
 }

@@ -196,10 +196,10 @@ export default function Kiosk({
                             className="flex items-center justify-between rounded-[0.7cqw] border-2 border-(--s-amber) bg-(--s-amber-bg) px-[1.4cqw] py-[0.9cqw]"
                         >
                             <div className="flex flex-col gap-[0.2cqw]">
-                                <span className="text-[1.25cqw] font-bold text-(--s-amber-soft)">
+                                <span className="text-[max(1rem,1.25cqw)] font-bold text-(--s-amber-soft)">
                                     {t('screens.kiosk.offline_title')}
                                 </span>
-                                <span className="text-[0.9cqw] text-(--s-ink-2)">
+                                <span className="text-[max(0.8rem,0.9cqw)] text-(--s-ink-2)">
                                     {t('screens.kiosk.offline_body', {
                                         time: updatedAt
                                             ? clock(updatedAt)
@@ -224,11 +224,11 @@ export default function Kiosk({
                 {gone !== null ? (
                     <div
                         role="status"
-                        className="m-auto flex flex-col gap-[0.6cqw] text-center text-[1.6cqw] text-(--s-ink-2)"
+                        className="m-auto flex flex-col gap-[0.6cqw] text-center text-[max(1.1rem,1.6cqw)] text-(--s-ink-2)"
                     >
                         <span>{t(`screens.kiosk.${gone}`)}</span>
                         {gone === 'unshared' && (
-                            <span className="text-[1cqw]">
+                            <span className="text-[max(0.85rem,1cqw)]">
                                 {t('screens.kiosk.unshared_body')}
                             </span>
                         )}

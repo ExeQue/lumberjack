@@ -2140,7 +2140,8 @@ export function DisplayGear({
                 aria-label={t('screens.inspector.display_gear')}
                 title={t('screens.inspector.display_gear')}
                 draggable={false}
-                className="lj-badge lj-gear z-20 flex size-[1.5em] cursor-pointer items-center justify-center rounded border border-(--s-line) bg-(--s-ground) text-(--s-ink-2) hover:text-(--s-ink)"
+                // The before: square keeps a 24px target, however small the preview draws the gear.
+                className="lj-badge lj-gear relative z-20 flex size-[1.5em] cursor-pointer items-center justify-center rounded border border-(--s-line) bg-(--s-ground) text-(--s-ink-2) before:absolute before:top-1/2 before:left-1/2 before:size-6 before:-translate-1/2 hover:text-(--s-ink)"
                 onPointerDown={stop}
                 onClick={(e) => {
                     // Opened here rather than by popoverTarget, so it is placed before
