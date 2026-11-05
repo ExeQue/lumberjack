@@ -187,196 +187,46 @@ widget shows unless it picks its own (no project ticked means every project of t
 new ones included), the time zone for the clock and the theme schedule (left empty, each TV
 uses its browser's own, so one screen shows local time in every office; a new screen starts
 empty), whether the
-header shows and whether its clock does (in 24 or 12 hours), the [theme](#theme) and how the screen fits a display of another shape.
+header shows and whether its clock does (in 24 or 12 hours, as the charts' time axes), the [theme](#theme) and how the screen fits a display of another shape.
 
 ## Widgets
 
-A widget is a way of showing something; what it shows is picked under **Shows**, grouped
-by topic (traffic, issues, jobs and queues, hosts and agents, databases, health).
+A widget is a way of showing something; data widgets pick what they show under
+**Shows**, grouped by topic (traffic, issues, jobs and queues, hosts and agents,
+databases, health). [Widgets](./widgets) describes each one with every setting, its
+display settings behind the gear, scope, rotation and status colors.
 
-| Widget               | Shows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stat                 | One number with its trend against an earlier period and a sparkline: requests, requests per minute (the last five minutes, now), error rate, p95, Apdex, open issues, users affected, failed jobs, queue size, queue workers (red at none), agents online, highest host CPU, memory or disk, current release, LCP p75, database size and connections.                                                                                                                                                                                                                                                                                                                            |
-| Gauge                | One value on a half circle against its limits: requests per minute, error rate, p95, Apdex, host CPU, memory or disk, queue size, health uptime, the share of database connections in use.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Chart                | A series over the period: requests and errors, requests, requests per minute, error rate, p95, Apdex, users affected, queue size, wait or workers, failed jobs, host CPU, memory or disk, LCP, database size or connections. It can split by route, queue, host, database check, environment, release or project.                                                                                                                                                                                                                                                                                                                                                                |
-| List                 | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents, and the events of a calendar (see [Calendars](#calendars)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Health               | The health checks of the projects: a count at 1 x 1, a list when narrow (name, state and how long, in columns), cards when the widget is two or more cells wide (each like a single check's tile, one per grid cell the widget covers). The cards run to the widget's edges. What does not fit scrolls slowly into view, as in a list (sideways on a widget wider than tall); with **Scroll slowly** off it is counted at the end instead, with how many of those are down or degraded. With exactly one check picked, that check alone with its uptime, timeline and last message, and for a database check its connections (amber at 80% of the maximum, red at 90%) and size. |
-| Project overview     | Every project of the scope as a traffic light: one cell each with its name, green, amber or red, and why when it is not green (**2 checks down**, **Backlog on mail**, **3 new issues**). The cells share the tile in as square a grid as their count allows, problems first (**Problems first**); **Only what needs attention** leaves the green ones out. At 1 x 1 it shows how many are ok and the worst one. See [Project overview](#project-overview).                                                                                                                                                                                                                      |
-| SLO                  | One service level objective over the period: availability (requests without a 5xx) or latency (requests under a threshold), against a target of 99%, 99.5%, 99.9%, 99.95%, 99.99% or any other. It shows how much of the period met it, the error budget left as a bar, and the burn rate. See [SLOs](#slos).                                                                                                                                                                                                                                                                                                                                                                    |
-| Clock and text       | The time (12 or 24 hour, its own time zone or the screen's, with seconds or the date), a note for the room, or both, and the time in other cities under it (a world clock).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Countdown            | The time left to a moment (a release, an event, a deadline), in days and hours while far off and as a clock in the last day, with a line saying what it counts down to. Once past: the time since, zero, or only the line. In each TV's own time. Or it follows a calendar (an iCalendar data source): to the end of the event on, to the start of the next, or both, saying the event's title or "Busy until" and "Available until" for a meeting room door; all-day events are skipped.                                                                                                                                                                                        |
-| Message              | A note for the room, or a ticker running across the tile; plain, info (blue), warning (amber) or critical (red), which colors the tile like a status.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| QR code              | A link, a wifi network (name, password, security, hidden) or any text, as a QR code in the brand style, with an optional line under it such as "Guest wifi". It shows on share links too, so put nothing there that the link should not give away.                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| Image, video or page | An image (a camera's MJPEG stream too, loaded again every few minutes if you like), a video (MP4 or WebM, muted and looping) or a web page; a YouTube or Vimeo link plays muted and looping. Several addresses, one a line, take turns as a slideshow, on every TV at the same moment. Fit as CSS object-fit (contain, cover, fill, none, scale-down); without the space around it the media runs to the tile's edges. The TV loads the address itself, so it must be http(s), reachable from the TV, and https on an https Lumberjack. Pages that forbid framing stay blank.                                                                                                    |
+| Widget                                                | Shows                                                                                          |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [Stat](./widgets#stat)                                | One number with its trend and a sparkline: requests, errors, latency, jobs, queues, hosts.     |
+| [Gauge](./widgets#gauge)                              | One value on a half circle against its limits.                                                 |
+| [Chart](./widgets#chart)                              | A series over the period, as bars, an area or a line, or split by route, queue, host and more. |
+| [List](./widgets#list)                                | Rows: issues, alerts, failed jobs, scheduled tasks, routes, queues, hosts, agents, calendars.  |
+| [Health](./widgets#health)                            | The health checks: a count, a list or cards, or one check with its timeline.                   |
+| [Project overview](./widgets#project-overview)        | Every project of the scope as a traffic light, with why.                                       |
+| [SLO](./widgets#slo)                                  | An availability or latency objective and its error budget.                                     |
+| [Clock and text](./widgets#clock-and-text)            | The time, a note for the room, and the time in other cities.                                   |
+| [Countdown](./widgets#countdown)                      | The time left to a moment, or to a calendar's next event.                                      |
+| [Message](./widgets#message)                          | A note or a running ticker, colored by its tone.                                               |
+| [QR code](./widgets#qr-code)                          | A link, a wifi network or any text to scan.                                                    |
+| [Image, video or page](./widgets#image-video-or-page) | An image or camera, a video, YouTube or a web page; several as a slideshow.                    |
 
-A list of queues judges each queue like its [backlog alert](./alerts#queue-backlog): red
-past the project's thresholds (its own for that queue, or the rule's: 1,000 jobs or 10
-minutes by default), amber past half of them: the number of jobs waiting turns that color,
-and a queue whose jobs wait too long says **Waiting** and for how long. A muted queue stays
-calm. Limits set on the widget replace that and count on its size. Each row has the queue's
-full name, its jobs waiting on the right, and how many workers run on it, where the agent
-knows.
-The database values read what [database health checks](./health#database-metrics) report:
-the size is the latest each database reported, added up over the databases in scope, connections
-the same; the gauge shows the database with the largest share of its connections in use
-(amber at 80%, red at 90%). A database several servers report counts once.
-A list of hosts shows each host once with CPU, memory and disk meters. The filter of a queue, host or database value is named after it (**Queue**, **Host**, **Database check**) and suggests the team's queues, hosts and database checks (by slug, such as `database:pgsql`) while you type; `*` still matches anything. Rows that do not fit scroll slowly down and back up, resting at each end; hovering stops it, and **Scroll slowly through rows that do not fit** under Rows turns it off.
+Every widget with data names its period in the top right corner (1h, 24h, 7d, 30d), or how
+old the latest report is for values that are the latest report; **Over** in the inspector
+picks it per widget, or follows the screen.
 
-Every widget with data names its period in the top right corner (1h, 24h, 7d, 30d), or how old the latest report is (**55s**, **6m**) for values that are the latest report (host CPU, memory and disk, queue sizes, agents, open issues, the current release, health, databases), which have no period to pick;
-**Over** in the inspector picks it per widget, or follows the screen. **Show the period
-in the corner** under Display turns the label off.
+Each widget's settings are grouped in sections that open and close: first what the type
+itself offers (**Value**, **Scale**, **Chart**, **Rows**, **Checks**, **Projects**,
+**Objective**, **Clock** and so on), then [Rotation](./widgets#rotation),
+[Scope](./widgets#scope) and, behind the gear on the tile, [Display](./widgets#display).
 
-Each widget's settings are grouped in sections that open and close:
-
-- **Value**, **Scale**, **Chart**, **Rows**, **Checks**, **Projects**, **Objective** or **Clock**: what the type
-  itself offers, such as the amber and red limits of a stat or gauge (empty uses the
-  defaults shown; shares go from 0 to 1, durations are in milliseconds), whether a gauge
-  marks each limit on its arc (with red hidden, amber runs to the end), whether low
-  values are bad (Apdex, uptime), what to compare with, decimals, a prefix and suffix,
-  the chart style (bars, area or line, the lines smooth or straight) and how many series, its time axis, value axis and grid lines (each on or off), how many rows a list shows and in which order.
-- **Rotation**: a stat, gauge, chart, list or health widget can show several values in
-  turn on one tile. The inspector shows them as tabs at the top, one per value in the order they
-  show, the widget's own source first. **+** after the tabs adds the next value not
-  shown yet and opens its tab; **Shows** on that tab changes which one it is. A tab
-  holds everything about its value: what it shows, its title, its period (**Over**),
-  how many seconds it stays on screen, and the type's value settings (limits, low
-  values are bad, compare, decimals, prefix and suffix, a gauge's scale, chart or list
-  options) and its **Scope**, so one stat can show the requests of a route and then the
-  size of a queue. On the first tab these are the widget's own; on the others, left empty,
-  each shows what the widget uses ("Same as widget"). Drag a tab, or use the arrows
-  above its settings, to change the order; **Remove this value** takes it out of the
-  rotation. Moving a value to the front, or removing the first, makes it the widget's
-  source and its settings the widget's, and the other values keep what they showed.
-  In the designer the selected tile shows the value whose tab is open.
-
-    Below the tabs, **Whole widget** holds what applies to every value: under
-    **Rotation**, how often they switch (every 5 seconds to a minute), with a fade, a
-    slide, a flip (as on a departures board) or none (the old value leaves with its title and label before the next comes in), whether a value that needs attention (amber or red) holds the tile
-    until it clears, and a progress bar; then how often it updates (the rest
-    of Display is behind the gear). Tiles with the same timing switch together. The
-    progress bar runs along the bottom edge of the tile, growing from the center to the
-    full width just as the next value takes over; it stands still while a value holds
-    the tile or a tab is open in the designer, and does not show when the system asks
-    for reduced motion. As stored in the screen's widgets, a `rotate` entry is a
-    source id or `{"source": "p95", "seconds": 30, "title": "Latency", "options":
-  {"red": 800}, "scope": {"period": "24h"}}`; the first value's seconds are the
-    widget's `source_seconds` option.
-
-    A health widget's values are sets of checks: each tab picks its own checks and the
-    other settings under **Checks** (view, only problems, uptime, timeline, message,
-    stale). Pick one check per tab and a 1 x 1 tile cycles through the checks, each
-    named after its check; or pick a group per tab. **+** adds a tab with the next check
-    not on a tab yet (with none picked once every check has one), and a tab is named
-    after its title, else its check, else how many checks it shows (**3 checks**), else
-    **All checks**. A tab with no check picked shows every check, not the widget's. A
-    down or degraded check holds the tile while **Stay on a value that needs attention** is on. Stored, every health
-    value names the source `checks`: `{"source": "checks", "seconds": 5, "options":
-    {"checks": ["<check uuid>"]}}`.
-
-    ![A rotating widget's value tabs](./screenshots/screen-designer-rotation.png)
-
-- **Scope**, on each value's tab: the projects, environment and release (**All**,
-  **Current only** or **Previous**) it shows,
-  each the widget's (on the first tab the screen's) default unless set, and a filter
-  named after what the value can narrow: the route, queue, job, host or database check
-  (`*` matches anything, so `POST /checkout*` or `payments*`); a route filter also
-  matches route names, such as `orders.*`. A value that narrows a route also has a
-  **Domain**, suggesting the domains requests came in on in the last 7 days, such as
-  `shop.example.com` (`*` works here too). A value with nothing to
-  narrow has no filter, and one that narrows something else than the first value (a
-  queue after a route) does not take the widget's filter or domain. A rotated value's scope is stored in its `rotate` entry, such as
-  `{"source": "queue_size", "scope": {"filter": "bulk"}}`.
-- **Display**: not in the inspector but behind the gear in the tile's top right corner,
-  in place of the period label, which shows while the pointer is on the tile, it has focus or it is
-  selected (never on the TV). The gear selects the widget and opens its display settings
-  in a small panel beside it; Escape or a click elsewhere closes it, and changes save like
-  any other. They are whether the title shows and how big, whether it sits on a card (off,
-  it has no background or border while all is well, and gets them back while degraded,
-  down or recovering), whether the tile is colored by
-  its status (and whether a calm tile keeps its green border), the text size (fitted to
-  the tile, or small to huge), alignment (left or centered, top or vertically centered),
-  and whether to hide it while all is ok or while it has nothing to show. How often it
-  updates (live, every minute, every 5 minutes) is about its data, so it stays in the
-  inspector. The panel opens beside the tile (right of it, else left, else below or
-  above), so the tile stays in view while it changes, follows it when the page scrolls,
-  and scrolls itself when it does not fit.
-
-    ![A widget's display settings behind its gear](./screenshots/screen-designer-display.png)
-
-Older screens may still have an **Empty cell** widget, from when widgets filled the grid
-in order and a gap needed a filler. It still works (dashed in the designer, invisible
-on the TV), but it is no longer offered: a free cell is empty on its own, so it can be
-removed.
-
-### Project overview
-
-A project's light is the worst of what it has:
-
-- **Red**: a health check is down, an issue is escalating (it escalated within the last
-  hour), or a queue is past its backlog thresholds.
-- **Amber**: a health check is degraded or stale (unless **Stale counts as** is Ok), a
-  queue is past half its backlog thresholds, or the period brought new issues: open ones
-  first seen in it, 3 or more by default (**Amber from new issues**: 1, 3, 5, 10 or 20).
-- **Green** otherwise, also for a project with nothing to report.
-
-Checks are judged as on the health widget, queues as on a list of queues (see above: the
-backlog rule's thresholds, or the queue's own, half of them amber; a muted queue stays
-green). The reason on a cell is its worst; **Show why** off shows the state word instead.
-The tile takes the color of its worst project. Every project of the scope is read in the
-same few queries, however many there are. Share links show project names, as charts split
-by project do.
-
-### SLOs
-
-An SLO widget follows one objective over its period (**Over**), for the requests of the
-scope (a route filter and domain narrow it):
-
-- **Availability**: the share of requests without a 5xx, from the SDK's request counts
-  (every request, not only the sampled ones).
-- **Latency**: the share of requests that took at most **Fast enough under** milliseconds
-  (500 by default). This reads the runs the SDK sampled, like the percentiles do, so it is
-  an estimate from the sample, and counts every status.
-
-The error budget is what the target leaves: 0.1% of the requests at 99.9%. **Budget left**
-is how much of it the period has not used (below zero once overspent, shown as **Budget
-spent**). The periods are rolling (the last hour, day, 7 or 30 days), so the burn rate
-reads the latest twenty-fourth of the period (the last hour of a day, at least five
-minutes): its share of bad requests over the budget. A burn rate of 1 spends exactly the
-budget over the period; 10 would spend it in a tenth of it. The tile turns red with no
-budget left, amber while the burn rate is over 1 or under a quarter of the budget is
-left, green otherwise; without requests it shows **No requests yet**.
-
-### Calendars
-
-A list can show a calendar's events: today's meetings next to the meeting room door, the
-on-call rota, the week's releases. Add the calendar as a data source of a project
-(**Data sources**, format **iCalendar (.ics)**) with the address it is published at in
-iCal format: in Google Calendar the **Secret address in iCal format** under the
-calendar's settings, in Outlook a calendar published as ICS, in iCloud a public
-calendar's link (`webcal://` as `https://`), or any `.ics` address. Lumberjack fetches it
-on its interval like any data source and records an error when the answer is not an
-iCalendar feed. That address is a key to the calendar: after saving, the data sources page
-shows it without its path, and screens, TVs and share links never get it.
-
-Then pick **Calendar events** for a list widget and the data source under **Rows**. It
-shows the events from **Days back** (today, yesterday or a week back) to **Days ahead**
-(the rest of today, until tomorrow, a week or 30 days), in the screen's time zone (else
-the server's), with repeating events expanded, their skipped and moved dates included,
-and cancelled ones left out. With **Only what has not ended** (on by default) an event
-leaves the list when it ends. Rows go by day, each day's all-day events first, then by
-start: the start time (or **All day**), the title, and the place and end time where
-there is room; an event on now says **Now** in amber. A list over more than one day puts
-the weekday before the time. On a share link without names the rows show the times only.
-**Rows** caps how many show, as in any list.
-
-### Status colors
-
-A widget with a state colors itself: a green border when all is ok, an amber border and
-background when degraded or past the amber limit, red when down or past red, blue while
-a check is recovering and gray when a check is stale. Widgets without a state (a chart,
-the clock) keep a plain border. A down check turns the health widget red; a degraded or
-recovering one colors only its row or card. A tile that turns red flashes once, so the
-change is noticed; there is no sound.
+As stored in the screen's widgets, a rotating widget's `rotate` entry is a source id or
+`{"source": "p95", "seconds": 30, "title": "Latency", "options": {"red": 800}, "scope":
+{"period": "24h"}}`; the first value's seconds are the widget's `source_seconds` option.
+Every health value names the source `checks`: `{"source": "checks", "seconds": 5,
+"options": {"checks": ["<check uuid>"]}}`. A rotated value's scope is stored in its
+`rotate` entry, such as `{"source": "queue_size", "scope": {"filter": "bulk"}}`. In the
+designer the selected tile shows the value whose tab is open.
 
 ## On the TV
 

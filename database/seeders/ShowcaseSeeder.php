@@ -33,6 +33,7 @@ class ShowcaseSeeder extends Seeder
             ShowcaseLogsSeeder::class,
             ShowcaseAlertsSeeder::class,
             ShowcaseScreensSeeder::class,
+            ShowcaseWidgetsSeeder::class,
         ]);
 
         $this->command?->info('Showcase people (password "password"): '.implode(', ', array_merge(...array_map(
