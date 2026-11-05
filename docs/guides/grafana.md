@@ -1,21 +1,20 @@
 # Send Lumberjack metrics to Grafana
 
-Chart Lumberjack's requests, errors, latency, queues and hosts in Grafana, next to your
-other dashboards, and alert on them there. Grafana reads Lumberjack's read-only
-metrics API.
+Chart Lumberjack's requests, errors, latency, queues and hosts in Grafana, and alert on
+them there. Grafana reads Lumberjack's read-only metrics API.
 
 ## 1. Get a credential
 
 Pick one:
 
-- **A team token.** A team owner or admin opens **Team** in the sidebar and creates
-  one under **API and MCP tokens**, with the projects Grafana may read. The **read**
-  scope is enough. The token starts with `lj_mcp_` and is shown once. See
-  [Let an AI agent read your errors](./ai-agents.md) for the form.
-- **Public stats**, for one project and without a token. In the project's
-  **Settings**, under **Keys**, an owner or admin turns on **Public stats**. This gives an
-  unguessable URL ending in `/api/v1/public/ps_.../`. It serves aggregates only: no
-  error messages, stack traces or host names.
+- **A team token.** A team owner or admin creates one under **Team** > **API and MCP
+  tokens**, with the projects Grafana may read and the **read** scope. It starts with
+  `lj_mcp_` and is shown once. See [Let an AI agent read your errors](./ai-agents.md)
+  for the form.
+- **Public stats**, for one project and without a token. An owner or admin turns on
+  **Public stats** under **Keys** in the project's **Settings**. This gives an unguessable
+  URL ending in `/api/v1/public/ps_.../` that serves aggregates only: no error messages,
+  stack traces or host names.
 
 ## 2. Add the data source
 
@@ -36,9 +35,8 @@ Lumberjack ships a ready-made dashboard:
 3. At the top of the dashboard, set **Lumberjack URL** to your Lumberjack's address and
    **Project slug** to the project, such as `shop`.
 
-**When it works:** the dashboard shows four panels for the project: **Requests**,
-**Error rate**, **p95 per route** for the five busiest routes, and a **Routes** table. It
-refreshes every 30 seconds.
+**When it works:** the dashboard shows **Requests**, **Error rate**, **p95 per route** for
+the five busiest routes, and a **Routes** table, refreshed every 30 seconds.
 
 ## 4. Build your own panels
 
@@ -66,8 +64,8 @@ With public stats, replace `https://your-lumberjack/api/v1` with the public stat
 
 ## 5. Alert on the numbers
 
-Lumberjack also serves its current numbers in the Prometheus text format at
-`/api/v1/metrics`. Let Prometheus scrape it:
+Lumberjack serves its current numbers in the Prometheus text format at
+`/api/v1/metrics`:
 
 ```yaml
 scrape_configs:
@@ -82,7 +80,7 @@ scrape_configs:
           - targets: ['your-lumberjack']
 ```
 
-Then add that Prometheus as a data source in Grafana and alert on gauges such as
+Add that Prometheus as a data source in Grafana and alert on gauges such as
 `lumberjack_error_rate`, `lumberjack_request_duration_p95_seconds` or
 `lumberjack_queue_size`. These cover what Lumberjack's own alert rules do not, such as
 a project's error rate or p95 crossing a limit.

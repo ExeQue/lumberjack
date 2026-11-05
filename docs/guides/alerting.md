@@ -1,13 +1,11 @@
 # Get told when production breaks
 
-Set up Lumberjack so the right people hear about new errors, regressions, failing
-health checks and stuck queues, in the place they already look.
-
+Send new errors, regressions, failing health checks and stuck queues to the right people.
 You need to be a team owner or admin to add channels and change rules.
 
 ## 1. Connect a channel
 
-A channel is where alerts go. Set it up once for the team and every project can use it.
+A channel is where alerts go. It belongs to the team, and every project can use it.
 
 1. Open **Team** in the sidebar, then **Alerts**.
 2. Click **Add new channel** and pick where alerts go:
@@ -23,14 +21,13 @@ A channel is where alerts go. Set it up once for the team and every project can 
     | Pushover        | Your user or group key and an application token.          |
     | Webhook         | Your own endpoint. Set it up in a project's settings.     |
 
-3. Follow the hint in the dialog to find the URL or keys, give the channel a name such
-   as "On-call", and save.
+3. Follow the hint in the dialog to find the URL or keys, name the channel and save.
 4. Click **Send test** on the channel.
 
 ![Picking where alerts go](../screenshots/channel-wizard.png)
 
-**When it works:** the test message arrives, and the channel shows **Delivered** with
-the time. **Failed** means the other side refused the message: check the URL or keys.
+**When it works:** the channel shows **Delivered** with the time. **Failed** means the other
+side refused the message: check the URL or keys.
 
 ## 2. Turn on the rules you want
 
@@ -59,15 +56,12 @@ Ignored issues and browser errors never send an alert.
 
 ## 3. Send one project somewhere else
 
-Every project uses the team's rules. To change them for one project:
+In the project's **Settings**, then **Alerts**:
 
-1. Open the project's **Settings**, then **Alerts**.
-2. To also send this project's alerts to another channel, use **+ channel (this
-   project)** under a rule marked **Team default**.
-3. To change the rule itself for this project, click **Customize**. **Use the team's**
-   goes back to the team's rule.
-
-A project can also add its own channels here, such as a **Webhook** to your own app.
+- **+ channel (this project)** under a rule marked **Team default** also sends this
+  project's alerts to another channel.
+- **Customize** changes the rule for this project; **Use the team's** goes back.
+- The project can add its own channels, such as a **Webhook** to your own app.
 
 ![A project's alert settings](../screenshots/settings-alerts.png)
 
@@ -75,33 +69,31 @@ A project can also add its own channels here, such as a **Webhook** to your own 
 
 The **Queue backlog** rule fires when a queue has more than 1,000 jobs waiting, or the
 oldest job has waited more than 10 minutes, for 5 minutes. Change the numbers on the
-rule, or per queue: on the project's **Jobs** page, click **Alert** next to a queue in
-the **Queues** card. See [Watch background work](./background-work.md).
+rule, or per queue with **Alert** in the **Queues** card of the project's **Jobs** page.
+See [Watch background work](./background-work.md).
 
 ## 5. Watch the things your app depends on
 
-Health checks alert through the three **Health check** rules. Add them on the project's
-**Health** page with **Add check**: an **HTTP** check for a URL, an **SSL certificate**
-check, a **TCP port**, a **DNS record**, or a **Heartbeat** your cron job calls. Your app
-can also report its own checks (database, cache, disks, queues) through the SDK.
-
-A check only alerts after several bad results in a row, so one slow answer does not
-page anyone. See [Health](../health.md).
+Add health checks on the project's **Health** page with **Add check**: **HTTP**, **SSL
+certificate**, **TCP port**, **DNS record**, or a **Heartbeat** your cron job calls. Your
+app can also report its own checks (database, cache, disks, queues) through the SDK. They
+alert through the three **Health check** rules, only after several bad results in a row.
+See [Health](../health.md).
 
 ## Error rate and response time
 
 There is no alert rule on a project's error rate or p95. To get close:
 
 - **Escalation** fires when one error suddenly happens far more often than usual.
-- An **HTTP** health check with **Warn when slower than (ms)** warns when a page you
-  pick gets slow, and fails when it returns the wrong status.
-- Scrape the Prometheus gauges `lumberjack_error_rate` and
-  `lumberjack_request_duration_p95_seconds` and alert on them in Prometheus or Grafana.
+- An **HTTP** health check with **Warn when slower than (ms)** warns when a page gets
+  slow, and fails on the wrong status.
+- Alert on the Prometheus gauges `lumberjack_error_rate` and
+  `lumberjack_request_duration_p95_seconds` in Prometheus or Grafana.
   See [Send metrics to Grafana](./grafana.md).
 
 ## 6. Choose what you hear yourself
 
-Channels go to the whole team. Each person also picks their own notifications:
+Each person also picks their own notifications:
 
 1. Click your name at the bottom of the sidebar, then **Profile and settings**,
    then **Notifications**.
@@ -109,7 +101,7 @@ Channels go to the whole team. Each person also picks their own notifications:
    and **Browser** per row: new issues, health checks, queue backlogs, scheduled tasks,
    agents, releases, and issues you watch.
 3. For notifications while Lumberjack is closed, click **Enable on this device** in each
-   browser or phone you want them on.
+   browser or phone.
 
 Personal notifications for new issues, health checks and queue backlogs follow the
 team's rules: turning a rule off stops them too.

@@ -1,7 +1,7 @@
 # Projects
 
-A project is one app you monitor. It belongs to a team. Every member of the team can see
-it, and team owners and admins change its settings.
+A project is one app you monitor. Every member of its team can see it; team owners and
+admins change its settings.
 
 ## The projects list
 
@@ -11,73 +11,55 @@ it, and team owners and admins change its settings.
 - a chart of errors per hour;
 - **Calm** when the project has no open issues and every agent checks in;
 - **Agent offline** (or **2 agents offline**) and **Not seen: …** when an
-  [agent](#agents) stopped checking in, with the hosts it ran on. Hover for the full list.
+  [agent](#agents) stopped checking in, with the hosts it ran on.
 
 **Search projects** filters the cards.
 
 ## Live updates
 
-Every page updates in place when what it shows changes: another member edits something,
-an MCP tool acts, or new data arrives from the app.
+Pages update in place when another member, an MCP tool or new data changes what they
+show, including open kiosks and TVs (see [Status screens](./screens)).
 
-- **Project pages**: the overview, issues and an issue, routes, queries, releases,
-  jobs, schedule, commands, logs and health, as data arrives and when a health check,
-  scheduled task, label or queue alert is changed.
-- **Sidebar**: the badge counts of issues, jobs, schedule, health and commands, and the
-  team's projects.
-- **Projects list**: new, renamed and removed projects, and each card's figures as its
-  issues, jobs and agents change.
-- **Project settings**: keys, labels, log channels, agents, retention, alerts and the
-  repository, and what the project inherits from the team.
-- **Team**: members, invitations, MCP tokens, alert channels and rules, and retention.
-- **Screens**: the screens list, Displays, and every open kiosk and TV when its screen
-  is changed (see [Status screens](./screens)).
-- **Administration**: teams, users, the audit log and retention.
-
-While you edit a settings page, it does not change under you. It says **This page
-changed elsewhere** with a **Reload** button instead. **Reload** loads the new state and
-drops your unsaved edits. Saving keeps your edits and loads the rest.
+A settings page you are editing does not change under you. It says **This page changed
+elsewhere** instead: **Reload** loads the new state and drops your unsaved edits, saving
+keeps your edits and loads the rest.
 
 ## Creating a project
 
-Team owners and admins create projects with **New project**. Give it a **Name** and an
-**Issue prefix**. The prefix is suggested from the name and starts every
+Team owners and admins create projects with **New project**, giving a **Name** and an
+**Issue prefix**. The prefix, suggested from the name, starts every
 [issue number](./issues#issue-numbers). It has 2 to 8 capital letters and digits, starts
 with a letter and is unique in the team.
 
-The new project opens on its **Installation** settings. They show how to install the
-SDK, the `.env` values, the agent setup, the browser script and a test command. The
-server token is shown only once, right after you create the project. Copy it then, or
-rotate it later.
+The new project opens on its **Installation** settings: how to install the SDK, the
+`.env` values, the agent setup, the browser script and a test command. The server token
+is shown only once, right after you create the project. Copy it then, or rotate it
+later.
 
 ## Switching project
 
-Pick another project in the sidebar or the [command palette](./finding-things) to open
-the same page in it: from the issues to its issues, from a job to its jobs. A page about
-one thing, like a trace, opens the other project's overview.
+Picking another project in the sidebar or the [command palette](./finding-things) opens
+the same page in it: from a job to its jobs. A page about one thing, like a trace, opens
+the other project's overview.
 
 ## Settings
 
-Only team owners and admins change settings, labels, log channels, agents, retention
-and the repository. Members see everything and work on issues.
-
-The settings are split into sections, one open at a time. The address names the open
-section (for example `#agents`), so you can link to it.
+Only team owners and admins change settings. The settings are split into sections, one
+open at a time; the address names the open section (such as `#agents`).
 
 - **General:** the name, the **slug**, the issue prefix, allowed origins and extra
   secret fields. The slug is used in URLs and as the project argument in MCP. It takes
   letters, digits, `-` and `_`, and is unique in the team.
-- **Installation:** what to install and set, as when the project was created.
+- **Installation:** what to install and set.
 - **Keys:** the server token for the agent, the public key for browser errors, and
   public stats. Public stats is a secret URL that serves the project's figures on the
   [metrics API](./metrics-api#authentication) without a token. It is off by default.
-  You can rotate all three. The server token is shown only once.
+  All three can be rotated. The server token is shown only once.
 - **Allowed origins:** browser errors are accepted only from these origins, such as
-  `https://shop.example.com` without a path. Until you add one, browser errors are
-  rejected.
+  `https://shop.example.com` without a path. With none, all are rejected.
 - **Extra secret fields:** keys whose values are replaced with `[filtered]` before they
-  are stored, in headers, session, Context and log context. These come on top of the
-  keys that are always masked: `password`, `passwd`, `pwd`, `secret`, `token`,
+  are stored, in headers, session, Context and log context, on top of the keys that are
+  always masked: `password`, `passwd`, `pwd`, `secret`, `token`,
   `authorization`, `cookie`, `api_key`, `apikey`, `access_key`, `private_key`, `jwt`,
   `dsn`, `credit_card`, `card_number`, `cvv` and `session_id`. Values that look like
   secrets are masked whatever their key, see [Security](./administration#security).
@@ -104,7 +86,6 @@ The project's [data sources](./data-sources.md) are listed in the settings menu 
 
 An agent is a small process from the SDK that runs once on every server of the app,
 under Supervisor. It sends the app's data to Lumberjack and checks in every minute.
-Install it as the **Installation** settings show.
 
 **Agents** in the settings lists every agent that has checked in:
 
@@ -128,25 +109,18 @@ the container's own limits count.
 
 - An agent that has not checked in for **5 minutes** is **Offline**. The projects list
   warns about it.
-- Every team member who can see the project gets an **Agents** notification, once per
-  project, however many agents went offline. It is on in the app by default. Each
-  member can turn it on or off for mail, the app and the browser in their
-  [notification settings](./teams#notifications). When the agent checks in again and
-  later goes offline, members are told again.
-- An agent that has not checked in for **24 hours** is removed: its server or pod is
-  most likely gone.
+- Team members get an **Agents** notification, once per project however many agents
+  went offline, and again if one goes offline after coming back. It is on in the app by
+  default, see [notification settings](./teams#notifications).
+- An agent that has not checked in for **24 hours** is removed.
 - **Remove** removes an agent right away. It comes back if it checks in again.
 
 ### What agents report
 
-With each check-in, an agent reports:
-
-- the size of the app's queues that the SDK watches, shown on the
-  [Jobs page](./performance#queues) and used by [queue backlog alerts](./alerts#queue-backlog);
-- how busy its host is: load, memory and disk, shown in the table above.
-
-Queue sizes are kept for 30 days and host metrics for 7 days by default. Both follow
-[retention](#retention).
+With each check-in, an agent reports the size of the queues the SDK watches, shown on
+the [Jobs page](./performance#queues) and used by
+[queue backlog alerts](./alerts#queue-backlog), and its host's load, memory and disk.
+Both follow [retention](#retention).
 
 ## Browser script
 
@@ -172,12 +146,10 @@ The project settings show the script tag for browser errors:
 | `data-vitals`      | `false` stops measuring [Web Vitals](./performance#browser).            |
 | `data-endpoint`    | Where to send, instead of `/api/ingest/browser` on the script's server. |
 
-Crawlers and automated browsers are ignored.
+Crawlers and automated browsers are ignored. With each page view's Web Vitals, the
+script sends the class of device: mobile, tablet or desktop.
 
-With each page view's Web Vitals, the script sends the class of device: mobile, tablet
-or desktop.
-
-The script also has a small API on `window.Lumberjack`:
+The script has a small API on `window.Lumberjack`:
 
 | Call                                          | Does                                                                                                     |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -193,13 +165,13 @@ only from browser extensions.
 
 ## Retention
 
-Retention sets how long each kind of data is kept. You set it on three levels. Each
-level is the default for the level below it, and the most that level may keep:
+Retention sets how long each kind of data is kept, on three levels. Each level is the
+default for the level below it, and the most that level may keep:
 
 1. **Application**, the whole Lumberjack: **Administration > Retention**, for system
    administrators. Empty uses the built-in default and sets no maximum.
-2. **Team**: **Team > Retention** in the sidebar, for team owners and admins. Members
-   can read it. At most the application value.
+2. **Team**: **Team > Retention** in the sidebar, for team owners and admins. At most
+   the application value.
 3. **Project**: **Retention** in the project's settings, for team owners and admins. At
    most the team value. Job classes and log channels can have their own value, also at
    most the team value.
@@ -209,10 +181,10 @@ or project can choose **Forever** only when the application keeps that data fore
 the team sets no number for its projects. The built-in defaults are never forever.
 
 A value above the limit is rejected, with the limit named. When you lower a level, the
-levels below it are capped at once and show as **Capped**. Their own values come back
-when the limit is raised again. A level with no value sets no limit, so a project can
-keep data longer than the built-in default when neither its team nor the application
-sets a limit.
+levels below it are capped at once and show as **Capped**; their own values come back
+when the limit is raised. A level with no value sets no limit, so a project can keep
+data longer than the built-in default when neither its team nor the application sets
+one.
 
 ![The retention table of a project, with the limit from the team and what is stored](./screenshots/settings-retention.png)
 
@@ -254,8 +226,8 @@ or through MCP.
 2. Create a fine-grained token with only **Issues: read and write** on that repository.
    **Create token on GitHub** opens GitHub with these settings filled in. Paste it under
    **Fine-grained token**.
-3. Click **Test connection**. It checks the token and says whether the repository is
-   private or public.
+3. **Test connection** checks the token and says whether the repository is private or
+   public.
 4. For a public repository, tick **Allow creating issues in a public repository**.
 5. Optionally list **Labels**, comma separated, for the created issues.
 

@@ -1,7 +1,6 @@
 # Guides
 
-Step-by-step guides for common tasks. Each one links to the reference pages for the
-details.
+Step-by-step guides for common tasks, linking to the reference pages for details.
 
 | Guide                                                         | What you do                                                                              |
 | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |

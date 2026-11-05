@@ -37,9 +37,9 @@ npm run types:check
 
 ## Demo data
 
-`php artisan migrate --seed` or `php artisan migrate:fresh --seed` fills a fresh database.
-It takes about half a minute. The data is placed relative to the minute you seed, and is the
-same on every run.
+`php artisan migrate --seed` or `php artisan migrate:fresh --seed` fills a fresh database in
+about half a minute. The data is placed relative to the minute you seed, and is the same on
+every run.
 
 To add only the showcase to a database you already use:
 
@@ -47,11 +47,8 @@ To add only the showcase to a database you already use:
 php artisan db:seed --class=ShowcaseSeeder
 ```
 
-This creates the showcase people and projects that are missing and fills them. Everything
-else stays as it was.
-
-The health checks Lumberjack runs point at placeholder hosts. After a couple of hours of the
-scheduler running them, they turn red.
+This adds only the missing showcase people and projects. The seeded health checks point at
+placeholder hosts, so they turn red after a couple of hours of the scheduler running them.
 
 ### Accounts
 
@@ -75,8 +72,8 @@ Every password is `password`.
 ### Projects
 
 - **Demo** in Local Team is for the SDK workbench. Its server token, public key and three
-  MCP agent tokens are fixed, and the seeder prints them. A fresh seed keeps the workbench
-  and local MCP clients working. Acme Agency members cannot see it.
+  MCP agent tokens are fixed, so a fresh seed keeps the workbench and local MCP clients
+  working; the seeder prints them. Acme Agency members cannot see it.
 - The showcase has six projects with a month of data:
     - Local Team: **Storefront** (a webshop on `shop.example.com`), **Orders API** (an API on
       `api.example.com`), **Marketing Site** and **Fulfillment Worker** (queues and scheduled
@@ -120,8 +117,6 @@ The script only opens pages and dialogs. It reads these environment variables:
 | `DOCS_PASSWORD`  | `password`                  | Sign-in password                          |
 | `DOCS_PROJECT`   | `Storefront`                | The project to show                       |
 | `CHROME_PATH`    | the Chrome Puppeteer downloaded | A Chrome or Chromium to use instead   |
-
-If Puppeteer has no Chrome downloaded, set `CHROME_PATH` to an installed browser:
 
 ```bash
 CHROME_PATH=/usr/bin/chromium npm run docs:screenshots

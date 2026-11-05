@@ -7,18 +7,14 @@ and alerting.
 
 ## Authentication
 
-Use either of these. Both only read.
-
 - **A team token**, sent as `Authorization: Bearer lj_mcp_...`. Create it under **API
   and MCP tokens** on the team page, as described in [MCP](./mcp#tokens). The token
-  reads the projects it lists that its creator may see. Expiry, revocation and
-  "last used" work as for MCP.
+  reads the projects it lists that its creator may see.
 - **Public stats**, without a header. An owner or admin turns on **Public stats** in a
   project's **Settings, Keys**. That creates a secret URL,
   `https://your-lumberjack/api/v1/public/ps_.../`, which serves the same endpoints for
-  that one project. Public stats are off by default. You can rotate the URL, which
-  stops the old one at once, or turn it off. Every change goes into the
-  [audit log](./administration).
+  that one project. Rotating the URL stops the old one at once. Every change goes into
+  the [audit log](./administration).
 
 Public stats show aggregates only. They leave out issue messages, stack traces, user
 ids, query strings and host names. Hosts show as `host 1`, `host 2`. Issue titles are
@@ -118,9 +114,7 @@ Query parameters, which match Grafana's macros:
 - `environment`, `route`, `domain`, `queue`, `job`, `host`, `release`, `check`: filters.
   `route`, `domain`, `queue`, `job`, `host` and `check` (a health check's slug, such as
   `database:pgsql`) take `*` as a wildcard (`/api/*`, `*.example.com`). `route` matches a
-  route's URI or its name (`orders.*`). `domain` matches the host the request was made
-  to. A filter that does not apply to a metric, such as `route` on `queue_size`, is
-  ignored. The exception is `host`: on a metric that cannot be split by host, it is
+  route's URI or its name (`orders.*`). A filter that does not apply to a metric is ignored, except `host`, which is
   rejected with 422.
 - `group_by`: one series per environment, route, domain, host, queue, release or check.
   Only the busiest `top` are returned, 10 by default and at most 50.
@@ -147,7 +141,7 @@ In a bucket without data, counts are zero and other metrics have no point. Witho
   Apdex use only the sampled runs. See [Sampling](./performance#sampling). With a
   `release` filter or split, totals are estimated from the sampled runs and their
   sample rate.
-- Apdex uses a 500 ms target, as on the Requests page.
+- Apdex uses a 500 ms target, as on the [Requests page](./performance#apdex).
 - `cpu_load` is the 1 minute load per core (1 is every core busy); memory and disk are
   the share in use. A host metric is the highest value over the hosts. A queue's size
   is the largest it reported in a bucket, summed over the queues.
@@ -215,8 +209,7 @@ For public stats, drop `authorization` and set `metrics_path` to
 3. For a table, use format **Table**, a URL such as `.../projects/shop/routes?period=24h`,
    and **Rows / root** `rows`.
 
-For alerting on gauges, add a Prometheus data source over a Prometheus that scrapes
-`/api/v1/metrics` as above.
+For alerting on gauges, use a Prometheus that scrapes `/api/v1/metrics` as above.
 
 To start quickly, import [`docs/grafana/lumberjack.json`](./grafana/lumberjack.json)
 under **Dashboards, New, Import**. It shows requests, error rate, p95 per route and the
