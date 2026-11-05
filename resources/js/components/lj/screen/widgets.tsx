@@ -2184,6 +2184,28 @@ function embedUrl(url: string, subtitles: boolean): string {
 }
 
 /**
+ * Stops what a video or a camera's stream still downloads once it leaves the tile (the
+ * next slide, another screen): a removed element alone may keep its connection open.
+ */
+function stopOnRemove(element: HTMLVideoElement | HTMLImageElement | null) {
+    if (!element) {
+        return;
+    }
+
+    return () => {
+        if (element instanceof HTMLVideoElement) {
+            element.pause();
+        }
+
+        element.removeAttribute('src');
+
+        if (element instanceof HTMLVideoElement) {
+            element.load();
+        }
+    };
+}
+
+/**
  * An image (a camera's MJPEG stream too), a video or a web page from an address the
  * screen's browser loads itself; nothing goes through the server. Not interactive, so
  * the designer can still pick and drag the tile.
@@ -2256,6 +2278,7 @@ function MediaTile({
         body = (
             <video
                 key={source}
+                ref={stopOnRemove}
                 src={source}
                 className={cn(box, fit)}
                 autoPlay
@@ -2283,6 +2306,7 @@ function MediaTile({
         body = (
             <img
                 key={source}
+                ref={stopOnRemove}
                 src={source}
                 alt={caption || widget.title || ''}
                 className={cn(box, fit)}
