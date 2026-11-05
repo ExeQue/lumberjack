@@ -33,6 +33,10 @@ return [
 
     // Flash messages on Team settings > Displays.
     // Asking what shows a screen, or one display, to load the page afresh.
+    'identify' => [
+        'sent' => ':name shows its name for :seconds seconds.',
+    ],
+
     'reload' => [
         'sent' => '{0} Reload sent; no screen shows it right now|{1} Reload sent to 1 screen|[2,*] Reload sent to :count screens',
         'sent_unknown' => 'Reload sent.',

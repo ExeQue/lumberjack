@@ -194,6 +194,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('present/displays', [DisplayController::class, 'index'])->name('team.displays');
     Route::put('present/displays/{display:uuid}', [DisplayController::class, 'update'])->name('displays.update');
     Route::post('present/displays/{display:uuid}/reload', [DisplayController::class, 'reload'])->name('displays.reload');
+    Route::post('present/displays/{display:uuid}/identify', [DisplayController::class, 'identify'])->name('displays.identify');
     Route::delete('present/displays/{display:uuid}', [DisplayController::class, 'destroy'])->name('displays.destroy');
     Route::put('present/devices/{device:uuid}', [DeviceController::class, 'update'])->name('devices.update');
     Route::post('present/devices/{device:uuid}/reload', [DeviceController::class, 'reload'])->name('devices.reload');

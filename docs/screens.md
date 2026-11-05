@@ -425,6 +425,8 @@ For a window:
   screen has something red it stays until that clears, unless you turn that off.
 - **Theme**: the screen's own theme, or always **Dark**, **Light** or **By time of
   day**, for a TV in a bright room showing a screen that is dark elsewhere.
+- **Identify**: the TV shows its name large over the screen for 10 seconds, to tell it apart
+  on a wall of them. **Open on a TV** in the designer offers it for each paired TV too.
 - **Reload**: this window loads its page afresh.
 - **Remove**: this window goes back to showing a pairing code; removing a device's last
   window removes the device.

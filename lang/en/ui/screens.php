@@ -538,6 +538,7 @@ return [
     ],
 
     'kiosk' => [
+        'identify' => 'This is',
         'all_projects' => 'All projects',
         'all_environments' => 'All environments',
         'attention' => '{1} 1 needs attention|[2,*] :count need attention',
@@ -686,6 +687,8 @@ return [
         // Buttons: the TV loads its page afresh.
         'reload' => 'Reload',
         'reload_hint' => 'Loads the page in this window afresh, as after an update.',
+        'identify' => 'Identify',
+        'identify_hint' => 'The TV shows its name over the screen for 10 seconds, to tell it apart from the others.',
         'reload_device' => 'Reload all',
         'reload_device_hint' => 'Loads the page in every window of this device afresh.',
         'remove' => 'Remove',
