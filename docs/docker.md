@@ -173,15 +173,6 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
     Setup creates the first administrator; see
     [Setup and system administration](./administration.md).
 
-### While the image is private
-
-The image on GHCR is private for now. Before step 3, sign in to the registry with a
-GitHub token that has the `read:packages` scope:
-
-```bash
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
-```
-
 ## Settings
 
 | Variable                                 | Default        |                                                                                                                                                                                                    |
