@@ -67,8 +67,9 @@ if [ ! -f update.sh ]; then
     printf '#!/bin/sh\n# Updates Lumberjack: pulls the image and restarts it. compose.yaml and .env.docker stay as they are.\nset -eu\ncd "$(dirname "$0")"\nCOMPOSE="%s"\n' "$COMPOSE" > update.sh
     cat >> update.sh <<'EOF'
 $COMPOSE --env-file .env.docker pull
-# podman-compose does not recreate running containers on up; the volumes stay.
-$COMPOSE --env-file .env.docker down
+# podman-compose does not recreate running containers on up; the volumes stay. Its errors
+# about containers that are not there yet, on a first install, say nothing.
+$COMPOSE --env-file .env.docker down 2>/dev/null
 $COMPOSE --env-file .env.docker up -d
 
 echo "Waiting for Lumberjack to start"
