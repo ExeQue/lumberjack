@@ -47,7 +47,9 @@ export default function AdminAudit({ entries }: { entries: Paginated<Entry> }) {
                 />
                 <Card>
                     {entries.data.length === 0 ? (
-                        <EmptyState title={t('admin.audit.empty')} />
+                        <EmptyState title={t('admin.audit.empty')}>
+                            {t('admin.audit.empty_body')}
+                        </EmptyState>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className={tableClass}>

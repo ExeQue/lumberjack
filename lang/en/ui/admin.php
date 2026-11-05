@@ -47,7 +47,11 @@ return [
             'admin' => 'Administrator',
             'suspended' => 'Suspended',
             'password_change' => 'Must change password',
+            // Shown when none of the badges above applies
+            'active' => 'Active',
         ],
+        // Button opening the row's menu of actions
+        'more' => 'More',
         // Buttons
         'make_admin' => 'Make administrator',
         'make_admin_question' => 'Make :name an administrator? They can see every team and manage every user.',
@@ -78,6 +82,7 @@ return [
         'subject' => 'Subject',
         'details' => 'Details',
         'empty' => 'Nothing yet',
+        'empty_body' => 'Every administrator action is recorded here: teams created, opened or deleted, users invited, suspended or reinstated, administration granted or revoked, password resets, and changes to public stats, shared status screens and paired TVs.',
         'actions' => [
             'team_created' => 'Created team',
             'team_deleted' => 'Deleted team',

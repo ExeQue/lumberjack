@@ -61,7 +61,7 @@ export default function AdminTeams({ teams, users }: Props) {
                     {teams.length === 0 ? (
                         <EmptyState title={t('admin.teams.empty')} />
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="relative overflow-x-auto">
                             <table className={tableClass}>
                                 <thead>
                                     <tr>

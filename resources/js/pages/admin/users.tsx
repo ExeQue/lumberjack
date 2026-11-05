@@ -1,11 +1,11 @@
 import { Relative } from '@/components/lj/relative';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
-import { ConfirmButton } from '@/components/lj/confirm-button';
+import { useRef, useState } from 'react';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
     Button,
+    buttonClass,
     Card,
     CardHeader,
     EmptyState,
@@ -17,6 +17,20 @@ import {
     tdClass,
     thClass,
 } from '@/components/lj/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
 import { useAdminLive } from '@/lib/use-live';
@@ -52,11 +66,24 @@ const pagerClass =
     'inline-flex h-8 items-center rounded-md border border-line-strong bg-panel-2 px-3 text-ink';
 const keep = { preserveScroll: true };
 
+type Confirming = {
+    question: string;
+    label: string;
+    danger?: boolean;
+    run: () => void;
+};
+
 export default function AdminUsers({ filters, users, teams }: Props) {
     const t = useT();
     useAdminLive(['users.changed', 'teams.changed'], ['users', 'teams']);
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
     const [search, setSearch] = useState(filters.search);
+    // The row actions live in a menu, which closes on select, so their question is asked here.
+    const [confirming, setConfirming] = useState<Confirming | null>(null);
+    // The dialog keeps its text while it animates closed.
+    const lastConfirming = useRef<Confirming | null>(null);
+    lastConfirming.current = confirming ?? lastConfirming.current;
+    const shown = lastConfirming.current;
     const form = useForm({
         email: '',
         team: teams[0]?.uuid ?? '',
@@ -95,7 +122,7 @@ export default function AdminUsers({ filters, users, teams }: Props) {
                     <Input
                         id="user-search"
                         type="search"
-                        className="max-w-sm"
+                        className="w-full max-w-sm"
                         placeholder={t('admin.users.search')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -106,7 +133,7 @@ export default function AdminUsers({ filters, users, teams }: Props) {
                     {users.data.length === 0 ? (
                         <EmptyState title={t('admin.users.empty')} />
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="relative overflow-x-auto">
                             <table className={tableClass}>
                                 <thead>
                                     <tr>
@@ -119,7 +146,12 @@ export default function AdminUsers({ filters, users, teams }: Props) {
                                         <th className={thClass}>
                                             {t('admin.users.status')}
                                         </th>
-                                        <th className={thClass}>
+                                        <th
+                                            className={cn(
+                                                thClass,
+                                                'hidden md:table-cell',
+                                            )}
+                                        >
                                             {t('admin.users.joined')}
                                         </th>
                                         <th className={thClass}>
@@ -182,12 +214,21 @@ export default function AdminUsers({ filters, users, teams }: Props) {
                                                                 )}
                                                             </Badge>
                                                         )}
+                                                        {!user.is_admin &&
+                                                            !user.suspended &&
+                                                            !user.password_change_required && (
+                                                                <span className="text-ink-2">
+                                                                    {t(
+                                                                        'admin.users.badges.active',
+                                                                    )}
+                                                                </span>
+                                                            )}
                                                     </span>
                                                 </td>
                                                 <td
                                                     className={cn(
                                                         tdClass,
-                                                        'whitespace-nowrap text-ink-2',
+                                                        'hidden whitespace-nowrap text-ink-2 md:table-cell',
                                                     )}
                                                 >
                                                     <Relative
@@ -200,160 +241,169 @@ export default function AdminUsers({ filters, users, teams }: Props) {
                                                         'text-right',
                                                     )}
                                                 >
-                                                    <span className="inline-flex flex-wrap justify-end gap-2">
-                                                        <Button
-                                                            onClick={() =>
-                                                                router.post(
-                                                                    reset(
-                                                                        user.id,
-                                                                    ).url,
-                                                                    {},
-                                                                    keep,
-                                                                )
-                                                            }
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            className={buttonClass()}
                                                         >
                                                             {t(
-                                                                'admin.users.send_reset',
+                                                                'admin.users.more',
                                                             )}
-                                                        </Button>
-                                                        {!you &&
-                                                            !user.password_change_required && (
-                                                                <ConfirmButton
-                                                                    variant="default"
-                                                                    question={t(
-                                                                        'admin.users.require_password_change_question',
-                                                                        {
-                                                                            name: user.name,
-                                                                        },
-                                                                    )}
-                                                                    confirmLabel={t(
-                                                                        'admin.users.require_password_change',
-                                                                    )}
-                                                                    onConfirm={() =>
-                                                                        router.put(
-                                                                            passwordChange(
-                                                                                user.id,
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                onSelect={() =>
+                                                                    router.post(
+                                                                        reset(
+                                                                            user.id,
+                                                                        ).url,
+                                                                        {},
+                                                                        keep,
+                                                                    )
+                                                                }
+                                                            >
+                                                                {t(
+                                                                    'admin.users.send_reset',
+                                                                )}
+                                                            </DropdownMenuItem>
+                                                            {!you &&
+                                                                !user.password_change_required && (
+                                                                    <DropdownMenuItem
+                                                                        onSelect={() =>
+                                                                            setConfirming(
+                                                                                {
+                                                                                    question:
+                                                                                        t(
+                                                                                            'admin.users.require_password_change_question',
+                                                                                            {
+                                                                                                name: user.name,
+                                                                                            },
+                                                                                        ),
+                                                                                    label: t(
+                                                                                        'admin.users.require_password_change',
+                                                                                    ),
+                                                                                    run: () =>
+                                                                                        router.put(
+                                                                                            passwordChange(
+                                                                                                user.id,
+                                                                                            )
+                                                                                                .url,
+                                                                                            {},
+                                                                                            keep,
+                                                                                        ),
+                                                                                },
                                                                             )
-                                                                                .url,
-                                                                            {},
-                                                                            keep,
+                                                                        }
+                                                                    >
+                                                                        {t(
+                                                                            'admin.users.require_password_change',
+                                                                        )}
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                            {!you && (
+                                                                <DropdownMenuItem
+                                                                    onSelect={() =>
+                                                                        setConfirming(
+                                                                            {
+                                                                                question:
+                                                                                    t(
+                                                                                        user.is_admin
+                                                                                            ? 'admin.users.revoke_admin_question'
+                                                                                            : 'admin.users.make_admin_question',
+                                                                                        {
+                                                                                            name: user.name,
+                                                                                        },
+                                                                                    ),
+                                                                                label: t(
+                                                                                    user.is_admin
+                                                                                        ? 'admin.users.revoke_admin'
+                                                                                        : 'admin.users.make_admin',
+                                                                                ),
+                                                                                danger: user.is_admin,
+                                                                                run: () =>
+                                                                                    router.put(
+                                                                                        setAdmin(
+                                                                                            user.id,
+                                                                                        )
+                                                                                            .url,
+                                                                                        {
+                                                                                            is_admin:
+                                                                                                !user.is_admin,
+                                                                                        },
+                                                                                        keep,
+                                                                                    ),
+                                                                            },
                                                                         )
                                                                     }
                                                                 >
                                                                     {t(
-                                                                        'admin.users.require_password_change',
+                                                                        user.is_admin
+                                                                            ? 'admin.users.revoke_admin'
+                                                                            : 'admin.users.make_admin',
                                                                     )}
-                                                                </ConfirmButton>
+                                                                </DropdownMenuItem>
                                                             )}
-                                                        {!you &&
-                                                            (user.is_admin ? (
-                                                                <ConfirmButton
-                                                                    question={t(
-                                                                        'admin.users.revoke_admin_question',
-                                                                        {
-                                                                            name: user.name,
-                                                                        },
-                                                                    )}
-                                                                    confirmLabel={t(
-                                                                        'admin.users.revoke_admin',
-                                                                    )}
-                                                                    onConfirm={() =>
-                                                                        router.put(
-                                                                            setAdmin(
-                                                                                user.id,
+                                                            {!you &&
+                                                                (user.suspended ? (
+                                                                    <DropdownMenuItem
+                                                                        onSelect={() =>
+                                                                            router.put(
+                                                                                suspend(
+                                                                                    user.id,
+                                                                                )
+                                                                                    .url,
+                                                                                {
+                                                                                    suspended: false,
+                                                                                },
+                                                                                keep,
                                                                             )
-                                                                                .url,
-                                                                            {
-                                                                                is_admin: false,
-                                                                            },
-                                                                            keep,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {t(
-                                                                        'admin.users.revoke_admin',
-                                                                    )}
-                                                                </ConfirmButton>
-                                                            ) : (
-                                                                <ConfirmButton
-                                                                    variant="default"
-                                                                    question={t(
-                                                                        'admin.users.make_admin_question',
-                                                                        {
-                                                                            name: user.name,
-                                                                        },
-                                                                    )}
-                                                                    confirmLabel={t(
-                                                                        'admin.users.make_admin',
-                                                                    )}
-                                                                    onConfirm={() =>
-                                                                        router.put(
-                                                                            setAdmin(
-                                                                                user.id,
-                                                                            )
-                                                                                .url,
-                                                                            {
-                                                                                is_admin: true,
-                                                                            },
-                                                                            keep,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {t(
-                                                                        'admin.users.make_admin',
-                                                                    )}
-                                                                </ConfirmButton>
-                                                            ))}
-                                                        {!you &&
-                                                            (user.suspended ? (
-                                                                <Button
-                                                                    onClick={() =>
-                                                                        router.put(
-                                                                            suspend(
-                                                                                user.id,
-                                                                            )
-                                                                                .url,
-                                                                            {
-                                                                                suspended: false,
-                                                                            },
-                                                                            keep,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {t(
-                                                                        'admin.users.reinstate',
-                                                                    )}
-                                                                </Button>
-                                                            ) : (
-                                                                <ConfirmButton
-                                                                    question={t(
-                                                                        'admin.users.suspend_question',
-                                                                        {
-                                                                            name: user.name,
-                                                                        },
-                                                                    )}
-                                                                    confirmLabel={t(
-                                                                        'admin.users.suspend',
-                                                                    )}
-                                                                    onConfirm={() =>
-                                                                        router.put(
-                                                                            suspend(
-                                                                                user.id,
-                                                                            )
-                                                                                .url,
-                                                                            {
-                                                                                suspended: true,
-                                                                            },
-                                                                            keep,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {t(
-                                                                        'admin.users.suspend',
-                                                                    )}
-                                                                </ConfirmButton>
-                                                            ))}
-                                                    </span>
+                                                                        }
+                                                                    >
+                                                                        {t(
+                                                                            'admin.users.reinstate',
+                                                                        )}
+                                                                    </DropdownMenuItem>
+                                                                ) : (
+                                                                    <>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem
+                                                                            className="text-err focus:text-err"
+                                                                            onSelect={() =>
+                                                                                setConfirming(
+                                                                                    {
+                                                                                        question:
+                                                                                            t(
+                                                                                                'admin.users.suspend_question',
+                                                                                                {
+                                                                                                    name: user.name,
+                                                                                                },
+                                                                                            ),
+                                                                                        label: t(
+                                                                                            'admin.users.suspend',
+                                                                                        ),
+                                                                                        danger: true,
+                                                                                        run: () =>
+                                                                                            router.put(
+                                                                                                suspend(
+                                                                                                    user.id,
+                                                                                                )
+                                                                                                    .url,
+                                                                                                {
+                                                                                                    suspended: true,
+                                                                                                },
+                                                                                                keep,
+                                                                                            ),
+                                                                                    },
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            {t(
+                                                                                'admin.users.suspend',
+                                                                            )}
+                                                                        </DropdownMenuItem>
+                                                                    </>
+                                                                ))}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </td>
                                             </tr>
                                         );
@@ -461,6 +511,34 @@ export default function AdminUsers({ filters, users, teams }: Props) {
                         </form>
                     </Card>
                 )}
+                <Dialog
+                    open={confirming !== null}
+                    onOpenChange={(open) => !open && setConfirming(null)}
+                >
+                    <DialogContent className="gap-5 border-line bg-panel sm:max-w-md [&>button:last-child]:hidden">
+                        <DialogTitle className="text-sm leading-relaxed font-normal text-ink">
+                            {shown?.question}
+                        </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            {shown?.label}
+                        </DialogDescription>
+                        <DialogFooter>
+                            <Button onClick={() => setConfirming(null)}>
+                                {t('common.cancel')}
+                            </Button>
+                            <Button
+                                variant={shown?.danger ? 'danger' : 'primary'}
+                                autoFocus
+                                onClick={() => {
+                                    confirming?.run();
+                                    setConfirming(null);
+                                }}
+                            >
+                                {shown?.label}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </PageBody>
         </>
     );

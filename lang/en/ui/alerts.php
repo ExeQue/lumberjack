@@ -54,6 +54,8 @@ return [
         'no_channels' => 'Add a channel first.',
         'environments' => 'Environments',
         'environments_hint' => 'Comma separated. Empty means all.',
+        'environments_placeholder' => 'e.g. production',
+        'on_without_channel' => 'On, but no channel is ticked: this rule sends nowhere.',
         'thresholds' => [
             'title' => 'Alert when',
             'size' => 'More than this many jobs wait',
