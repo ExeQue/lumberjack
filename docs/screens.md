@@ -161,8 +161,9 @@ this browser, kept per screen, not part of the screen.
 - **Resize**: drag any edge or corner; sizes follow whole cells, and the left and top
   edges move the widget as they resize it. A widget only grows into free cells.
 - **Keyboard**: with a widget focused, the arrow keys move it one cell, Shift and the
-  arrows resize it (both only into free cells), Delete removes it and Escape shows the
-  screen's settings.
+  arrows resize it (both only into free cells; a widget against the right or bottom edge
+  keeps that edge and grows or shrinks on its other side), Delete removes it and Escape
+  shows the screen's settings.
 
 ![Dragging a widget onto a free cell](./screenshots/screen-designer-drop.png)
 
