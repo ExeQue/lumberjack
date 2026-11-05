@@ -41,12 +41,14 @@ class NotifySurfacedIssueAction
         }
 
         $scheduled = ScheduledTaskIssues::is($issue);
-        $title = (string) __(match (true) {
-            $scheduled => 'notifications.push.scheduled_task',
-            $type === AlertRuleType::Regression => 'notifications.push.regression',
-            $type === AlertRuleType::Escalation => 'notifications.push.escalation',
-            default => 'notifications.push.new_issue',
-        }, ['title' => $issue->title]);
+        // A scheduled task's issue title already says "Scheduled task failed/missed: ...", so a
+        // new one needs no prefix; a regression or escalation still says so.
+        $title = match (true) {
+            $type === AlertRuleType::Regression => (string) __('notifications.push.regression', ['title' => $issue->title]),
+            $type === AlertRuleType::Escalation => (string) __('notifications.push.escalation', ['title' => $issue->title]),
+            $scheduled => $issue->title,
+            default => (string) __('notifications.push.new_issue', ['title' => $issue->title]),
+        };
 
         $message = PushMessage::about(
             $issue->project,
