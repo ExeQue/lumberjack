@@ -2241,10 +2241,12 @@ const LIGHT_STATE: Record<string, string> = {
 };
 
 function reasonText(t: Translate, reason: OverviewReason): string {
-    return t(`screens.overview.reasons.${reason.reason}`, {
-        count: reason.count,
-        queue: reason.queue ?? '',
-    });
+    // The count also picks the plural ({1} ... |[2,*] ...).
+    return t(
+        `screens.overview.reasons.${reason.reason}`,
+        { count: reason.count, queue: reason.queue ?? '' },
+        reason.count,
+    );
 }
 
 /**
