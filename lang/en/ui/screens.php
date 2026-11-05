@@ -467,7 +467,7 @@ return [
 
     'countdown' => [
         'empty' => 'Pick when it counts down to.',
-        'days' => '{1} 1 day :time|[2,*] :count days :time',
+        'days' => '{1} 1 day|[2,*] :count days',
         'since' => 'Since :label',
         'since_then' => 'Since then',
     ],

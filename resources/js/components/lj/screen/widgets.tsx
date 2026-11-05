@@ -2555,13 +2555,28 @@ function Countdown({
         .map(pad)
         .join(':');
 
+    const big = days > 0 ? t('screens.countdown.days', {}, days) : clock;
+    // Monospaced digits: as large as the text size asks, but never wider than the tile.
+    const fit = (text: string, base: string | undefined): CSSProperties => ({
+        fontSize: `min(${base ?? BIG_SIZE.auto}, ${Math.round(150 / Math.max(4, text.length))}cqw)`,
+    });
+
     return (
         <>
-            <span className="lj-tile-big tabular-nums" style={size}>
-                {days > 0
-                    ? t('screens.countdown.days', { days, time: clock }, days)
-                    : clock}
+            <span
+                className="lj-tile-big whitespace-nowrap tabular-nums"
+                style={fit(big, size.fontSize as string | undefined)}
+            >
+                {big}
             </span>
+            {days > 0 && (
+                <span
+                    className="font-mono whitespace-nowrap text-(--s-ink-2) tabular-nums"
+                    style={fit(clock, 'min(18cqh, 8cqw)')}
+                >
+                    {clock}
+                </span>
+            )}
             {(label || (past && after === 'since')) && (
                 <span className="lj-tile-small">
                     {past && after === 'since'
