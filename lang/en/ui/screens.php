@@ -407,6 +407,7 @@ return [
         'media' => ['label' => 'Shows', 'options' => ['image' => 'An image or camera', 'video' => 'A video', 'page' => 'A web page or YouTube']],
         'media_url' => ['label' => 'Address', 'placeholder' => 'https://'],
         'padding' => ['label' => 'Space around it'],
+        'subtitles' => ['label' => 'Subtitles (YouTube and Vimeo)'],
         'fit' => ['label' => 'Fit', 'options' => ['contain' => 'Whole (contain)', 'cover' => 'Fill, cropped (cover)', 'fill' => 'Stretch (fill)', 'none' => 'Actual size (none)', 'scale-down' => 'Shrink only (scale-down)']],
         'reload_every' => ['label' => 'Load again', 'options' => ['never' => 'Never', '1' => 'Every minute', '5' => 'Every 5 minutes', '15' => 'Every 15 minutes', '60' => 'Every hour']],
         'rotate_every' => ['label' => 'Switch every', 'options' => ['5' => '5 seconds', '10' => '10 seconds', '20' => '20 seconds', '30' => '30 seconds', '60' => '1 minute']],

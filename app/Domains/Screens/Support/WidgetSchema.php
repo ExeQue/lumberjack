@@ -506,6 +506,7 @@ final class WidgetSchema
                     ['key' => 'media_url', 'type' => 'url', 'default' => null, 'data' => false, 'span' => 2],
                     ['key' => 'fit', 'type' => 'select', 'options' => ['contain', 'cover', 'fill', 'none', 'scale-down'], 'default' => 'contain', 'data' => false, 'span' => 1, 'when' => ['media' => ['image', 'video']]],
                     ['key' => 'reload_every', 'type' => 'select', 'options' => ['never', '1', '5', '15', '60'], 'default' => 'never', 'data' => false, 'span' => 1, 'when' => ['media' => ['image', 'page']]],
+                    ['key' => 'subtitles', 'type' => 'toggle', 'default' => false, 'data' => false, 'span' => 2, 'when' => ['media' => ['page']]],
                     $toggle('padding', true),
                     $text('caption', 2),
                 ]),
