@@ -37,39 +37,39 @@ Lumberjack runs as one Docker image, with Postgres and Redis beside it:
 docker compose --env-file .env.docker up -d
 ```
 
-[Running Lumberjack with Docker](docs/docker.md) has the whole setup. Your apps send data
-through a [library](docs/libraries.md), such as
+[Running Lumberjack with Docker](https://exeque.github.io/lumberjack/docs/docker) has the whole setup. Your apps send data
+through a [library](https://exeque.github.io/lumberjack/docs/libraries), such as
 [`exeque/laravel-lumberjack`](https://github.com/ExeQue/laravel-lumberjack) for Laravel, or
-straight to the [ingest API](docs/api.md) from any language or framework.
+straight to the [ingest API](https://exeque.github.io/lumberjack/docs/api) from any language or framework.
 
 ## Guides
 
-- [Get alerted when production breaks](docs/guides/alerting.md)
-- [Find out why a page is slow](docs/guides/slow-pages.md)
-- [Check a release](docs/guides/releases.md)
-- [Watch queues, jobs and scheduled tasks](docs/guides/background-work.md)
-- [Put a status screen on a TV](docs/guides/status-tv.md)
-- [Let an AI agent work with your errors](docs/guides/ai-agents.md)
-- [Show Lumberjack data in Grafana](docs/guides/grafana.md)
+- [Get alerted when production breaks](https://exeque.github.io/lumberjack/docs/guides/alerting)
+- [Find out why a page is slow](https://exeque.github.io/lumberjack/docs/guides/slow-pages)
+- [Check a release](https://exeque.github.io/lumberjack/docs/guides/releases)
+- [Watch queues, jobs and scheduled tasks](https://exeque.github.io/lumberjack/docs/guides/background-work)
+- [Put a status screen on a TV](https://exeque.github.io/lumberjack/docs/guides/status-tv)
+- [Let an AI agent work with your errors](https://exeque.github.io/lumberjack/docs/guides/ai-agents)
+- [Show Lumberjack data in Grafana](https://exeque.github.io/lumberjack/docs/guides/grafana)
 
 ## Reference
 
-- [Running Lumberjack with Docker](docs/docker.md): installation, settings, reverse proxy,
+- [Running Lumberjack with Docker](https://exeque.github.io/lumberjack/docs/docker): installation, settings, reverse proxy,
   backups and updates.
-- [Libraries](docs/libraries.md): the libraries your apps send data with.
-- [Setup and administration](docs/administration.md): first-run setup, recovery,
+- [Libraries](https://exeque.github.io/lumberjack/docs/libraries): the libraries your apps send data with.
+- [Setup and administration](https://exeque.github.io/lumberjack/docs/administration): first-run setup, recovery,
   administrators and the command line.
-- [Teams and accounts](docs/teams.md): members, roles, invitations, your profile and
+- [Teams and accounts](https://exeque.github.io/lumberjack/docs/teams): members, roles, invitations, your profile and
   two-factor authentication.
-- [Projects](docs/projects.md)
-- [Issues](docs/issues.md)
-- [Alerts](docs/alerts.md)
-- [Performance and traces](docs/performance.md)
-- [Releases](docs/releases.md)
-- [Health](docs/health.md)
-- [Finding things](docs/finding-things.md): search, filters and the command palette.
-- [Status screens](docs/screens.md) and [widgets](docs/widgets.md)
-- [MCP](docs/mcp.md)
-- [Metrics API](docs/metrics-api.md): read figures from Grafana, Prometheus or a script.
-- [Ingest and API](docs/api.md): the endpoints SDKs and agents send to, and their limits.
-- [Development](docs/development.md): run Lumberjack from source, demo data and screenshots.
+- [Projects](https://exeque.github.io/lumberjack/docs/projects)
+- [Issues](https://exeque.github.io/lumberjack/docs/issues)
+- [Alerts](https://exeque.github.io/lumberjack/docs/alerts)
+- [Performance and traces](https://exeque.github.io/lumberjack/docs/performance)
+- [Releases](https://exeque.github.io/lumberjack/docs/releases)
+- [Health](https://exeque.github.io/lumberjack/docs/health)
+- [Finding things](https://exeque.github.io/lumberjack/docs/finding-things): search, filters and the command palette.
+- [Status screens](https://exeque.github.io/lumberjack/docs/screens) and [widgets](https://exeque.github.io/lumberjack/docs/widgets)
+- [MCP](https://exeque.github.io/lumberjack/docs/mcp)
+- [Metrics API](https://exeque.github.io/lumberjack/docs/metrics-api): read figures from Grafana, Prometheus or a script.
+- [Ingest and API](https://exeque.github.io/lumberjack/docs/api): the endpoints SDKs and agents send to, and their limits.
+- [Development](https://exeque.github.io/lumberjack/docs/development): run Lumberjack from source, demo data and screenshots.
