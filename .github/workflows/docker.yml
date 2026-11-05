@@ -1,9 +1,11 @@
 name: Docker image
 
-# Only a release tag (v1.2.3) builds and publishes an image.
+# Only a release tag (v1.2.3) publishes an image. A manual run builds and tests
+# it, and fills the build cache, without tagging anything.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -122,6 +124,7 @@ jobs:
   # One tag, both platforms: a manifest list over the two digests.
   publish:
     needs: [ smoke, build ]
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
       # Image names are lower case; the repository is ExeQue/lumberjack.
