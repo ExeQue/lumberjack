@@ -1,5 +1,13 @@
 <p align="center"><img src="./art/cover.jpg" alt="Lumberjack - every layer of your app, ring by ring: errors, performance and logs on your own server" width="100%"></p>
 
+<p align="center">
+<a href="https://github.com/ExeQue/lumberjack/releases"><img src="https://img.shields.io/github/v/release/ExeQue/lumberjack" alt="Latest release"></a>
+<a href="https://github.com/ExeQue/lumberjack/actions/workflows/tests.yml"><img src="https://github.com/ExeQue/lumberjack/actions/workflows/tests.yml/badge.svg?branch=main" alt="Tests"></a>
+<a href="https://github.com/ExeQue/lumberjack/actions/workflows/docker.yml"><img src="https://github.com/ExeQue/lumberjack/actions/workflows/docker.yml/badge.svg" alt="Docker image"></a>
+<a href="https://github.com/ExeQue/lumberjack/actions/workflows/docs.yml"><img src="https://github.com/ExeQue/lumberjack/actions/workflows/docs.yml/badge.svg" alt="Documentation"></a>
+<a href="https://github.com/ExeQue/lumberjack/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ExeQue/lumberjack" alt="License"></a>
+</p>
+
 # Lumberjack
 
 Lumberjack watches your apps from your own server, whatever they are built with. It collects errors, logs and
