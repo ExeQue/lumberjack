@@ -896,7 +896,7 @@ export default function IssueShow({
                                 </Badge>
                             )}
                         </div>
-                        <h1 className="font-mono text-lg font-medium break-all">
+                        <h1 className="font-mono text-lg font-medium break-words">
                             {issue.reference && (
                                 <CopyText
                                     text={issue.reference}
@@ -913,6 +913,39 @@ export default function IssueShow({
                         )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
+                        {issue.status === 'open' ||
+                        issue.status === 'in_progress' ? (
+                            <>
+                                <Button
+                                    variant="primary"
+                                    onClick={() => setClosing('resolved')}
+                                >
+                                    {t('issue.actions.resolve')}
+                                </Button>
+                                <Button onClick={() => setClosing('ignored')}>
+                                    {t('issue.actions.ignore')}
+                                </Button>
+                                {issue.status === 'open' ? (
+                                    <Button
+                                        onClick={() =>
+                                            changeStatus('in_progress')
+                                        }
+                                    >
+                                        {t('issue.actions.start')}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        onClick={() => changeStatus('open')}
+                                    >
+                                        {t('issue.actions.stop')}
+                                    </Button>
+                                )}
+                            </>
+                        ) : (
+                            <Button onClick={() => changeStatus('open')}>
+                                {t('issue.actions.reopen')}
+                            </Button>
+                        )}
                         <WatchControl
                             watchers={watchers}
                             watching={watching}
@@ -965,39 +998,6 @@ export default function IssueShow({
                                     {t('issue.actions.create_repo_issue')}
                                 </Button>
                             )
-                        )}
-                        {issue.status === 'open' ||
-                        issue.status === 'in_progress' ? (
-                            <>
-                                {issue.status === 'open' ? (
-                                    <Button
-                                        onClick={() =>
-                                            changeStatus('in_progress')
-                                        }
-                                    >
-                                        {t('issue.actions.start')}
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        onClick={() => changeStatus('open')}
-                                    >
-                                        {t('issue.actions.stop')}
-                                    </Button>
-                                )}
-                                <Button onClick={() => setClosing('ignored')}>
-                                    {t('issue.actions.ignore')}
-                                </Button>
-                                <Button
-                                    variant="primary"
-                                    onClick={() => setClosing('resolved')}
-                                >
-                                    {t('issue.actions.resolve')}
-                                </Button>
-                            </>
-                        ) : (
-                            <Button onClick={() => changeStatus('open')}>
-                                {t('issue.actions.reopen')}
-                            </Button>
                         )}
                     </div>
                 </div>
