@@ -3,6 +3,8 @@ name: Documentation
 on:
   push:
     branches: [ "main" ]
+    # A release tag deploys, like the Docker image; path filters do not apply to tags.
+    tags: [ 'v*' ]
     paths: &docs
       - 'README.md'
       - 'docs/**'
@@ -10,13 +12,16 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/docs.yml'
+      - 'install.sh'
+      - 'compose.yaml'
+      - '.env.docker.example'
   pull_request:
     branches: [ "main" ]
     paths: *docs
   workflow_dispatch:
 
-# The build runs on a pull request too: VitePress fails on a dead link, which is
-# the check that matters. A pull request stops there; main and a manual run deploy.
+# Every run builds: VitePress fails on a dead link, which is the check that matters.
+# Only a release tag or a manual run deploys, so the site matches the released image.
 permissions:
   contents: read
 
@@ -49,14 +54,18 @@ jobs:
       - name: Build the site
         run: npm run docs:build
 
+      # The install script and the files it downloads, from the same release as the docs.
+      - name: Add the install files
+        run: cp install.sh compose.yaml .vitepress/dist/ && cp .env.docker.example .vitepress/dist/env.docker.example
+
       - name: Upload the artifact
-        if: github.event_name != 'pull_request'
+        if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-pages-artifact@v5
         with:
           path: .vitepress/dist
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
 

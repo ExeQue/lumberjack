@@ -9,7 +9,36 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
                                          └─► redis
 ```
 
-## Start
+## Install with one command
+
+On a server with Docker Compose or Podman Compose, in the folder Lumberjack should live in:
+
+```bash
+curl -fsSL https://exeque.github.io/lumberjack/install.sh | sh
+```
+
+Docker is used when it is installed. To pick one, pass `docker` or `podman`:
+
+```bash
+curl -fsSL https://exeque.github.io/lumberjack/install.sh | sh -s podman
+```
+
+The script asks for the address people open Lumberjack on, puts `compose.yaml` and a
+filled-in `.env.docker` in a `lumberjack` folder, starts Lumberjack and prints the setup
+token. Run it again from the same folder to update. To read it first:
+
+```bash
+curl -fsSLO https://exeque.github.io/lumberjack/install.sh
+less install.sh
+sh install.sh
+```
+
+Set `APP_URL` or `LUMBERJACK_PORT` (default `8080`) in front of `sh` to skip the question or
+use another port, e.g. `curl -fsSL .../install.sh | APP_URL=https://lumberjack.example.com sh`.
+Then point your reverse proxy at the port (see [Reverse proxy](#reverse-proxy)), and fill in
+the mail settings in `lumberjack/.env.docker`.
+
+## Install by hand
 
 1. In a new folder, create `compose.yaml` with this content (it is also in the
    repository as [`compose.yaml`](https://github.com/ExeQue/lumberjack/blob/main/compose.yaml)):
@@ -30,7 +59,7 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
 
     services:
         lumberjack:
-            image: ghcr.io/exeque/lumberjack:latest
+            image: ${LUMBERJACK_IMAGE:-ghcr.io/exeque/lumberjack:latest}
             restart: unless-stopped
             ports:
                 - '${LUMBERJACK_PORT:-8080}:8080'
@@ -181,6 +210,7 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
 | `APP_KEY`                                | (required)     | Encryption key. Keep it: changing it signs everyone out and breaks stored secrets                                                                                                                  |
 | `DB_PASSWORD`                            | (required)     | Password of the bundled Postgres                                                                                                                                                                   |
 | `LUMBERJACK_SETUP_TOKEN`                 | generated      | Locks first-run setup. Without one, a token is generated on first start and printed in the log                                                                                                     |
+| `LUMBERJACK_IMAGE`                       | `ghcr.io/exeque/lumberjack:latest` | The image, e.g. pinned to a version: `ghcr.io/exeque/lumberjack:0.2` |
 | `LUMBERJACK_PORT`                        | `8080`         | Port on the host                                                                                                                                                                                   |
 | `HORIZON_INGEST_PROCESSES`               | `2`            | Most workers for incoming telemetry                                                                                                                                                                |
 | `HORIZON_BACKGROUND_PROCESSES`           | `2`            | Most workers for everything else (alerts, pruning)                                                                                                                                                 |
@@ -262,6 +292,8 @@ Links in mails and alerts always use `APP_URL`.
 | `lumberjack-storage` | The setup flag and the generated setup token                                                                              |
 
 ## Updating
+
+Installed with the script? Run it again. Otherwise:
 
 ```bash
 docker compose pull

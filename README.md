@@ -31,10 +31,11 @@ AI agents work with your issues over MCP.
 
 ## Get started
 
-Lumberjack runs as one Docker image, with Postgres and Redis beside it:
+Lumberjack runs as one Docker image, with Postgres and Redis beside it. On a server with
+Docker or Podman:
 
 ```bash
-docker compose --env-file .env.docker up -d
+curl -fsSL https://exeque.github.io/lumberjack/install.sh | sh
 ```
 
 [Running Lumberjack with Docker](https://exeque.github.io/lumberjack/docs/docker) has the whole setup. Your apps send data
