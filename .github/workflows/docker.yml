@@ -46,9 +46,9 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 200
           docker compose --env-file .env.docker logs lumberjack | grep -q 'enter this setup token'
 
-  # Each platform builds on its own runner, in parallel, and pushes by digest.
+  # Each platform builds on its own runner, in parallel with the smoke test, and
+  # pushes by digest only: nothing is tagged until publish, which waits for both.
   build:
-    needs: smoke
     strategy:
       matrix:
         include:
@@ -110,7 +110,7 @@ jobs:
 
   # One tag, both platforms: a manifest list over the two digests.
   publish:
-    needs: build
+    needs: [ smoke, build ]
     runs-on: ubuntu-latest
     steps:
       # Image names are lower case; the repository is ExeQue/lumberjack.
