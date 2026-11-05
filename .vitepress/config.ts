@@ -13,7 +13,10 @@ export default defineConfig({
 
     // The app's own icons, from public/; head links do not get the base added.
     head: [
-        ['link', { rel: 'icon', href: '/lumberjack/favicon.ico', sizes: 'any' }],
+        [
+            'link',
+            { rel: 'icon', href: '/lumberjack/favicon.ico', sizes: 'any' },
+        ],
         [
             'link',
             {

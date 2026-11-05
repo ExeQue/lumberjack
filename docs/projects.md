@@ -63,9 +63,9 @@ open at a time; the address names the open section (such as `#agents`).
   `authorization`, `cookie`, `api_key`, `apikey`, `access_key`, `private_key`, `jwt`,
   `dsn`, `credit_card`, `card_number`, `cvv` and `session_id`. Values that look like
   secrets are masked whatever their key, see [Security](./administration#security).
-  - A plain word masks every key that contains it: `cpr`.
-  - `*` is a wildcard in the key name: `card_*`.
-  - A dotted pattern matches the full path: `session.checkout.*`.
+    - A plain word masks every key that contains it: `cpr`.
+    - `*` is a wildcard in the key name: `card_*`.
+    - A dotted pattern matches the full path: `session.checkout.*`.
 - **Agents:** the servers that send data, see [Agents](#agents).
 - **Alerts:** the project's [own channels, and its rules](./alerts#team-rules-and-project-overrides): the team's by default, or customized for the project.
 - **Log channels:** the channels the project's log lines go to, with the lines of the
@@ -193,24 +193,24 @@ For each data type, the table shows the **Default** the level inherits, the valu
 and **Deletes before**: the date up to which data is deleted next. Data is deleted once
 a day.
 
-| Data type            | Default  | What it is                                                         |
-| -------------------- | -------- | ------------------------------------------------------------------ |
-| Occurrences          | 90 days  | Each time an error happened, with its stack trace and context      |
-| Requests             | 14 days  | Recorded HTTP requests and the request counts per minute           |
-| Queries              | 14 days  | Database queries recorded with requests and jobs                   |
-| Spans                | 14 days  | Outgoing HTTP calls, cache operations and custom timings in traces |
-| Web vitals           | 30 days  | Page load metrics from browsers                                    |
-| Job runs             | 30 days  | Each attempt of a queued job. Can be set per job class             |
-| Scheduled task runs  | 30 days  | Each run of a scheduled task                                       |
-| Command runs         | 30 days  | Each console command run                                           |
-| Logs                 | 14 days  | Log lines. Can be set per channel                                  |
-| Health results       | 14 days  | Each health check result and its latency                           |
-| Health outages       | 365 days | Periods a check was down or degraded. Uptime is counted from them  |
-| Data source history  | 30 days  | What each [data source](./data-sources.md) answered, for charts    |
-| Queue size samples   | 30 days  | Queue length and oldest job age, reported by the agents            |
-| Host metrics         | 7 days   | CPU, memory and disk, reported by the agents                       |
-| Alert history        | 90 days  | Every alert sent, to which channel, and whether it got through     |
-| Audit log            | 365 days | What administrators did. Application level only                    |
+| Data type            | Default  | What it is                                                                            |
+| -------------------- | -------- | ------------------------------------------------------------------------------------- |
+| Occurrences          | 90 days  | Each time an error happened, with its stack trace and context                         |
+| Requests             | 14 days  | Recorded HTTP requests and the request counts per minute                              |
+| Queries              | 14 days  | Database queries recorded with requests and jobs                                      |
+| Spans                | 14 days  | Outgoing HTTP calls, cache operations and custom timings in traces                    |
+| Web vitals           | 30 days  | Page load metrics from browsers                                                       |
+| Job runs             | 30 days  | Each attempt of a queued job. Can be set per job class                                |
+| Scheduled task runs  | 30 days  | Each run of a scheduled task                                                          |
+| Command runs         | 30 days  | Each console command run                                                              |
+| Logs                 | 14 days  | Log lines. Can be set per channel                                                     |
+| Health results       | 14 days  | Each health check result and its latency                                              |
+| Health outages       | 365 days | Periods a check was down or degraded. Uptime is counted from them                     |
+| Data source history  | 30 days  | What each [data source](./data-sources.md) answered, for charts                       |
+| Queue size samples   | 30 days  | Queue length and oldest job age, reported by the agents                               |
+| Host metrics         | 7 days   | CPU, memory and disk, reported by the agents                                          |
+| Alert history        | 90 days  | Every alert sent, to which channel, and whether it got through                        |
+| Audit log            | 365 days | What administrators did. Application level only                                       |
 | Notification history | 90 days  | Everyone's [notification center](./teams#notification-center). Application level only |
 
 Issues themselves are never deleted, only their occurrences. Failed job runs, failed or
@@ -240,11 +240,11 @@ name. Deleting the data can take several minutes.
 
 ## Limits
 
-| What                                      | Limit             |
-| ----------------------------------------- | ----------------- |
-| Allowed origins                           | 50                |
-| Extra secret fields                       | 50, 64 characters |
-| Log channel name                          | 64 characters     |
-| Browser errors per page view              | 100               |
-| Same browser error per page view          | 5                 |
-| Retention value                           | 1 to 3650 days    |
+| What                             | Limit             |
+| -------------------------------- | ----------------- |
+| Allowed origins                  | 50                |
+| Extra secret fields              | 50, 64 characters |
+| Log channel name                 | 64 characters     |
+| Browser errors per page view     | 100               |
+| Same browser error per page view | 5                 |
+| Retention value                  | 1 to 3650 days    |

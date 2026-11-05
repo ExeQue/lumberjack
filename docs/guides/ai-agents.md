@@ -81,11 +81,11 @@ show. GitHub has to reach your Lumberjack, so it must be on a public URL.
 
 ## Limits
 
-| What                 | Limit                     |
-| -------------------- | ------------------------- |
-| Calls per token      | 120 a minute              |
-| Token name           | 100 characters            |
-| Token expiry         | 30, 90 or 365 days, or never |
+| What            | Limit                        |
+| --------------- | ---------------------------- |
+| Calls per token | 120 a minute                 |
+| Token name      | 100 characters               |
+| Token expiry    | 30, 90 or 365 days, or never |
 
 ## Reference
 

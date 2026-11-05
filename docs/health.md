@@ -72,13 +72,13 @@ away a check that will not report again, for example after you renamed its slug.
 **Add check** offers five types. Each runs every 1, 5, 15 or 60 minutes and can have an
 environment label. Only team owners and admins add, edit, archive and delete checks.
 
-| Type      | Checks                                                                                                                                                           |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| HTTP      | A URL answers with the expected status, optionally with a text in the body. Warns when slower than a limit you set.                                              |
-| SSL       | A host's certificate: warns a number of days before it expires and fails close to it.                                                                           |
-| TCP       | A port accepts a connection.                                                                                                                                     |
-| DNS       | A name has records of a type, optionally one with the value you expect.                                                                                          |
-| Heartbeat | A dead man's switch: your cron job or backup calls a secret URL when it is done; the check fails when no call came within its interval plus a grace.            |
+| Type      | Checks                                                                                                                                               |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP      | A URL answers with the expected status, optionally with a text in the body. Warns when slower than a limit you set.                                  |
+| SSL       | A host's certificate: warns a number of days before it expires and fails close to it.                                                                |
+| TCP       | A port accepts a connection.                                                                                                                         |
+| DNS       | A name has records of a type, optionally one with the value you expect.                                                                              |
+| Heartbeat | A dead man's switch: your cron job or backup calls a secret URL when it is done; the check fails when no call came within its interval plus a grace. |
 
 | Type      | Fields (default)                                                                                                                            |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -172,11 +172,11 @@ down.
 Three alert rules send health alerts. All are on by default, and each has its own
 channels and environments:
 
-| Rule                       | Sent when                                                       |
-| -------------------------- | --------------------------------------------------------------- |
-| **Health check degraded**  | A check keeps warning or starts failing                         |
-| **Health check down**      | A check keeps failing, also when a degraded check goes down     |
-| **Health check recovered** | A check is ok again                                             |
+| Rule                       | Sent when                                                   |
+| -------------------------- | ----------------------------------------------------------- |
+| **Health check degraded**  | A check keeps warning or starts failing                     |
+| **Health check down**      | A check keeps failing, also when a degraded check goes down |
+| **Health check recovered** | A check is ok again                                         |
 
 The rules are independent: with **Health check degraded** off, the later down and
 recovered alerts are still sent.
@@ -230,12 +230,12 @@ Only checks the app reports are listed, without archived ones.
 
 ## Limits
 
-| What                                       | Limit                                                                         |
-| ------------------------------------------ | ----------------------------------------------------------------------------- |
-| Checks Lumberjack runs, per project        | 50. Set `LUMBERJACK_HEALTH_MAX_CHECKS` to change it                           |
-| Timeout of a check                         | 15 seconds                                                                    |
-| Body an HTTP check searches                | The first megabyte                                                            |
-| Metrics per reported result                | 20                                                                            |
-| Heartbeat pings                            | 60 a minute                                                                   |
-| `GET /api/health`                          | 120 requests a minute per project                                             |
-| Kept results and outages                   | 14 days and 365 days by default, see [retention](./projects#retention)        |
+| What                                | Limit                                                                  |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| Checks Lumberjack runs, per project | 50. Set `LUMBERJACK_HEALTH_MAX_CHECKS` to change it                    |
+| Timeout of a check                  | 15 seconds                                                             |
+| Body an HTTP check searches         | The first megabyte                                                     |
+| Metrics per reported result         | 20                                                                     |
+| Heartbeat pings                     | 60 a minute                                                            |
+| `GET /api/health`                   | 120 requests a minute per project                                      |
+| Kept results and outages            | 14 days and 365 days by default, see [retention](./projects#retention) |

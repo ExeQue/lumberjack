@@ -51,9 +51,9 @@ an onboarding of three steps opens, each with **Skip**.
    at the top of the sidebar.
 2. **Notifications:** pick a preset and change any cell. **Next** saves it as your
    [notification settings](#notifications).
-   - **Quiet:** what concerns you, in app only.
-   - **Balanced:** the defaults below.
-   - **Everything:** every kind in app and in the browser, mail as Balanced.
+    - **Quiet:** what concerns you, in app only.
+    - **Balanced:** the defaults below.
+    - **Everything:** every kind in app and in the browser, mail as Balanced.
 3. **Browser on this device:** **Enable on this device** turns on
    [browser notifications](#browser-notifications) here. **Not now** skips it.
 
