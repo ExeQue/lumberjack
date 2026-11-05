@@ -97,7 +97,12 @@ type Props = {
     sharing: Sharing;
     tv: TvInstructionsProps;
     /** The team's paired TVs, for team admins: put this screen on one. */
-    paired: { uuid: string; name: string; shows_this: boolean }[];
+    paired: {
+        uuid: string;
+        name: string;
+        shows_this: boolean;
+        rotation: number;
+    }[];
     /** The display shapes a screen can be designed for (ScreenAspect), landscape. */
     aspects: string[];
     /** Ready layouts an empty screen can be filled from. */
@@ -1293,6 +1298,44 @@ export default function EditScreen(props: Props) {
                                                 <span className="min-w-0 flex-1 truncate">
                                                     {display.name}
                                                 </span>
+                                                <Select
+                                                    aria-label={`${t('screens.displays.rotation')}: ${display.name}`}
+                                                    className="w-auto"
+                                                    value={String(
+                                                        display.rotation,
+                                                    )}
+                                                    onChange={(e) =>
+                                                        router.put(
+                                                            displayUpdate(
+                                                                display.uuid,
+                                                            ).url,
+                                                            {
+                                                                rotation:
+                                                                    Number(
+                                                                        e.target
+                                                                            .value,
+                                                                    ),
+                                                            },
+                                                            {
+                                                                preserveScroll: true,
+                                                                preserveState: true,
+                                                            },
+                                                        )
+                                                    }
+                                                >
+                                                    {[0, 90, 180, 270].map(
+                                                        (degrees) => (
+                                                            <option
+                                                                key={degrees}
+                                                                value={degrees}
+                                                            >
+                                                                {t(
+                                                                    `screens.displays.rotations.${degrees}`,
+                                                                )}
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </Select>
                                                 <Button
                                                     variant="ghost"
                                                     title={t(
