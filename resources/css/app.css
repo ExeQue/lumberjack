@@ -214,6 +214,11 @@
         overflow-y: scroll;
     }
 
+    /* That scrollbar stays while a dialog locks the scroll, so no room is made for it again. */
+    body[data-scroll-locked] {
+        margin-right: 0 !important;
+    }
+
     /*
      * Style changes ease instead of jumping: hover, focus, selection and theme switches.
      * Only paint properties, never size or position, so charts and layout stay instant.
