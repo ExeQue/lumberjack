@@ -18,7 +18,7 @@ final class ScreenQr
     /** On a screen: inline SVG with the Lumberjack mark as SVG. */
     public static function svg(string $url): string
     {
-        return Qr::url($url)->style('lumberjack')->logo(file: public_path('favicon.svg'), size: self::LOGO_SIZE)->svg()->contents();
+        return Qr::url($url)->style('lumberjack')->logo(file: public_path('favicon.svg'), size: self::LOGO_SIZE, shape: 'circle')->svg()->contents();
     }
 
     /**
@@ -36,6 +36,6 @@ final class ScreenQr
      */
     public static function screenPng(string $url, int $size = 600): Rendered
     {
-        return Qr::url($url)->style('lumberjack')->logo(file: resource_path('images/qr-logo.png'), size: self::LOGO_SIZE)->png($size);
+        return Qr::url($url)->style('lumberjack')->logo(file: resource_path('images/qr-logo.png'), size: self::LOGO_SIZE, shape: 'circle')->png($size);
     }
 }
