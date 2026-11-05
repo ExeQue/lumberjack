@@ -146,7 +146,7 @@ export default function CommandsIndex({
                             {t('commands.empty_body')}
                         </EmptyState>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="relative overflow-x-auto">
                             <table className={tableClass}>
                                 <thead>
                                     <tr>
@@ -322,7 +322,7 @@ export default function CommandsIndex({
                     {runs.length === 0 ? (
                         <EmptyState title={t('commands.runs.empty')} />
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="relative overflow-x-auto">
                             <table className={tableClass}>
                                 <thead>
                                     <tr>
@@ -354,7 +354,12 @@ export default function CommandsIndex({
                                         >
                                             {t('commands.columns.exit_code')}
                                         </th>
-                                        <th className={thClass}>
+                                        <th
+                                            className={cn(
+                                                thClass,
+                                                'hidden lg:table-cell',
+                                            )}
+                                        >
                                             {t('commands.columns.host')}
                                         </th>
                                         <th className={thClass}>
@@ -393,7 +398,7 @@ export default function CommandsIndex({
                                                 <td
                                                     className={cn(
                                                         tdClass,
-                                                        'max-w-[48ch] font-mono text-xs break-all text-ink-2',
+                                                        'max-w-[48ch] min-w-48 font-mono text-xs wrap-anywhere text-ink-2',
                                                     )}
                                                 >
                                                     {line !== '' ? (
@@ -450,7 +455,7 @@ export default function CommandsIndex({
                                                 <td
                                                     className={cn(
                                                         tdClass,
-                                                        'font-mono text-xs',
+                                                        'hidden font-mono text-xs lg:table-cell',
                                                     )}
                                                 >
                                                     {run.host ?? '-'}
@@ -461,7 +466,7 @@ export default function CommandsIndex({
                                                         'text-right',
                                                     )}
                                                 >
-                                                    <span className="inline-flex gap-3">
+                                                    <span className="inline-flex gap-3 whitespace-nowrap">
                                                         {run.trace_id && (
                                                             <Link
                                                                 href={
@@ -470,7 +475,7 @@ export default function CommandsIndex({
                                                                         run.trace_id,
                                                                     ]).url
                                                                 }
-                                                                className="text-xs text-ink-2 hover:text-amber hover:underline"
+                                                                className="inline-block py-1 text-xs text-ink-2 hover:text-amber hover:underline"
                                                             >
                                                                 {t(
                                                                     'traces.open',
@@ -485,7 +490,7 @@ export default function CommandsIndex({
                                                                         run.issue,
                                                                     ]).url
                                                                 }
-                                                                className="text-xs text-amber hover:underline"
+                                                                className="inline-block py-1 text-xs text-amber hover:underline"
                                                             >
                                                                 {t(
                                                                     'commands.runs.view_issue',

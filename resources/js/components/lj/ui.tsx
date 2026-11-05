@@ -307,7 +307,9 @@ export function Segmented<T extends string>({
     );
 }
 
-export const tableClass = 'w-full border-collapse text-[13px]';
+// Relative, so the sr-only header labels (absolute) stay inside the table's scroll container
+// instead of widening the page.
+export const tableClass = 'relative w-full border-collapse text-[13px]';
 export const thClass =
     'border-b border-line px-3 py-2.5 text-left text-[11px] font-medium tracking-wide whitespace-nowrap text-ink-3 uppercase';
 /**

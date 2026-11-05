@@ -7,7 +7,12 @@ import { cn } from '@/lib/utils';
 import { useSectionTabs } from '@/lib/use-navigation';
 import type { DashboardFilters, Period } from '@/types/lumberjack';
 
-export type Crumb = { label: string; href?: string; mono?: boolean };
+export type Crumb = {
+    label: string;
+    href?: string;
+    mono?: boolean;
+    title?: string;
+};
 
 export function TopBar({
     crumbs,
@@ -24,7 +29,7 @@ export function TopBar({
             <header className="flex min-h-[57px] flex-wrap items-center gap-3 border-b border-line px-4 py-3 sm:px-7">
                 <nav
                     aria-label={t('common.breadcrumb')}
-                    className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-ink-3"
+                    className="flex min-w-0 flex-[1_1_16rem] flex-wrap items-center gap-2 text-ink-3"
                 >
                     {crumbs.map((crumb, i) => {
                         const last = i === crumbs.length - 1;
@@ -35,6 +40,7 @@ export function TopBar({
                                 {last || !crumb.href ? (
                                     <span
                                         aria-current={last ? 'page' : undefined}
+                                        title={crumb.title}
                                         className={
                                             last
                                                 ? 'font-medium text-ink'
@@ -48,6 +54,7 @@ export function TopBar({
                                 ) : (
                                     <Link
                                         href={crumb.href}
+                                        title={crumb.title}
                                         className={
                                             crumb.mono
                                                 ? 'font-mono text-ink-2 hover:text-ink'

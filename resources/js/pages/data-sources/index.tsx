@@ -133,7 +133,7 @@ export default function DataSourcesIndex({ project, sources }: Props) {
                             {t('data_sources.empty_body')}
                         </EmptyState>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="relative overflow-x-auto">
                             <table className={tableClass}>
                                 <thead>
                                     <tr>
@@ -148,11 +148,21 @@ export default function DataSourcesIndex({ project, sources }: Props) {
                                                 'data_sources.columns.last_fetch',
                                             )}
                                         </th>
-                                        <th className={thClass}>
+                                        <th
+                                            className={cn(
+                                                thClass,
+                                                'hidden md:table-cell',
+                                            )}
+                                        >
                                             {t('data_sources.columns.every')}
                                         </th>
                                         {project.can_administer && (
-                                            <th className={thClass}>
+                                            <th
+                                                className={cn(
+                                                    thClass,
+                                                    'hidden md:table-cell',
+                                                )}
+                                            >
                                                 <span className="sr-only">
                                                     {t(
                                                         'data_sources.columns.actions',
@@ -200,6 +210,36 @@ function SourceRow({
 }) {
     const t = useT();
     const failed = source.last_error !== null;
+    const actions = project.can_administer && (
+        <span className="inline-flex flex-wrap gap-2">
+            <Button
+                onClick={() =>
+                    router.post(
+                        sourceFetch([project.uuid, source.uuid]).url,
+                        {},
+                        { preserveScroll: true },
+                    )
+                }
+            >
+                {t('data_sources.fetch_now')}
+            </Button>
+            <Button onClick={onEdit}>{t('data_sources.edit')}</Button>
+            <ConfirmButton
+                question={t('data_sources.delete_question', {
+                    source: source.name,
+                })}
+                confirmLabel={t('data_sources.delete')}
+                onConfirm={() =>
+                    router.delete(
+                        sourceDestroy([project.uuid, source.uuid]).url,
+                        { preserveScroll: true },
+                    )
+                }
+            >
+                {t('data_sources.delete')}
+            </ConfirmButton>
+        </span>
+    );
 
     return (
         <tr className="align-top">
@@ -209,7 +249,7 @@ function SourceRow({
                     <Badge>{t(`data_sources.formats.${source.format}`)}</Badge>
                 </span>
                 <span
-                    className="block truncate font-mono text-xs text-ink-3"
+                    className="block max-w-56 truncate font-mono text-xs text-ink-3 md:max-w-96"
                     title={source.url}
                 >
                     GET {source.url}
@@ -233,6 +273,8 @@ function SourceRow({
                         </pre>
                     </details>
                 )}
+                {/* Below md the actions column is hidden, so they sit here, in view. */}
+                {actions && <div className="mt-2 md:hidden">{actions}</div>}
             </td>
             <td className={tdClass}>
                 {source.last_fetched_at === null ? (
@@ -247,10 +289,12 @@ function SourceRow({
                     </Badge>
                 )}
             </td>
-            <td className={cn(tdClass, 'max-w-72 text-xs text-ink-2')}>
+            <td className={cn(tdClass, 'max-w-72 min-w-40 text-xs text-ink-2')}>
                 <When iso={source.last_fetched_at} />
                 {failed && (
-                    <span className="block text-err">{source.last_error}</span>
+                    <span className="block wrap-break-word text-err">
+                        {source.last_error}
+                    </span>
                 )}
                 {failed && source.last_ok_at && (
                     <span className="block text-ink-3">
@@ -259,43 +303,22 @@ function SourceRow({
                     </span>
                 )}
             </td>
-            <td className={cn(tdClass, 'text-xs whitespace-nowrap text-ink-2')}>
+            <td
+                className={cn(
+                    tdClass,
+                    'hidden text-xs whitespace-nowrap text-ink-2 md:table-cell',
+                )}
+            >
                 {t('data_sources.every', {}, source.interval_minutes)}
             </td>
             {project.can_administer && (
-                <td className={cn(tdClass, 'text-right whitespace-nowrap')}>
-                    <span className="inline-flex gap-2">
-                        <Button
-                            onClick={() =>
-                                router.post(
-                                    sourceFetch([project.uuid, source.uuid])
-                                        .url,
-                                    {},
-                                    { preserveScroll: true },
-                                )
-                            }
-                        >
-                            {t('data_sources.fetch_now')}
-                        </Button>
-                        <Button onClick={onEdit}>
-                            {t('data_sources.edit')}
-                        </Button>
-                        <ConfirmButton
-                            question={t('data_sources.delete_question', {
-                                source: source.name,
-                            })}
-                            confirmLabel={t('data_sources.delete')}
-                            onConfirm={() =>
-                                router.delete(
-                                    sourceDestroy([project.uuid, source.uuid])
-                                        .url,
-                                    { preserveScroll: true },
-                                )
-                            }
-                        >
-                            {t('data_sources.delete')}
-                        </ConfirmButton>
-                    </span>
+                <td
+                    className={cn(
+                        tdClass,
+                        'hidden text-right whitespace-nowrap md:table-cell',
+                    )}
+                >
+                    {actions}
                 </td>
             )}
         </tr>
