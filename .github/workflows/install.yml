@@ -1,8 +1,8 @@
 name: Install script
 
-# Runs install.sh the way the docs say, with Docker, against the published image:
-# a first install, an update that keeps an edited compose.yaml, and a second run
-# that finds the install and updates it.
+# Runs install.sh the way the docs say, with Docker and with Podman, against the
+# published image: a first install, an update that keeps an edited compose.yaml,
+# and a second run that finds the install and updates it.
 on:
   push:
     branches: [ "main" ]
@@ -19,11 +19,28 @@ permissions:
   contents: read
 
 jobs:
-  docker:
+  install:
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [ docker, podman ]
+
+    name: ${{ matrix.engine }}
+
+    env:
+      ENGINE: ${{ matrix.engine }}
+      # The runner has Docker too, and podman compose would hand the work to its
+      # docker-compose; a Podman-only server uses podman-compose.
+      PODMAN_COMPOSE_PROVIDER: podman-compose
 
     steps:
       - uses: actions/checkout@v7
+
+      - name: Install podman-compose
+        if: matrix.engine == 'podman'
+        run: sudo apt-get update -q && sudo apt-get install -y -q podman-compose
 
       # The same three files the docs site serves, from this commit.
       - name: Serve the install files
@@ -40,10 +57,10 @@ jobs:
           LUMBERJACK_SOURCE: http://localhost:8999
           APP_URL: http://localhost:8080
         run: |
-          curl -fsSL "$LUMBERJACK_SOURCE/install.sh" | sh -s docker | tee install.log
+          curl -fsSL "$LUMBERJACK_SOURCE/install.sh" | sh -s "$ENGINE" | tee install.log
           grep -q 'setup token' install.log
           test -x lumberjack/update.sh
-          grep -q '^COMPOSE="docker compose"$' lumberjack/update.sh
+          grep -q "^COMPOSE=\"$ENGINE compose\"$" lumberjack/update.sh
           test "$(stat -c %a lumberjack/.env.docker)" = 600
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 200
 
@@ -51,9 +68,10 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: |
           echo '# my own tweak' >> lumberjack/compose.yaml
-          before=$(docker inspect -f '{{.Created}}' "$(docker compose -f lumberjack/compose.yaml --env-file lumberjack/.env.docker ps -q lumberjack)")
+          app() { "$ENGINE" ps -q --filter label=com.docker.compose.service=lumberjack; }
+          before=$("$ENGINE" inspect -f '{{.Created}}' "$(app)")
           lumberjack/update.sh
-          after=$(docker inspect -f '{{.Created}}' "$(docker compose -f lumberjack/compose.yaml --env-file lumberjack/.env.docker ps -q lumberjack)")
+          after=$("$ENGINE" inspect -f '{{.Created}}' "$(app)")
           test "$before" != "$after"
           tail -1 lumberjack/compose.yaml | grep -q 'my own tweak'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 200
@@ -64,10 +82,10 @@ jobs:
           LUMBERJACK_SOURCE: http://localhost:8999
         run: |
           curl -fsSL "$LUMBERJACK_SOURCE/install.sh" | sh | tee rerun.log
-          grep -q 'Using docker compose' rerun.log
+          grep -q "Using $ENGINE compose" rerun.log
           grep -q 'Already installed' rerun.log
 
       - name: Logs
         if: failure()
         working-directory: ${{ runner.temp }}/lumberjack
-        run: docker compose --env-file .env.docker logs --tail 100
+        run: $ENGINE logs --tail 100 "$($ENGINE ps -aq --filter label=com.docker.compose.service=lumberjack)"

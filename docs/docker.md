@@ -105,7 +105,7 @@ the mail settings in `lumberjack/.env.docker`.
                     condition: service_healthy
 
         postgres:
-            image: postgres:18-alpine
+            image: docker.io/library/postgres:18-alpine
             restart: unless-stopped
             environment:
                 POSTGRES_DB: ${DB_DATABASE:-lumberjack}
@@ -124,7 +124,7 @@ the mail settings in `lumberjack/.env.docker`.
                 retries: 20
 
         redis:
-            image: redis:7-alpine
+            image: docker.io/library/redis:7-alpine
             restart: unless-stopped
             command: ['redis-server', '--appendonly', 'yes']
             volumes:
