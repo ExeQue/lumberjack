@@ -1,8 +1,8 @@
-<p align="center"><img src="./art/cover.jpg" alt="Lumberjack - every layer of your Laravel app, ring by ring: errors, performance and logs on your own server" width="100%"></p>
+<p align="center"><img src="./art/cover.jpg" alt="Lumberjack - every layer of your app, ring by ring: errors, performance and logs on your own server" width="100%"></p>
 
 # Lumberjack
 
-Lumberjack watches your Laravel apps from your own server. It collects errors, logs and
+Lumberjack watches your apps from your own server, whatever they are built with. It collects errors, logs and
 performance data, runs health checks, sends alerts, shows status screens on a TV and lets
 AI agents work with your issues over MCP.
 
@@ -39,7 +39,8 @@ docker compose --env-file .env.docker up -d
 
 [Running Lumberjack with Docker](docs/docker.md) has the whole setup. Your apps send data
 through a [library](docs/libraries.md), such as
-[`exeque/laravel-lumberjack`](https://github.com/ExeQue/laravel-lumberjack) for Laravel.
+[`exeque/laravel-lumberjack`](https://github.com/ExeQue/laravel-lumberjack) for Laravel, or
+straight to the [ingest API](docs/api.md) from any language or framework.
 
 ## Guides
 

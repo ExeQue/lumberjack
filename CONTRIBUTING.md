@@ -37,4 +37,4 @@ Behavior changes come with Pest tests; pure styling and copy changes do not need
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages and the pull request title, e.g. `fix(issues): keep filters when paging`.
 - Describe what changed and why, and add a screenshot for UI changes.
-- By contributing you agree that your work is released under the [MIT License](LICENSE).
+- By contributing you agree that your work is released under the [MIT License](https://github.com/ExeQue/lumberjack/blob/main/LICENSE).
