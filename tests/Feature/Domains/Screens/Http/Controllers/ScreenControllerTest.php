@@ -103,6 +103,7 @@ describe('the screens of a team', function () {
         $response->assertRedirect(route('screens.edit', $screen));
         expect($screen->team_id)->toBe($this->project->team_id)
             ->and([$screen->cols, $screen->rows])->toBe([8, 4])
+            ->and($screen->timezone)->toBeNull()
             ->and($screen->theme)->toBe(ScreenTheme::Dark)
             ->and($screen->widgets)->toBe([]);
     });

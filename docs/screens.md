@@ -184,7 +184,8 @@ With no widget selected (click the grid's background, the toolbar's Screen setti
 shows the screen's own settings: its name, the projects, environment and period every
 widget shows unless it picks its own (no project ticked means every project of the team,
 new ones included), the time zone for the clock and the theme schedule (left empty, each TV
-uses its browser's own, so one screen shows local time in every office), whether the
+uses its browser's own, so one screen shows local time in every office; a new screen starts
+empty), whether the
 header shows and whether its clock does, the [theme](#theme) and how the screen fits a display of another shape.
 
 ## Widgets
@@ -197,7 +198,7 @@ by topic (traffic, issues, jobs and queues, hosts and agents, databases, health)
 | Stat                 | One number with its trend against an earlier period and a sparkline: requests, requests per minute (the last five minutes, now), error rate, p95, Apdex, open issues, users affected, failed jobs, queue size, queue workers (red at none), agents online, highest host CPU, memory or disk, current release, LCP p75, database size and connections.                                                                                                                                                                                                                                                                                                                            |
 | Gauge                | One value on a half circle against its limits: requests per minute, error rate, p95, Apdex, host CPU, memory or disk, queue size, health uptime, the share of database connections in use.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Chart                | A series over the period: requests and errors, requests, requests per minute, error rate, p95, Apdex, users affected, queue size, wait or workers, failed jobs, host CPU, memory or disk, LCP, database size or connections. It can split by route, queue, host, database check, environment, release or project.                                                                                                                                                                                                                                                                                                                                                                |
-| List                 | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| List                 | Rows: latest issues, the alert feed, failed jobs by job, scheduled tasks, slowest routes, queues, hosts, agents, and the events of a calendar (see [Calendars](#calendars)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Health               | The health checks of the projects: a count at 1 x 1, a list when narrow (name, state and how long, in columns), cards when the widget is two or more cells wide (each like a single check's tile, one per grid cell the widget covers). The cards run to the widget's edges. What does not fit scrolls slowly into view, as in a list (sideways on a widget wider than tall); with **Scroll slowly** off it is counted at the end instead, with how many of those are down or degraded. With exactly one check picked, that check alone with its uptime, timeline and last message, and for a database check its connections (amber at 80% of the maximum, red at 90%) and size. |
 | Clock and text       | The time (12 or 24 hour, its own time zone or the screen's, with seconds or the date), a note for the room, or both.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | QR code              | A link, a wifi network (name, password, security, hidden) or any text, as a QR code in the brand style, with an optional line under it such as "Guest wifi". It shows on share links too, so put nothing there that the link should not give away.                                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -215,6 +216,29 @@ the size is the latest each database reported, added up over the databases in sc
 the same; the gauge shows the database with the largest share of its connections in use
 (amber at 80%, red at 90%). A database several servers report counts once.
 A list of hosts shows each host once with CPU, memory and disk meters. The filter of a queue, host or database value is named after it (**Queue**, **Host**, **Database check**) and suggests the team's queues, hosts and database checks (by slug, such as `database:pgsql`) while you type; `*` still matches anything. Rows that do not fit scroll slowly down and back up, resting at each end; hovering stops it, and **Scroll slowly through rows that do not fit** under Rows turns it off.
+
+### Calendars
+
+A list can show a calendar's events: today's meetings next to the meeting room door, the
+on-call rota, the week's releases. Add the calendar as a data source of a project
+(**Data sources**, format **iCalendar (.ics)**) with the address it is published at in
+iCal format: in Google Calendar the **Secret address in iCal format** under the
+calendar's settings, in Outlook a calendar published as ICS, in iCloud a public
+calendar's link (`webcal://` as `https://`), or any `.ics` address. Lumberjack fetches it
+on its interval like any data source and records an error when the answer is not an
+iCalendar feed. That address is a key to the calendar: after saving, the data sources page
+shows it without its path, and screens, TVs and share links never get it.
+
+Then pick **Calendar events** for a list widget and the data source under **Rows**. It
+shows the events from **Days back** (today, yesterday or a week back) to **Days ahead**
+(the rest of today, until tomorrow, a week or 30 days), in the screen's time zone (else
+the server's), with repeating events expanded, their skipped and moved dates included,
+and cancelled ones left out. With **Only what has not ended** (on by default) an event
+leaves the list when it ends. Rows go by day, each day's all-day events first, then by
+start: the start time (or **All day**), the title, and the place and end time where
+there is room; an event on now says **Now** in amber. A list over more than one day puts
+the weekday before the time. On a share link without names the rows show the times only.
+**Rows** caps how many show, as in any list.
 
 Every widget with data names its period in the top right corner (1h, 24h, 7d, 30d), or how old the latest report is (**55s**, **6m**) for values that are the latest report (host CPU, memory and disk, queue sizes, agents, open issues, the current release, health, databases), which have no period to pick;
 **Over** in the inspector picks it per widget, or follows the screen. **Show the period
