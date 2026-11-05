@@ -154,14 +154,22 @@ export function CommandPalette() {
                         onValueChange={setQuery}
                         placeholder={
                             project
-                                ? t('palette.placeholder_project', {
-                                      project: project.name,
-                                  })
+                                ? t(
+                                      // A phone gets the short one: the long one is cut off.
+                                      window.matchMedia('(max-width: 639px)')
+                                          .matches
+                                          ? 'palette.placeholder_project_short'
+                                          : 'palette.placeholder_project',
+                                      {
+                                          project: project.name,
+                                      },
+                                  )
                                 : t('palette.placeholder')
                         }
                         className="h-12 w-full border-b border-line bg-transparent px-4 text-sm text-ink outline-none placeholder:text-ink-3"
                     />
-                    <Command.List className="max-h-[60vh] overflow-y-auto p-1.5">
+                    {/* The bottom fades out, a hint that the list scrolls on. */}
+                    <Command.List className="max-h-[60vh] overflow-y-auto [mask-image:linear-gradient(to_bottom,black_calc(100%-1.5rem),transparent)] p-1.5 pb-6">
                         <Command.Empty className="px-3 py-6 text-center text-ink-3">
                             {loading
                                 ? t('palette.searching')

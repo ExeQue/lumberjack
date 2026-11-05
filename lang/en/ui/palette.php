@@ -8,6 +8,8 @@ return [
     'description' => 'Jump to a page, project or team, or search this project.',
     'placeholder' => 'Go to a page, project or team',
     'placeholder_project' => 'Search :project for issues, routes, jobs, traces, or go to a page',
+    // On a phone, where the long one is cut off.
+    'placeholder_project_short' => 'Search :project or go to a page',
     'searching' => 'Searching...',
     'empty' => 'Nothing found.',
     'switch_team' => 'Switch to :team',

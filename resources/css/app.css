@@ -320,6 +320,12 @@
         cursor: pointer;
     }
 
+    /* The browser's dark unchecked box has a faint gray edge; trace it in a visible ink. */
+    .dark input[type='checkbox']:not(:checked, :indeterminate, :focus-visible) {
+        outline: 1px solid var(--lj-ink-2);
+        outline-offset: -1px;
+    }
+
     button:disabled,
     select:disabled,
     input:disabled {
