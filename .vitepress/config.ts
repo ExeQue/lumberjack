@@ -10,6 +10,26 @@ export default defineConfig({
     lastUpdated: true,
     cleanUrls: true,
 
+    // The app's own icons, from public/; head links do not get the base added.
+    head: [
+        ['link', { rel: 'icon', href: '/lumberjack/favicon.ico', sizes: 'any' }],
+        [
+            'link',
+            {
+                rel: 'icon',
+                href: '/lumberjack/favicon.svg',
+                type: 'image/svg+xml',
+            },
+        ],
+        [
+            'link',
+            {
+                rel: 'apple-touch-icon',
+                href: '/lumberjack/apple-touch-icon.png',
+            },
+        ],
+    ],
+
     // Only README.md and docs/ are pages; everything else in the repository is code.
     srcExclude: [
         '.ai/**',
@@ -49,6 +69,8 @@ export default defineConfig({
     },
 
     themeConfig: {
+        logo: '/favicon.svg',
+
         nav: [
             { text: 'Guides', link: '/docs/guides/' },
             { text: 'Run it with Docker', link: '/docs/docker' },
