@@ -20,7 +20,8 @@ class CreateScreenAction
 
         return $team->screens()->create([
             'name' => $name,
-            'timezone' => config('app.timezone'),
+            // None: each TV uses its own (the browser's) time zone.
+            'timezone' => null,
             'cols' => $cols,
             'rows' => $rows,
             'widgets' => $template->widgets(),
