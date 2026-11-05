@@ -711,7 +711,9 @@ export function WidgetInspector({
             }
             case 'data_source': {
                 // A calendar reads an iCalendar source, External JSON any other.
-                const calendar = target.source?.id === 'calendar';
+                const calendar =
+                    target.source?.id === 'calendar' ||
+                    widget.type === 'countdown';
                 const all = (catalog.data_sources ?? []).filter(
                     (s) => (s.format === 'ical') === calendar,
                 );

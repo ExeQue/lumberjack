@@ -75,9 +75,13 @@ export function useScreenData(
     const [updatedAt, setUpdatedAt] = useState<number | null>(null);
     const fetched = useRef<Record<string, string>>({});
     const widgetsRef = useRef<Widget[]>([]);
-    // A QR code's picture is drawn on the server, so it comes with the data.
+    // A QR code's picture is drawn on the server, and a countdown may follow a calendar,
+    // so they come with the data.
     const dataWidgets = screen.widgets.filter(
-        (w) => DATA_KINDS.includes(w.type) || w.type === 'qr',
+        (w) =>
+            DATA_KINDS.includes(w.type) ||
+            w.type === 'qr' ||
+            (w.type === 'countdown' && w.options?.counts_to === 'calendar'),
     );
     const keys = dataWidgets
         .map((w) => `${w.id}:${dataKey(schema, w)}`)

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Actions\ResolveScreenDataAction;
 use App\Domains\Screens\Actions\ResolveWidgetDataAction;
@@ -10,6 +11,7 @@ use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Models\Team;
+use Carbon\CarbonImmutable;
 
 covers(ResolveScreenDataAction::class);
 
@@ -199,4 +201,24 @@ describe('a QR code widget', function () {
         'nothing yet' => [['content' => 'text'], false],
         'not a link' => [['url' => 'not a link'], null],
     ]);
+});
+
+describe('a countdown on a calendar', function () {
+    it('gets the event on and the next ones, without all-day events, and no titles on a share link without names', function () {
+        // A Wednesday, 13:00 in Copenhagen: the lunch talk is on.
+        $this->travelTo(CarbonImmutable::parse('2026-11-04 12:00:30', 'UTC'));
+        $calendar = DataSource::factory()->for($this->project)->ical((string) file_get_contents(base_path('tests/Fixtures/DataSources/calendar.ics')))->create();
+        $screen = Screen::factory()->for($this->project->team)->withCountdownWidget(['counts_to' => 'calendar', 'data_source' => $calendar->uuid])->create(['timezone' => 'Europe/Copenhagen']);
+        $events = fn (bool $aggregatesOnly = false): array => app(ResolveScreenDataAction::class)->execute($screen, 'countdown', $aggregatesOnly)['countdown']['countdown']['events'];
+
+        expect(array_column($events(), 'title'))->toBe(['Lunch talk', 'Deploy', 'Standup (moved)'])
+            ->and($events()[0])->toMatchArray(['start' => '2026-11-04T11:30:00+00:00', 'end' => '2026-11-04T13:00:00+00:00'])
+            ->and(array_column($events(true), 'title'))->toBe([null, null, null]);
+    });
+
+    it('asks for nothing while it counts to a moment of its own', function () {
+        $screen = Screen::factory()->for($this->project->team)->withCountdownWidget(['target' => '2026-12-01T10:00'])->create();
+
+        expect(app(ResolveScreenDataAction::class)->execute($screen, 'countdown'))->toBe([]);
+    });
 });

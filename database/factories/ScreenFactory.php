@@ -81,4 +81,16 @@ class ScreenFactory extends Factory
             'id' => 'qr', 'type' => 'qr', 'source' => null, 'rotate' => [], 'x' => 3, 'y' => 3, 'w' => 1, 'h' => 1, 'title' => null, 'options' => $options, 'scope' => [],
         ]]]);
     }
+
+    /**
+     * Plus a countdown widget on row 3 with these options (counts_to, target, data_source and the rest).
+     *
+     * @param  array<string, mixed>  $options
+     */
+    public function withCountdownWidget(array $options = []): static
+    {
+        return $this->state(fn (array $attributes) => ['widgets' => [...$attributes['widgets'], [
+            'id' => 'countdown', 'type' => 'countdown', 'source' => null, 'rotate' => [], 'x' => 0, 'y' => 3, 'w' => 2, 'h' => 1, 'title' => null, 'options' => $options, 'scope' => [],
+        ]]]);
+    }
 }
