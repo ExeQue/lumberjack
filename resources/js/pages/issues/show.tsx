@@ -850,7 +850,7 @@ export default function IssueShow({
                     setClosing(null);
                 }}
             />
-            <PageBody wide>
+            <PageBody>
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex min-w-0 flex-[1_1_520px] flex-col gap-2">
                         <div className="flex flex-wrap gap-2">

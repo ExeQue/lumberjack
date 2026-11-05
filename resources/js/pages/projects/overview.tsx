@@ -502,7 +502,7 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
         return (
             <>
                 {header}
-                <PageBody wide>
+                <PageBody>
                     <PageTitle title={t('overview.title')} />
                     <Card>
                         <EmptyState title={t('common.loading')} />
@@ -519,7 +519,7 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
     return (
         <>
             {header}
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('overview.title')}
                     description={

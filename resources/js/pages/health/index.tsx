@@ -423,7 +423,7 @@ export default function HealthIndex({
                     environments={project.environments}
                 />
             </TopBar>
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('health.title')}
                     description={t('health.description', {}, active.length)}

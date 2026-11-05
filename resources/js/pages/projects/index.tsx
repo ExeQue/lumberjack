@@ -106,7 +106,7 @@ export default function ProjectsIndex({
             <TopBar
                 crumbs={[{ label: team.name }, { label: t('projects.title') }]}
             />
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('projects.title')}
                     description={t(

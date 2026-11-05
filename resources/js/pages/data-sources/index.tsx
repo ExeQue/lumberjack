@@ -102,7 +102,7 @@ export default function DataSourcesIndex({ project, sources }: Props) {
                     { label: t('data_sources.title') },
                 ]}
             />
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('data_sources.title')}
                     description={t(

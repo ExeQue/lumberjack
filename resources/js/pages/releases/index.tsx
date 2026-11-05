@@ -96,7 +96,7 @@ export default function ReleasesIndex({
                     environments={project.environments}
                 />
             </TopBar>
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('releases.title')}
                     description={t('releases.description', {}, releases.length)}
