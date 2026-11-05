@@ -843,16 +843,16 @@
         },
         {
             "name": "exeque/laravel-qr",
-            "version": "v0.10.2",
+            "version": "v0.10.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/ExeQue/laravel-qr.git",
-                "reference": "a83da079e708f5503dc917a6a5c146738245bc31"
+                "reference": "9b397bdb04734fbd8d405e8d68278f00f373842f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/ExeQue/laravel-qr/zipball/a83da079e708f5503dc917a6a5c146738245bc31",
-                "reference": "a83da079e708f5503dc917a6a5c146738245bc31",
+                "url": "https://api.github.com/repos/ExeQue/laravel-qr/zipball/9b397bdb04734fbd8d405e8d68278f00f373842f",
+                "reference": "9b397bdb04734fbd8d405e8d68278f00f373842f",
                 "shasum": ""
             },
             "require": {
@@ -912,9 +912,10 @@
             ],
             "support": {
                 "issues": "https://github.com/ExeQue/laravel-qr/issues",
-                "source": "https://github.com/ExeQue/laravel-qr/tree/v0.10.2"
+                "source": "https://github.com/ExeQue/laravel-qr/tree/v0.10.3"
             },
-            "time": "2026-10-28T05:52:04+00:00"
+            "time": "2026-11-05T17:47:35+00:00",
+            "published-time": "2026-11-05T17:50:28+00:00"
         },
         {
             "name": "fruitcake/php-cors",
