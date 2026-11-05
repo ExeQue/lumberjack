@@ -2526,8 +2526,15 @@ function calendarMoment(
     status: boolean,
     t: Translate,
 ): { at: string | null; line: string | null } | null {
-    const time = (iso: string) =>
-        new Intl.DateTimeFormat(document.documentElement.lang || 'en', {
+    // 24-hour, as the screen's times are; with the weekday when it is not today.
+    const time = (iso: string) => {
+        const at = new Date(iso);
+
+        return new Intl.DateTimeFormat(document.documentElement.lang || 'en', {
+            weekday:
+                at.toDateString() === new Date(now).toDateString()
+                    ? undefined
+                    : 'short',
             hour: '2-digit',
             minute: '2-digit',
         }).format(new Date(iso));
