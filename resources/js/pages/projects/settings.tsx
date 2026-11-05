@@ -765,8 +765,7 @@ function InstallSection({ settings }: Props) {
             description={t('settings.install.description')}
         >
             <Code label={t('settings.install.step_package')}>
-                {`composer config repositories.lumberjack vcs https://github.com/ExeQue/laravel-lumberjack
-composer require exeque/laravel-lumberjack`}
+                composer require exeque/laravel-lumberjack
             </Code>
             <Code
                 label={t('settings.install.step_env')}
