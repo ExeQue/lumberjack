@@ -140,6 +140,19 @@ const STARTERS: Record<WidgetKind, string | null> = {
     empty: null,
 };
 
+/** A transparent pixel, as the drag picture of a tile moved on the grid. */
+const BLANK_DRAG_IMAGE = (() => {
+    if (typeof Image === 'undefined') {
+        return null as unknown as HTMLImageElement;
+    }
+
+    const image = new Image();
+    image.src =
+        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+    return image;
+})();
+
 /** Resize handles, invisible: which edges each moves, where it sits, and its cursor. */
 type Handle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
@@ -1092,6 +1105,9 @@ export default function EditScreen(props: Props) {
 
                         e.dataTransfer.setData('text/plain', widget.id);
                         e.dataTransfer.effectAllowed = 'move';
+                        // No picture of the tile under the pointer: the grid shows its footprint,
+                        // and the browser's snapshot of live content (a ticker, video) comes out wrong.
+                        e.dataTransfer.setDragImage(BLANK_DRAG_IMAGE, 0, 0);
                         // Held by the cell under the pointer, so it lands where it was dragged.
                         const cell = cellAt(e.clientX, e.clientY);
                         startDrag({
