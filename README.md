@@ -38,7 +38,8 @@ docker compose --env-file .env.docker up -d
 ```
 
 [Running Lumberjack with Docker](docs/docker.md) has the whole setup. Your apps send data
-with the Laravel SDK, [`exeque/laravel-lumberjack`](https://github.com/ExeQue/laravel-lumberjack).
+through a [library](docs/libraries.md), such as
+[`exeque/laravel-lumberjack`](https://github.com/ExeQue/laravel-lumberjack) for Laravel.
 
 ## Guides
 
@@ -54,6 +55,7 @@ with the Laravel SDK, [`exeque/laravel-lumberjack`](https://github.com/ExeQue/la
 
 - [Running Lumberjack with Docker](docs/docker.md): installation, settings, reverse proxy,
   backups and updates.
+- [Libraries](docs/libraries.md): the libraries your apps send data with.
 - [Setup and administration](docs/administration.md): first-run setup, recovery,
   administrators and the command line.
 - [Teams and accounts](docs/teams.md): members, roles, invitations, your profile and
