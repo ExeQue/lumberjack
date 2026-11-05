@@ -6,6 +6,7 @@ namespace App\Domains\DataSources\Support;
 
 use Carbon\CarbonImmutable;
 use Sabre\VObject\Component\VCalendar;
+use Sabre\VObject\ParseException;
 use Sabre\VObject\Property;
 use Sabre\VObject\Reader;
 use Sabre\VObject\Recur\EventIterator;
@@ -34,9 +35,10 @@ final class Ical
      */
     public static function parses(string $text): bool
     {
+        // Only what the reader says about the text: anything else is a fault to hear about.
         try {
             return Reader::read($text, Reader::OPTION_FORGIVING) instanceof VCalendar;
-        } catch (Throwable) {
+        } catch (ParseException) {
             return false;
         }
     }

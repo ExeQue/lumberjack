@@ -30,6 +30,17 @@ class SaveDataSourceRequest extends FormRequest
     }
 
     /**
+     * A calendar's webcal:// link (what Google, iCloud and Outlook hand out) is the same
+     * address over HTTPS.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('url'))) {
+            $this->merge(['url' => preg_replace('~^webcals?://~i', 'https://', trim($this->input('url')))]);
+        }
+    }
+
+    /**
      * @return array<string, array<mixed>>
      */
     public function rules(): array
