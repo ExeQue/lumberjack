@@ -2,7 +2,7 @@
 
 One image runs everything Lumberjack needs: the web server, Reverb for live
 updates, Horizon for the queues and the scheduler. Postgres and Redis run beside
-it in `compose.yaml`. You put a reverse proxy with TLS in front of one port.
+it in `compose.yaml`, behind a reverse proxy with TLS on one port.
 
 ```
 reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
@@ -154,8 +154,7 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
     docker run --rm ghcr.io/exeque/lumberjack php artisan key:generate --show
     ```
 
-    Also fill in `APP_URL` (the address people open Lumberjack on) and
-    `DB_PASSWORD`.
+    Also fill in `APP_URL` and `DB_PASSWORD`.
 
 4. Start it:
 
@@ -163,7 +162,7 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
     docker compose --env-file .env.docker up -d
     ```
 
-5. Point your reverse proxy at port 8080 (see below).
+5. Point your reverse proxy at port 8080 (see [Reverse proxy](#reverse-proxy)).
 
 6. Read the setup token from the log and open `APP_URL/setup`:
 
@@ -171,21 +170,19 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
     docker compose logs lumberjack | grep -A2 'setup token'
     ```
 
-    Setup creates the first administrator. See
+    Setup creates the first administrator; see
     [Setup and system administration](./administration.md).
 
 ### While the image is private
 
-The image on GHCR is private for now. Before steps 3 and 4, sign in to the registry
-with a GitHub token that has the `read:packages` scope:
+The image on GHCR is private for now. Before step 3, sign in to the registry with a
+GitHub token that has the `read:packages` scope:
 
 ```bash
 echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
 ```
 
 ## Settings
-
-Everything is set through environment variables in `.env.docker`.
 
 | Variable                                 | Default        |                                                                                                                                                                                                                                                                                                                                                 |
 | ---------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -214,9 +211,9 @@ Set `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (or
 remove the `postgres` or `redis` service and its `depends_on` entry from
 `compose.yaml`. Lumberjack needs Postgres 16 or newer and Redis 7 or newer.
 
-Do not use `localhost` as the host: inside the container it is the container itself.
-For a Postgres or Redis on the same server, use `host.docker.internal`. The service
-must accept connections from the Docker network:
+For a Postgres or Redis on the same server, use `host.docker.internal` as the host, not
+`localhost`, which is the container itself. The service must accept connections from
+the Docker network:
 
 - Postgres: `listen_addresses` includes the Docker bridge (e.g. `'*'` or
   `172.17.0.1`), and `pg_hba.conf` allows the Docker subnet, e.g.
@@ -225,8 +222,7 @@ must accept connections from the Docker network:
   password is set (`REDIS_PASSWORD`).
 
 On Linux you can instead set `network_mode: host` on the `lumberjack` service. Then
-`localhost` is the server itself, Lumberjack listens on port 8080 of the server, and
-`ports:` is ignored.
+`localhost` is the server itself and `ports:` is ignored.
 
 ## Reverse proxy
 
@@ -260,11 +256,9 @@ location / {
 
 `TRUSTED_PROXIES` lists the proxies whose `X-Forwarded-For`, `-Proto` and `-Host`
 headers are trusted. The default, `127.0.0.1,172.16.0.0/12`, covers a proxy on the same
-server or in a Docker network. If your proxy connects from somewhere else, set it to the
-proxy's address.
-
-Keep the list short: anyone who connects from a trusted address can claim any client IP
-and get around the login and ingest rate limits.
+server or in a Docker network; otherwise set it to the proxy's address. Keep the list
+short: anyone who connects from a trusted address can claim any client IP and get
+around the login and ingest rate limits.
 
 Links in mails and alerts always use `APP_URL`.
 
@@ -283,14 +277,12 @@ docker compose pull
 docker compose --env-file .env.docker up -d
 ```
 
-The version at the bottom of the sidebar shows which one is running.
-
 Migrations run on start. To run them yourself, set `LUMBERJACK_MIGRATE=false` and run
 `docker compose exec lumberjack php artisan migrate --force`.
 
 ## Commands
 
-Run artisan inside the container. All commands are on
+Run artisan inside the container. All commands are listed on
 [Setup and system administration](./administration#command-line).
 
 ```bash
@@ -300,8 +292,8 @@ docker compose exec lumberjack php artisan setup:clear
 
 ## Inside the image
 
-The container runs four processes and restarts any that stops. All of them log to the
-container's output (`docker compose logs lumberjack`).
+The container runs four processes, restarts any that stops, and logs them all to its
+output.
 
 | Process   |                                                         |
 | --------- | ------------------------------------------------------- |
@@ -312,10 +304,9 @@ container's output (`docker compose logs lumberjack`).
 
 Horizon runs two groups of workers:
 
-- **Ingest** workers take the `ingest` queue. Set their number with
-  `HORIZON_INGEST_PROCESSES`.
-- **Background** workers take `alerts`, `default` and `health`, in that order. Set
-  their number with `HORIZON_BACKGROUND_PROCESSES`.
+- **Ingest** workers take the `ingest` queue (`HORIZON_INGEST_PROCESSES`).
+- **Background** workers take `alerts`, `default` and `health`, in that order
+  (`HORIZON_BACKGROUND_PROCESSES`).
 
 Reverb needs no settings. `REVERB_APP_ID`, `REVERB_APP_KEY` and `REVERB_APP_SECRET`
 override its generated credentials.

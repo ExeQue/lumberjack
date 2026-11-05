@@ -1,12 +1,11 @@
 # Widgets
 
-A widget is one tile of a [status screen](./screens): a number, a gauge, a chart, a list,
-the health checks, a clock or a note. It covers whole cells of the screen's grid, and its
-size in cells is its size on the TV. The designer's palette has two groups:
+A widget is one tile of a [status screen](./screens). It covers whole cells of the
+screen's grid. The designer's palette has two groups:
 
 - **Data** widgets (Stat, Gauge, Chart, List, Health, Project overview, SLO) show
-  something Lumberjack measured. Each picks what it shows under **Shows**, uses the
-  screen's projects, environment and period unless it sets its own, and updates live.
+  something Lumberjack measured. Each picks what it shows under **Shows** and uses the
+  screen's projects, environment and period unless it sets its own.
 - **Layout** widgets (Clock and text, Countdown, Message, QR code, Image, video or page)
   show their own settings. They have no source, scope or period.
 
@@ -18,15 +17,14 @@ seeded Lumberjack.
 
 ### Title
 
-**Title** names the tile. When it is empty, a data widget is named after what it shows
-(**p95 response time**), a single picked health check after that check, and a layout
-widget after its type.
+When **Title** is empty, a data widget is named after what it shows (**p95 response
+time**), a single picked health check after that check, and a layout widget after its
+type.
 
 ### Display
 
-The gear in the tile's top right corner opens its display settings. The gear shows when
-you point at, focus or select the tile in the designer. **Copy** and **Paste** at the top
-of the panel copy the settings from one widget to another.
+The gear in the tile's top right corner opens its display settings. **Copy** and
+**Paste** at the top of the panel copy the settings from one widget to another.
 
 The examples below show the same p95 stat (amber, past its limit) or the same health
 check, each with one setting changed.
@@ -56,8 +54,7 @@ The default, and **Align** center with **Vertically** in the middle.
 
     ![A stat past its limit without status colors](./screenshots/widget-display-no-colors.png)
 
-- **Green border while all is ok** (data widgets): when off, a healthy tile has a plain
-  border.
+- **Green border while all is ok** (data widgets).
 - **Show card**: when off, the tile has no background or border while all is well. They
   come back when it is degraded, down or recovering.
 
@@ -76,20 +73,19 @@ change and at least every minute), **Every minute** or **Every 5 minutes**.
 
 Data widgets have a **Scope** section. Each setting uses the screen's value unless set:
 
-- **Projects**: none ticked uses the screen's.
+- **Projects**.
 - **Environment**.
 - **Period** and **Release** (**All**, **Current only** or **Previous**), for widgets over
   a period. **Over** at the top of the inspector also picks the period.
 - **Filter**, for a source that can be narrowed: the route, queue, job, host or database
-  check. `*` matches anything, so `POST /checkout*` or `payments*`. A route filter also
-  matches route names such as `orders.*`. The queue, host and check filters suggest the
-  team's own as you type.
-- **Domain**, for a source with routes: such as `shop.example.com`.
+  check. `*` matches anything, such as `POST /checkout*`. A route filter also matches
+  route names such as `orders.*`.
+- **Domain**, for a source with routes, such as `shop.example.com`.
 
 ### Rotation
 
 A stat, gauge, chart, list or health widget can show several values in turn on one tile.
-The inspector shows them as tabs, the widget's own value first. **+** adds a value. Each
+The inspector shows them as tabs, the widget's own value first, and **+** adds one. Each
 tab sets what it shows, its title, its period, how many seconds it stays, the type's
 first section of settings, and its own scope (**Same as widget** by default). Drag a tab,
 or use the arrows above its settings, to reorder.
@@ -101,11 +97,11 @@ Under **Whole widget**:
 - **Transition**: **Fade**, **Slide**, **Flip** (like a departures board) or **None**.
 - **Stay on a value that needs attention**: an amber or red value holds the tile until
   it clears.
-- **Show a progress bar until the next value**, along the tile's bottom edge.
+- **Show a progress bar until the next value**.
 
-On a health widget, each tab picks its own checks and **Checks** settings. Pick one check
-per tab, and a 1 x 1 tile cycles through the checks, each named after its check. A tab
-with no check picked shows every check.
+On a health widget, each tab picks its own checks and **Checks** settings. With one check
+per tab, a 1 x 1 tile cycles through the checks. A tab with no check picked shows every
+check.
 
 ![A rotating widget's value tabs](./screenshots/screen-designer-rotation.png)
 
@@ -122,8 +118,8 @@ A data widget with a state colors itself:
 | A check stale                     | Gray                        |
 
 Widgets without a state, such as a chart or the clock, keep a plain border. A down check
-turns the whole health widget red. A degraded or recovering check colors only its row or
-card. A tile that turns red flashes once. A message's tone colors its tile the same way.
+turns the whole health widget red; a degraded or recovering check colors only its row or
+card. A tile that turns red flashes once.
 
 ### Light theme
 
@@ -137,16 +133,15 @@ Widgets follow the screen's [theme](./screens#theme).
 
 ### Share links
 
-A [share link](./screens#share-links) shows every widget as the TV does. Unless **Show
-issue titles and names, not only counts** is ticked, it leaves out issue titles, alert
-channel names and health check messages, numbers hosts and agents ("host 1"), and shows
-calendar events without their titles. Layout widgets show as they are, so put nothing in
-a message or QR code that the link should not reveal.
+Unless **Show issue titles and names, not only counts** is ticked, a
+[share link](./screens#share-links) leaves out issue titles, alert channel names and
+health check messages, numbers hosts and agents ("host 1"), and shows calendar events
+without their titles. Layout widgets show as they are, so put nothing in a message or QR
+code that the link should not reveal.
 
 ## Stat
 
-One number, with its trend against an earlier period and a sparkline. A stat with limits
-turns amber or red past them.
+One number, with its trend against an earlier period and a sparkline.
 
 ![A stat with its trend](./screenshots/widget-stat.png)
 
@@ -188,7 +183,7 @@ turns amber or red past them.
   worse for a value with limits, gray otherwise. Under 2% counts as no change.
 - **Decimals**: **Automatic**, 0, 1 or 2.
 - **Sparkline under the number**.
-- **Prefix** and **Suffix** around the number, such as `~` or `/min`.
+- **Prefix** and **Suffix** around the number, such as `/min`.
 
 ## Gauge
 
@@ -240,13 +235,12 @@ size**, **Database connections** and **External JSON**.
 - **Overlay the previous period**, faint behind the current one.
 - **Y axis starts at zero**, **Legend**, **Time axis**, **Value axis** and **Grid lines**.
 
-The time axis uses 24 or 12 hours, like the screen's clock. On share links, see
-[Share links](#share-links) for how hosts are named.
+The time axis uses 24 or 12 hours, like the screen's clock.
 
 ## List
 
 Rows, worst or newest first, as many as fit the tile. Rows that do not fit scroll slowly
-down and back up. Pointing at the list stops the scroll.
+down and back up.
 
 ![The latest issues](./screenshots/widget-list-issues.png)
 
@@ -280,19 +274,17 @@ down and back up. Pointing at the list stops the scroll.
   first** or **Most frequent**.
 - **Only what needs attention**: leaves out the rows that are fine.
 - **Show age**, **Show count**, **Show project** and **Wrap long text**.
-- **Scroll slowly through rows that do not fit**: when off, the list stays still.
+- **Scroll slowly through rows that do not fit**.
 
 ### Calendars
 
-A list can show a calendar's events, such as today's meetings, the on-call rota or the
-week's releases.
+A list can show a calendar's events, such as the on-call rota or the week's releases.
 
 1. On the project, add a data source under **Data sources** with format **iCalendar
    (.ics)** and the calendar's iCal address:
     - Google Calendar: **Secret address in iCal format** in the calendar's settings.
     - Outlook: a calendar published as ICS.
     - iCloud: a public calendar's link, with `webcal://` changed to `https://`.
-    - Any other `.ics` address.
 2. On a list widget, pick **Calendar events**, then the data source under **Rows**.
 
 The address gives access to the calendar, so Lumberjack hides its path after saving and
@@ -305,10 +297,8 @@ days**), in the screen's time zone. Repeating events are expanded, and cancelled
 left out. With **Only what has not ended** (on by default), an event leaves the list when
 it ends.
 
-Rows are grouped by day, all-day events first, then by start time. Each row shows the
-start time (or **All day**), the title, and the place and end time where there is room.
-An event happening now says **Now** in amber. A list over more than one day shows the
-weekday before the time.
+Rows are grouped by day, all-day events first, then by start time. An event happening now
+says **Now** in amber. A list over more than one day shows the weekday before the time.
 
 ### External JSON
 
@@ -344,17 +334,16 @@ message, and for a database check its connections and size.
 - **Only what needs attention**: only checks that are not ok.
 - **Show uptime**, **Show the timeline** and **Show the last message** (a single check).
 - **Stale counts as**: **Its own state** (gray), **Degraded** or **Ok**.
-- **Scroll slowly through rows that do not fit**: what does not fit scrolls into view,
-  sideways on a widget wider than tall. When off, the hidden checks are counted at the
-  end, with how many are down or degraded.
+- **Scroll slowly through rows that do not fit**: sideways on a widget wider than tall.
+  When off, the hidden checks are counted at the end, with how many are down or degraded.
 
 A database check shows its connections, amber at 80% of the maximum and red at 90%.
 
 ## Project overview
 
 Every project in scope as a traffic light: one cell each with its name, its color, and
-the reason when it is not green (**2 checks down**, **Backlog on mail**, **3 new
-issues**). At 1 x 1 it shows how many projects are ok and the worst one.
+the reason when it is not green (**2 checks down**, **Backlog on mail**). At 1 x 1 it
+shows how many projects are ok and the worst one.
 
 ![Every project as a traffic light](./screenshots/widget-overview.png)
 
@@ -367,7 +356,7 @@ A project's color is the worst of these:
 - **Amber**: a health check is degraded or stale (unless **Stale counts as** is Ok), a
   queue is past half its backlog thresholds, or the period has new open issues (3 or more
   by default).
-- **Green** otherwise, also for a project with nothing to report.
+- **Green** otherwise.
 
 **Projects**:
 
@@ -377,14 +366,13 @@ A project's color is the worst of these:
 - **Amber from new issues**: 1, 3, 5, 10 or 20.
 - **Stale counts as**: **Degraded** or **Ok**.
 
-Checks are judged as on the health widget, and queues as on a list of queues, so a muted
-queue stays green. The tile takes the color of its worst project. Share links show
+A muted queue stays green. The tile takes the color of its worst project. Share links show
 project names.
 
 ## SLO
 
-One service level objective over the period, for the requests in scope. A route filter
-and domain narrow it. It shows how much of the period met the objective, the error
+One service level objective over the period, for the requests in scope, narrowed by a
+route filter and domain. It shows how much of the period met the objective, the error
 budget left as a bar, and the burn rate.
 
 ![An availability SLO](./screenshots/widget-slo-availability.png)
@@ -404,9 +392,9 @@ budget left as a bar, and the burn rate.
 - **Fast enough under (ms)**, for the latency objective.
 
 The error budget is what the target allows to fail: 0.1% of the requests at 99.9%. The
-bar shows how much of it is left, and **Budget spent** once it is used up. The burn rate
-is how fast the most recent part of the period uses the budget: at 1 it lasts exactly
-the period, at 10 it is gone in a tenth of it.
+bar says **Budget spent** once it is used up. The burn rate is how fast the most recent
+part of the period uses the budget: at 1 it lasts exactly the period, at 10 it is gone in
+a tenth of it.
 
 | Color | When                                                                   |
 | ----- | ---------------------------------------------------------------------- |
@@ -427,15 +415,14 @@ The time, a note for the room, or both, with the time in other cities below.
 - **Shows**: **Clock**, **Text only** or **Clock and text**.
 - **Format**: **24 hour** or **12 hour**.
 - **Time zone**: empty uses the screen's, or else the TV's own.
-- **Other time zones**: up to 12, each with its city and time under the clock.
+- **Other time zones**: up to 12.
 - **Seconds** and **Date**.
-- **Text**: the note, such as a team name or "Quiet hours after 18:00".
+- **Text**: the note, such as "Quiet hours after 18:00".
 
 ## Countdown
 
-The time left to a moment, such as a release or a deadline, or to a calendar's next
-event. Far off it counts in days and hours, and in the last day it shows a clock, with a
-line saying what it counts down to.
+The time left to a moment or to a calendar's next event. Far off it counts in days and
+hours, and in the last day it shows a clock, with a line saying what it counts down to.
 
 ![A countdown to a release](./screenshots/widget-countdown.png)
 
@@ -474,12 +461,12 @@ status.
 - **Message**: up to 500 characters. Line breaks are kept, and a ticker joins the lines.
   With **Text size** at **Fit to tile**, a longer message gets smaller type to fit.
 - **Tone**: **Plain**, **Info (blue)**, **Warning (amber)** or **Critical (red)**.
-- **Run across like a ticker**: the text scrolls from right to left, over and over. Use a
-  wide tile one row high.
+- **Run across like a ticker**: the text scrolls from right to left. Use a wide tile one
+  row high.
 
 ## QR code
 
-A link, a wifi network or any text as a QR code, for phones in the room to scan.
+A link, a wifi network or any text as a QR code.
 
 ![The guest wifi as a QR code](./screenshots/widget-qr-wifi.png)
 
@@ -521,6 +508,5 @@ on https. Pages that forbid framing stay blank.
 
 ## Empty cell
 
-Older screens may have an **Empty cell** widget. It still works (dashed in the designer,
-invisible on the TV), but it is no longer offered: free cells are already empty, so you
-can remove it.
+Older screens may have an **Empty cell** widget. It still works but is no longer offered,
+since free cells are already empty, so you can remove it.

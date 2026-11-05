@@ -2,7 +2,6 @@
 
 SDKs and their agents send data to Lumberjack over HTTP. This page lists the endpoints,
 their payloads and limits, for running Lumberjack behind a proxy or writing your own SDK.
-An official SDK does all of this for you.
 
 ## Endpoints
 
@@ -16,8 +15,7 @@ An official SDK does all of this for you.
 | `/mcp`                                   | MCP token, as a bearer token      | 120 calls a minute per token                              |
 | `GET /api/v1/...`                        | Team token, or public stats key   | 120 a minute per token or key                             |
 
-The read-only [metrics API](./metrics-api) under `/api/v1` has its own page, and so does
-[MCP](./mcp).
+See the [metrics API](./metrics-api) and [MCP](./mcp) pages for those endpoints.
 
 ### Responses
 
@@ -107,9 +105,9 @@ sampled or not:
 | `counts[].duration_ms_sum` | The summed duration of those requests, in milliseconds.                                   |
 | `from`, `to`, `timestamp`  | Unix time in seconds. The counts are filed under the minute of `timestamp`.               |
 
-You can send one event per request or one every few seconds. The result is the same.
-The counts are kept as long as the [request runs](./projects#retention). The pages use
-them as described under [Sampling](./performance#sampling).
+Send one event per request or one every few seconds, with the same result. The counts
+are kept as long as the [request runs](./projects#retention), and used as described
+under [Sampling](./performance#sampling).
 
 ## Heartbeat
 
@@ -135,8 +133,7 @@ it with `sendBeacon` as `text/plain`. A batch holds at most 50 events of type
 `exception` or `vital`.
 
 The request's `Origin` must be one of the project's
-[allowed origins](./projects#settings). Lumberjack answers the CORS preflight for those
-origins. Requests from crawlers and automated browsers are accepted and dropped.
+[allowed origins](./projects#settings), which get a CORS preflight answer. Requests from crawlers and automated browsers are accepted and dropped.
 
 ## Limits
 

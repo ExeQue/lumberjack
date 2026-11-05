@@ -1,14 +1,13 @@
 # Setup and system administration
 
-System administrators set up Lumberjack, manage teams and users, and keep an eye on
-the server. This page covers first-run setup, the command line, mail, the
-**Administration** pages and the security settings.
+System administrators set up Lumberjack, manage teams and users, and look after the
+server.
 
 ## First-run setup
 
-A Lumberjack without users sends every page to `/setup`. There you choose the name,
-email and password of the first system administrator. There is no default account or
-password. The administrator starts without a team and lands on **Administration > All
+A Lumberjack without users sends every page to `/setup`, where you choose the name,
+email and password of the first system administrator. There is no default account. The
+administrator starts without a team and lands on **Administration > All
 teams**, where teams are created.
 
 ### Protect setup with a token
@@ -20,16 +19,13 @@ server reachable from outside, set a setup token:
 LUMBERJACK_SETUP_TOKEN=a-long-random-string
 ```
 
-Setup then asks for the token too. Generate one with, for example,
-`openssl rand -hex 24`.
+Setup then asks for the token too. Generate one with `openssl rand -hex 24`.
 
 ### The setup flag
 
-When the first user exists, Lumberjack writes the file `storage/app/setup/complete`.
-If the file goes missing, Lumberjack writes it again.
-
-To make Lumberjack check its setup again, delete the file, through the storage mount
-or with:
+When the first user exists, Lumberjack writes the file `storage/app/setup/complete`,
+and writes it again if it goes missing. To make Lumberjack check its setup again, delete
+the file, through the storage mount or with:
 
 ```bash
 php artisan setup:clear
@@ -69,13 +65,13 @@ themselves or delete their own account.
 | `php artisan lumberjack:make-admin {email} --revoke` | Removes administration, unless they are the last active administrator.                                                                                                                                                               |
 | `php artisan setup:clear`                            | Deletes the setup flag.                                                                                                                                                                                                              |
 | `php artisan lumberjack:prune`                       | Deletes data older than its [retention](./projects#retention). Also runs every day by itself.                                                                                                                                        |
-| `php artisan webpush:vapid --show`                   | Prints a new key pair for [browser notifications](./teams#browser-notifications), to set as `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Optional: keys are generated automatically. Set them to keep them across a database restore. |
+| `php artisan webpush:vapid --show`                   | Prints a new key pair for [browser notifications](./teams#browser-notifications), to set as `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Keys are generated automatically; set them to keep them across a database restore.          |
 
 New VAPID keys make every browser turn notifications on again.
 
 ### Scheduled commands
 
-The scheduler runs these by itself. You do not need to call them.
+The scheduler runs these by itself.
 
 | Command                                   | Runs           | What it does                                                         |
 | ----------------------------------------- | -------------- | -------------------------------------------------------------------- |
@@ -94,7 +90,8 @@ The scheduler runs these by itself. You do not need to call them.
 
 ## Mail
 
-Every mail has an HTML and a plain-text version:
+Every mail has an HTML and a plain-text version, and follows the reader's light or dark
+mode where the mail client supports it.
 
 | Mail                                    | Sent to                                                  | From          |
 | --------------------------------------- | -------------------------------------------------------- | ------------- |
@@ -111,12 +108,9 @@ Every mail has an HTML and a plain-text version:
 | Password reset, email confirmation      | the account                                              | notifications |
 
 Subjects start with the project in brackets, such as
-`[Demo] New error: DEMO-12 RuntimeException`, so you can filter mail per project. The
-footer of each mail says why it was sent and where to change that. An address gets
+`[Demo] New error: DEMO-12 RuntimeException`. The footer of each mail says why it was sent and where to change that. An address gets
 [one mail per thing that happened](./issues#one-mail-per-thing-that-happened), however
 many rules lead to it.
-
-Mails follow the reader's light or dark mode where the mail client supports it.
 
 | Variable                          | Default             | What it does                                    |
 | --------------------------------- | ------------------- | ----------------------------------------------- |
@@ -128,8 +122,8 @@ Mails follow the reader's light or dark mode where the mail client supports it.
 ### Previewing mails
 
 In local development (`APP_ENV=local`), sign in and open `/dev/mail`. It lists every
-mail with sample data, in light and dark mode and as plain text. Nothing is sent. The
-page exists only in the local environment.
+mail with sample data, in light and dark mode and as plain text, without sending
+anything.
 
 ## Administration pages
 
@@ -139,8 +133,8 @@ or not they are members.
 
 - **All teams:** every team with its owner, members, projects and errors of the last
   24 hours. Open a team to work in it, delete it with all its data, or create one. The
-  owner can be an existing user or the email of someone without an account. That
-  person is then invited to own the team.
+  owner can be an existing user, or the email of someone without an account, who is
+  then invited to own the team.
 - **All users:** 50 a page, with **Search by name or email** and badges for
   **Administrator**, **Suspended** and **Must change password**. Invite someone to a
   team as admin or member, send a password reset link, require a new password, make or
@@ -159,15 +153,13 @@ or not they are members.
 ### Accounts come by invitation
 
 There is no public registration. Accounts come from first-run setup, an invitation or
-the command line. A user belongs to the teams they were invited to. An account in no
-team sees a page saying so until an invitation arrives. Teams, invitations and your own
-account are on [Teams and accounts](./teams).
+the command line. An account in no team sees a page saying so until an invitation
+arrives. See [Teams and accounts](./teams).
 
 ### Who may create teams
 
 By default anyone signed in can create a team on the team page and becomes its owner.
 Set `LUMBERJACK_TEAM_CREATION=admins` to let only system administrators create teams.
-They can also create teams for others under **All teams**.
 
 ### Suspending a user
 
@@ -184,7 +176,7 @@ choose a new one.
 Click the version at the bottom of the sidebar to open **About**. It shows the version,
 the commit it was built from, and links to the release notes and the documentation.
 System administrators also see PHP, Laravel, the database, and the queue, cache and
-session drivers, which helps in a bug report.
+session drivers.
 
 The Docker image shows its release version. A git checkout shows its tag, or "dev"
 without git.

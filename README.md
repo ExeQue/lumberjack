@@ -4,7 +4,7 @@
 
 Lumberjack watches your Laravel apps from your own server. It collects errors, logs and
 performance data, runs health checks, sends alerts, shows status screens on a TV and lets
-AI agents work with your issues over MCP. Every page updates live as data arrives.
+AI agents work with your issues over MCP.
 
 ![The overview of a project: requests, error rate, p95, failed jobs, open issues and health checks](docs/screenshots/overview.png)
 
@@ -13,11 +13,11 @@ AI agents work with your issues over MCP. Every page updates live as data arrive
 - **Know when production breaks.** Exceptions, browser errors and error logs become issues,
   and an alert reaches you by email, Slack, Microsoft Teams, Discord, Telegram, ntfy,
   Pushover or a webhook.
-- **Find out why a page is slow.** See each route's response times, Web Vitals, the queries
-  it ran and N+1 hints, down to a single trace.
+- **Find out why a page is slow.** Response times, Web Vitals, queries and N+1 hints per
+  route, down to a single trace.
 - **Check a release.** See which deploy brought new errors or slowdowns.
-- **Watch background work.** Follow jobs, queues, scheduled tasks and commands, and see what
-  failed or never ran.
+- **Watch background work.** See which jobs, scheduled tasks and commands failed or never
+  ran, and which queues back up.
 - **Check that your sites are up.** Run HTTP, SSL, TCP, DNS and heartbeat checks, and track
   outages and uptime.
 - **Search your logs**, or watch them live.

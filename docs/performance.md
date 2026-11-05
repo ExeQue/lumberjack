@@ -12,12 +12,9 @@ Every page has two pickers at the top:
 - **Environment**: **All environments**, or one of the environments the project sent
   data from in the last week.
 
-The pickers are part of the page address, so a link opens with the same choice. Hover a
-chart to see the value of each bar or point. The pages update live as data arrives.
+The pickers are part of the page address, so a link opens with the same choice.
 
 ## Overview
-
-The **Overview** is the first page of a project.
 
 ![The overview of a project](./screenshots/overview.png)
 
@@ -33,8 +30,7 @@ At the top, a card for each key figure, with the change from the period before:
 | **Health checks**     | How many [health checks](./health) are ok, and how many are down, degraded or stale |
 
 Below the cards, a chip for each health check shows its state in color: red for down,
-amber for degraded, blue for recovering, gray for stale or pending. Click a chip for
-the check's details.
+amber for degraded, blue for recovering, gray for stale or pending.
 
 Then come charts of **Requests over time**, **Exceptions over time** and **Response
 times** (p95 and p50), and the **Latest issues**, **Slowest routes (p95)** and **Failed
@@ -43,22 +39,11 @@ jobs** of the period. When the app samples its data, a note says so; see
 
 ## Pages
 
-- **Requests**: each route's requests, p50, p95 and p99, error rate and
-  [Apdex](#apdex). See [Requests](#requests).
-- **Database**: queries grouped by SQL, with their calls, time and N+1 flags. See
-  [Database](#database).
-- **Browser**: Core Web Vitals of real page views, per device and page, and browser
-  errors. See [Browser](#browser).
-- **Jobs**: runs, failures, duration and wait time per job class, and the queues. See
-  [Jobs](#jobs).
-- **Schedule**: scheduled tasks with their last and next run. See [Schedule](#schedule).
-- **Commands**: console commands with their runs, failures and duration. See
-  [Commands](#commands).
-- **Logs**: log lines by channel and level, with search. See [Logs](#logs).
+[Requests](#requests), [Database](#database), [Browser](#browser), [Jobs](#jobs),
+[Schedule](#schedule), [Commands](#commands) and [Logs](#logs) each have a page in the
+sidebar.
 
 ## Requests
-
-**Requests** in the sidebar lists the project's routes.
 
 ![The Requests page with the routes table](./screenshots/routes.png)
 
@@ -67,16 +52,14 @@ highest p95 (the default), most requests, highest error rate, most total time or
 Apdex. **Search routes or names** uses the [search syntax](./finding-things#search-syntax)
 and matches a route's URI or its route name, such as `orders.show`.
 
-Click a route for its p50 and p95 over the period, its status codes (2xx to 5xx) and its
-10 slowest requests with their query counts.
+A route's details show its p50 and p95 over the period, its status codes and its 10
+slowest requests with their query counts.
 
 When requests came in on more than one domain in the period, a **Domain** picker appears
 next to the search. With **All domains**, the same route on two domains shows as two
-rows, with a **Domain** column. Pick a domain to show only its requests.
+rows, with a **Domain** column.
 
 ## Database
-
-**Database** in the sidebar lists the queries the app runs.
 
 ![The Database page: queries grouped by SQL with the share of database time](./screenshots/queries.png)
 
@@ -85,8 +68,7 @@ query. Each query shows its calls, total time, share of database time, p95 and m
 Filter by connection, search the SQL, and sort by most total time, highest p95 or most
 calls. **Most from** is the line in the app that ran the query most often.
 
-A query is flagged **N+1** when it runs 5 times or more in one request or job. The badge
-says how many times per request. With 7 or 30 days picked, **Most from** and the N+1 flag
+A query is flagged **N+1** when it runs 5 times or more in one request or job. With 7 or 30 days picked, **Most from** and the N+1 flag
 cover the last 24 hours only.
 
 ## Jobs
@@ -94,14 +76,14 @@ cover the last 24 hours only.
 ![The Jobs page with the Queues card, the job classes and the latest failed runs](./screenshots/jobs.png)
 
 Each job class shows its runs, failure rate, stuck and retried jobs, duration and wait
-time. Click a job for its runs. Filter by queue and sort by highest failure rate, most
+time. Filter by queue and sort by highest failure rate, most
 runs, highest p95 duration or highest p95 wait. Below the job classes are the **latest failed, stuck and released
 runs**, with their parameters, an **Open trace** and the issue they became.
 
 A run is **Queued**, **Processing**, **Processed**, **Released** (put back on the
 queue), **Failed** or **Stuck**. A run is stuck when it has been processing for longer
-than its timeout plus 2 minutes. A job without a timeout counts as 10 minutes. A banner
-says how many runs are stuck and links to them.
+than its timeout plus 2 minutes, or 10 minutes for a job without a timeout. A banner
+links to the stuck runs.
 
 ## Queues
 
@@ -115,26 +97,26 @@ is set to watch). Per connection and queue:
 - **Oldest pending:** how long the oldest waiting job has waited, for Redis and database
   queues.
 - **p95 wait:** time from queued to started of the jobs that ran in the period.
-- **Size:** the highest size per bucket over the period; hover for each bucket.
+- **Size:** the highest size per bucket over the period.
 - **Alert:** the queue's own [backlog alert](./alerts#queue-backlog) thresholds, for
   team owners and admins. **custom** marks a queue with its own thresholds, **muted** a
   queue that never alerts.
 
-When every worker is dead, no job starts but the queue keeps growing. A
-[queue backlog alert](./alerts#queue-backlog) catches that.
+A [queue backlog alert](./alerts#queue-backlog) catches a queue that grows because every
+worker is dead.
 
 ## Schedule
 
 ![The Schedule page with each task's cron, status and its recent runs](./screenshots/schedule.png)
 
 Each task shows its cron, its latest status (**Running**, **Finished**, **Failed**,
-**Skipped** or **Missed**), the last and next run and a strip of its last 20 runs. Click
-a task for its runs with their exit code and host.
+**Skipped** or **Missed**), the last and next run and a strip of its last 20 runs. A
+task's details list its runs with their exit code and host.
 
 A run is late after a minute, and **missed** when it has not started 5 minutes after
 its time. A missed run becomes an issue. A task that has not been reported for 24 hours
 is no longer flagged. **Forget task**, for owners and admins, deletes a task that is
-gone from the app, with its runs. It comes back if the app still runs it.
+gone from the app, with its runs.
 
 ## Commands
 
@@ -149,9 +131,8 @@ Queue workers are not listed.
 ![The Logs page with the channel list, the levels and the latest lines](./screenshots/logs.png)
 
 Filter by channel, minimum level (debug to emergency) and release, and search the
-messages. The page shows the newest 200 lines. Narrow the filters to see older ones.
-The search matches whole words. It does not use the `*` syntax of the other search
-fields. **Manage channels** opens the project's [log channels](./projects#settings).
+messages. The page shows the newest 200 lines; narrow the filters to see older ones.
+The search matches whole words, without the `*` syntax of the other search fields. **Manage channels** opens the project's [log channels](./projects#settings).
 
 New lines appear while you are at the top of the list. When you have scrolled down or
 selected text, **Show new lines** appears instead.
@@ -179,12 +160,11 @@ Apdex scores a route from 0 to 1 by how fast its requests felt:
 | Within 2 s             | ½      |
 | Slower, or a 5xx error | 0      |
 
-A score below 0.85 shows in amber, below 0.7 in red. Sort by lowest Apdex to find the
-routes people wait on.
+A score below 0.85 shows in amber, below 0.7 in red.
 
 ## Browser
 
-**Browser** in the sidebar shows how fast pages are for the people using them. The
+**Browser** shows how fast pages are for the people using them. The
 [browser script](./projects#browser-script) measures Core Web Vitals on every page view,
 with the class of device: mobile, tablet or desktop.
 
@@ -210,8 +190,8 @@ lists each page path, with ids grouped as `{id}`, with page views and the p75 of
 contentful paint). Sort it by most viewed or slowest LCP.
 
 **Browser errors** counts the occurrences of browser issues in the period, on every
-device, and lists the issues with the most; **All issues** opens the issues list
-filtered to browser errors.
+device, and lists the issues with the most; **All issues** opens them in the issues
+list.
 
 Values below zero or above a minute are ignored. Web vitals are kept for 30 days by
 default, see [retention](./projects#retention). Until a project receives any, the page
@@ -228,8 +208,7 @@ id. **Open trace** (on a request, a run or an occurrence) shows it on one time a
   notifications and Redis commands,
 - log lines and exceptions.
 
-The header names the request's route, route name and domain. Each step is a bar that
-starts when the step started and is as long as it took. Above the timeline, a summary
+The header names the request's route, route name and domain. Above the timeline, a summary
 counts the queries, outgoing calls, cache operations and misses, mails, notifications,
 Redis commands, log lines and exceptions. Which spans are recorded depends on the SDK.
 

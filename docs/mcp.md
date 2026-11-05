@@ -1,7 +1,7 @@
 # MCP
 
-Lumberjack is an MCP server. An AI agent such as Claude Code, Claude Desktop or Cursor
-can use it to read issues and telemetry and help triage them.
+Lumberjack has an MCP server. AI agents such as Claude Code, Claude Desktop or Cursor
+can read issues and telemetry through it and help triage them.
 
 ## Tokens
 
@@ -16,16 +16,13 @@ Members see the list. The same tokens read the [metrics API](./metrics-api).
 | **Expiry**   | 30, 90 or 365 days, or never.                                                           |
 
 The token, `lj_mcp_...`, is shown once. The list shows who created each token and when
-it was last used. You can revoke a token at any time.
-
-Rules:
+it was last used, and **Revoke**s it.
 
 - A token acts as the person who created it. It sees and changes only what that person
   may see and change, within its projects and its team.
-- A `read` token changes nothing.
 - A token works only while its creator is an owner or admin of the team. When they
   leave the team, become a member, are suspended or are deleted, the token stops and
-  shows as **Stopped**. Revoke it and let a current admin create a new one.
+  shows as **Stopped**; a current admin has to create a new one.
 - A token makes at most 120 calls a minute.
 
 ## Connecting
@@ -40,8 +37,7 @@ claude mcp add --transport http lumberjack https://your-lumberjack/mcp \
   --header "Authorization: Bearer lj_mcp_..."
 ```
 
-**Other clients** that read an `mcpServers` JSON file, such as Cursor or a project's
-`.mcp.json`:
+**Other clients** that read an `mcpServers` JSON file, such as Cursor or `.mcp.json`:
 
 ```json
 {
@@ -90,8 +86,8 @@ are in microseconds. Tools marked **write** need the `write` scope.
 
 `project` is a project slug from `list_projects`. It is required only when the token
 covers more than one project. `issue` is an issue's number, such as `DEMO-42`, or its
-id. `period` is `1h`, `24h`, `7d` or `30d`, and defaults to `24h`. Arguments in bold
-are required.
+id. `period` is `1h`, `24h`, `7d` or `30d` (default `24h`). Arguments in bold are
+required.
 
 | Tool                   | Arguments                                                                                                                                                                                                                                       |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -125,15 +121,15 @@ are required.
 
 The project settings have a ready-made GitHub Actions workflow that runs Claude Code in
 your repository. Through the MCP tools, it triages new and regressed issues and answers
-notes that tag it. It does not resolve issues.
+notes that tag it, without resolving them.
 
 ![The Automatic triage section of a project's settings](./screenshots/settings-triage.png)
 
 When it is sure of the cause and the fix is small, or a comment asks for one, it opens a
 **draft pull request** from a `lumberjack/<issue number>` branch with "Fixes #N" in its
-body, and links it in its note or comment. It does not push to the default branch or
-merge. CI does not start on these pull requests by itself: push to the branch or re-run
-CI to start it.
+body, and links it in its note or comment. It never pushes to the default branch or
+merges. CI does not start on these pull requests by itself: push to the branch or re-run
+CI.
 
 1. Create a token with the write scope that covers the project.
 2. Add the secrets to the GitHub repository: `LUMBERJACK_MCP_TOKEN` (the token) and
@@ -156,11 +152,8 @@ up to 20 minutes. Only one run per issue, or for the inbox, runs at a time.
 Your Lumberjack must be on a public URL that GitHub can reach. The settings also show
 how to run the same triage once in a local Claude Code session.
 
-The workflow shows as "Lumberjack Triage" in the Actions tab, with the GitHub issue
-number in the run's title. It commits as "Lumberjack", from
-`lumberjack@noreply.invalid`.
-
-To show the Lumberjack logo on those commits, create a GitHub App or account with the
-logo as its avatar. Then set the repository variable `LUMBERJACK_GIT_EMAIL` to its
-email. For an app, that is `<bot user id>+<app slug>[bot]@users.noreply.github.com`.
+The workflow shows as "Lumberjack Triage" in the Actions tab and commits as
+"Lumberjack", from `lumberjack@noreply.invalid`. To show the Lumberjack logo on those
+commits, create a GitHub App or account with the logo as its avatar and set the
+repository variable `LUMBERJACK_GIT_EMAIL` to its email. For an app, that is `<bot user id>+<app slug>[bot]@users.noreply.github.com`.
 Get the bot user id with `gh api /users/<app slug>[bot] --jq .id`.

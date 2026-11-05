@@ -2,7 +2,7 @@
 
 The **Health** page of a project shows whether the things your app depends on work:
 its database, cache, queues and disks, the URLs people visit and their certificates.
-Checks come from two places. Once a result is in, both work the same.
+Checks come from two places and work the same once a result is in.
 
 | Source              | Where it runs                        | Set up                            |
 | ------------------- | ------------------------------------ | --------------------------------- |
@@ -11,23 +11,21 @@ Checks come from two places. Once a result is in, both work the same.
 
 ## Checks the app reports
 
-The SDK runs checks inside the app and sends their results with the rest of the app's
-data. How you register and schedule checks is up to the SDK. See its documentation.
+The SDK runs checks inside the app and sends their results with the rest of its data.
+See the SDK's documentation for registering and scheduling checks.
 
 A check is known by its **slug** (`database:pgsql`, `disk:s3`, `queue:redis:default`)
-within an environment. A slug Lumberjack has not seen before becomes a new check on
-its first result. You set up nothing in Lumberjack. A slug uses lowercase letters,
-digits and `: . _ -`, at most 100 characters. A result with another slug or an unknown
-status is ignored.
+within an environment. A new slug becomes a new check on its first result, with nothing
+to set up in Lumberjack. A slug uses lowercase letters, digits and `: . _ -`, at most
+100 characters. A result with another slug or an unknown status is ignored.
 
 Each result has a status (`ok`, `warning` or `failed`), a message, up to 20 numeric
 metrics and how long the check took. The `latency_ms` metric is shown as the check's
 latency.
 
-A result may also carry `interval_minutes`: how often the app runs the check, from 1 to
-1440 minutes. Send it when the check runs less often than every minute. The Health page
-shows it next to the check (**every 15 min**), and it sets when the check goes
-[stale](#stale-checks).
+A result may also carry `interval_minutes`, from 1 to 1440: send it when the check runs
+less often than every minute. The Health page shows it next to the check
+(**every 15 min**), and it sets when the check goes [stale](#stale-checks).
 
 ### Database metrics
 
@@ -39,9 +37,10 @@ A check that watches a database may send these metrics with each result:
 | `connections`     | Connections open right now             |
 | `max_connections` | Connections the database server allows |
 
-The Health page shows them next to the latency (**13.8 MB · 4 of 100 conns**). They also feed the database widgets of [status screens](./screens#widgets) and the `db_size`,
-`db_connections` and `db_connections_used` series of the [metrics API](./metrics-api#series).
-Any reported check that sends them counts, whatever its slug.
+The Health page shows them next to the latency (**13.8 MB · 4 of 100 conns**). They also
+feed the database widgets of [status screens](./screens#widgets) and the `db_size`,
+`db_connections` and `db_connections_used` series of the [metrics API](./metrics-api#series),
+whatever the check's slug.
 
 When several servers report the same slug, each server has its own state and the check
 shows the worst of them. The row lists the hosts with their status, and the details
@@ -52,14 +51,12 @@ show each host's last result.
 A check that stops reporting shows as **stale** in gray, not as down. A check is stale
 when no result came in for:
 
-- 2.5 times its `interval_minutes`, when it sends one: 37.5 minutes for a check that
-  runs every 15 minutes;
-- otherwise 3 times its usual spacing: 3 minutes for a check that runs every minute;
+- 2.5 times its `interval_minutes`, when it sends one;
+- otherwise 3 times its usual spacing;
 - 15 minutes while its spacing is not known yet.
 
-A stale check has no uptime and sends no alerts. Its next result brings it back.
-**Archive** puts away a check that will not report again, for example after you renamed
-its slug.
+A stale check has no uptime and sends no alerts until its next result. **Archive** puts
+away a check that will not report again, for example after you renamed its slug.
 
 ### Cleaning up
 
@@ -67,9 +64,8 @@ its slug.
   after 24 hours.
 - **Reported checks** that sent nothing for 7 days are archived. An archived check that
   reports again comes back with its history.
-- **Delete** in a check's details deletes it with its results and outages. A deleted
-  check that the app still runs comes back as a new check with its next result, so
-  remove it from the app first.
+- **Delete** in a check's details deletes it with its results and outages. If the app
+  still runs it, it comes back as a new check, so remove it from the app first.
 
 ## Checks Lumberjack runs
 
@@ -78,18 +74,18 @@ environment label. Only team owners and admins add, edit, archive and delete che
 
 | Type      | Checks                                                                                                                                                           |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| HTTP      | A URL answers with the expected status (200 unless set), optionally with a text in the body. Warns when slower than a limit you set.                             |
-| SSL       | A host's certificate: warns a number of days before it expires (14) and fails close to it (3).                                                                   |
-| TCP       | A port accepts a connection, e.g. a database or mail server.                                                                                                     |
-| DNS       | A name has records of a type (A, AAAA, CNAME, MX, TXT), optionally one with the value you expect.                                                                |
-| Heartbeat | A dead man's switch: your cron job or backup calls a secret URL when it is done; the check fails when no call came within its interval plus a grace (5 minutes). |
+| HTTP      | A URL answers with the expected status, optionally with a text in the body. Warns when slower than a limit you set.                                              |
+| SSL       | A host's certificate: warns a number of days before it expires and fails close to it.                                                                           |
+| TCP       | A port accepts a connection.                                                                                                                                     |
+| DNS       | A name has records of a type, optionally one with the value you expect.                                                                                          |
+| Heartbeat | A dead man's switch: your cron job or backup calls a secret URL when it is done; the check fails when no call came within its interval plus a grace.            |
 
 | Type      | Fields (default)                                                                                                                            |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | HTTP      | URL, method (GET, HEAD or POST; GET), expected status (200), body contains, warn when slower than (1 to 60,000 ms), timeout (1 to 30 s; 10) |
 | SSL       | Host, port (443), warn days before expiry (14), fail days before expiry (3)                                                                 |
 | TCP       | Host, port, timeout (1 to 30 s; 5)                                                                                                          |
-| DNS       | Name, record type (A), expected value                                                                                                       |
+| DNS       | Name, record type (A, AAAA, CNAME, MX, TXT; A), expected value                                                                              |
 | Heartbeat | Grace (0 to 1,440 minutes; 5)                                                                                                               |
 
 Every check also has a name, a description and the thresholds described under
@@ -106,7 +102,7 @@ php artisan backup:run && curl -fsS -m 10 https://lumberjack.example.com/api/hea
 
 HTTP, SSL and TCP checks only reach public addresses. A host that resolves to a
 private, loopback, link-local or otherwise reserved address is rejected, in IPv4 and
-IPv6. Redirects are followed up to three times, and each one is checked the same way.
+IPv6. Redirects are followed up to three times, each checked the same way.
 
 To watch internal services, turn this off:
 
@@ -122,10 +118,10 @@ counted per host:
 - After **degrade after** (2) bad results in a row (warnings or failures) it is
   **degraded**.
 - After **down after** (5) failed results in a row it is **down**. A warning in
-  between starts that count again, so a check that only warns never goes down.
-- On a good result after that it is **recovering**: still part of the outage, but
-  getting better. After **recover after** (5) good results in a row it is **ok**
-  again. A bad result while recovering puts it back where it was, degraded or down.
+  between restarts that count, so a check that only warns never goes down.
+- On a good result after that it is **recovering**: still part of the outage. After
+  **recover after** (5) good results in a row it is **ok** again. A bad result while
+  recovering puts it back where it was, degraded or down.
 
 A **down after** below **degrade after** counts as **degrade after**. Set both the same
 to go straight from ok to down on failures.
@@ -145,33 +141,31 @@ A check that was ok, fails every minute and then passes again, with the defaults
 It sends a degraded alert at minute 2, a down alert at minute 5 and a recovered alert
 at minute 10. Recovering sends no alert.
 
-Checks the app reports send their own thresholds. In the check's details you can set
-others for a slug. Leave all three empty to use the app's again. The details also hold
-a display name, a description and **mute**: a muted check is still shown but sends no
-alerts.
+Checks the app reports send their own thresholds. In the check's details you can
+override them per slug; leave all three empty to use the app's again. The details also
+hold a display name, a description and **mute**: a muted check is still shown but sends
+no alerts.
 
 ![The Health page with the reported checks and the details of one open](./screenshots/health.png)
 
 ### Outages and uptime
 
-An **outage** starts when a check becomes degraded or down, with the first message. It
-ends when the check is ok again, so it stays open while the check is recovering. The
-details list the last 20 outages with their duration and the worst status they
-reached, the last 50 results and a chart of how long the check took. Restore an
-archived check from the **Archived** list.
+An **outage** starts when a check becomes degraded or down and ends when it is ok
+again, so it stays open while the check is recovering. The details list the last 20
+outages with their duration and worst status, the last 50 results and a chart of how
+long the check took. Restore an archived check from the **Archived** list.
 
 **Uptime** is the share of the period, picked at the top of the page, in which the
-check was not down, counted from when the check was added. Degraded time counts as up.
-Recovering time counts as part of the outage. While a check is down, its uptime drops
-live on the page. The strip on each row has one segment per part of the period,
-colored by the worst status in it.
+check was not down, counted from when the check was added. Degraded time counts as up;
+recovering time counts as part of the outage. The strip on each row has one segment per
+part of the period, colored by the worst status in it.
 
 ### On the overview and sidebar
 
 The project overview shows how many checks are ok, and every check as a chip, worst
 first: down in red, degraded in amber, recovering in blue, stale and pending in gray.
-Hover a chip for its last message. Click it to open its details on the Health page.
-The sidebar counts the checks that are degraded or down.
+Hover a chip for its last message. The sidebar counts the checks that are degraded or
+down.
 
 ## Alerts
 
@@ -184,26 +178,24 @@ channels and environments:
 | **Health check down**      | A check keeps failing, also when a degraded check goes down     |
 | **Health check recovered** | A check is ok again                                             |
 
-For example, a down check can page someone while a degraded one only posts to a
-channel. Turning one rule off does not stop the others: with **Health check degraded**
-off, the later down and recovered alerts are still sent.
+The rules are independent: with **Health check degraded** off, the later down and
+recovered alerts are still sent.
 
 Each step for the worse is sent at once: ok to degraded, and degraded to down. Going
-from recovering back to degraded or down is not a new alert. The thresholds keep a
-flapping check quiet. Muted and archived checks send no alerts.
-See [Alerts](./alerts#webhooks) for the webhook body.
+from recovering back to degraded or down is not a new alert. Muted and archived checks
+send no alerts. See [Alerts](./alerts#webhooks) for the webhook body.
 
 ## Reading states from the app
 
 The app can read the state of its reported checks, for example to skip a broken
-dependency or show a notice. Lumberjack answers in two places, with the same body:
+dependency. Lumberjack answers in two places, with the same body:
 
 - **The agent's heartbeat.** `POST /api/ingest/heartbeat` answers with the states
   under `health`. An agent that sends `environment` gets the checks of that
   environment; without it, those of every environment.
-- **`GET /api/health`**, with the server token as a bearer token, for apps that ask
-  without an agent. `?environment=` and `?slug=` narrow the list. A missing or unknown
-  token gets a 401. More than 120 requests a minute per project get a 429.
+- **`GET /api/health`**, with the server token as a bearer token, for apps without an
+  agent. `?environment=` and `?slug=` narrow the list. A missing or unknown token gets
+  a 401. More than 120 requests a minute per project get a 429.
 
 ```json
 {
@@ -234,8 +226,7 @@ dependency or show a notice. Lumberjack answers in two places, with the same bod
 | `hosts`       | Only when several servers report the slug: each server's own state                       |
 | `at`          | When the answer was made                                                                 |
 
-Only checks the app reports are listed, without archived ones. Checks Lumberjack runs
-have no slug, so they are not listed.
+Only checks the app reports are listed, without archived ones.
 
 ## Limits
 
