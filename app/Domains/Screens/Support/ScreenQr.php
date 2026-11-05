@@ -6,6 +6,7 @@ namespace App\Domains\Screens\Support;
 
 use ExeQue\Qr\Builders\Rendered;
 use ExeQue\Qr\Facades\Qr;
+use ExeQue\Qr\Rendering\ScanSafety;
 
 /**
  * The QR codes Lumberjack draws, in the `lumberjack` style of config/qr.php: amber on
@@ -31,7 +32,8 @@ final class ScreenQr
     }
 
     /**
-     * A QR code widget's picture, from its options: a link, a wifi network or any text.
+     * A QR code widget's picture, from its options: a link, a wifi network or any text, on
+     * no background.
      * Null while there is nothing to encode yet.
      *
      * @param  array<string, mixed>  $options
@@ -47,7 +49,10 @@ final class ScreenQr
             default => $value('url') === '' ? null : Qr::url($value('url')),
         };
 
-        return $qr?->style($style)->logo(file: public_path('favicon.svg'), size: self::LOGO_SIZE, shape: 'circle')->svg()->contents();
+        // Transparent, so the tile shows through. Contrast is measured against white
+        // when there is no background, which amber on a dark tile fails, so that guard
+        // is off here; the rest still apply.
+        return $qr?->style($style)->background(null)->scanSafety(new ScanSafety(minContrast: null, inverted: null))->logo(file: public_path('favicon.svg'), size: self::LOGO_SIZE, shape: 'circle')->svg()->contents();
     }
 
     /**
