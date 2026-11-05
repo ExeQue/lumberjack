@@ -85,6 +85,7 @@ export type SchemaField = {
         | 'toggle'
         | 'text'
         | 'url'
+        | 'urls'
         | 'number'
         | 'checks'
         | 'data_source'

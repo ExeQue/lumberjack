@@ -61,6 +61,7 @@ describe('validating a widget', function () {
         'a clock' => [['id' => 'f', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['timezone' => 'Europe/Copenhagen', 'format' => '12']]],
         'an empty cell' => [['id' => 'g', 'type' => 'empty', 'w' => 3, 'h' => 2]],
         'a camera' => [['id' => 'i', 'type' => 'media', 'w' => 2, 'h' => 2, 'options' => ['media' => 'image', 'media_url' => 'https://cam.example.com/snapshot.jpg?token='.str_repeat('a', 400), 'fit' => 'cover', 'reload_every' => '1']]],
+        'a slideshow' => [['id' => 'j', 'type' => 'media', 'w' => 2, 'h' => 2, 'options' => ['media_url' => "https://example.com/a.jpg\r\n\nhttps://example.com/b.png\n", 'slide_seconds' => '20']]],
     ]);
 
     it('refuses what the type does not take', function (array $widget, string $error) use ($validate) {
@@ -69,6 +70,8 @@ describe('validating a widget', function () {
         'a check that is no uuid' => [['id' => 'e', 'type' => 'health', 'source' => 'checks', 'w' => 1, 'h' => 1, 'options' => ['checks' => ['x']]], 'w.options.checks.0'],
         'a data source that is no uuid' => [['id' => 'a', 'type' => 'stat', 'source' => 'external_json', 'w' => 1, 'h' => 1, 'options' => ['data_source' => 'x']], 'w.options.data_source'],
         'a media address that runs script' => [['id' => 'i', 'type' => 'media', 'w' => 1, 'h' => 1, 'options' => ['media' => 'page', 'media_url' => 'javascript:alert(1)']], 'w.options.media_url'],
+        'a slideshow with one address that runs script' => [['id' => 'i', 'type' => 'media', 'w' => 1, 'h' => 1, 'options' => ['media_url' => "https://example.com/a.jpg\njavascript:alert(1)"]], 'w.options.media_url'],
+        'more slides than a slideshow takes' => [['id' => 'i', 'type' => 'media', 'w' => 1, 'h' => 1, 'options' => ['media_url' => implode("\n", array_fill(0, WidgetSchema::MAX_SLIDES + 1, 'https://example.com/a.jpg'))]], 'w.options.media_url'],
         'an unknown time zone' => [['id' => 'f', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['timezone' => 'Nowhere']], 'w.options.timezone'],
         'a gauge source on a stat' => [['id' => 'a', 'type' => 'stat', 'source' => 'health_uptime', 'w' => 1, 'h' => 1], 'w.source'],
         'a widget that is no object' => [[], 'w'],
