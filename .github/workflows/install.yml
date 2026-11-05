@@ -1,0 +1,73 @@
+name: Install script
+
+# Runs install.sh the way the docs say, with Docker, against the published image:
+# a first install, an update that keeps an edited compose.yaml, and a second run
+# that finds the install and updates it.
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'install.sh'
+      - 'compose.yaml'
+      - '.env.docker.example'
+      - '.github/workflows/install.yml'
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The same three files the docs site serves, from this commit.
+      - name: Serve the install files
+        run: |
+          mkdir -p "$RUNNER_TEMP/site"
+          cp install.sh compose.yaml "$RUNNER_TEMP/site/"
+          cp .env.docker.example "$RUNNER_TEMP/site/env.docker.example"
+          (cd "$RUNNER_TEMP/site" && python3 -m http.server 8999 > /dev/null 2>&1 &)
+          sleep 1
+
+      - name: Install
+        working-directory: ${{ runner.temp }}
+        env:
+          LUMBERJACK_SOURCE: http://localhost:8999
+          APP_URL: http://localhost:8080
+        run: |
+          curl -fsSL "$LUMBERJACK_SOURCE/install.sh" | sh -s docker | tee install.log
+          grep -q 'setup token' install.log
+          test -x lumberjack/update.sh
+          grep -q '^COMPOSE="docker compose"$' lumberjack/update.sh
+          test "$(stat -c %a lumberjack/.env.docker)" = 600
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 200
+
+      - name: Update keeps an edited compose.yaml
+        working-directory: ${{ runner.temp }}
+        run: |
+          echo '# my own tweak' >> lumberjack/compose.yaml
+          before=$(docker inspect -f '{{.Created}}' "$(docker compose -f lumberjack/compose.yaml --env-file lumberjack/.env.docker ps -q lumberjack)")
+          lumberjack/update.sh
+          after=$(docker inspect -f '{{.Created}}' "$(docker compose -f lumberjack/compose.yaml --env-file lumberjack/.env.docker ps -q lumberjack)")
+          test "$before" != "$after"
+          tail -1 lumberjack/compose.yaml | grep -q 'my own tweak'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 200
+
+      - name: A second run finds the install
+        working-directory: ${{ runner.temp }}
+        env:
+          LUMBERJACK_SOURCE: http://localhost:8999
+        run: |
+          curl -fsSL "$LUMBERJACK_SOURCE/install.sh" | sh | tee rerun.log
+          grep -q 'Using docker compose' rerun.log
+          grep -q 'Already installed' rerun.log
+
+      - name: Logs
+        if: failure()
+        working-directory: ${{ runner.temp }}/lumberjack
+        run: docker compose --env-file .env.docker logs --tail 100
