@@ -32,11 +32,11 @@ public stats URL without one.
 | Time range of a series             | at most 90 days and 2,000 points        |
 | Freshness                          | answers can be up to 30 seconds old     |
 
-| Status | When                                                         |
-| ------ | ------------------------------------------------------------ |
-| `401`  | The token is wrong or missing.                               |
+| Status | When                                                                  |
+| ------ | --------------------------------------------------------------------- |
+| `401`  | The token is wrong or missing.                                        |
 | `404`  | The public key is unknown, or the credential cannot read the project. |
-| `422`  | A parameter is invalid.                                      |
+| `422`  | A parameter is invalid.                                               |
 
 Data past a project's [retention](./projects#retention) is deleted and does not show.
 
@@ -57,11 +57,11 @@ Data past a project's [retention](./projects#retention) is deleted and does not 
 
 `{p}` is a project's slug or uuid. The summary and tables take:
 
-| Parameter     | Values                                                                 |
-| ------------- | ---------------------------------------------------------------------- |
-| `period`      | `1h`, `24h` (default), `7d` or `30d`, ending now                       |
-| `environment` | Optional. Only this environment.                                       |
-| `limit`       | Tables only. 100 by default, 50 for releases, at most 500.             |
+| Parameter     | Values                                                     |
+| ------------- | ---------------------------------------------------------- |
+| `period`      | `1h`, `24h` (default), `7d` or `30d`, ending now           |
+| `environment` | Optional. Only this environment.                           |
+| `limit`       | Tables only. 100 by default, 50 for releases, at most 500. |
 
 Durations are in milliseconds, rates and shares are fractions from 0 to 1, and sizes are
 in bytes.

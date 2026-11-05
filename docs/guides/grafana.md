@@ -87,10 +87,10 @@ a project's error rate or p95 crossing a limit.
 
 ## Limits
 
-| What                                | Limit                         |
-| ----------------------------------- | ----------------------------- |
-| Requests per token or public key    | 120 a minute                  |
-| Time range of a series              | 90 days, at most 2,000 points |
+| What                             | Limit                         |
+| -------------------------------- | ----------------------------- |
+| Requests per token or public key | 120 a minute                  |
+| Time range of a series           | 90 days, at most 2,000 points |
 
 ## Reference
 

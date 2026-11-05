@@ -58,14 +58,14 @@ themselves or delete their own account.
 
 ## Command line
 
-| Command                                              | What it does                                                                                                                                                                                                                         |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `php artisan lumberjack:create-user`                 | Creates a user. Takes `--name`, `--email` and `--password`, and asks for any you leave out. `--admin` makes them an administrator. The first user is always one. `--team="Name"` makes them the owner of a new team.                 |
-| `php artisan lumberjack:make-admin {email}`          | Makes an existing user an administrator.                                                                                                                                                                                             |
-| `php artisan lumberjack:make-admin {email} --revoke` | Removes administration, unless they are the last active administrator.                                                                                                                                                               |
-| `php artisan setup:clear`                            | Deletes the setup flag.                                                                                                                                                                                                              |
-| `php artisan lumberjack:prune`                       | Deletes data older than its [retention](./projects#retention). Also runs every day by itself.                                                                                                                                        |
-| `php artisan webpush:vapid --show`                   | Prints a new key pair for [browser notifications](./teams#browser-notifications), to set as `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Keys are generated automatically; set them to keep them across a database restore.          |
+| Command                                              | What it does                                                                                                                                                                                                               |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `php artisan lumberjack:create-user`                 | Creates a user. Takes `--name`, `--email` and `--password`, and asks for any you leave out. `--admin` makes them an administrator. The first user is always one. `--team="Name"` makes them the owner of a new team.       |
+| `php artisan lumberjack:make-admin {email}`          | Makes an existing user an administrator.                                                                                                                                                                                   |
+| `php artisan lumberjack:make-admin {email} --revoke` | Removes administration, unless they are the last active administrator.                                                                                                                                                     |
+| `php artisan setup:clear`                            | Deletes the setup flag.                                                                                                                                                                                                    |
+| `php artisan lumberjack:prune`                       | Deletes data older than its [retention](./projects#retention). Also runs every day by itself.                                                                                                                              |
+| `php artisan webpush:vapid --show`                   | Prints a new key pair for [browser notifications](./teams#browser-notifications), to set as `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Keys are generated automatically; set them to keep them across a database restore. |
 
 New VAPID keys make every browser turn notifications on again.
 
@@ -73,20 +73,20 @@ New VAPID keys make every browser turn notifications on again.
 
 The scheduler runs these by itself.
 
-| Command                                   | Runs           | What it does                                                         |
-| ----------------------------------------- | -------------- | -------------------------------------------------------------------- |
-| `lumberjack:mark-stuck-jobs`              | Every minute   | Marks job runs that outlived their timeout as stuck.                 |
-| `lumberjack:mark-missed-tasks`            | Every minute   | Marks scheduled tasks whose run is overdue as missed.                |
-| `lumberjack:return-ignored-issues`        | Every minute   | Re-opens issues whose ignore period is over.                         |
-| `lumberjack:send-watch-digests`           | Every minute   | Mails watchers the grouped updates on their issues.                  |
-| `lumberjack:check-queue-backlogs`         | Every minute   | Alerts on queues over their backlog threshold, and when they recover. |
-| `lumberjack:run-health-checks`            | Every minute   | Runs the health checks that are due.                                 |
-| `lumberjack:fetch-data-sources`           | Every minute   | Fetches the [external JSON](./widgets#external-json) sources that are due. |
-| `lumberjack:notify-offline-agents`        | Every minute   | Tells members who want it when an agent goes offline.                |
-| `horizon:snapshot`                        | Every 5 minutes | Records queue metrics for the Horizon dashboard.                    |
-| `model:prune`                             | Every hour     | Deletes agents and health check hosts not seen for 24 hours.         |
-| `lumberjack:archive-silent-health-checks` | Every day      | Archives reported health checks that sent nothing for a week.        |
-| `lumberjack:prune`                        | Every day      | Deletes data older than its retention.                               |
+| Command                                   | Runs            | What it does                                                               |
+| ----------------------------------------- | --------------- | -------------------------------------------------------------------------- |
+| `lumberjack:mark-stuck-jobs`              | Every minute    | Marks job runs that outlived their timeout as stuck.                       |
+| `lumberjack:mark-missed-tasks`            | Every minute    | Marks scheduled tasks whose run is overdue as missed.                      |
+| `lumberjack:return-ignored-issues`        | Every minute    | Re-opens issues whose ignore period is over.                               |
+| `lumberjack:send-watch-digests`           | Every minute    | Mails watchers the grouped updates on their issues.                        |
+| `lumberjack:check-queue-backlogs`         | Every minute    | Alerts on queues over their backlog threshold, and when they recover.      |
+| `lumberjack:run-health-checks`            | Every minute    | Runs the health checks that are due.                                       |
+| `lumberjack:fetch-data-sources`           | Every minute    | Fetches the [external JSON](./widgets#external-json) sources that are due. |
+| `lumberjack:notify-offline-agents`        | Every minute    | Tells members who want it when an agent goes offline.                      |
+| `horizon:snapshot`                        | Every 5 minutes | Records queue metrics for the Horizon dashboard.                           |
+| `model:prune`                             | Every hour      | Deletes agents and health check hosts not seen for 24 hours.               |
+| `lumberjack:archive-silent-health-checks` | Every day       | Archives reported health checks that sent nothing for a week.              |
+| `lumberjack:prune`                        | Every day       | Deletes data older than its retention.                                     |
 
 ## Mail
 

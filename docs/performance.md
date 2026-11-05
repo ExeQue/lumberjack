@@ -25,13 +25,13 @@ The pickers are part of the page address, so a link opens with the same choice.
 
 At the top, a card for each key figure, with the change from the period before:
 
-| Card                  | Shows                                                                         |
-| --------------------- | ----------------------------------------------------------------------------- |
-| **Requests**          | Requests in the period                                                        |
-| **Error rate**        | The share of requests that answered 5xx, and how many exceptions were recorded |
-| **p95 response time** | 95% of requests were faster than this. The p50 and p99 show below it          |
-| **Failed jobs**       | The share of job runs that failed, and how many are stuck                     |
-| **Open issues**       | Open issues in all environments, whatever the period                          |
+| Card                  | Shows                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| **Requests**          | Requests in the period                                                              |
+| **Error rate**        | The share of requests that answered 5xx, and how many exceptions were recorded      |
+| **p95 response time** | 95% of requests were faster than this. The p50 and p99 show below it                |
+| **Failed jobs**       | The share of job runs that failed, and how many are stuck                           |
+| **Open issues**       | Open issues in all environments, whatever the period                                |
 | **Health checks**     | How many [health checks](./health) are ok, and how many are down, degraded or stale |
 
 Below the cards, a chip for each health check shows its state in color: red for down,
@@ -223,8 +223,8 @@ Paste a trace id in the [command palette](./finding-things) to open it.
 
 ## Limits
 
-| What                        | Limit                                 |
-| --------------------------- | ------------------------------------- |
-| Queues on the Queues card   | 20                                    |
-| Log lines on the Logs page  | The newest 200 that match the filters |
-| Steps in a trace            | 500                                   |
+| What                       | Limit                                 |
+| -------------------------- | ------------------------------------- |
+| Queues on the Queues card  | 20                                    |
+| Log lines on the Logs page | The newest 200 that match the filters |
+| Steps in a trace           | 500                                   |

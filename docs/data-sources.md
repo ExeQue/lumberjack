@@ -15,14 +15,14 @@ sources of every project in the team.
 
 1. Click **Add data source** and fill in the form:
 
-   | Field               | What to enter                                                                                    |
-   | ------------------- | ------------------------------------------------------------------------------------------------ |
-   | **Name**            | A name to pick it by in widgets.                                                                 |
-   | **URL**             | An `http` or `https` address that Lumberjack sends a `GET` request to. It must be public.         |
-   | **Format**          | **JSON**, **Prometheus** or **iCalendar (.ics)**. See [Formats](#formats).                       |
-   | **Interval**        | How often to fetch it, in minutes. At least 1.                                                   |
-   | **Timeout**         | How long to wait for an answer, in seconds. At most 15.                                          |
-   | **Request headers** | Optional headers sent with each request, such as `Authorization: Bearer …`.                      |
+    | Field               | What to enter                                                                             |
+    | ------------------- | ----------------------------------------------------------------------------------------- |
+    | **Name**            | A name to pick it by in widgets.                                                          |
+    | **URL**             | An `http` or `https` address that Lumberjack sends a `GET` request to. It must be public. |
+    | **Format**          | **JSON**, **Prometheus** or **iCalendar (.ics)**. See [Formats](#formats).                |
+    | **Interval**        | How often to fetch it, in minutes. At least 1.                                            |
+    | **Timeout**         | How long to wait for an answer, in seconds. At most 15.                                   |
+    | **Request headers** | Optional headers sent with each request, such as `Authorization: Bearer …`.               |
 
 2. Click **Add**. The source is fetched within a minute.
 
@@ -72,15 +72,15 @@ show a deleted source go empty.
 
 A failed fetch marks the source **Failed** and shows why:
 
-| Error                                                 | What to do                                                       |
-| ----------------------------------------------------- | ---------------------------------------------------------------- |
-| The server answered HTTP 401 (or another status)      | Check the URL and the headers.                                   |
-| The response is larger than 1024 KB (4096 KB for iCalendar) | Point the URL at a smaller answer.                               |
-| The response is not valid JSON                        | Check the URL, or pick another format.                           |
-| The response has no Prometheus samples                | Use the text format, lines like `name{label="value"} 1`.         |
-| The response is not an iCalendar feed                 | Use an address that answers with text starting `BEGIN:VCALENDAR`. |
-| Its header values cannot be decrypted                 | Save the header values again.                                    |
-| A connection error or timeout                         | Check that the server is reachable and answers within the timeout. |
+| Error                                                       | What to do                                                         |
+| ----------------------------------------------------------- | ------------------------------------------------------------------ |
+| The server answered HTTP 401 (or another status)            | Check the URL and the headers.                                     |
+| The response is larger than 1024 KB (4096 KB for iCalendar) | Point the URL at a smaller answer.                                 |
+| The response is not valid JSON                              | Check the URL, or pick another format.                             |
+| The response has no Prometheus samples                      | Use the text format, lines like `name{label="value"} 1`.           |
+| The response is not an iCalendar feed                       | Use an address that answers with text starting `BEGIN:VCALENDAR`.  |
+| Its header values cannot be decrypted                       | Save the header values again.                                      |
+| A connection error or timeout                               | Check that the server is reachable and answers within the timeout. |
 
 Widgets keep showing the last good answer.
 
@@ -108,14 +108,14 @@ See [retention](./projects#retention), under **Data source history**.
 
 ## Limits
 
-| What                       | Limit                                         |
-| -------------------------- | --------------------------------------------- |
-| Name                       | 150 characters                                |
-| URL                        | 2000 characters                               |
-| Interval                   | 1 to 1440 minutes                             |
-| Timeout                    | 1 to 15 seconds                               |
-| Request headers            | 20                                            |
-| Answer size                | 1 MB, 4 MB for an iCalendar feed              |
-| Answer kept for charts     | 64 KB. Larger answers are only used as latest |
-| Redirects                  | 3                                             |
-| **Fetch now**              | 10 a minute                                   |
+| What                   | Limit                                         |
+| ---------------------- | --------------------------------------------- |
+| Name                   | 150 characters                                |
+| URL                    | 2000 characters                               |
+| Interval               | 1 to 1440 minutes                             |
+| Timeout                | 1 to 15 seconds                               |
+| Request headers        | 20                                            |
+| Answer size            | 1 MB, 4 MB for an iCalendar feed              |
+| Answer kept for charts | 64 KB. Larger answers are only used as latest |
+| Redirects              | 3                                             |
+| **Fetch now**          | 10 a minute                                   |

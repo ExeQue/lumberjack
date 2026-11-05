@@ -54,20 +54,20 @@ placeholder hosts, so they turn red after a couple of hours of the scheduler run
 
 Every password is `password`.
 
-| Account             | Team           | Role                               |
-| ------------------- | -------------- | ---------------------------------- |
-| `admin@lumberjack`  | Local Team     | Owner, and administers Lumberjack  |
-| `sofie@lumberjack`  | Local Team     | Admin                              |
-| `jonas@lumberjack`  | Local Team     | Member                             |
-| `maja@lumberjack`   | Local Team     | Admin                              |
-| `oskar@lumberjack`  | Local Team     | Member                             |
-| `ida@lumberjack`    | Local Team     | Member                             |
-| `eve@lumberjack`    | Acme Agency    | Owner                              |
-| `noah@lumberjack`   | Acme Agency    | Member                             |
-| `clara@lumberjack`  | Acme Agency    | Admin                              |
-| `freja@lumberjack`  | Northwind Labs | Owner                              |
-| `emil@lumberjack`   | Northwind Labs | Admin                              |
-| `asta@lumberjack`   | Northwind Labs | Member                             |
+| Account            | Team           | Role                              |
+| ------------------ | -------------- | --------------------------------- |
+| `admin@lumberjack` | Local Team     | Owner, and administers Lumberjack |
+| `sofie@lumberjack` | Local Team     | Admin                             |
+| `jonas@lumberjack` | Local Team     | Member                            |
+| `maja@lumberjack`  | Local Team     | Admin                             |
+| `oskar@lumberjack` | Local Team     | Member                            |
+| `ida@lumberjack`   | Local Team     | Member                            |
+| `eve@lumberjack`   | Acme Agency    | Owner                             |
+| `noah@lumberjack`  | Acme Agency    | Member                            |
+| `clara@lumberjack` | Acme Agency    | Admin                             |
+| `freja@lumberjack` | Northwind Labs | Owner                             |
+| `emil@lumberjack`  | Northwind Labs | Admin                             |
+| `asta@lumberjack`  | Northwind Labs | Member                            |
 
 ### Projects
 
@@ -110,13 +110,13 @@ npm run docs:screenshots -- issues jobs # only these
 
 The script only opens pages and dialogs. It reads these environment variables:
 
-| Variable         | Default                     | Used for                                  |
-| ---------------- | --------------------------- | ----------------------------------------- |
-| `LUMBERJACK_URL` | `https://lumberjack.test`   | The Lumberjack to open                    |
-| `DOCS_EMAIL`     | `admin@lumberjack`          | Sign-in email                             |
-| `DOCS_PASSWORD`  | `password`                  | Sign-in password                          |
-| `DOCS_PROJECT`   | `Storefront`                | The project to show                       |
-| `CHROME_PATH`    | the Chrome Puppeteer downloaded | A Chrome or Chromium to use instead   |
+| Variable         | Default                         | Used for                            |
+| ---------------- | ------------------------------- | ----------------------------------- |
+| `LUMBERJACK_URL` | `https://lumberjack.test`       | The Lumberjack to open              |
+| `DOCS_EMAIL`     | `admin@lumberjack`              | Sign-in email                       |
+| `DOCS_PASSWORD`  | `password`                      | Sign-in password                    |
+| `DOCS_PROJECT`   | `Storefront`                    | The project to show                 |
+| `CHROME_PATH`    | the Chrome Puppeteer downloaded | A Chrome or Chromium to use instead |
 
 ```bash
 CHROME_PATH=/usr/bin/chromium npm run docs:screenshots

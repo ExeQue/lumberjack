@@ -10,16 +10,16 @@ A channel is where alerts go. It belongs to the team, and every project can use 
 1. Open **Team** in the sidebar, then **Alerts**.
 2. Click **Add new channel** and pick where alerts go:
 
-    | Channel         | You need                                                  |
-    | --------------- | --------------------------------------------------------- |
-    | Mail            | An email address.                                         |
-    | Slack           | An incoming webhook URL.                                  |
-    | Discord         | A channel webhook URL.                                    |
-    | Microsoft Teams | A Workflows webhook URL.                                  |
-    | Telegram        | A bot token and a chat id. The bot must be in the chat.   |
-    | ntfy            | A topic URL, and an access token for a protected topic.   |
-    | Pushover        | Your user or group key and an application token.          |
-    | Webhook         | Your own endpoint. Set it up in a project's settings.     |
+    | Channel         | You need                                                |
+    | --------------- | ------------------------------------------------------- |
+    | Mail            | An email address.                                       |
+    | Slack           | An incoming webhook URL.                                |
+    | Discord         | A channel webhook URL.                                  |
+    | Microsoft Teams | A Workflows webhook URL.                                |
+    | Telegram        | A bot token and a chat id. The bot must be in the chat. |
+    | ntfy            | A topic URL, and an access token for a protected topic. |
+    | Pushover        | Your user or group key and an application token.        |
+    | Webhook         | Your own endpoint. Set it up in a project's settings.   |
 
 3. Follow the hint in the dialog to find the URL or keys, name the channel and save.
 4. Click **Send test** on the channel.
@@ -34,17 +34,17 @@ side refused the message: check the URL or keys.
 Under **Rules** on the same page, each rule is on or off and sends to the channels you
 tick. A new channel is added to the rules that are on.
 
-| Rule                   | Tells you about                                         | Default |
-| ---------------------- | ------------------------------------------------------- | ------- |
-| New issue              | The first occurrence of a new error.                    | On      |
-| Regression             | A resolved issue that happens again.                    | On      |
-| Escalation             | An issue that suddenly happens far more often.          | On      |
+| Rule                   | Tells you about                                          | Default |
+| ---------------------- | -------------------------------------------------------- | ------- |
+| New issue              | The first occurrence of a new error.                     | On      |
+| Regression             | A resolved issue that happens again.                     | On      |
+| Escalation             | An issue that suddenly happens far more often.           | On      |
 | Queue backlog          | A queue with too many jobs waiting, or waiting too long. | On      |
-| Health check degraded  | A health check that keeps warning or starts failing.    | On      |
-| Health check down      | A health check that keeps failing.                      | On      |
-| Health check recovered | A health check that is ok again.                        | On      |
-| Note                   | Every note written on an issue.                         | Off     |
-| Resolved or ignored    | Every issue someone resolves or ignores.                | Off     |
+| Health check degraded  | A health check that keeps warning or starts failing.     | On      |
+| Health check down      | A health check that keeps failing.                       | On      |
+| Health check recovered | A health check that is ok again.                         | On      |
+| Note                   | Every note written on an issue.                          | Off     |
+| Resolved or ignored    | Every issue someone resolves or ignores.                 | Off     |
 
 To alert only on production, type `production` in **Environments**. Empty means every
 environment.
