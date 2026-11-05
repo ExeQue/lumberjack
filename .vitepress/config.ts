@@ -6,7 +6,8 @@ export default defineConfig({
     title: 'Lumberjack',
     description:
         'Self-hosted error tracking, logs and performance monitoring for Laravel.',
-    base: '/lumberjack/',
+    // GitHub Pages serves the docs under /lumberjack/; the lerd docs worker serves them at the root of its subdomain.
+    base: process.env.DOCS_BASE ?? '/lumberjack/',
     lastUpdated: true,
     cleanUrls: true,
 
@@ -57,6 +58,8 @@ export default defineConfig({
         // Not the app's vite.config.ts: its plugins (Wayfinder runs artisan) have no place in the docs.
         configFile: false,
         server: {
+            // Served through lerd on docs.lumberjack.test, which Vite would otherwise refuse.
+            allowedHosts: ['.test'],
             watch: {
                 ignored: [
                     '**/vendor/**',
