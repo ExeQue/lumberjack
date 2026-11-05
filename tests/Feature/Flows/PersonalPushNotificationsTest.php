@@ -85,7 +85,7 @@ describe('new issues and scheduled tasks', function () {
 
         app(SendIssueAlertsAction::class)->execute($task, AlertRuleType::NewIssue, 'production');
 
-        $this->assertPushed($this->alice, ScheduledTaskNotification::class);
+        $this->assertPushed($this->alice, ScheduledTaskNotification::class, fn (ScheduledTaskNotification $n): bool => $n->message->title === 'Scheduled task missed: reports:send');
         $this->assertPushed($this->bob, ScheduledTaskNotification::class);
         Notification::assertNotSentTo($this->alice, NewIssueNotification::class);
     });
