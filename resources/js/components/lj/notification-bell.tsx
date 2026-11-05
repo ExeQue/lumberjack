@@ -148,48 +148,53 @@ export function NotificationBell() {
                         {t('notifications.empty')}
                     </p>
                 ) : (
-                    items.map((item) => {
-                        const Icon = NOTIFICATION_KINDS[item.kind] ?? Bell;
+                    // Header and footer stay; the list scrolls within what fits on screen.
+                    <div className="max-h-[calc(var(--radix-dropdown-menu-content-available-height)-6rem)] overflow-y-auto">
+                        {items.map((item) => {
+                            const Icon = NOTIFICATION_KINDS[item.kind] ?? Bell;
 
-                        return (
-                            <DropdownMenuItem
-                                key={item.id}
-                                onSelect={() => open(item)}
-                                className="items-start gap-2.5"
-                            >
-                                <Icon
-                                    className="mt-0.5 size-4 shrink-0 text-ink-3"
-                                    aria-hidden="true"
-                                />
-                                <span className="flex min-w-0 flex-1 flex-col">
-                                    <span
-                                        className={cn(
-                                            'truncate',
-                                            !item.read && 'font-medium',
-                                        )}
-                                    >
-                                        {item.title}
-                                    </span>
-                                    <span className="truncate text-[12px] text-ink-3">
-                                        {item.body}
-                                    </span>
-                                    <span className="truncate text-[11px] text-ink-3">
-                                        {[item.project, item.team]
-                                            .filter(Boolean)
-                                            .join(' · ')}
-                                        {item.project && ' · '}
-                                        <Relative iso={item.created_at} />
-                                    </span>
-                                </span>
-                                {!item.read && (
-                                    <span
-                                        className="mt-1.5 size-2 shrink-0 rounded-full bg-amber"
-                                        aria-label={t('notifications.unread')}
+                            return (
+                                <DropdownMenuItem
+                                    key={item.id}
+                                    onSelect={() => open(item)}
+                                    className="items-start gap-2.5"
+                                >
+                                    <Icon
+                                        className="mt-0.5 size-4 shrink-0 text-ink-3"
+                                        aria-hidden="true"
                                     />
-                                )}
-                            </DropdownMenuItem>
-                        );
-                    })
+                                    <span className="flex min-w-0 flex-1 flex-col">
+                                        <span
+                                            className={cn(
+                                                'truncate',
+                                                !item.read && 'font-medium',
+                                            )}
+                                        >
+                                            {item.title}
+                                        </span>
+                                        <span className="truncate text-[12px] text-ink-3">
+                                            {item.body}
+                                        </span>
+                                        <span className="truncate text-[11px] text-ink-3">
+                                            {[item.project, item.team]
+                                                .filter(Boolean)
+                                                .join(' · ')}
+                                            {item.project && ' · '}
+                                            <Relative iso={item.created_at} />
+                                        </span>
+                                    </span>
+                                    {!item.read && (
+                                        <span
+                                            className="mt-1.5 size-2 shrink-0 rounded-full bg-amber"
+                                            aria-label={t(
+                                                'notifications.unread',
+                                            )}
+                                        />
+                                    )}
+                                </DropdownMenuItem>
+                            );
+                        })}
+                    </div>
                 )}
                 <DropdownMenuSeparator />
                 <div className="flex items-center justify-between">
