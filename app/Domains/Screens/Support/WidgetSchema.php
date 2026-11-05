@@ -504,8 +504,9 @@ final class WidgetSchema
                 $section('media', [
                     $select('media', ['image', 'video', 'page'], 'image', false, 2),
                     ['key' => 'media_url', 'type' => 'url', 'default' => null, 'data' => false, 'span' => 2],
-                    ['key' => 'fit', 'type' => 'select', 'options' => ['contain', 'cover'], 'default' => 'contain', 'data' => false, 'span' => 1, 'when' => ['media' => ['image', 'video']]],
+                    ['key' => 'fit', 'type' => 'select', 'options' => ['contain', 'cover', 'fill', 'none', 'scale-down'], 'default' => 'contain', 'data' => false, 'span' => 1, 'when' => ['media' => ['image', 'video']]],
                     ['key' => 'reload_every', 'type' => 'select', 'options' => ['never', '1', '5', '15', '60'], 'default' => 'never', 'data' => false, 'span' => 1, 'when' => ['media' => ['image', 'page']]],
+                    $toggle('padding', true),
                     $text('caption', 2),
                 ]),
                 $display(false),
