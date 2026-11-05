@@ -82,6 +82,7 @@ export default defineConfig({
                 items: [
                     { text: 'Introduction', link: '/' },
                     { text: 'Running with Docker', link: '/docs/docker' },
+                    { text: 'Libraries', link: '/docs/libraries' },
                 ],
             },
             {
