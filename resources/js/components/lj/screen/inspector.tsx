@@ -7,7 +7,7 @@ import {
     useSyncExternalStore,
 } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Input, Label, Select } from '@/components/lj/ui';
+import { Button, Input, inputClass, Label, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { PATH_FIELDS, PathConfig, useJsonPreview } from './json-path-help';
@@ -929,6 +929,36 @@ export function WidgetInspector({
                                 </option>
                             ))}
                         </Select>
+                    </div>
+                );
+            case 'urls':
+                return (
+                    <div
+                        key={field.key}
+                        className={cn('flex flex-col gap-1', span)}
+                    >
+                        <Label
+                            htmlFor={id(field.key)}
+                            className="text-xs text-ink-2"
+                        >
+                            {fieldLabel(field.key)}
+                        </Label>
+                        <textarea
+                            id={id(field.key)}
+                            rows={3}
+                            wrap="off"
+                            value={String(raw ?? '')}
+                            placeholder={t(
+                                `screens.fields.${field.key}.placeholder`,
+                            )}
+                            onChange={(e) =>
+                                setOption(field.key, e.target.value)
+                            }
+                            className={cn(inputClass, 'h-auto resize-y py-2')}
+                        />
+                        <span className="text-xs text-ink-3">
+                            {t(`screens.fields.${field.key}.hint`)}
+                        </span>
                     </div>
                 );
             case 'timezone':

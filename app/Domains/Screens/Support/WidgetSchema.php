@@ -48,6 +48,9 @@ final class WidgetSchema
 
     public const int MAX_WIDGETS = 48;
 
+    /** Addresses one media widget shows in turn. */
+    public const int MAX_SLIDES = 20;
+
     public const int MAX_ROTATE = 12;
 
     /** Longest a rotated value may stay on screen, in seconds. */
@@ -73,6 +76,16 @@ final class WidgetSchema
     public static function isDataType(string $type): bool
     {
         return WidgetType::tryFrom($type) !== null;
+    }
+
+    /**
+     * The non-empty lines of a multi-line option, trimmed.
+     *
+     * @return list<string>
+     */
+    public static function lines(string $value): array
+    {
+        return array_values(array_filter(array_map(trim(...), preg_split('/\R/', $value) ?: []), fn (string $line): bool => $line !== ''));
     }
 
     /**
@@ -237,8 +250,22 @@ final class WidgetSchema
                 'checks' => ['nullable', 'array', 'max:50'],
                 'data_source' => ['nullable', 'string', 'uuid'],
                 'timezone' => ['nullable', 'timezone:all'],
-                // A media address may be long (signed links) and is only ever http(s).
-                'url' => ['nullable', 'string', 'max:2000', 'url:http,https'],
+                // Media addresses, one a line: long ones (signed links) too, only ever http(s).
+                'urls' => ['nullable', 'string', 'max:20000', function (string $attribute, mixed $value, Closure $fail): void {
+                    $lines = self::lines((string) $value);
+
+                    if (count($lines) > self::MAX_SLIDES) {
+                        $fail(__('validation.max.array', ['attribute' => $attribute, 'max' => self::MAX_SLIDES]));
+                    }
+
+                    foreach ($lines as $line) {
+                        if (strlen($line) > 2000 || ! preg_match('~^https?://~i', $line) || filter_var($line, FILTER_VALIDATE_URL) === false) {
+                            $fail(__('validation.url', ['attribute' => $attribute]));
+
+                            return;
+                        }
+                    }
+                }],
                 default => ['nullable', 'string', 'max:200'],
             };
 
@@ -503,7 +530,8 @@ final class WidgetSchema
             'media' => [
                 $section('media', [
                     $select('media', ['image', 'video', 'page'], 'image', false, 2),
-                    ['key' => 'media_url', 'type' => 'url', 'default' => null, 'data' => false, 'span' => 2],
+                    ['key' => 'media_url', 'type' => 'urls', 'default' => null, 'data' => false, 'span' => 2],
+                    ['key' => 'slide_seconds', 'type' => 'select', 'options' => ['5', '10', '20', '30', '60', '300'], 'default' => '10', 'data' => false, 'span' => 2],
                     ['key' => 'fit', 'type' => 'select', 'options' => ['contain', 'cover', 'fill', 'none', 'scale-down'], 'default' => 'contain', 'data' => false, 'span' => 2, 'when' => ['media' => ['image', 'video']]],
                     ['key' => 'reload_every', 'type' => 'select', 'options' => ['never', '1', '5', '15', '60'], 'default' => 'never', 'data' => false, 'span' => 2, 'when' => ['media' => ['image', 'page']]],
                     ['key' => 'subtitles', 'type' => 'toggle', 'default' => false, 'data' => false, 'span' => 2, 'when' => ['media' => ['page']]],

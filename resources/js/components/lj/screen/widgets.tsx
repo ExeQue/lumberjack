@@ -2200,7 +2200,19 @@ function MediaTile({
     const t = useT();
     const opt = <T,>(key: string) => option<T>(schema, widget, key);
     const kind = opt<string>('media') ?? 'image';
-    const url = webUrl(opt<string | null>('media_url'));
+    // One address a line; several take turns, by the clock, so every TV shows the same.
+    const lines = (opt<string | null>('media_url') ?? '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    const seconds = Number(opt<string>('slide_seconds')) || 10;
+    const slide =
+        lines.length > 1
+            ? Math.floor(now / (seconds * 1000)) % lines.length
+            : 0;
+    const url = webUrl(lines[slide] ?? null);
+    const next =
+        lines.length > 1 ? webUrl(lines[(slide + 1) % lines.length]) : null;
     const caption = opt<string>('caption');
     const fit =
         (
@@ -2219,7 +2231,8 @@ function MediaTile({
         url && kind === 'image' && every > 0
             ? `${url}${url.includes('?') ? '&' : '?'}_lj=${round}`
             : url;
-    const box = 'min-h-0 w-full flex-1 pointer-events-none';
+    const box =
+        'min-h-0 w-full flex-1 pointer-events-none animate-in fade-in duration-700';
 
     let body: ReactNode;
 
@@ -2227,7 +2240,7 @@ function MediaTile({
         body = (
             <span className="lj-tile-small m-auto">
                 {t(
-                    opt<string | null>('media_url')
+                    lines.length > 0
                         ? 'screens.media.invalid'
                         : 'screens.media.empty',
                 )}
@@ -2269,6 +2282,7 @@ function MediaTile({
     } else {
         body = (
             <img
+                key={source}
                 src={source}
                 alt={caption || widget.title || ''}
                 className={cn(box, fit)}
@@ -2281,6 +2295,10 @@ function MediaTile({
     return (
         <>
             {body}
+            {/* The next image loads ahead, so the turn shows it at once. */}
+            {kind === 'image' && next && next !== url && (
+                <link rel="preload" as="image" href={next} />
+            )}
             {caption && (
                 <span className="lj-tile-small lj-tile-pad shrink-0 text-center">
                     {caption}
