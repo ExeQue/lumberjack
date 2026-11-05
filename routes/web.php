@@ -219,7 +219,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('present/screens/{screen:uuid}', [ScreenController::class, 'destroy'])->name('screens.destroy');
     Route::put('present/screens/{screen:uuid}/share', [ScreenShareController::class, 'update'])->name('screens.share');
     Route::post('present/screens/{screen:uuid}/share/rotate', [ScreenShareController::class, 'rotate'])->name('screens.share.rotate');
-    Route::get('present/screens/{screen:uuid}/share/qr', [ScreenShareController::class, 'qr'])->name('screens.share.qr');
 
     // Pairing a TV by the code it shows, and the team's paired TVs.
     Route::get('pair', [PairController::class, 'index'])->name('pair');
