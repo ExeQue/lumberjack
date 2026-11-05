@@ -5,7 +5,7 @@ import { defineConfig } from 'vitepress';
 export default defineConfig({
     title: 'Lumberjack',
     description:
-        'Self-hosted error tracking, logs and performance monitoring for Laravel.',
+        'Self-hosted error tracking, logs and performance monitoring for any app, whatever it is built with.',
     // GitHub Pages serves the docs under /lumberjack/; the lerd docs worker serves them at the root of its subdomain.
     base: process.env.DOCS_BASE ?? '/lumberjack/',
     lastUpdated: true,
