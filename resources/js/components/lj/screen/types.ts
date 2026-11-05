@@ -34,6 +34,8 @@ export type WidgetKind =
     | 'list'
     | 'health'
     | 'clock'
+    | 'countdown'
+    | 'message'
     | 'qr'
     | 'media'
     | 'empty';
@@ -86,6 +88,9 @@ export type SchemaField = {
         | 'text'
         | 'url'
         | 'urls'
+        | 'timezones'
+        | 'datetime'
+        | 'textarea'
         | 'number'
         | 'checks'
         | 'data_source'
@@ -142,7 +147,17 @@ export const DATA_KINDS: WidgetKind[] = [
 /** Addresses one media widget shows in turn; WidgetSchema::MAX_SLIDES. */
 export const MAX_SLIDES = 20;
 
-export const LAYOUT_KINDS: WidgetKind[] = ['clock', 'qr', 'media', 'empty'];
+/** Extra time zones one clock shows; WidgetSchema::MAX_ZONES. */
+export const MAX_ZONES = 12;
+
+export const LAYOUT_KINDS: WidgetKind[] = [
+    'clock',
+    'countdown',
+    'message',
+    'qr',
+    'media',
+    'empty',
+];
 export const ROTATING_KINDS: WidgetKind[] = [
     'stat',
     'gauge',

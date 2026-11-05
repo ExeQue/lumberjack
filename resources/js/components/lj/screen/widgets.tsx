@@ -433,7 +433,13 @@ export function WidgetTile({
     const payload = sourceId ? previewData?.[keys[index]] : undefined;
     const source = sources[widget.type]?.find((s) => s.id === sourceId);
     const colored = opt<boolean>('status_colors') !== false;
-    const status: Status = colored ? statusOf(widget.type, payload) : null;
+    // A message's tone colors its tile like a status: info blue, warning amber, critical red.
+    const status: Status =
+        widget.type === 'message'
+            ? (MESSAGE_TONE[opt<string>('tone') ?? 'plain'] ?? null)
+            : colored
+              ? statusOf(widget.type, payload)
+              : null;
     // One picked health check names the tile after itself unless it has a title.
     const single = (payload?.check as { name?: string } | null | undefined)
         ?.name;
@@ -506,6 +512,10 @@ export function WidgetTile({
                 {t('screens.kinds.empty')}
             </span>
         ) : null;
+    } else if (widget.type === 'countdown') {
+        body = <Countdown widget={widget} schema={schema} now={now} />;
+    } else if (widget.type === 'message') {
+        body = <Message widget={widget} schema={schema} />;
     } else if (widget.type === 'media') {
         body = <MediaTile widget={widget} schema={schema} now={now} />;
     } else if (widget.type === 'qr') {
@@ -2460,6 +2470,111 @@ function QrCodeTile({
     );
 }
 
+const MESSAGE_TONE: Record<string, Status> = {
+    info: 'recovering',
+    warning: 'degraded',
+    critical: 'down',
+};
+
+/** A note for the room, still or running across the tile like a ticker. */
+function Message({ widget, schema }: { widget: Widget; schema: Schema }) {
+    const opt = <T,>(key: string) => option<T>(schema, widget, key);
+    const text = opt<string | null>('message') ?? '';
+    const size: CSSProperties = {
+        fontSize: BIG_SIZE[opt<string>('text_size') ?? 'auto'],
+    };
+
+    if (opt<boolean>('scroll')) {
+        return (
+            <div className="relative min-h-0 w-full flex-1 overflow-hidden">
+                <span
+                    className="lj-ticker absolute top-1/2 left-0 -translate-y-1/2 font-semibold whitespace-nowrap"
+                    style={size}
+                >
+                    {text.replace(/\s*\n\s*/g, '  ·  ')}
+                </span>
+            </div>
+        );
+    }
+
+    return (
+        <span className="font-semibold whitespace-pre-line" style={size}>
+            {text}
+        </span>
+    );
+}
+
+/**
+ * The time left until a moment, in each TV's own time: days and hours while far off,
+ * a clock in the last day. After it: the time since, zero, or nothing.
+ */
+function Countdown({
+    widget,
+    schema,
+    now,
+}: {
+    widget: Widget;
+    schema: Schema;
+    now: number;
+}) {
+    const t = useT();
+    const opt = <T,>(key: string) => option<T>(schema, widget, key);
+    const target = opt<string | null>('target');
+    const label = opt<string | null>('countdown_label');
+    const after = opt<string>('after') ?? 'since';
+    const seconds = opt<boolean>('seconds') !== false;
+    const size: CSSProperties = {
+        fontSize: BIG_SIZE[opt<string>('text_size') ?? 'auto'],
+    };
+    const at = target ? new Date(target).getTime() : NaN;
+
+    if (Number.isNaN(at)) {
+        return (
+            <span className="lj-tile-small m-auto">
+                {t('screens.countdown.empty')}
+            </span>
+        );
+    }
+
+    const past = now >= at;
+    const left = Math.floor(
+        (past ? (after === 'since' ? now - at : 0) : at - now) / 1000,
+    );
+
+    if (past && after === 'hide') {
+        return label ? <span className="lj-tile-small">{label}</span> : null;
+    }
+
+    const days = Math.floor(left / 86400);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const clock = [
+        Math.floor((left % 86400) / 3600),
+        Math.floor((left % 3600) / 60),
+        ...(seconds ? [left % 60] : []),
+    ]
+        .map(pad)
+        .join(':');
+
+    return (
+        <>
+            <span className="lj-tile-big tabular-nums" style={size}>
+                {days > 0
+                    ? t('screens.countdown.days', { days, time: clock }, days)
+                    : clock}
+            </span>
+            {(label || (past && after === 'since')) && (
+                <span className="lj-tile-small">
+                    {past && after === 'since'
+                        ? label
+                            ? t('screens.countdown.since', { label })
+                            : t('screens.countdown.since_then')
+                        : label}
+                </span>
+            )}
+        </>
+    );
+}
+
 function Clock({
     widget,
     schema,
@@ -2490,6 +2605,11 @@ function Clock({
         month: 'long',
     }).format(new Date(now));
     const text = opt<string>('text');
+    // A world clock: more zones under the main time.
+    const zones = (opt<string | null>('zones') ?? '')
+        .split('\n')
+        .map((zone) => zone.trim())
+        .filter(Boolean);
     const size: CSSProperties = {
         fontSize: BIG_SIZE[opt<string>('text_size') ?? 'auto'],
     };
@@ -2503,6 +2623,28 @@ function Clock({
             )}
             {opt<boolean>('date') && (
                 <span className="lj-tile-small">{date}</span>
+            )}
+            {zones.length > 0 && (
+                <ul className="mt-[0.3em] grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-[0.8em] gap-y-[0.15em] text-left">
+                    {zones.map((zone) => (
+                        <li key={zone} className="contents">
+                            <span className="truncate text-(--s-ink-2)">
+                                {zone.split('/').pop()?.replace(/_/g, ' ')}
+                            </span>
+                            <span className="font-mono tabular-nums">
+                                {new Intl.DateTimeFormat(lang, {
+                                    timeZone: zone,
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hourCycle:
+                                        opt<string>('format') === '12'
+                                            ? 'h12'
+                                            : 'h23',
+                                }).format(new Date(now))}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
             )}
             {mode !== 'clock' && text && (
                 <span
