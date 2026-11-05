@@ -2578,7 +2578,11 @@ function Countdown({
                 </span>
             )}
             {(label || (past && after === 'since')) && (
-                <span className="lj-tile-small">
+                // With the tile, as the numbers are: a third of their height or so.
+                <span
+                    className="whitespace-nowrap text-(--s-ink-2)"
+                    style={{ fontSize: 'min(13cqh, 5.5cqw)' }}
+                >
                     {past && after === 'since'
                         ? label
                             ? t('screens.countdown.since', { label })
