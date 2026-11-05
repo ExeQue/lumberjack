@@ -9,6 +9,7 @@ use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Shared\Enums\Period;
 use Closure;
+use DateTimeZone;
 use Illuminate\Validation\Rule;
 
 /**
@@ -18,7 +19,7 @@ use Illuminate\Validation\Rule;
  *
  * A widget is {id, type, source, rotate, x, y, w, h, title, options, scope}, x and y its
  * 0-based column and row (see ScreenLayout). Data types are the
- * WidgetType cases and show a source of WidgetSources; clock, qr, media and empty need none (a qr
+ * WidgetType cases and show a source of WidgetSources; the LAYOUT_TYPES need none (a qr
  * code's picture comes with the data all the same, drawn on the server). Options
  * live in sections of fields: select (one of its values), toggle, text, number, checks
  * (health check uuids), data_source (a data source uuid). A field with sources shows only
@@ -38,7 +39,7 @@ use Illuminate\Validation\Rule;
 final class WidgetSchema
 {
     /** Widgets drawn by the client alone, without a source. */
-    public const array LAYOUT_TYPES = ['clock', 'qr', 'media', 'empty'];
+    public const array LAYOUT_TYPES = ['clock', 'countdown', 'message', 'qr', 'media', 'empty'];
 
     /** Types that can rotate through several sources on one tile. */
     public const array ROTATING_TYPES = ['stat', 'gauge', 'chart', 'list', 'health'];
@@ -50,6 +51,9 @@ final class WidgetSchema
 
     /** Addresses one media widget shows in turn. */
     public const int MAX_SLIDES = 20;
+
+    /** Extra time zones one clock shows. */
+    public const int MAX_ZONES = 12;
 
     public const int MAX_ROTATE = 12;
 
@@ -266,6 +270,16 @@ final class WidgetSchema
                         }
                     }
                 }],
+                'timezones' => ['nullable', 'string', 'max:2000', function (string $attribute, mixed $value, Closure $fail): void {
+                    $zones = self::lines((string) $value);
+
+                    if (count($zones) > self::MAX_ZONES || array_diff($zones, timezone_identifiers_list(DateTimeZone::ALL_WITH_BC)) !== []) {
+                        $fail(__('validation.timezone', ['attribute' => $attribute]));
+                    }
+                }],
+                // A local date and time, as an <input type="datetime-local"> gives it.
+                'datetime' => ['nullable', 'date_format:Y-m-d\TH:i'],
+                'textarea' => ['nullable', 'string', 'max:500'],
                 default => ['nullable', 'string', 'max:200'],
             };
 
@@ -514,9 +528,28 @@ final class WidgetSchema
                     $select('mode', ['clock', 'text', 'both'], 'clock'),
                     $select('format', ['24', '12'], '24'),
                     $text('timezone', 2, 'timezone'),
+                    // More clocks beside it, one a zone, for a world clock.
+                    ['key' => 'zones', 'type' => 'timezones', 'default' => null, 'data' => false, 'span' => 2],
                     $toggle('seconds', false),
                     $toggle('date', false),
                     $text('text', 2),
+                ]),
+                $display(false),
+            ],
+            'countdown' => [
+                $section('countdown', [
+                    ['key' => 'target', 'type' => 'datetime', 'default' => null, 'data' => false, 'span' => 2],
+                    $text('countdown_label', 2),
+                    $select('after', ['since', 'zero', 'hide'], 'since', false, 2),
+                    $toggle('seconds', true),
+                ]),
+                $display(false),
+            ],
+            'message' => [
+                $section('message', [
+                    ['key' => 'message', 'type' => 'textarea', 'default' => null, 'data' => false, 'span' => 2],
+                    $select('tone', ['plain', 'info', 'warning', 'critical'], 'plain', false, 2),
+                    $toggle('scroll', false),
                 ]),
                 $display(false),
             ],

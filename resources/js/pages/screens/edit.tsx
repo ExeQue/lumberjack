@@ -133,6 +133,8 @@ const STARTERS: Record<WidgetKind, string | null> = {
     list: 'latest_issues',
     health: 'checks',
     clock: null,
+    countdown: null,
+    message: null,
     qr: null,
     media: null,
     empty: null,

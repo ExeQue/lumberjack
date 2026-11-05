@@ -7,7 +7,7 @@ import {
     useSyncExternalStore,
 } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Input, Label, Select } from '@/components/lj/ui';
+import { Button, Input, inputClass, Label, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { PATH_FIELDS, PathConfig, useJsonPreview } from './json-path-help';
@@ -22,7 +22,7 @@ import type {
     Widget,
     WidgetScope,
 } from './types';
-import { MAX_SLIDES, ROTATING_KINDS } from './types';
+import { MAX_SLIDES, MAX_ZONES, ROTATING_KINDS } from './types';
 
 export type Catalog = {
     schema: Schema;
@@ -935,9 +935,16 @@ export function WidgetInspector({
                         </Select>
                     </div>
                 );
-            case 'urls': {
-                // Kept as one address a line; edited as a row each, empty rows included.
-                const urls = String(raw ?? '').split('\n');
+            case 'urls':
+            case 'timezones': {
+                // Kept as one value a line; edited as a row each, empty rows included.
+                const zones = field.type === 'timezones';
+                const urls =
+                    raw === undefined || raw === null || raw === ''
+                        ? zones
+                            ? []
+                            : ['']
+                        : String(raw).split('\n');
                 const setUrls = (list: string[]) =>
                     setOption(field.key, list.join('\n'));
 
@@ -954,27 +961,47 @@ export function WidgetInspector({
                         </Label>
                         {urls.map((url, i) => (
                             <div key={i} className="flex gap-1">
-                                <Input
-                                    id={id(`${field.key}-${i}`)}
-                                    type="url"
-                                    className="min-w-0 flex-1"
-                                    value={url}
-                                    placeholder={t(
-                                        `screens.fields.${field.key}.placeholder`,
-                                    )}
-                                    onChange={(e) =>
-                                        setUrls(
-                                            urls.map((u, j) =>
-                                                j === i ? e.target.value : u,
-                                            ),
-                                        )
-                                    }
-                                />
-                                {urls.length > 1 && (
+                                {zones ? (
+                                    <div className="min-w-0 flex-1">
+                                        <TimezoneInput
+                                            id={id(`${field.key}-${i}`)}
+                                            value={url}
+                                            onChange={(zone) =>
+                                                setUrls(
+                                                    urls.map((u, j) =>
+                                                        j === i ? zone : u,
+                                                    ),
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                ) : (
+                                    <Input
+                                        id={id(`${field.key}-${i}`)}
+                                        type="url"
+                                        className="min-w-0 flex-1"
+                                        value={url}
+                                        placeholder={t(
+                                            `screens.fields.${field.key}.placeholder`,
+                                        )}
+                                        onChange={(e) =>
+                                            setUrls(
+                                                urls.map((u, j) =>
+                                                    j === i
+                                                        ? e.target.value
+                                                        : u,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                )}
+                                {(zones || urls.length > 1) && (
                                     <Button
                                         variant="ghost"
                                         aria-label={t(
-                                            'screens.inspector.remove_url',
+                                            zones
+                                                ? 'screens.inspector.remove_zone'
+                                                : 'screens.inspector.remove_url',
                                         )}
                                         onClick={() =>
                                             setUrls(
@@ -990,14 +1017,18 @@ export function WidgetInspector({
                                 )}
                             </div>
                         ))}
-                        {urls.length < MAX_SLIDES && (
+                        {urls.length < (zones ? MAX_ZONES : MAX_SLIDES) && (
                             <Button
                                 variant="ghost"
                                 className="self-start"
                                 onClick={() => setUrls([...urls, ''])}
                             >
                                 <Plus className="size-4" aria-hidden="true" />
-                                {t('screens.inspector.add_url')}
+                                {t(
+                                    zones
+                                        ? 'screens.inspector.add_zone'
+                                        : 'screens.inspector.add_url',
+                                )}
                             </Button>
                         )}
                         <span className="text-xs text-ink-3">
@@ -1040,47 +1071,71 @@ export function WidgetInspector({
                                 ? t(`screens.fields.filter.on.${filterOn}`)
                                 : fieldLabel(field.key)}
                         </Label>
-                        <Input
-                            id={id(field.key)}
-                            value={String(raw ?? '')}
-                            list={
-                                field.key === 'filter' && filterOn
-                                    ? id(`filter-${filterOn}`)
-                                    : field.key === 'domain'
-                                      ? id('filter-domain')
-                                      : undefined
-                            }
-                            placeholder={
-                                scope &&
-                                (field.key === 'filter' ||
-                                    field.key === 'domain') &&
-                                scopeTarget.inherited?.[field.key]
-                                    ? scopeTarget.inherited[field.key]
-                                    : inherited &&
-                                        typeof inherited[field.key] === 'string'
-                                      ? String(inherited[field.key])
-                                      : field.key === 'filter' && filterOn
-                                        ? t(
-                                              `screens.fields.filter.all.${filterOn}`,
+                        {field.type === 'textarea' ? (
+                            <textarea
+                                id={id(field.key)}
+                                rows={3}
+                                value={String(raw ?? '')}
+                                placeholder={t(
+                                    `screens.fields.${field.key}.placeholder`,
+                                )}
+                                onChange={(e) =>
+                                    setOption(field.key, e.target.value)
+                                }
+                                className={cn(
+                                    inputClass,
+                                    'h-auto resize-y py-2',
+                                )}
+                            />
+                        ) : (
+                            <Input
+                                type={
+                                    field.type === 'datetime'
+                                        ? 'datetime-local'
+                                        : undefined
+                                }
+                                id={id(field.key)}
+                                value={String(raw ?? '')}
+                                list={
+                                    field.key === 'filter' && filterOn
+                                        ? id(`filter-${filterOn}`)
+                                        : field.key === 'domain'
+                                          ? id('filter-domain')
+                                          : undefined
+                                }
+                                placeholder={
+                                    scope &&
+                                    (field.key === 'filter' ||
+                                        field.key === 'domain') &&
+                                    scopeTarget.inherited?.[field.key]
+                                        ? scopeTarget.inherited[field.key]
+                                        : inherited &&
+                                            typeof inherited[field.key] ===
+                                                'string'
+                                          ? String(inherited[field.key])
+                                          : field.key === 'filter' && filterOn
+                                            ? t(
+                                                  `screens.fields.filter.all.${filterOn}`,
+                                              )
+                                            : field.key === 'caption'
+                                              ? // What the line says fits what the code holds.
+                                                t(
+                                                    `screens.fields.caption.placeholders.${option<string | null>(catalog.schema, widget, 'content') ?? option<string>(catalog.schema, widget, 'media')}`,
+                                                )
+                                              : t(
+                                                    `screens.fields.${field.key}.placeholder`,
+                                                )
+                                }
+                                onChange={(e) =>
+                                    scope
+                                        ? scopeTarget.set(
+                                              field.key as keyof WidgetScope,
+                                              e.target.value,
                                           )
-                                        : field.key === 'caption'
-                                          ? // What the line says fits what the code holds.
-                                            t(
-                                                `screens.fields.caption.placeholders.${option<string | null>(catalog.schema, widget, 'content') ?? option<string>(catalog.schema, widget, 'media')}`,
-                                            )
-                                          : t(
-                                                `screens.fields.${field.key}.placeholder`,
-                                            )
-                            }
-                            onChange={(e) =>
-                                scope
-                                    ? scopeTarget.set(
-                                          field.key as keyof WidgetScope,
-                                          e.target.value,
-                                      )
-                                    : target.set(field.key, e.target.value)
-                            }
-                        />
+                                        : target.set(field.key, e.target.value)
+                                }
+                            />
+                        )}
                         {field.key === 'filter' && filterOn && (
                             <datalist id={id(`filter-${filterOn}`)}>
                                 {(catalog.filters?.[filterOn] ?? []).map(

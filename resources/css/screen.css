@@ -334,3 +334,22 @@
 .lj-tile[data-bare] .lj-tile-pad {
     padding: 0.5em 1em;
 }
+
+/* A message running across its tile, from the right edge out at the left. */
+.lj-ticker {
+    animation: lj-ticker 18s linear infinite;
+    padding-left: 100%;
+}
+
+@keyframes lj-ticker {
+    to {
+        transform: translateX(-100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lj-ticker {
+        animation: none;
+        padding-left: 0;
+    }
+}

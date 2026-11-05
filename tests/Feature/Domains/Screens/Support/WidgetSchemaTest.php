@@ -17,7 +17,7 @@ describe('the schema', function () {
     })->with(array_values(array_diff(WidgetSchema::types(), ['empty'])));
 
     it('knows every visualization and the layout widgets', function () {
-        expect(WidgetSchema::types())->toBe([...array_map(fn (WidgetType $t): string => $t->value, WidgetType::cases()), 'clock', 'qr', 'media', 'empty'])
+        expect(WidgetSchema::types())->toBe([...array_map(fn (WidgetType $t): string => $t->value, WidgetType::cases()), 'clock', 'countdown', 'message', 'qr', 'media', 'empty'])
             ->and(WidgetSchema::sections('empty'))->toBe([])
             ->and(WidgetSchema::sections('pie'))->toBe([]);
     });
@@ -62,6 +62,9 @@ describe('validating a widget', function () {
         'a clock' => [['id' => 'f', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['timezone' => 'Europe/Copenhagen', 'format' => '12']]],
         'an empty cell' => [['id' => 'g', 'type' => 'empty', 'w' => 3, 'h' => 2]],
         'a camera' => [['id' => 'i', 'type' => 'media', 'w' => 2, 'h' => 2, 'options' => ['media' => 'image', 'media_url' => 'https://cam.example.com/snapshot.jpg?token='.str_repeat('a', 400), 'fit' => 'cover', 'reload_every' => '1']]],
+        'a world clock' => [['id' => 'k', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['zones' => "America/New_York\nAsia/Tokyo"]]],
+        'a countdown' => [['id' => 'l', 'type' => 'countdown', 'w' => 2, 'h' => 1, 'options' => ['target' => '2026-12-01T10:00', 'countdown_label' => 'Release 2.0', 'after' => 'zero']]],
+        'a ticker' => [['id' => 'm', 'type' => 'message', 'w' => 4, 'h' => 1, 'options' => ['message' => "Deploy freeze\nfrom Friday", 'tone' => 'warning', 'scroll' => true]]],
         'a slideshow' => [['id' => 'j', 'type' => 'media', 'w' => 2, 'h' => 2, 'options' => ['media_url' => "https://example.com/a.jpg\r\n\nhttps://example.com/b.png\n", 'slide_seconds' => '20']]],
     ]);
 
@@ -74,6 +77,9 @@ describe('validating a widget', function () {
         'a slideshow with one address that runs script' => [['id' => 'i', 'type' => 'media', 'w' => 1, 'h' => 1, 'options' => ['media_url' => "https://example.com/a.jpg\njavascript:alert(1)"]], 'w.options.media_url'],
         'more slides than a slideshow takes' => [['id' => 'i', 'type' => 'media', 'w' => 1, 'h' => 1, 'options' => ['media_url' => implode("\n", array_fill(0, WidgetSchema::MAX_SLIDES + 1, 'https://example.com/a.jpg'))]], 'w.options.media_url'],
         'a calendar over days the designer does not offer' => [['id' => 'k', 'type' => 'list', 'source' => 'calendar', 'w' => 2, 'h' => 2, 'options' => ['days_after' => '365']], 'w.options.days_after'],
+        'a world clock with an unknown city' => [['id' => 'k', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['zones' => "Asia/Tokyo\nMars/Olympus"]], 'w.options.zones'],
+        'a countdown to no moment' => [['id' => 'l', 'type' => 'countdown', 'w' => 1, 'h' => 1, 'options' => ['target' => 'next friday']], 'w.options.target'],
+        'a message of an unknown tone' => [['id' => 'm', 'type' => 'message', 'w' => 1, 'h' => 1, 'options' => ['tone' => 'panic']], 'w.options.tone'],
         'an unknown time zone' => [['id' => 'f', 'type' => 'clock', 'w' => 1, 'h' => 1, 'options' => ['timezone' => 'Nowhere']], 'w.options.timezone'],
         'a gauge source on a stat' => [['id' => 'a', 'type' => 'stat', 'source' => 'health_uptime', 'w' => 1, 'h' => 1], 'w.source'],
         'a widget that is no object' => [[], 'w'],
