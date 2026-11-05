@@ -121,6 +121,8 @@ final class WidgetSources
             new WidgetSource($list, 'hosts', 'rows', 0.8, 0.9, filterOn: 'host', snapshot: true),
             new WidgetSource($list, 'agents', 'rows', filterOn: 'host', snapshot: true),
             new WidgetSource($list, 'external_json', 'rows', snapshot: true),
+            // An iCalendar data source's events (see Ical).
+            new WidgetSource($list, 'calendar', 'rows', snapshot: true),
 
             // Health: every check of the scope, or the picked ones.
             new WidgetSource(WidgetType::Health, 'checks', 'checks'),

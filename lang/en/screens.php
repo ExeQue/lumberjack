@@ -122,6 +122,7 @@ return [
             'hosts' => 'Hosts',
             'agents' => 'Agents',
             'external_json' => 'External JSON',
+            'calendar' => 'Calendar events',
         ],
         'health' => [
             'checks' => 'Health checks',

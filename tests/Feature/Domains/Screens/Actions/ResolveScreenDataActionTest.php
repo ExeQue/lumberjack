@@ -60,6 +60,28 @@ describe('a screen\'s data', function () {
             ->and($calls[2][2])->toBe(['limit' => 20, 'only_problems' => false, 'sort' => 'newest']);
     });
 
+    it('gives a calendar its own options and the screen\'s time zone, else the server\'s', function (?string $timezone, string $expected) {
+        $options = null;
+        $this->mock(ResolveWidgetDataAction::class)->shouldReceive('execute')
+            ->andReturnUsing(function (Team $team, WidgetType $type, string $source, WidgetScope $scope, array $given) use (&$options): array {
+                $options = $given;
+
+                return [];
+            });
+        config(['app.timezone' => 'UTC']);
+        $this->screen->update(['timezone' => $timezone, 'widgets' => [
+            ['id' => 'a', 'type' => 'list', 'source' => 'calendar', 'rotate' => [], 'w' => 2, 'h' => 2, 'title' => null, 'options' => ['data_source' => '8a3a9c5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e', 'days_after' => '30'], 'scope' => []],
+        ]]);
+
+        app(ResolveScreenDataAction::class)->execute($this->screen);
+
+        expect($options)->toMatchArray(['data_source' => '8a3a9c5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e', 'days_before' => '0', 'days_after' => '30', 'upcoming_only' => true, 'timezone' => $expected])
+            ->and($options)->not->toHaveKey('json_path');
+    })->with([
+        'the screen\'s' => ['America/Los_Angeles', 'America/Los_Angeles'],
+        'none set' => [null, 'UTC'],
+    ]);
+
     it('resolves a rotated value with its own limits and period over the widget\'s', function () {
         $this->screen->update(['widgets' => [
             ['id' => 'a', 'type' => 'stat', 'source' => 'requests', 'w' => 1, 'h' => 1, 'title' => null, 'options' => ['compare' => 'none', 'red' => 50.0], 'scope' => ['period' => '1h'], 'rotate' => [

@@ -19,8 +19,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * An external endpoint of a project that Lumberjack fetches every interval, for screen
- * widgets to read a number or rows from: JSON with JSONPath, or Prometheus text with a
- * selector (format). The latest raw body is kept here; the parsed body of each fetch that
+ * widgets to read a number or rows from: JSON with JSONPath, Prometheus text with a
+ * selector, or an iCalendar feed for a calendar list (format). The latest raw body is kept here; the parsed body of each fetch that
  * fits goes to data_source_fetches, for charts.
  * Header values are often secrets: they are stored encrypted and never leave the server.
  *
@@ -101,13 +101,17 @@ class DataSource extends Model
     }
 
     /**
-     * Its URL as shown: the query's keys, not their values, which may be keys of another kind.
+     * Its URL as shown: the query's keys, not their values, which may be keys of another
+     * kind; for a calendar not its path either.
      */
     public function maskedUrl(): string
     {
+        // A calendar's secret address (Google, Outlook, iCloud) carries its key in the path.
+        $url = $this->format === DataSourceFormat::Ical ? (string) preg_replace('~^([a-z][a-z0-9+.-]*://[^/?#]+)/[^?#]+~i', '$1/***', $this->url) : $this->url;
+
         return (string) preg_replace_callback('/\?([^#]*)/', fn (array $m): string => '?'.implode('&', array_map(
             fn (string $pair): string => str_contains($pair, '=') ? strstr($pair, '=', true).'=***' : ($pair === '' ? '' : '***'),
             explode('&', $m[1]),
-        )), $this->url, 1);
+        )), $url, 1);
     }
 }

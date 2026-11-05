@@ -217,29 +217,6 @@ the same; the gauge shows the database with the largest share of its connections
 (amber at 80%, red at 90%). A database several servers report counts once.
 A list of hosts shows each host once with CPU, memory and disk meters. The filter of a queue, host or database value is named after it (**Queue**, **Host**, **Database check**) and suggests the team's queues, hosts and database checks (by slug, such as `database:pgsql`) while you type; `*` still matches anything. Rows that do not fit scroll slowly down and back up, resting at each end; hovering stops it, and **Scroll slowly through rows that do not fit** under Rows turns it off.
 
-### Calendars
-
-A list can show a calendar's events: today's meetings next to the meeting room door, the
-on-call rota, the week's releases. Add the calendar as a data source of a project
-(**Data sources**, format **iCalendar (.ics)**) with the address it is published at in
-iCal format: in Google Calendar the **Secret address in iCal format** under the
-calendar's settings, in Outlook a calendar published as ICS, in iCloud a public
-calendar's link (`webcal://` as `https://`), or any `.ics` address. Lumberjack fetches it
-on its interval like any data source and records an error when the answer is not an
-iCalendar feed. That address is a key to the calendar: after saving, the data sources page
-shows it without its path, and screens, TVs and share links never get it.
-
-Then pick **Calendar events** for a list widget and the data source under **Rows**. It
-shows the events from **Days back** (today, yesterday or a week back) to **Days ahead**
-(the rest of today, until tomorrow, a week or 30 days), in the screen's time zone (else
-the server's), with repeating events expanded, their skipped and moved dates included,
-and cancelled ones left out. With **Only what has not ended** (on by default) an event
-leaves the list when it ends. Rows go by day, each day's all-day events first, then by
-start: the start time (or **All day**), the title, and the place and end time where
-there is room; an event on now says **Now** in amber. A list over more than one day puts
-the weekday before the time. On a share link without names the rows show the times only.
-**Rows** caps how many show, as in any list.
-
 Every widget with data names its period in the top right corner (1h, 24h, 7d, 30d), or how old the latest report is (**55s**, **6m**) for values that are the latest report (host CPU, memory and disk, queue sizes, agents, open issues, the current release, health, databases), which have no period to pick;
 **Over** in the inspector picks it per widget, or follows the screen. **Show the period
 in the corner** under Display turns the label off.
@@ -323,6 +300,29 @@ Older screens may still have an **Empty cell** widget, from when widgets filled 
 in order and a gap needed a filler. It still works (dashed in the designer, invisible
 on the TV), but it is no longer offered: a free cell is empty on its own, so it can be
 removed.
+
+### Calendars
+
+A list can show a calendar's events: today's meetings next to the meeting room door, the
+on-call rota, the week's releases. Add the calendar as a data source of a project
+(**Data sources**, format **iCalendar (.ics)**) with the address it is published at in
+iCal format: in Google Calendar the **Secret address in iCal format** under the
+calendar's settings, in Outlook a calendar published as ICS, in iCloud a public
+calendar's link (`webcal://` as `https://`), or any `.ics` address. Lumberjack fetches it
+on its interval like any data source and records an error when the answer is not an
+iCalendar feed. That address is a key to the calendar: after saving, the data sources page
+shows it without its path, and screens, TVs and share links never get it.
+
+Then pick **Calendar events** for a list widget and the data source under **Rows**. It
+shows the events from **Days back** (today, yesterday or a week back) to **Days ahead**
+(the rest of today, until tomorrow, a week or 30 days), in the screen's time zone (else
+the server's), with repeating events expanded, their skipped and moved dates included,
+and cancelled ones left out. With **Only what has not ended** (on by default) an event
+leaves the list when it ends. Rows go by day, each day's all-day events first, then by
+start: the start time (or **All day**), the title, and the place and end time where
+there is room; an event on now says **Now** in amber. A list over more than one day puts
+the weekday before the time. On a share link without names the rows show the times only.
+**Rows** caps how many show, as in any list.
 
 ### Status colors
 

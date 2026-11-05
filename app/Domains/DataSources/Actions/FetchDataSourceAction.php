@@ -6,6 +6,7 @@ namespace App\Domains\DataSources\Actions;
 
 use App\Domains\DataSources\Enums\DataSourceFormat;
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Support\Ical;
 use App\Domains\DataSources\Support\Prometheus;
 use App\Domains\Health\Actions\RunHealthCheckAction;
 use App\Domains\Health\Data\HealthResultData;
@@ -24,7 +25,8 @@ use JsonException;
 /**
  * Fetches one data source and keeps what it answered: the raw body on the source, and the
  * parsed body in the history when it is small enough for charts to read back (for
- * Prometheus text, the parsed samples, Prometheus::parse, under the same cap). Guarded like
+ * Prometheus text, the parsed samples, Prometheus::parse, under the same cap; an iCalendar
+ * feed only as the latest, as its history is of no use to a widget). Guarded like
  * the health checks Lumberjack runs: every connection goes to an address the network guard
  * allowed (health.allow_private), redirects are followed by hand, each checked again, and
  * the headers only go to the source's own origin. The timeout is for each request, so a
@@ -34,6 +36,9 @@ class FetchDataSourceAction
 {
     /** The largest body read; a larger one fails the fetch. */
     public const int MAX_BODY_BYTES = 1_048_576;
+
+    /** The largest iCalendar feed read: one with years of history passes a megabyte. */
+    public const int MAX_ICAL_BYTES = 4_194_304;
 
     /** The largest body kept per fetch in the history (for Prometheus: parsed, as JSON); a larger one is only kept as the latest. */
     public const int HISTORY_MAX_BYTES = 65_536;
@@ -58,11 +63,17 @@ class FetchDataSourceAction
                 throw new ProbeFailedException(__('data_sources.errors.status', ['status' => $response->status()]));
             }
 
-            if (strlen($body) > self::MAX_BODY_BYTES) {
-                throw new ProbeFailedException(__('data_sources.errors.too_large', ['max' => self::MAX_BODY_BYTES / 1024]));
+            if (strlen($body) > self::maxBytes($source)) {
+                throw new ProbeFailedException(__('data_sources.errors.too_large', ['max' => self::maxBytes($source) / 1024]));
             }
 
-            if ($source->format === DataSourceFormat::Prometheus) {
+            if ($source->format === DataSourceFormat::Ical) {
+                $body = str_replace("\0", '', mb_scrub($body, 'UTF-8'));
+
+                if (! Ical::parses($body)) {
+                    throw new ProbeFailedException(__('data_sources.errors.not_ical'));
+                }
+            } elseif ($source->format === DataSourceFormat::Prometheus) {
                 // Text, not JSON: kept as UTF-8 without NUL, which a text column refuses.
                 $body = str_replace("\0", '', mb_scrub($body, 'UTF-8'));
                 $parsed = Prometheus::parse($body);
@@ -92,6 +103,10 @@ class FetchDataSourceAction
         }
 
         $source->fill(['last_ok_at' => $now, 'last_error' => null, 'last_body' => $body])->save();
+
+        if ($source->format === DataSourceFormat::Ical) {
+            return;
+        }
 
         $history = $parsed !== null ? (string) json_encode($parsed, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION) : $body;
 
@@ -135,8 +150,17 @@ class FetchDataSourceAction
             ->timeout($timeout)
             ->connectTimeout(min(5, $timeout))
             ->withUserAgent('Lumberjack-DataSource/1')
-            ->accept($source->format === DataSourceFormat::Prometheus ? 'text/plain;version=0.0.4;q=1.0, */*;q=0.1' : 'application/json')
-            ->withHeaders($headers), 'GET', $url, self::MAX_BODY_BYTES + 1);
+            ->accept(match ($source->format) {
+                DataSourceFormat::Prometheus => 'text/plain;version=0.0.4;q=1.0, */*;q=0.1',
+                DataSourceFormat::Ical => 'text/calendar, */*;q=0.1',
+                DataSourceFormat::Json => 'application/json',
+            })
+            ->withHeaders($headers), 'GET', $url, self::maxBytes($source) + 1);
+    }
+
+    private static function maxBytes(DataSource $source): int
+    {
+        return $source->format === DataSourceFormat::Ical ? self::MAX_ICAL_BYTES : self::MAX_BODY_BYTES;
     }
 
     /**

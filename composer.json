@@ -22,6 +22,7 @@
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
         "promphp/prometheus_client_php": "^2.15",
+        "sabre/vobject": "^5.0",
         "softcreatr/jsonpath": "^2.1"
     },
     "require-dev": {

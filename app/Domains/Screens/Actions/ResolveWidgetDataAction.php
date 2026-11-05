@@ -52,7 +52,8 @@ use Illuminate\Support\Str;
  * gauge; split_by (a metric group or project), top and overlay_previous for a chart;
  * limit, sort (newest, most_frequent, last_seen, worst) and only_problems for a list; checks (uuids) and
  * only_problems for health; data_source, json_path, and for a list label_path and value_path,
- * for External JSON. Display options are the widget's own business.
+ * for External JSON; data_source, days_before, days_after, upcoming_only and timezone for a
+ * calendar. Display options are the widget's own business.
  */
 class ResolveWidgetDataAction
 {
@@ -99,12 +100,14 @@ class ResolveWidgetDataAction
             'low_is_bad' => (bool) ($options['low_is_bad'] ?? $source->lowIsBad),
         ];
 
-        $data = $source->id === 'external_json' ? $this->external($team, $type, $scope, $options, $limits, $aggregatesOnly) : match ($type) {
-            WidgetType::Stat => $this->stat($source, $projects, $scope, $options, $limits),
-            WidgetType::Gauge => $this->gauge($source, $projects, $scope, $options, $limits),
-            WidgetType::Chart => $this->chart($source, $projects, $scope, $options, $aggregatesOnly),
-            WidgetType::List => $this->listRows($source, $projects, $scope, $options, $limits, $aggregatesOnly),
-            WidgetType::Health => $this->checks($projects, $scope, $options, $aggregatesOnly),
+        $data = match (true) {
+            $source->id === 'external_json' => $this->external($team, $type, $scope, $options, $limits, $aggregatesOnly),
+            $source->id === 'calendar' => $this->calendar($team, $options, $aggregatesOnly),
+            $type === WidgetType::Stat => $this->stat($source, $projects, $scope, $options, $limits),
+            $type === WidgetType::Gauge => $this->gauge($source, $projects, $scope, $options, $limits),
+            $type === WidgetType::Chart => $this->chart($source, $projects, $scope, $options, $aggregatesOnly),
+            $type === WidgetType::List => $this->listRows($source, $projects, $scope, $options, $limits, $aggregatesOnly),
+            $type === WidgetType::Health => $this->checks($projects, $scope, $options, $aggregatesOnly),
         };
 
         // The period it covers, for the tile's corner label; health and the latest report are now.
@@ -545,12 +548,7 @@ class ResolveWidgetDataAction
      */
     private function external(Team $team, WidgetType $type, WidgetScope $scope, array $options, array $limits, bool $aggregatesOnly): array
     {
-        $uuid = $options['data_source'] ?? null;
-        $source = is_string($uuid) && Str::isUuid($uuid)
-            ? $this->memo->remember("data-source:{$team->id}:{$uuid}", fn (): DataSource|false => DataSource::query()
-                ->whereIn('project_id', $team->projects->modelKeys())->where('uuid', $uuid)->first() ?? false)
-            : false;
-        $source = $source instanceof DataSource ? $source : null;
+        $source = $this->dataSource($team, $options);
         $path = (string) ($options['json_path'] ?? '');
         $window = MetricWindow::forPeriod($scope->period);
         $value = $source !== null ? $this->dataSources->number($source, $path) : null;
@@ -598,6 +596,66 @@ class ResolveWidgetDataAction
         };
 
         return ['as_of' => $source?->last_ok_at?->toIso8601String(), ...$data];
+    }
+
+    /**
+     * {columns, rows, as_of} of a calendar: the events of an iCalendar data source from
+     * days_before days back to days_after days on (0: the rest of today), in the screen's
+     * time zone (the timezone option, set by ResolveScreenDataAction). Rows go by day, a
+     * day's all-day events first, then by start: {project, title, location, day (Y-m-d),
+     * start and end (H:i, null all day), all_day, starts_at, ends_at}, state amber while it
+     * is on. With upcoming_only, what has ended is left out. A share link without names
+     * shows the times alone: titles and places are whatever the calendar says.
+     *
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    private function calendar(Team $team, array $options, bool $aggregatesOnly): array
+    {
+        $source = $this->dataSource($team, $options);
+        $timezone = (string) ($options['timezone'] ?? config('app.timezone'));
+        $today = now($timezone)->startOfDay();
+        $from = $today->subDays(max(0, (int) ($options['days_before'] ?? 0)));
+        $to = $today->addDays(max(0, (int) ($options['days_after'] ?? 7)) + 1);
+        $now = now()->getTimestamp();
+        $local = fn (int $t): CarbonImmutable => CarbonImmutable::createFromTimestamp($t, $timezone);
+
+        $rows = collect($source !== null ? $this->dataSources->events($source, $from, $to) : [])
+            ->when((bool) ($options['upcoming_only'] ?? true))->filter(fn (array $e): bool => $e['end'] > $now)
+            // An event that began before the window shows on its first day.
+            ->map(fn (array $e): array => [...$e, 'day' => $local(max($e['start'], $from->getTimestamp()))->toDateString()])
+            ->sortBy([['day', 'asc'], ['all_day', 'desc'], ['start', 'asc']])
+            ->take(max(1, min(100, (int) ($options['limit'] ?? self::LIST_LIMIT))))
+            ->map(fn (array $e): array => [
+                'project' => $team->projects->find($source?->project_id)?->slug,
+                'title' => $aggregatesOnly ? null : $e['title'],
+                'location' => $aggregatesOnly ? null : $e['location'],
+                'day' => $e['day'],
+                'start' => $e['all_day'] ? null : $local($e['start'])->format('H:i'),
+                'end' => $e['all_day'] ? null : $local($e['end'])->format('H:i'),
+                'all_day' => $e['all_day'],
+                'starts_at' => $local($e['start'])->toIso8601String(),
+                'ends_at' => $local($e['end'])->toIso8601String(),
+                'state' => $e['start'] <= $now && $now < $e['end'] ? 'amber' : null,
+            ])->values()->all();
+
+        return ['as_of' => $source?->last_ok_at?->toIso8601String(), 'columns' => ['day', 'start', 'end', 'title', 'location'], 'rows' => $rows];
+    }
+
+    /**
+     * The team's data source the options pick (data_source), null for none or another team's.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    private function dataSource(Team $team, array $options): ?DataSource
+    {
+        $uuid = $options['data_source'] ?? null;
+        $source = is_string($uuid) && Str::isUuid($uuid)
+            ? $this->memo->remember("data-source:{$team->id}:{$uuid}", fn (): DataSource|false => DataSource::query()
+                ->whereIn('project_id', $team->projects->modelKeys())->where('uuid', $uuid)->first() ?? false)
+            : false;
+
+        return $source instanceof DataSource ? $source : null;
     }
 
     /**
