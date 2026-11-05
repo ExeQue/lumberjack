@@ -434,7 +434,7 @@ return [
         ],
         'domain' => ['label' => 'Domain', 'placeholder' => 'All domains; pick one, or use * as a wildcard'],
         'show_title' => ['label' => 'Show title'],
-        'card' => ['label' => 'On a card (off: no background or border while all is well)'],
+        'card' => ['label' => 'Show card'],
         'status_colors' => ['label' => 'Color the tile by status'],
         'ok_border' => ['label' => 'Green border while all is ok'],
         'text_size' => ['label' => 'Text size', 'options' => ['auto' => 'Fit to tile', 's' => 'Small', 'm' => 'Medium', 'l' => 'Large', 'xl' => 'Huge']],
