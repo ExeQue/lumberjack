@@ -139,6 +139,7 @@ return [
         'list' => 'List',
         'health' => 'Health',
         'clock' => 'Clock and text',
+        'qr' => 'QR code',
         'empty' => 'Empty cell',
     ],
 
@@ -150,6 +151,7 @@ return [
         'list' => 'Issues, alerts, jobs, tasks, routes, queues, hosts',
         'health' => 'All checks, or pick one for its timeline',
         'clock' => 'Time, a title or a note',
+        'qr' => 'A link, the guest wifi or any text to scan',
         'empty' => 'Blank space; not shown on the TV',
     ],
 
@@ -310,6 +312,7 @@ return [
         'rows' => 'Rows',
         'checks' => 'Checks',
         'clock' => 'Clock',
+        'qr' => 'QR code',
         'rotation' => 'Rotation',
         'scope' => 'Scope',
         'display' => 'Display',
@@ -390,6 +393,14 @@ return [
         'seconds' => ['label' => 'Seconds'],
         'date' => ['label' => 'Date'],
         'text' => ['label' => 'Text', 'placeholder' => 'A note for the room'],
+        'content' => ['label' => 'Holds', 'options' => ['link' => 'A link', 'wifi' => 'A wifi network', 'text' => 'Text']],
+        'url' => ['label' => 'Link', 'placeholder' => 'https://'],
+        'ssid' => ['label' => 'Network name'],
+        'password' => ['label' => 'Password'],
+        'security' => ['label' => 'Security', 'options' => ['WPA' => 'WPA', 'WEP' => 'WEP', 'nopass' => 'None']],
+        'hidden_network' => ['label' => 'Hidden network'],
+        'qr_text' => ['label' => 'Text'],
+        'caption' => ['label' => 'Line under the code', 'placeholders' => ['link' => 'Our status page', 'wifi' => 'Guest wifi', 'text' => 'Scan me']],
         'rotate_every' => ['label' => 'Switch every', 'options' => ['5' => '5 seconds', '10' => '10 seconds', '20' => '20 seconds', '30' => '30 seconds', '60' => '1 minute']],
         'transition' => ['label' => 'Transition', 'options' => ['fade' => 'Fade', 'slide' => 'Slide', 'flip' => 'Flip', 'none' => 'None']],
         'hold_problem' => ['label' => 'Stay on a value that needs attention'],
@@ -421,6 +432,11 @@ return [
     'widget' => [
         'loading' => 'Loading...',
         'failed' => 'Could not load this widget.',
+    ],
+
+    'qr' => [
+        'empty' => 'Nothing to encode yet.',
+        'invalid' => 'That is not a link a QR code can hold.',
     ],
 
     'trend' => [

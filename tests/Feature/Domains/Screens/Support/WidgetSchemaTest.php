@@ -17,7 +17,7 @@ describe('the schema', function () {
     })->with(array_values(array_diff(WidgetSchema::types(), ['empty'])));
 
     it('knows every visualization and the layout widgets', function () {
-        expect(WidgetSchema::types())->toBe([...array_map(fn (WidgetType $t): string => $t->value, WidgetType::cases()), 'clock', 'empty'])
+        expect(WidgetSchema::types())->toBe([...array_map(fn (WidgetType $t): string => $t->value, WidgetType::cases()), 'clock', 'qr', 'empty'])
             ->and(WidgetSchema::sections('empty'))->toBe([])
             ->and(WidgetSchema::sections('pie'))->toBe([]);
     });

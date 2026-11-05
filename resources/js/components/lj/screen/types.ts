@@ -34,6 +34,7 @@ export type WidgetKind =
     | 'list'
     | 'health'
     | 'clock'
+    | 'qr'
     | 'empty';
 
 export type WidgetScope = {
@@ -94,6 +95,8 @@ export type SchemaField = {
     span: number;
     /** Shown only for these sources (the External JSON fields). */
     sources?: string[];
+    /** Shown only while these options have one of the values (the QR code's per content). */
+    when?: Record<string, string[]>;
 };
 
 export type SchemaSection = { id: string; fields: SchemaField[] };
@@ -133,7 +136,7 @@ export const DATA_KINDS: WidgetKind[] = [
     'list',
     'health',
 ];
-export const LAYOUT_KINDS: WidgetKind[] = ['clock', 'empty'];
+export const LAYOUT_KINDS: WidgetKind[] = ['clock', 'qr', 'empty'];
 export const ROTATING_KINDS: WidgetKind[] = [
     'stat',
     'gauge',

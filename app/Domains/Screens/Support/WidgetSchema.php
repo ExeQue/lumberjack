@@ -18,10 +18,12 @@ use Illuminate\Validation\Rule;
  *
  * A widget is {id, type, source, rotate, x, y, w, h, title, options, scope}, x and y its
  * 0-based column and row (see ScreenLayout). Data types are the
- * WidgetType cases and show a source of WidgetSources; clock and empty need none. Options
+ * WidgetType cases and show a source of WidgetSources; clock, qr and empty need none (a qr
+ * code's picture comes with the data all the same, drawn on the server). Options
  * live in sections of fields: select (one of its values), toggle, text, number, checks
  * (health check uuids), data_source (a data source uuid). A field with sources shows only
- * for those sources (the External JSON fields). A field marked data is read by ResolveWidgetDataAction, so a
+ * for those sources (the External JSON fields), one with when only while those options
+ * have one of the listed values (the QR code's fields per content). A field marked data is read by ResolveWidgetDataAction, so a
  * change to it refetches the widget; the rest only change how it draws. Scope fields are
  * stored in the widget's scope, not its options; absent means the screen's default.
  *
@@ -36,7 +38,7 @@ use Illuminate\Validation\Rule;
 final class WidgetSchema
 {
     /** Widgets drawn by the client alone, without a source. */
-    public const array LAYOUT_TYPES = ['clock', 'empty'];
+    public const array LAYOUT_TYPES = ['clock', 'qr', 'empty'];
 
     /** Types that can rotate through several sources on one tile. */
     public const array ROTATING_TYPES = ['stat', 'gauge', 'chart', 'list', 'health'];
@@ -478,6 +480,21 @@ final class WidgetSchema
                     $toggle('seconds', false),
                     $toggle('date', false),
                     $text('text', 2),
+                ]),
+                $display(false),
+            ],
+            'qr' => [
+                $section('qr', [
+                    $select('content', ['link', 'wifi', 'text'], 'link', true, 2),
+                    ...array_map(fn (array $field): array => [...$field, 'data' => true, 'when' => ['content' => [$field['when']]]], [
+                        ['key' => 'url', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => 'link'],
+                        ['key' => 'ssid', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => 'wifi'],
+                        ['key' => 'password', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => 'wifi'],
+                        ['key' => 'security', 'type' => 'select', 'options' => ['WPA', 'WEP', 'nopass'], 'default' => 'WPA', 'span' => 1, 'when' => 'wifi'],
+                        ['key' => 'hidden_network', 'type' => 'toggle', 'default' => false, 'span' => 1, 'when' => 'wifi'],
+                        ['key' => 'qr_text', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => 'text'],
+                    ]),
+                    $text('caption', 2),
                 ]),
                 $display(false),
             ],

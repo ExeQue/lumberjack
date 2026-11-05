@@ -119,6 +119,7 @@ const STARTERS: Record<WidgetKind, Pick<Widget, 'source' | 'w' | 'h'>> = {
     list: { source: 'latest_issues', w: 2, h: 2 },
     health: { source: 'checks', w: 1, h: 1 },
     clock: { source: null, w: 1, h: 1 },
+    qr: { source: null, w: 1, h: 1 },
     empty: { source: null, w: 1, h: 1 },
 };
 

@@ -159,3 +159,23 @@ describe('a screen\'s data', function () {
             ->and($data['b']['latest_issues'])->toBe(['ok' => true]);
     });
 });
+
+describe('a QR code widget', function () {
+    it('comes with its picture, nothing while empty, and fails alone on a link that is not one', function (array $options, ?bool $drawn) {
+        $screen = Screen::factory()->withQrWidget($options)->create();
+
+        $qr = app(ResolveScreenDataAction::class)->execute($screen, 'qr')['qr']['qr'];
+
+        match ($drawn) {
+            true => expect($qr['svg'])->toStartWith('<svg')->toContain('#161a1e')
+                ->and($qr['light'])->toStartWith('<svg')->toContain('#ffffff'),
+            false => expect($qr)->toBe(['svg' => null, 'light' => null]),
+            null => expect($qr)->toBeNull(),
+        };
+    })->with([
+        'a wifi network' => [['content' => 'wifi', 'ssid' => 'Guests', 'password' => 'welcome', 'security' => 'WPA'], true],
+        'a link' => [['url' => 'https://lumberjack.test'], true],
+        'nothing yet' => [['content' => 'text'], false],
+        'not a link' => [['url' => 'not a link'], null],
+    ]);
+});
