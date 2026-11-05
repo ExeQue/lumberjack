@@ -345,7 +345,10 @@ function joinNotes(...notes: string[]): string {
 
 function SectionLink({ href, children }: { href: string; children: string }) {
     return (
-        <Link href={href} className="text-xs text-amber hover:underline">
+        <Link
+            href={href}
+            className="-my-1 inline-block py-1.5 text-xs text-amber hover:underline"
+        >
             {children}
         </Link>
     );
@@ -371,10 +374,23 @@ function HealthCard({
         >
             <StatCard
                 label={t('overview.kpis.health')}
-                value={t('overview.kpis.health_value', {
-                    ok: formatNumber(summary.ok),
-                    total: formatNumber(summary.total),
-                })}
+                value={
+                    bad + summary.stale > 0
+                        ? joinNotes(
+                              bad > 0
+                                  ? t('overview.kpis.health_problems', {}, bad)
+                                  : '',
+                              summary.stale > 0
+                                  ? t('overview.kpis.health_stale', {
+                                        count: formatNumber(summary.stale),
+                                    })
+                                  : '',
+                          )
+                        : t('overview.kpis.health_value', {
+                              ok: formatNumber(summary.ok),
+                              total: formatNumber(summary.total),
+                          })
+                }
                 tone={summary.down > 0 ? 'err' : bad > 0 ? 'warn' : undefined}
                 note={
                     bad + summary.stale > 0

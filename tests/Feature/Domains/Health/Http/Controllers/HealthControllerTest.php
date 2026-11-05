@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Domains\Health\Enums\HealthCheckType;
+use App\Domains\Health\Enums\HealthStatus;
 use App\Domains\Health\Http\Controllers\HealthController;
 use App\Domains\Health\Http\Requests\SaveHealthCheckRequest;
 use App\Domains\Health\Models\HealthCheck;
+use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Health\Policies\HealthCheckPolicy;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Enums\TeamRole;
@@ -50,6 +52,18 @@ describe('the health page', function () {
                 ->where('detail.uuid', $this->reported->uuid)
                 ->has('detail.results', 0)
                 ->has('detail.latency_series'));
+    });
+
+    it('grays the strip of a stale check from its last result on', function () {
+        HealthCheck::query()->whereKey($this->reported->id)->update(['created_at' => now()->subDays(2), 'status' => HealthStatus::Ok, 'last_result_at' => now()->subHours(5)]);
+        HealthCheckHost::query()->create(['health_check_id' => $this->reported->id, 'host' => 'web-1', 'status' => HealthStatus::Ok, 'interval_s' => 60, 'last_result_at' => now()->subHours(5)]);
+
+        $this->actingAs($this->member)
+            ->get(route('health.index', ['project' => $this->project]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('checks.1.state', 'stale')
+                ->where('checks.1.strip.0.s', 'ok')
+                ->where('checks.1.strip', fn ($strip) => collect($strip)->last()['s'] === 'stale'));
     });
 
     it('shows the ping URL of a heartbeat only to those who administer the project', function () {

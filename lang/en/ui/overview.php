@@ -18,6 +18,9 @@ return [
         'open_issues_note' => 'All environments, regardless of period',
         'health' => 'Health checks',
         'health_value' => ':ok of :total ok',
+        // The big value once a check is down, degraded or stale, e.g. "3 problems · 6 stale".
+        'health_problems' => '{1} 1 problem|[2,*] :count problems',
+        'health_stale' => ':count stale',
         'health_note' => ':down down, :degraded degraded, :stale stale',
         'health_all_ok' => 'Every check passes',
     ],

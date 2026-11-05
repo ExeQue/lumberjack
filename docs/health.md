@@ -55,7 +55,9 @@ when no result came in for:
 - otherwise 3 times its usual spacing;
 - 15 minutes while its spacing is not known yet.
 
-A stale check has no uptime and sends no alerts until its next result. **Archive** puts
+A stale check has no uptime and sends no alerts until its next result. Its strip turns
+gray from its last result on, and the banner at the top counts stale checks next to the
+down and degraded ones. **Archive** puts
 away a check that will not report again, for example after you renamed its slug.
 
 ### Cleaning up
