@@ -413,6 +413,7 @@ final class WidgetSchema
         ])));
         $display = fn (bool $data): array => $section('display', array_values(array_filter([
             $toggle('show_title', true),
+            $toggle('card', true),
             $data ? $toggle('show_period', true) : null,
             $data ? $toggle('status_colors', true) : null,
             $data ? $toggle('ok_border', true) : null,

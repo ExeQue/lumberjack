@@ -286,7 +286,9 @@ Each widget's settings are grouped in sections that open and close:
   in place of the period label, which shows while the pointer is on the tile, it has focus or it is
   selected (never on the TV). The gear selects the widget and opens its display settings
   in a small panel beside it; Escape or a click elsewhere closes it, and changes save like
-  any other. They are whether the title shows and how big, whether the tile is colored by
+  any other. They are whether the title shows and how big, whether it sits on a card (off,
+  it has no background or border while all is well, and gets them back while degraded,
+  down or recovering), whether the tile is colored by
   its status (and whether a calm tile keeps its green border), the text size (fitted to
   the tile, or small to huge), alignment (left or centered, top or vertically centered),
   and whether to hide it while all is ok or while it has nothing to show. How often it

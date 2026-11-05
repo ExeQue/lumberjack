@@ -138,6 +138,26 @@
     border-color: var(--s-ink-4);
 }
 
+/* Without its card while calm: degraded, down and recovering still show on one. */
+.lj-tile[data-plain]:not(
+        [data-status='degraded'],
+        [data-status='down'],
+        [data-status='recovering']
+    ) {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* In the designer it keeps a faint outline, to find and pick it. */
+.lj-tile[data-plain][data-selected]:not(
+        [data-status='degraded'],
+        [data-status='down'],
+        [data-status='recovering']
+    ) {
+    border: 1px dashed var(--s-line-strong);
+}
+
 .lj-tile[data-kind='empty'] {
     border: 1px dashed var(--s-line-strong);
     background: transparent;
