@@ -99,6 +99,8 @@ return [
         'vendor' => 'vendor',
         'error_line' => 'Error line:',
         'empty' => 'No stacktrace recorded',
+        // Under "empty" for a missed or failed scheduled task.
+        'empty_schedule' => 'The scheduler reported this one, a missed run or an exit code, not a thrown exception, so it has no stacktrace.',
         // Button
         'show_vendor' => '{1} Show 1 vendor frame|[0,*] Show :count vendor frames',
         // Button

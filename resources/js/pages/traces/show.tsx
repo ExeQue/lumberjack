@@ -15,6 +15,7 @@ import { formatDuration, interpolateLogMessage } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { show as issueShow } from '@/routes/issues';
 import { show as projectShow } from '@/routes/projects';
+import { index as routesIndex } from '@/routes/routes';
 import type { ProjectHeader } from '@/types/lumberjack';
 
 type Entry = {
@@ -156,8 +157,16 @@ export default function TraceShow({ project, trace }: Props) {
                         href: projectShow(project.uuid).url,
                         mono: true,
                     },
-                    { label: t('traces.title') },
-                    { label: trace.id, mono: true },
+                    {
+                        label: t('traces.title'),
+                        href: routesIndex(project.uuid).url,
+                    },
+                    // The full id is in the tab title.
+                    {
+                        label: trace.id.slice(0, 8),
+                        mono: true,
+                        title: trace.id,
+                    },
                 ]}
             />
             <PageBody>
@@ -262,6 +271,8 @@ export default function TraceShow({ project, trace }: Props) {
                                                 style={{
                                                     left: `${Math.min(left, 99.6)}%`,
                                                     width: `${Math.min(width, 100 - Math.min(left, 99.6))}%`,
+                                                    // A 1 ms span in a long trace still shows.
+                                                    minWidth: 2,
                                                     background: barColor[tone],
                                                 }}
                                             />

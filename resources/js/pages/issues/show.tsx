@@ -1,7 +1,7 @@
 import { Relative } from '@/components/lj/relative';
 import { Head, router, useForm, usePage, Link } from '@inertiajs/react';
 import { ChevronRight, CircleDot, Eye, EyeOff } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent, KeyboardEvent } from 'react';
 import { LabelEditor } from '@/components/lj/labels';
 import type { IssueLabel } from '@/components/lj/labels';
@@ -336,20 +336,22 @@ function ContextCell({ value }: { value: unknown }) {
         value.every((v) => v === null || typeof v !== 'object')
     ) {
         return (
-            <span className="break-all">{value.map(String).join(', ')}</span>
+            <span className="wrap-break-word">
+                {value.map(String).join(', ')}
+            </span>
         );
     }
 
     if (typeof value === 'object') {
         return (
-            <pre className="font-mono text-xs break-all whitespace-pre-wrap">
+            <pre className="font-mono text-xs wrap-break-word whitespace-pre-wrap">
                 {JSON.stringify(value, null, 2)}
             </pre>
         );
     }
 
     return (
-        <span className="break-all">
+        <span className="wrap-break-word">
             {String(value as string | number | boolean)}
         </span>
     );
@@ -387,28 +389,21 @@ function ContextTables({ context }: { context: Record<string, unknown> }) {
                             {section.rows.length}
                         </span>
                     </summary>
-                    <table className="w-full table-fixed text-xs">
-                        <tbody>
-                            {[...section.rows]
-                                .sort(([a], [b]) => a.localeCompare(b))
-                                .map(([key, value]) => (
-                                    <tr
-                                        key={key}
-                                        className="border-t border-line/60 align-top"
-                                    >
-                                        <th
-                                            scope="row"
-                                            className="w-2/5 px-4 py-1.5 text-left font-mono font-normal break-words text-ink-3"
-                                        >
-                                            {key}
-                                        </th>
-                                        <td className="py-1.5 pr-4 font-mono text-ink-2">
-                                            <ContextCell value={value} />
-                                        </td>
-                                    </tr>
-                                ))}
-                        </tbody>
-                    </table>
+                    {/* Keys as wide as they need, up to 40%; values get the rest. */}
+                    <dl className="grid grid-cols-[fit-content(40%)_minmax(0,1fr)] text-xs">
+                        {[...section.rows]
+                            .sort(([a], [b]) => a.localeCompare(b))
+                            .map(([key, value]) => (
+                                <Fragment key={key}>
+                                    <dt className="border-t border-line/60 px-4 py-1.5 font-mono wrap-break-word text-ink-3">
+                                        {key}
+                                    </dt>
+                                    <dd className="border-t border-line/60 py-1.5 pr-4 font-mono text-ink-2">
+                                        <ContextCell value={value} />
+                                    </dd>
+                                </Fragment>
+                            ))}
+                    </dl>
                 </details>
             ))}
         </div>
@@ -1162,7 +1157,10 @@ export default function IssueShow({
                             hidden={tab !== 'stacktrace'}
                         >
                             {frames.length === 0 ? (
-                                <EmptyState title={t('issue.stack.empty')} />
+                                <EmptyState title={t('issue.stack.empty')}>
+                                    {latest?.context.schedule !== undefined &&
+                                        t('issue.stack.empty_schedule')}
+                                </EmptyState>
                             ) : (
                                 <>
                                     <ol>
