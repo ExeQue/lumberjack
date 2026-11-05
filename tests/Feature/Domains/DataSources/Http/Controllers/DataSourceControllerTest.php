@@ -162,6 +162,13 @@ describe('saving', function () {
         'no format' => [['format' => null], 'format'],
     ]);
 
+    it('takes a calendar\'s webcal link as the same address over HTTPS', function (string $link) {
+        $this->actingAs($this->admin)->post(route('data-sources.store', $this->project), ($this->form)(['url' => $link, 'format' => 'ical']))
+            ->assertSessionHasNoErrors();
+
+        expect(DataSource::query()->where('name', 'Stats')->sole()->url)->toBe('https://example.com/team/basic.ics');
+    })->with(['webcal://example.com/team/basic.ics', ' WEBCALS://example.com/team/basic.ics ']);
+
     it('saves the format, which the page shows', function () {
         $this->actingAs($this->admin)->put(route('data-sources.update', [$this->project, $this->source]), ($this->form)(['format' => 'prometheus', 'headers' => [['name' => 'Authorization', 'value' => '']]]))->assertSessionHasNoErrors();
 
