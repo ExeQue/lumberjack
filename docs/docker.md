@@ -25,7 +25,7 @@ curl -fsSL https://exeque.github.io/lumberjack/install.sh | sh -s podman
 
 The script asks for the address people open Lumberjack on, puts `compose.yaml` and a
 filled-in `.env.docker` in a `lumberjack` folder, starts Lumberjack and prints the setup
-token. Run it again from the same folder to update. To read it first:
+token. It also leaves `lumberjack/update.sh` behind for updates. To read it first:
 
 ```bash
 curl -fsSLO https://exeque.github.io/lumberjack/install.sh
@@ -293,7 +293,9 @@ Links in mails and alerts always use `APP_URL`.
 
 ## Updating
 
-Installed with the script? Run it again. Otherwise:
+Installed with the script? Run `lumberjack/update.sh`. It pulls the image and restarts
+Lumberjack on the engine it was installed with, and leaves `compose.yaml` and `.env.docker`
+as they are, changes of your own included. Run it after changing `.env.docker` too. Otherwise:
 
 ```bash
 docker compose pull
