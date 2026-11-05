@@ -139,6 +139,9 @@ export const DATA_KINDS: WidgetKind[] = [
     'list',
     'health',
 ];
+/** Addresses one media widget shows in turn; WidgetSchema::MAX_SLIDES. */
+export const MAX_SLIDES = 20;
+
 export const LAYOUT_KINDS: WidgetKind[] = ['clock', 'qr', 'media', 'empty'];
 export const ROTATING_KINDS: WidgetKind[] = [
     'stat',

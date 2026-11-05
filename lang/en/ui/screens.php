@@ -233,6 +233,8 @@ return [
         'period_screen' => 'Screen default',
         // Button.
         'remove' => 'Remove',
+        'add_url' => 'Add an address',
+        'remove_url' => 'Remove this address',
         'title' => 'Title',
         'shows' => 'Shows',
         // The tabs of a rotating widget's values, and what applies to all of them.
@@ -405,7 +407,7 @@ return [
         'qr_text' => ['label' => 'Text', 'placeholder' => 'Anything a phone should read'],
         'caption' => ['label' => 'Line under the code', 'placeholders' => ['link' => 'Our status page', 'wifi' => 'Guest wifi', 'text' => 'Scan me', 'image' => 'The loading dock', 'video' => 'This week\'s release', 'page' => 'Grafana']],
         'media' => ['label' => 'Shows', 'options' => ['image' => 'An image or camera', 'video' => 'A video', 'page' => 'A web page or YouTube']],
-        'media_url' => ['label' => 'Addresses', 'placeholder' => 'https://', 'hint' => 'One a line; several show in turn, the same one on every TV at once.'],
+        'media_url' => ['label' => 'Addresses', 'placeholder' => 'https://', 'hint' => 'Several show in turn, the same one on every TV at once.'],
         'slide_seconds' => ['label' => 'Next after', 'options' => ['5' => '5 seconds', '10' => '10 seconds', '20' => '20 seconds', '30' => '30 seconds', '60' => '1 minute', '300' => '5 minutes']],
         'padding' => ['label' => 'Space around it'],
         'subtitles' => ['label' => 'Subtitles (YouTube and Vimeo)'],
