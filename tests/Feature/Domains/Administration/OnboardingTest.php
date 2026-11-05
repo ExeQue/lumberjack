@@ -69,7 +69,7 @@ describe('who is sent to the onboarding', function () {
 
     it('does not send users who existed before it was added', function () {
         $existing = User::factory()->notOnboarded()->inTeam()->create();
-        $migration = require database_path('migrations/2026_11_19_100000_add_onboarded_at_to_users_table.php');
+        $migration = require database_path('migrations/2026_11_05_070600_add_onboarded_at_to_users_table.php');
         $migration->down();
         $migration->up();
 
