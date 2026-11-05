@@ -140,6 +140,7 @@ return [
         'health' => 'Health',
         'clock' => 'Clock and text',
         'qr' => 'QR code',
+        'media' => 'Image, video or page',
         'empty' => 'Empty cell',
     ],
 
@@ -152,6 +153,7 @@ return [
         'health' => 'All checks, or pick one for its timeline',
         'clock' => 'Time, a title or a note',
         'qr' => 'A link, the guest wifi or any text to scan',
+        'media' => 'A picture or camera, a video, YouTube or a web page',
         'empty' => 'Blank space; not shown on the TV',
     ],
 
@@ -313,6 +315,7 @@ return [
         'checks' => 'Checks',
         'clock' => 'Clock',
         'qr' => 'QR code',
+        'media' => 'Media',
         'rotation' => 'Rotation',
         'scope' => 'Scope',
         'display' => 'Display',
@@ -400,7 +403,11 @@ return [
         'security' => ['label' => 'Security', 'options' => ['WPA' => 'WPA', 'WEP' => 'WEP', 'nopass' => 'None']],
         'hidden_network' => ['label' => 'Hidden network'],
         'qr_text' => ['label' => 'Text', 'placeholder' => 'Anything a phone should read'],
-        'caption' => ['label' => 'Line under the code', 'placeholders' => ['link' => 'Our status page', 'wifi' => 'Guest wifi', 'text' => 'Scan me']],
+        'caption' => ['label' => 'Line under the code', 'placeholders' => ['link' => 'Our status page', 'wifi' => 'Guest wifi', 'text' => 'Scan me', 'image' => 'The loading dock', 'video' => 'This week\'s release', 'page' => 'Grafana']],
+        'media' => ['label' => 'Shows', 'options' => ['image' => 'An image or camera', 'video' => 'A video', 'page' => 'A web page or YouTube']],
+        'media_url' => ['label' => 'Address', 'placeholder' => 'https://'],
+        'fit' => ['label' => 'Fit', 'options' => ['contain' => 'Whole', 'cover' => 'Fill the tile']],
+        'reload_every' => ['label' => 'Load again', 'options' => ['never' => 'Never', '1' => 'Every minute', '5' => 'Every 5 minutes', '15' => 'Every 15 minutes', '60' => 'Every hour']],
         'rotate_every' => ['label' => 'Switch every', 'options' => ['5' => '5 seconds', '10' => '10 seconds', '20' => '20 seconds', '30' => '30 seconds', '60' => '1 minute']],
         'transition' => ['label' => 'Transition', 'options' => ['fade' => 'Fade', 'slide' => 'Slide', 'flip' => 'Flip', 'none' => 'None']],
         'hold_problem' => ['label' => 'Stay on a value that needs attention'],
@@ -432,6 +439,12 @@ return [
     'widget' => [
         'loading' => 'Loading...',
         'failed' => 'Could not load this widget.',
+    ],
+
+    'media' => [
+        'empty' => 'No address yet.',
+        'invalid' => 'Only http and https addresses.',
+        'failed' => 'Could not load it.',
     ],
 
     'qr' => [

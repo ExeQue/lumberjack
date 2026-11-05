@@ -506,6 +506,8 @@ export function WidgetTile({
                 {t('screens.kinds.empty')}
             </span>
         ) : null;
+    } else if (widget.type === 'media') {
+        body = <MediaTile widget={widget} schema={schema} now={now} />;
     } else if (widget.type === 'qr') {
         body = <QrCodeTile widget={widget} schema={schema} data={data?.qr} />;
     } else if (widget.type === 'clock') {
@@ -2144,6 +2146,132 @@ function Health({ widget, schema, data, now, t }: BodyProps) {
                 </ul>
             )}
         </div>
+    );
+}
+
+/** Only http(s): a javascript: address in a frame would run in the screen's own page. */
+function webUrl(value: string | null): string | null {
+    return value && /^https?:\/\//i.test(value.trim()) ? value.trim() : null;
+}
+
+/**
+ * A YouTube or Vimeo page as its player, muted and looping (a TV cannot autoplay with
+ * sound); any other page as it is.
+ */
+function embedUrl(url: string): string {
+    const youtube = url.match(
+        /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([\w-]{11})/i,
+    );
+
+    if (youtube) {
+        const id = youtube[1];
+
+        return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&playsinline=1`;
+    }
+
+    const vimeo = url.match(/^https?:\/\/(?:www\.)?vimeo\.com\/(\d+)/i);
+
+    return vimeo
+        ? `https://player.vimeo.com/video/${vimeo[1]}?autoplay=1&muted=1&loop=1&background=1`
+        : url;
+}
+
+/**
+ * An image (a camera's MJPEG stream too), a video or a web page from an address the
+ * screen's browser loads itself; nothing goes through the server. Not interactive, so
+ * the designer can still pick and drag the tile.
+ */
+function MediaTile({
+    widget,
+    schema,
+    now,
+}: {
+    widget: Widget;
+    schema: Schema;
+    now: number;
+}) {
+    const t = useT();
+    const opt = <T,>(key: string) => option<T>(schema, widget, key);
+    const kind = opt<string>('media') ?? 'image';
+    const url = webUrl(opt<string | null>('media_url'));
+    const caption = opt<string>('caption');
+    const fit =
+        opt<string>('fit') === 'cover' ? 'object-cover' : 'object-contain';
+    const every = Number(opt<string>('reload_every')) || 0;
+    // Loaded again every so many minutes: a snapshot that changes behind the same address.
+    const round = every > 0 ? Math.floor(now / (every * 60_000)) : 0;
+    const [failed, setFailed] = useState<string | null>(null);
+    const source =
+        url && kind === 'image' && every > 0
+            ? `${url}${url.includes('?') ? '&' : '?'}_lj=${round}`
+            : url;
+    const box = 'min-h-0 w-full flex-1 pointer-events-none';
+
+    let body: ReactNode;
+
+    if (!url || !source) {
+        body = (
+            <span className="lj-tile-small m-auto">
+                {t(
+                    opt<string | null>('media_url')
+                        ? 'screens.media.invalid'
+                        : 'screens.media.empty',
+                )}
+            </span>
+        );
+    } else if (failed === source) {
+        body = (
+            <span className="lj-tile-small m-auto">
+                {t('screens.media.failed')}
+            </span>
+        );
+    } else if (kind === 'video') {
+        body = (
+            <video
+                key={source}
+                src={source}
+                className={cn(box, fit)}
+                autoPlay
+                muted
+                loop
+                playsInline
+                onError={() => setFailed(source)}
+            />
+        );
+    } else if (kind === 'page') {
+        body = (
+            <iframe
+                key={`${source}#${round}`}
+                src={embedUrl(source)}
+                title={widget.title ?? t('screens.kinds.media')}
+                className={cn(box, 'border-0')}
+                sandbox="allow-scripts allow-same-origin allow-presentation"
+                allow="autoplay; encrypted-media"
+                referrerPolicy="no-referrer"
+                loading="lazy"
+            />
+        );
+    } else {
+        body = (
+            <img
+                src={source}
+                alt={caption || widget.title || ''}
+                className={cn(box, fit)}
+                referrerPolicy="no-referrer"
+                onError={() => setFailed(source)}
+            />
+        );
+    }
+
+    return (
+        <>
+            {body}
+            {caption && (
+                <span className="lj-tile-small shrink-0 text-center">
+                    {caption}
+                </span>
+            )}
+        </>
     );
 }
 

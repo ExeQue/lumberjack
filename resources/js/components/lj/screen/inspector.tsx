@@ -991,7 +991,7 @@ export function WidgetInspector({
                                         : field.key === 'caption'
                                           ? // What the line says fits what the code holds.
                                             t(
-                                                `screens.fields.caption.placeholders.${option(catalog.schema, widget, 'content')}`,
+                                                `screens.fields.caption.placeholders.${option<string | null>(catalog.schema, widget, 'content') ?? option<string>(catalog.schema, widget, 'media')}`,
                                             )
                                           : t(
                                                 `screens.fields.${field.key}.placeholder`,
