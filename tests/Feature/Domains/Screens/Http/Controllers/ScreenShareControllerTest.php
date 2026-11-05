@@ -17,7 +17,6 @@ use App\Domains\Screens\Http\Requests\UpdateScreenShareRequest;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
-use ExeQue\Qr\Facades\Qr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -138,23 +137,6 @@ describe('turning a share link on and off', function () {
     });
 });
 
-describe('the printable QR code', function () {
-    it('downloads the share link dark on white as PNG, readable', function () {
-        $screen = ($this->share)();
-
-        $response = $this->actingAs($this->member)->get(route('screens.share.qr', $screen))->assertOk()
-            ->assertHeader('Content-Type', 'image/png')
-            ->assertDownload('lumberjack-ops-qr.png');
-
-        expect(Qr::read($response->streamedContent())->text)->toBe($screen->shareUrl());
-    });
-
-    it('is not there while the screen is not shared, and not for outsiders', function () {
-        $this->actingAs($this->member)->get(route('screens.share.qr', $this->screen))->assertNotFound();
-        ($this->share)();
-        $this->actingAs(User::factory()->inTeam()->create())->get(route('screens.share.qr', $this->screen))->assertForbidden();
-    });
-});
 
 describe('a screen by its share link', function () {
     beforeEach(function () {

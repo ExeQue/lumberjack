@@ -16,11 +16,11 @@ describe('the QR codes of status screens', function () {
             ->and(strtolower($svg))->toContain('#161a1e');
     });
 
-    it('reads back what it holds, on screen and in print', function (string $variant) {
+    it('reads back what it holds', function () {
         $url = 'https://lumberjack.test/s/ls_'.str_repeat('a1', 20);
-        $png = $variant === 'screen' ? ScreenQr::screenPng($url) : ScreenQr::printPng($url);
+        $png = ScreenQr::screenPng($url);
 
         expect($png->mimeType())->toBe('image/png')
             ->and(Qr::read($png)->text)->toBe($url);
-    })->with(['screen', 'print']);
+    });
 });

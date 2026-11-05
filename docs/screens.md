@@ -446,8 +446,6 @@ that could be passed on.
 
 The QR codes (on the TV's pairing page, in **Open on a TV**, on **Pair a TV** in
 Displays and for the share link) carry the Lumberjack mark, amber on the dark panel.
-**Download QR for printing** under **Share** gives the share link as a PNG, dark on
-white with darker amber corners, for a sticker on the wall.
 
 ## What a TV keeps
 

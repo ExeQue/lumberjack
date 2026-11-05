@@ -1,10 +1,10 @@
 import { router } from '@inertiajs/react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { CopyButton } from '@/components/lj/copy-text';
-import { Button, buttonClass, Input, Label } from '@/components/lj/ui';
+import { Button, Input, Label } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { share } from '@/routes/screens';
-import { qr as qrRoute, rotate } from '@/routes/screens/share';
+import { rotate } from '@/routes/screens/share';
 import { QrCode } from './qr';
 
 export type Sharing = {
@@ -16,7 +16,7 @@ export type Sharing = {
 
 /**
  * The designer's share link: on and off, titles or only counts, copy, a new link, and
- * the QR code (on screen, and dark on white for printing). Team admins change it.
+ * the QR code. Team admins change it.
  */
 export function SharePanel({
     screen,
@@ -103,20 +103,11 @@ export function SharePanel({
                         </Label>
                     </div>
                     {sharing.qr !== null && (
-                        <div className="flex flex-wrap items-end gap-3">
-                            <QrCode
-                                svg={sharing.qr}
-                                label={t('screens.share.qr_label')}
-                                className="size-36"
-                            />
-                            <a
-                                href={qrRoute(screen).url}
-                                download
-                                className={buttonClass('default')}
-                            >
-                                {t('screens.share.download')}
-                            </a>
-                        </div>
+                        <QrCode
+                            svg={sharing.qr}
+                            label={t('screens.share.qr_label')}
+                            className="size-36"
+                        />
                     )}
                 </>
             )}

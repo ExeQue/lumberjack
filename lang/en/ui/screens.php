@@ -612,7 +612,6 @@ return [
         'revoke' => 'Stop sharing',
         'rotate_question' => 'Make a new link? The current one stops working at once, on every screen that shows it.',
         'revoke_question' => 'Stop sharing? The link stops working at once, on every screen that shows it.',
-        'download' => 'Download QR for printing',
         'qr_label' => 'QR code for the share link',
         'admins_only' => 'Only team admins share screens.',
         'off' => 'Not shared.',
