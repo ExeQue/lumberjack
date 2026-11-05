@@ -39,6 +39,7 @@ class UpdateScreenRequest extends FormRequest
             'fit' => ['sometimes', 'required', Rule::enum(ScreenFit::class)],
             'show_header' => ['sometimes', 'required', 'boolean'],
             'show_clock' => ['sometimes', 'required', 'boolean'],
+            'clock_format' => ['sometimes', 'required', Rule::in(['24', '12'])],
             'light_from' => ['sometimes', 'required', ...$time],
             'light_to' => ['sometimes', 'required', ...$time],
             // Empty: the viewer's own time zone.
@@ -52,7 +53,7 @@ class UpdateScreenRequest extends FormRequest
     }
 
     /**
-     * @return array{name?: string, theme?: ScreenTheme, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, show_header?: bool, show_clock?: bool, light_from?: string, light_to?: string, timezone?: string|null, scope?: array{projects: list<string>, environment: string|null, period: string}}
+     * @return array{name?: string, theme?: ScreenTheme, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, show_header?: bool, show_clock?: bool, clock_format?: string, light_from?: string, light_to?: string, timezone?: string|null, scope?: array{projects: list<string>, environment: string|null, period: string}}
      */
     public function settings(): array
     {
@@ -76,6 +77,10 @@ class UpdateScreenRequest extends FormRequest
 
         if ($this->has('show_clock')) {
             $settings['show_clock'] = $this->boolean('show_clock');
+        }
+
+        if ($this->has('clock_format')) {
+            $settings['clock_format'] = $this->string('clock_format')->toString();
         }
 
         if ($this->has('fit')) {

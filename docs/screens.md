@@ -187,7 +187,7 @@ widget shows unless it picks its own (no project ticked means every project of t
 new ones included), the time zone for the clock and the theme schedule (left empty, each TV
 uses its browser's own, so one screen shows local time in every office; a new screen starts
 empty), whether the
-header shows and whether its clock does, the [theme](#theme) and how the screen fits a display of another shape.
+header shows and whether its clock does (in 24 or 12 hours), the [theme](#theme) and how the screen fits a display of another shape.
 
 ## Widgets
 

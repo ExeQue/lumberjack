@@ -52,6 +52,7 @@ class ExportScreenAction
                 'fit' => $screen->fit->value,
                 'show_header' => $screen->show_header,
                 'show_clock' => $screen->show_clock,
+                'clock_format' => $screen->clock_format,
                 'theme' => $screen->theme->value,
                 'light_from' => $screen->light_from,
                 'light_to' => $screen->light_to,

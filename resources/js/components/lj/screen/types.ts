@@ -69,6 +69,8 @@ export type Screen = {
     show_header: boolean;
     /** Whether that header shows the clock. */
     show_clock: boolean;
+    /** The header's clock: '24' or '12' hours. */
+    clock_format: '24' | '12';
     theme: ScreenTheme;
     light_from: string;
     light_to: string;
