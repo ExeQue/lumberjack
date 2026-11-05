@@ -16,14 +16,19 @@ use Illuminate\Database\Seeder;
 
 /**
  * The Local Team's "Widget gallery": one widget of every type and its main variants, the
- * screen docs/widgets.md takes its screenshots of (npm run docs:screenshots). A 12 x 12
- * grid that fills its display, so a TV twice as tall as wide shows each tile as large as
- * a 12 x 6 screen would. Its calendar is a data source of Storefront whose feed is
+ * screen docs/widgets.md takes its screenshots of (npm run docs:screenshots). An 8 x 14
+ * grid that fills its display: 1920 px wide, its cells are as wide as an 8-column screen's
+ * on a 1920 x 1080 TV, and square. Its calendar is a data source of Storefront whose feed is
  * written again on every run, relative to now; a gallery screen already there is kept.
  */
 class ShowcaseWidgetsSeeder extends Seeder
 {
     public const string NAME = 'Widget gallery';
+
+    /** Eight columns as on a 1920 x 1080 TV with four rows; the gallery has more rows of the same size. */
+    private const int COLS = 8;
+
+    private const int ROWS = 14;
 
     private const string TIMEZONE = 'Europe/Copenhagen';
 
@@ -44,8 +49,8 @@ class ShowcaseWidgetsSeeder extends Seeder
 
         Screen::factory()->for($team)->create([
             'name' => self::NAME,
-            'cols' => 12,
-            'rows' => 12,
+            'cols' => self::COLS,
+            'rows' => self::ROWS,
             'fit' => ScreenFit::Fill,
             'theme' => ScreenTheme::Dark,
             'timezone' => self::TIMEZONE,
@@ -121,7 +126,7 @@ class ShowcaseWidgetsSeeder extends Seeder
     }
 
     /**
-     * Four bands of tiles on the 12 x 12 grid, named by type and variant.
+     * Rows of tiles on the 8 x 14 grid, named by type and variant.
      *
      * @return list<array<string, mixed>>
      */
@@ -132,37 +137,57 @@ class ShowcaseWidgetsSeeder extends Seeder
             'title' => $title, 'options' => $options, 'scope' => $scope,
         ];
         $storefront = $project !== null ? ['projects' => [$project->uuid]] : [];
+        // One check Lumberjack runs itself, so it stays fresh.
+        $check = $project?->healthChecks()->where('name', 'Storefront')->value('uuid');
+        $single = $check !== null ? ['checks' => [$check]] : [];
+        $plain = ['sparkline' => false];
         $calendarOption = $calendar !== null ? ['data_source' => $calendar->uuid] : [];
+        // Text widgets in the middle of their tile, as most screens show them.
+        $centered = ['align' => 'center', 'valign' => 'middle'];
         $countdownTarget = Showcase::now()->setTimezone(self::TIMEZONE)->addDays(12)->setTime(9, 0)->format('Y-m-d\TH:i');
 
         return [
-            $widget('stat', 'stat', 'p95', 0, 0, 3, 2, options: ['sparkline' => false]),
-            $widget('stat-sparkline', 'stat', 'requests', 3, 0, 3, 2, options: ['compare' => 'yesterday']),
-            $widget('stat-release', 'stat', 'current_release', 6, 0, 3, 2, 'Storefront release', ['compare' => 'none', 'sparkline' => false], $storefront),
-            $widget('gauge', 'gauge', 'host_cpu', 9, 0, 3, 2),
+            $widget('stat', 'stat', 'p95', 0, 0, 1, 1, options: ['sparkline' => false, ...$centered]),
+            $widget('stat-sparkline', 'stat', 'requests', 3, 0, 2, 1, options: ['compare' => 'yesterday', 'align' => 'center']),
+            $widget('stat-release', 'stat', 'current_release', 1, 0, 1, 1, 'Storefront release', ['compare' => 'none', 'sparkline' => false, ...$centered], $storefront),
+            $widget('gauge', 'gauge', 'host_cpu', 2, 0, 1, 1),
 
-            $widget('chart-area', 'chart', 'requests_errors', 0, 2, 4, 2, options: ['style' => 'area', 'smooth' => true]),
-            $widget('chart-split', 'chart', 'requests', 4, 2, 4, 2, 'Requests by route', ['split_by' => 'route', 'legend' => true], $storefront),
-            $widget('chart-bars', 'chart', 'p95', 8, 2, 4, 2, options: ['overlay_previous' => true]),
+            $widget('chart-area', 'chart', 'requests_errors', 0, 1, 4, 1, options: ['style' => 'area', 'smooth' => true]),
+            $widget('chart-bars', 'chart', 'p95', 4, 1, 4, 1, options: ['overlay_previous' => true]),
+            $widget('chart-split', 'chart', 'requests', 0, 2, 4, 2, 'Requests by route', ['split_by' => 'route', 'legend' => true], $storefront),
+            $widget('list-issues', 'list', 'latest_issues', 4, 2, 4, 2, options: ['sort' => 'worst', 'show_project' => true, 'limit' => '10']),
 
-            $widget('list-issues', 'list', 'latest_issues', 0, 4, 4, 2, options: ['sort' => 'worst', 'show_project' => true, 'limit' => '10']),
-            $widget('list-queues', 'list', 'queues', 4, 4, 4, 2, options: ['show_project' => true]),
-            $widget('list-calendar', 'list', 'calendar', 8, 4, 4, 2, 'This week', $calendarOption),
+            $widget('list-queues', 'list', 'queues', 0, 4, 4, 2, options: ['show_project' => true]),
+            $widget('list-calendar', 'list', 'calendar', 4, 4, 4, 2, 'This week', $calendarOption),
 
             $widget('health-cards', 'health', 'checks', 0, 6, 4, 2, options: ['view' => 'cards']),
             $widget('health-list', 'health', 'checks', 4, 6, 4, 2, 'Storefront checks', ['view' => 'list'], $storefront),
-            $widget('overview', 'overview', 'projects', 8, 6, 4, 2),
 
-            $widget('slo-availability', 'slo', 'availability', 0, 8, 3, 2, options: ['slo_target' => '99_5']),
-            $widget('slo-latency', 'slo', 'latency', 3, 8, 3, 2),
-            $widget('clock-world', 'clock', null, 6, 8, 3, 2, 'Copenhagen', ['date' => true, 'zones' => "America/New_York\nAsia/Tokyo\nAustralia/Sydney"]),
-            $widget('countdown', 'countdown', null, 9, 8, 3, 2, options: ['target' => $countdownTarget, 'countdown_label' => 'Release 3.0', 'seconds' => false]),
+            $widget('overview', 'overview', 'projects', 0, 8, 4, 2),
+            $widget('health-single', 'health', 'checks', 4, 8, 2, 1, options: [...$single, ...$centered], scope: $storefront),
+            $widget('countdown', 'countdown', null, 4, 9, 2, 1, options: ['target' => $countdownTarget, 'countdown_label' => 'Release 3.0', 'seconds' => false, ...$centered]),
+            $widget('clock-world', 'clock', null, 6, 8, 2, 2, 'Copenhagen', ['date' => true, 'zones' => "America/New_York\nAsia/Tokyo\nAustralia/Sydney", ...$centered]),
 
-            $widget('countdown-calendar', 'countdown', null, 0, 10, 3, 2, 'Room Oak', ['counts_to' => 'calendar', 'calendar_text' => 'status', ...$calendarOption]),
-            $widget('qr-wifi', 'qr', null, 3, 10, 2, 2, options: ['content' => 'wifi', 'ssid' => 'Office guests', 'password' => 'coffee-and-logs', 'caption' => 'Guest wifi']),
-            $widget('media-image', 'media', null, 5, 10, 3, 2, options: ['media_url' => rtrim((string) config('app.url'), '/').'/favicon.svg', 'caption' => 'Lumberjack']),
-            $widget('message', 'message', null, 8, 10, 4, 1, 'Heads up', ['message' => 'Deploy freeze from Friday noon until Monday morning.', 'tone' => 'warning']),
-            $widget('message-ticker', 'message', null, 8, 11, 4, 1, 'Planned work', ['message' => 'Orders database maintenance tomorrow at 22:00 for an hour. Checkout stays up; order history may be slow.', 'tone' => 'info', 'scroll' => true]),
+            $widget('slo-availability', 'slo', 'availability', 5, 0, 1, 1, options: ['slo_target' => '99_5', ...$centered]),
+            $widget('slo-latency', 'slo', 'latency', 6, 0, 1, 1, options: $centered),
+            $widget('countdown-calendar', 'countdown', null, 0, 10, 2, 1, 'Room Oak', ['counts_to' => 'calendar', 'calendar_text' => 'status', ...$calendarOption, ...$centered]),
+            $widget('qr-wifi', 'qr', null, 7, 0, 1, 1, options: ['content' => 'wifi', 'ssid' => 'Office guests', 'password' => 'coffee-and-logs', 'caption' => 'Guest wifi']),
+            $widget('media-image', 'media', null, 2, 10, 2, 1, options: ['media_url' => rtrim((string) config('app.url'), '/').'/favicon.svg', 'caption' => 'Lumberjack']),
+
+            $widget('message', 'message', null, 4, 10, 4, 1, 'Heads up', ['message' => 'Deploy freeze from Friday noon until Monday morning.', 'tone' => 'warning', ...$centered]),
+            $widget('message-ticker', 'message', null, 0, 11, 8, 1, 'Planned work', ['message' => 'Orders database maintenance tomorrow at 22:00 for an hour. Checkout stays up; order history may be slow.', 'tone' => 'info', 'scroll' => true]),
+
+            // The display settings, each against the plain p95 stat or health check it changes.
+            $widget('display-default', 'stat', 'p95', 0, 12, 1, 1, options: $plain),
+            $widget('display-centered', 'stat', 'p95', 1, 12, 1, 1, options: [...$plain, ...$centered]),
+            $widget('display-text-s', 'stat', 'p95', 2, 12, 1, 1, options: [...$plain, 'text_size' => 's']),
+            $widget('display-title-l', 'stat', 'p95', 3, 12, 1, 1, options: [...$plain, 'title_size' => 'l']),
+            $widget('display-no-title', 'stat', 'p95', 4, 12, 1, 1, options: [...$plain, 'show_title' => false]),
+            $widget('display-no-period', 'stat', 'p95', 5, 12, 1, 1, options: [...$plain, 'show_period' => false]),
+            $widget('display-no-colors', 'stat', 'p95', 6, 12, 1, 1, options: [...$plain, 'status_colors' => false]),
+            $widget('display-ok', 'health', 'checks', 0, 13, 2, 1, options: $single, scope: $storefront),
+            $widget('display-no-ok-border', 'health', 'checks', 2, 13, 2, 1, options: [...$single, 'ok_border' => false], scope: $storefront),
+            $widget('display-no-card', 'health', 'checks', 4, 13, 2, 1, options: [...$single, 'card' => false], scope: $storefront),
         ];
     }
 }

@@ -162,12 +162,14 @@ const pairCode = await page
     )
     .catch(() => null);
 
-// It fills its display: twice a TV's height gives each tile what a 12 x 6 screen would.
-const galleryView = { width: 1920, height: 2160 };
+// It fills its display: 1920 px wide gives each cell the width an 8-column screen has on a
+// 1920 x 1080 TV, and rows as tall as that make a 1 x 1 tile square.
+const galleryView = { width: 1920, height: 240 * 14 };
 // Health first: the seeded checks' agents report no more, and go stale within minutes.
 const galleryTiles = [
     'health-cards',
     'health-list',
+    'health-single',
     'overview',
     'stat',
     'stat-sparkline',
@@ -188,6 +190,16 @@ const galleryTiles = [
     'media-image',
     'message',
     'message-ticker',
+    'display-default',
+    'display-centered',
+    'display-text-s',
+    'display-title-l',
+    'display-no-title',
+    'display-no-period',
+    'display-no-colors',
+    'display-ok',
+    'display-no-ok-border',
+    'display-no-card',
 ];
 const galleryLight = ['stat-sparkline', 'chart-area', 'list-issues'];
 // A tile once its data is in: no loading text, a picture or a chart drawn where it has one.
