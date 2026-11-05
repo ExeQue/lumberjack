@@ -157,7 +157,7 @@ export default function RoutesIndex({
                     environments={project.environments}
                 />
             </TopBar>
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('routes.title')}
                     description={

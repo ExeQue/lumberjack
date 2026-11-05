@@ -165,7 +165,7 @@ export default function BrowserIndex({
                     environments={project.environments}
                 />
             </TopBar>
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('browser.title')}
                     description={t(

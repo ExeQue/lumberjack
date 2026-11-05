@@ -149,7 +149,7 @@ export default function ScheduleIndex({
                     environments={project.environments}
                 />
             </TopBar>
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('schedule.title')}
                     description={t('schedule.description', {}, tasks.length)}

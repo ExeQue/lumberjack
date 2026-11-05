@@ -197,7 +197,7 @@ export default function JobsIndex({
                     environments={project.environments}
                 />
             </TopBar>
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('jobs.title')}
                     description={t(

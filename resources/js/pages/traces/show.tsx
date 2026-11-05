@@ -160,7 +160,7 @@ export default function TraceShow({ project, trace }: Props) {
                     { label: trace.id, mono: true },
                 ]}
             />
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={
                         request ? (

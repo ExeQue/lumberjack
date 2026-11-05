@@ -130,7 +130,7 @@ export default function CommandsIndex({
                     environments={project.environments}
                 />
             </TopBar>
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('commands.title')}
                     description={t('commands.description', {}, commands.length)}

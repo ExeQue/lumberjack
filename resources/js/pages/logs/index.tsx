@@ -181,7 +181,7 @@ export default function LogsIndex({
                     environments={project.environments}
                 />
             </TopBar>
-            <PageBody wide>
+            <PageBody>
                 <PageTitle title={t('logs.title')} />
 
                 <div className="flex flex-wrap items-start gap-4">

@@ -167,7 +167,7 @@ export default function IssuesIndex({
                     { label: t('issues.title') },
                 ]}
             />
-            <PageBody wide>
+            <PageBody>
                 <PageTitle title={t('issues.title')} />
 
                 <div className="flex flex-wrap items-center gap-2">

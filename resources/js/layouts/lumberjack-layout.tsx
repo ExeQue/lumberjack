@@ -69,17 +69,9 @@ export default function LumberjackLayout({
     );
 }
 
-export function PageBody({
-    children,
-    wide = false,
-}: {
-    children: ReactNode;
-    wide?: boolean;
-}) {
+export function PageBody({ children }: { children: ReactNode }) {
     return (
-        <div
-            className={`flex w-full flex-col gap-5 px-4 pt-6 pb-10 sm:px-7 ${wide ? 'max-w-[1400px]' : 'max-w-[1200px]'}`}
-        >
+        <div className="flex w-full flex-col gap-5 px-4 pt-6 pb-10 sm:px-7">
             {children}
         </div>
     );

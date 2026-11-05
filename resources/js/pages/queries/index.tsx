@@ -123,7 +123,7 @@ export default function QueriesIndex({
                     environments={project.environments}
                 />
             </TopBar>
-            <PageBody wide>
+            <PageBody>
                 <PageTitle
                     title={t('queries.title')}
                     description={
