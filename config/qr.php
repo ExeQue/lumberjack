@@ -19,8 +19,6 @@ return [
     'colors' => [
         'amber' => '#F0A93B',
         'panel' => '#161a1e',
-        'amber-dark' => '#b5720f',
-        'paper' => '#ffffff',
     ],
 
     /*
@@ -29,8 +27,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Every QR code Lumberjack draws: amber, rounded modules and eyes, on the
-    | dark panel; on a light screen the screen's darker amber (3.9:1 on white,
-    | where the brand amber is only 1.9:1). Plain values, so the config can be
+    | dark panel (the QR code widget drops the panel and shows on either theme). Plain values, so the config can be
     | cached. The logo is added where a code is drawn, since SVG and PNG need
     | different files.
     |
@@ -46,11 +43,6 @@ return [
             ],
             'background' => 'panel',
             'margin' => 2,
-        ],
-        'lumberjack-light' => [
-            'extends' => 'lumberjack',
-            'modules' => ['paint' => 'amber-dark'],
-            'background' => 'paper',
         ],
     ],
 

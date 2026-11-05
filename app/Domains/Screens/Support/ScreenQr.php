@@ -33,13 +33,12 @@ final class ScreenQr
 
     /**
      * A QR code widget's picture, from its options: a link, a wifi network or any text, on
-     * no background.
-     * Null while there is nothing to encode yet.
+     * no background, so the same picture suits a light and a dark screen. Null while
+     * there is nothing to encode yet.
      *
      * @param  array<string, mixed>  $options
-     * @param  'lumberjack'|'lumberjack-light'  $style  the dark screen's or the light one's
      */
-    public static function widgetSvg(array $options, string $style = 'lumberjack'): ?string
+    public static function widgetSvg(array $options): ?string
     {
         $value = fn (string $key): string => trim((string) ($options[$key] ?? ''));
 
@@ -49,11 +48,10 @@ final class ScreenQr
             default => $value('url') === '' ? null : Qr::url($value('url')),
         };
 
-        // Transparent, so the tile shows through. Contrast is measured against white
-        // when there is no background, which amber on a dark tile fails, so that guard
-        // is off here; the rest still apply.
-        // The mark has no plate and draws in currentColor, which the screen sets.
-        return $qr?->style($style)->background(null)->scanSafety(new ScanSafety(minContrast: null, inverted: null))->logo(file: resource_path('images/qr-mark.svg'), size: self::LOGO_SIZE, shape: 'circle')->svg()->contents();
+        // Transparent, so the tile shows through. Amber has too little contrast for the
+        // guard on white, so that one guard is off; the rest still apply. The mark has
+        // no plate.
+        return $qr?->style('lumberjack')->background(null)->scanSafety(new ScanSafety(minContrast: null, inverted: null))->logo(file: resource_path('images/qr-mark.svg'), size: self::LOGO_SIZE, shape: 'circle')->svg()->contents();
     }
 
     /**

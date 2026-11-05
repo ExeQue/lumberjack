@@ -2160,24 +2160,14 @@ function QrCodeTile({
     const t = useT();
     const caption = option<string>(schema, widget, 'caption');
     const svg = typeof data?.svg === 'string' ? data.svg : null;
-    const light = typeof data?.light === 'string' ? data.light : svg;
-    const box =
-        'aspect-square min-h-0 w-auto max-w-full flex-1 self-center overflow-hidden rounded-[0.4em] [&_svg]:size-full';
 
     return (
         <>
             {svg ? (
-                // Both pictures: a scheduled theme switches without asking again.
-                <>
-                    <div
-                        className={cn(box, 'lj-qr-dark')}
-                        dangerouslySetInnerHTML={{ __html: svg }}
-                    />
-                    <div
-                        className={cn(box, 'lj-qr-light')}
-                        dangerouslySetInnerHTML={{ __html: light ?? svg }}
-                    />
-                </>
+                <div
+                    className="aspect-square min-h-0 w-auto max-w-full flex-1 self-center [&_svg]:size-full"
+                    dangerouslySetInnerHTML={{ __html: svg }}
+                />
             ) : (
                 <span className="lj-tile-small m-auto">
                     {t(

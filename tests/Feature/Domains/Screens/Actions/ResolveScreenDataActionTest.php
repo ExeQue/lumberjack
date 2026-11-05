@@ -167,9 +167,8 @@ describe('a QR code widget', function () {
         $qr = app(ResolveScreenDataAction::class)->execute($screen, 'qr')['qr']['qr'];
 
         match ($drawn) {
-            true => expect(strtolower($qr['svg']))->toStartWith('<svg')->toContain('#f0a93b')
-                ->and(strtolower($qr['light']))->toStartWith('<svg')->toContain('#b5720f')->not->toContain('#ffffff'),
-            false => expect($qr)->toBe(['svg' => null, 'light' => null]),
+            true => expect(strtolower($qr['svg']))->toStartWith('<svg')->toContain('#f0a93b')->not->toContain('#161a1e'),
+            false => expect($qr)->toBe(['svg' => null]),
             null => expect($qr)->toBeNull(),
         };
     })->with([
