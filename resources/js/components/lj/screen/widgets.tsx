@@ -2260,7 +2260,8 @@ function MediaTile({
                 className={cn(box, 'border-0')}
                 sandbox="allow-scripts allow-same-origin allow-presentation"
                 allow="autoplay; encrypted-media"
-                referrerPolicy="no-referrer"
+                // The origin only: YouTube's player refuses to play without one (error 153).
+                referrerPolicy="strict-origin-when-cross-origin"
                 loading="lazy"
             />
         );
