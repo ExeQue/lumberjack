@@ -51,10 +51,11 @@ jobs:
     needs: smoke
     strategy:
       matrix:
-        # amd64 only while the repository is private: native arm64 runners are free
-        # for public repositories only, and arm64 under QEMU takes most of an hour.
-        # Once public, arm64 builds natively alongside amd64 with no change here.
-        include: ${{ fromJSON(github.event.repository.private && '[{"platform":"linux/amd64","runner":"ubuntu-latest"}]' || '[{"platform":"linux/amd64","runner":"ubuntu-latest"},{"platform":"linux/arm64","runner":"ubuntu-24.04-arm"}]') }}
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
