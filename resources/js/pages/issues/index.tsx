@@ -335,22 +335,32 @@ export default function IssuesIndex({
                                     <th className={thClass}>
                                         {t('issues.columns.issue')}
                                     </th>
-                                    <th className={thClass}>
+                                    <th
+                                        className={`${thClass} hidden md:table-cell`}
+                                    >
                                         {t('issues.columns.last_24h')}
                                     </th>
                                     <th className={`${thClass} text-right`}>
                                         {t('issues.columns.occurrences')}
                                     </th>
-                                    <th className={`${thClass} text-right`}>
+                                    <th
+                                        className={`${thClass} hidden text-right xl:table-cell`}
+                                    >
                                         {t('issues.columns.users')}
                                     </th>
-                                    <th className={thClass}>
+                                    <th
+                                        className={`${thClass} hidden sm:table-cell`}
+                                    >
                                         {t('issues.columns.last_seen')}
                                     </th>
-                                    <th className={thClass}>
+                                    <th
+                                        className={`${thClass} hidden 2xl:table-cell`}
+                                    >
                                         {t('issues.columns.first_seen')}
                                     </th>
-                                    <th className={thClass}>
+                                    <th
+                                        className={`${thClass} hidden xl:table-cell`}
+                                    >
                                         {t('issues.columns.assignee')}
                                     </th>
                                 </tr>
@@ -395,7 +405,7 @@ export default function IssuesIndex({
                                             />
                                         </td>
                                         <td
-                                            className={`${tdClass} min-w-[360px] align-top`}
+                                            className={`${tdClass} align-top sm:min-w-[360px]`}
                                         >
                                             <Link
                                                 href={
@@ -412,7 +422,7 @@ export default function IssuesIndex({
                                                             {issue.reference}
                                                         </span>
                                                     )}
-                                                    <span className="font-mono font-medium">
+                                                    <span className="font-mono font-medium wrap-anywhere">
                                                         {issue.title}
                                                     </span>
                                                     <Badge>
@@ -488,17 +498,19 @@ export default function IssuesIndex({
                                                         </Badge>
                                                     )}
                                                 </span>
-                                                <span className="line-clamp-2 text-ink-2">
+                                                <span className="line-clamp-2 wrap-anywhere text-ink-2">
                                                     {issue.message}
                                                 </span>
                                                 {issue.location && (
-                                                    <span className="font-mono text-[11px] text-ink-3">
+                                                    <span className="font-mono text-[11px] wrap-anywhere text-ink-3">
                                                         {issue.location}
                                                     </span>
                                                 )}
                                             </Link>
                                         </td>
-                                        <td className={tdClass}>
+                                        <td
+                                            className={`${tdClass} hidden md:table-cell`}
+                                        >
                                             <Sparkline
                                                 values={issue.hourly}
                                                 tips={spreadTips(
@@ -523,6 +535,7 @@ export default function IssuesIndex({
                                             className={cn(
                                                 tdClass,
                                                 numClass,
+                                                'hidden xl:table-cell',
                                                 issue.users === 0 &&
                                                     'text-ink-3',
                                             )}
@@ -530,7 +543,7 @@ export default function IssuesIndex({
                                             {formatNumber(issue.users)}
                                         </td>
                                         <td
-                                            className={`${tdClass} whitespace-nowrap text-ink-2`}
+                                            className={`${tdClass} hidden whitespace-nowrap text-ink-2 sm:table-cell`}
                                         >
                                             <time
                                                 dateTime={issue.last_seen_at}
@@ -544,13 +557,15 @@ export default function IssuesIndex({
                                             </time>
                                         </td>
                                         <td
-                                            className={`${tdClass} whitespace-nowrap text-ink-2`}
+                                            className={`${tdClass} hidden whitespace-nowrap text-ink-2 2xl:table-cell`}
                                         >
                                             {formatDateTime(
                                                 issue.first_seen_at,
                                             )}
                                         </td>
-                                        <td className={`${tdClass} text-ink-2`}>
+                                        <td
+                                            className={`${tdClass} hidden text-ink-2 xl:table-cell`}
+                                        >
                                             {issue.assignee?.name ??
                                                 t('common.unassigned')}
                                         </td>

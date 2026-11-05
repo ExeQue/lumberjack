@@ -288,7 +288,7 @@ export default function ProjectsIndex({
                                             )}
                                         </div>
                                         {offline && (
-                                            // One line; the whole list on hover.
+                                            // The first two hosts and how many more; the whole list on hover.
                                             <span
                                                 className="truncate text-[11px] text-warn"
                                                 title={project.offline_agents.join(
@@ -296,9 +296,14 @@ export default function ProjectsIndex({
                                                 )}
                                             >
                                                 {t('projects.agent_missing', {
-                                                    hosts: project.offline_agents.join(
-                                                        ', ',
-                                                    ),
+                                                    hosts:
+                                                        project.offline_agents
+                                                            .slice(0, 2)
+                                                            .join(', ') +
+                                                        (project.offline_agents
+                                                            .length > 2
+                                                            ? ` +${project.offline_agents.length - 2}`
+                                                            : ''),
                                                 })}
                                             </span>
                                         )}
