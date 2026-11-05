@@ -18,7 +18,7 @@ use Illuminate\Validation\Rule;
  *
  * A widget is {id, type, source, rotate, x, y, w, h, title, options, scope}, x and y its
  * 0-based column and row (see ScreenLayout). Data types are the
- * WidgetType cases and show a source of WidgetSources; clock, qr and empty need none (a qr
+ * WidgetType cases and show a source of WidgetSources; clock, qr, media and empty need none (a qr
  * code's picture comes with the data all the same, drawn on the server). Options
  * live in sections of fields: select (one of its values), toggle, text, number, checks
  * (health check uuids), data_source (a data source uuid). A field with sources shows only
@@ -38,7 +38,7 @@ use Illuminate\Validation\Rule;
 final class WidgetSchema
 {
     /** Widgets drawn by the client alone, without a source. */
-    public const array LAYOUT_TYPES = ['clock', 'qr', 'empty'];
+    public const array LAYOUT_TYPES = ['clock', 'qr', 'media', 'empty'];
 
     /** Types that can rotate through several sources on one tile. */
     public const array ROTATING_TYPES = ['stat', 'gauge', 'chart', 'list', 'health'];
@@ -237,6 +237,8 @@ final class WidgetSchema
                 'checks' => ['nullable', 'array', 'max:50'],
                 'data_source' => ['nullable', 'string', 'uuid'],
                 'timezone' => ['nullable', 'timezone:all'],
+                // A media address may be long (signed links) and is only ever http(s).
+                'url' => ['nullable', 'string', 'max:2000', 'url:http,https'],
                 default => ['nullable', 'string', 'max:200'],
             };
 
@@ -494,6 +496,16 @@ final class WidgetSchema
                         ['key' => 'password', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => ['content' => ['wifi'], 'security' => ['WPA', 'WEP']]],
                         ['key' => 'qr_text', 'type' => 'text', 'default' => null, 'span' => 2, 'when' => ['content' => ['text']]],
                     ]),
+                    $text('caption', 2),
+                ]),
+                $display(false),
+            ],
+            'media' => [
+                $section('media', [
+                    $select('media', ['image', 'video', 'page'], 'image', false, 2),
+                    ['key' => 'media_url', 'type' => 'url', 'default' => null, 'data' => false, 'span' => 2],
+                    ['key' => 'fit', 'type' => 'select', 'options' => ['contain', 'cover'], 'default' => 'contain', 'data' => false, 'span' => 1, 'when' => ['media' => ['image', 'video']]],
+                    ['key' => 'reload_every', 'type' => 'select', 'options' => ['never', '1', '5', '15', '60'], 'default' => 'never', 'data' => false, 'span' => 1, 'when' => ['media' => ['image', 'page']]],
                     $text('caption', 2),
                 ]),
                 $display(false),

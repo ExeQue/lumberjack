@@ -35,6 +35,7 @@ export type WidgetKind =
     | 'health'
     | 'clock'
     | 'qr'
+    | 'media'
     | 'empty';
 
 export type WidgetScope = {
@@ -83,6 +84,7 @@ export type SchemaField = {
         | 'select'
         | 'toggle'
         | 'text'
+        | 'url'
         | 'number'
         | 'checks'
         | 'data_source'
@@ -136,7 +138,7 @@ export const DATA_KINDS: WidgetKind[] = [
     'list',
     'health',
 ];
-export const LAYOUT_KINDS: WidgetKind[] = ['clock', 'qr', 'empty'];
+export const LAYOUT_KINDS: WidgetKind[] = ['clock', 'qr', 'media', 'empty'];
 export const ROTATING_KINDS: WidgetKind[] = [
     'stat',
     'gauge',
