@@ -230,6 +230,23 @@ describe('the pages', function () {
             ->where('displays', [['name' => 'Office PC, Hall', 'w' => 3840, 'h' => 2160], ['name' => 'Office PC, window 2', 'w' => 1920, 'h' => 1080]])
             ->where('screen.fit', 'keep'));
     });
+
+    it('offers a team admin the team\'s paired TVs to put the screen on, and a member none', function () {
+        $admin = User::factory()->inTeam($this->screen->team, TeamRole::Admin)->create();
+        $pc = Device::factory()->for($this->screen->team)->create(['name' => 'Office PC']);
+        $hall = Display::factory()->onDevice($pc, 1)->create(['name' => 'Hall', 'playlist' => [$this->screen->id]]);
+        $lobby = Display::factory()->onDevice($pc, 2)->create(['name' => 'Lobby']);
+        Display::factory()->create(['name' => 'Another team']);
+
+        $this->actingAs($admin)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page->where('paired', [
+            ['uuid' => $hall->uuid, 'name' => 'Office PC, Hall', 'shows_this' => true],
+            ['uuid' => $lobby->uuid, 'name' => 'Office PC, Lobby', 'shows_this' => false],
+        ]));
+        $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page->where('paired', []));
+
+        $this->actingAs($admin)->put(route('displays.update', $lobby), ['screen' => $this->screen->uuid])->assertSessionHasNoErrors();
+        expect($lobby->refresh()->screen_id)->toBe($this->screen->id);
+    });
 });
 
 describe('saving from the designer', function () {

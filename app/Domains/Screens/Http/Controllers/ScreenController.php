@@ -114,6 +114,7 @@ class ScreenController
             'screen' => $presenter->present($screen),
             'team' => ['name' => $screen->team->name],
             'displays' => $presenter->previewDisplays($screen),
+            'paired' => $presenter->pairedDisplays($screen, $request->user()),
             // Where a TV reporting a new size says so, to refresh the list above.
             'displays_channel' => TeamDisplaysChannel::name($screen->team),
             'projects' => $presenter->projects($screen->team),
