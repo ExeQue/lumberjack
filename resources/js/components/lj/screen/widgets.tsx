@@ -2524,9 +2524,10 @@ function calendarMoment(
     now: number,
     count: string,
     status: boolean,
+    twelveHour: boolean,
     t: Translate,
 ): { at: string | null; line: string | null } | null {
-    // 24-hour, as the screen's times are; with the weekday when it is not today.
+    // 24 or 12 hours as picked; with the weekday when it is not today.
     const time = (iso: string) => {
         const at = new Date(iso);
 
@@ -2537,7 +2538,9 @@ function calendarMoment(
                     : 'short',
             hour: '2-digit',
             minute: '2-digit',
-        }).format(new Date(iso));
+            hourCycle: twelveHour ? 'h12' : 'h23',
+        }).format(at);
+    };
     const on = events.find(
         (e) => Date.parse(e.start) <= now && now < Date.parse(e.end),
     );
@@ -2606,6 +2609,7 @@ function Countdown({
               now,
               opt<string>('calendar_count') ?? 'both',
               opt<string>('calendar_text') === 'status',
+              opt<string>('format') === '12',
               t,
           )
         : null;
