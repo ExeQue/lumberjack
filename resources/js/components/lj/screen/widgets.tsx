@@ -2561,36 +2561,42 @@ function Countdown({
         fontSize: `min(${base ?? BIG_SIZE.auto}, ${Math.round(150 / Math.max(4, text.length))}cqw)`,
     });
 
+    const line =
+        past && after === 'since'
+            ? label
+                ? t('screens.countdown.since', { label })
+                : t('screens.countdown.since_then')
+            : label;
+
+    // The lines under the number hang below it, so they never move it off its place.
     return (
-        <>
+        <span className="relative">
             <span
-                className="lj-tile-big whitespace-nowrap tabular-nums"
+                className="lj-tile-big block whitespace-nowrap tabular-nums"
                 style={fit(big, size.fontSize as string | undefined)}
             >
                 {big}
             </span>
-            {days > 0 && (
-                <span
-                    className="font-mono whitespace-nowrap text-(--s-ink-2) tabular-nums"
-                    style={fit(clock, 'min(18cqh, 8cqw)')}
-                >
-                    {clock}
-                </span>
-            )}
-            {(label || (past && after === 'since')) && (
-                // With the tile, as the numbers are: a third of their height or so.
-                <span
-                    className="whitespace-nowrap text-(--s-ink-2)"
-                    style={{ fontSize: 'min(13cqh, 5.5cqw)' }}
-                >
-                    {past && after === 'since'
-                        ? label
-                            ? t('screens.countdown.since', { label })
-                            : t('screens.countdown.since_then')
-                        : label}
-                </span>
-            )}
-        </>
+            <span className="absolute inset-x-0 top-full flex flex-col">
+                {days > 0 && (
+                    <span
+                        className="font-mono whitespace-nowrap text-(--s-ink-2) tabular-nums"
+                        style={fit(clock, 'min(18cqh, 8cqw)')}
+                    >
+                        {clock}
+                    </span>
+                )}
+                {line && (
+                    // With the tile, as the numbers are: a third of their height or so.
+                    <span
+                        className="whitespace-nowrap text-(--s-ink-2)"
+                        style={{ fontSize: 'min(13cqh, 5.5cqw)' }}
+                    >
+                        {line}
+                    </span>
+                )}
+            </span>
+        </span>
     );
 }
 
