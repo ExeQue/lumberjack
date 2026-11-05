@@ -551,6 +551,12 @@ export function WidgetTile({
             {...props}
             className={cn('lj-tile', className)}
             data-kind={widget.type}
+            // Media to the tile's edges; its title and line keep their room.
+            data-bare={
+                (widget.type === 'media' &&
+                    opt<boolean>('padding') === false) ||
+                undefined
+            }
             data-status={
                 // A calm tile can drop its green border; problems always show.
                 status === 'ok' && opt<boolean>('ok_border') === false
@@ -613,7 +619,7 @@ export function WidgetTile({
                     // Its own key: the value below already uses the plain one.
                     key={`${keys[index] ?? ''}:title`}
                     className={cn(
-                        'grid items-baseline',
+                        'lj-tile-pad grid items-baseline',
                         // No label, no room kept: the title gets the whole width.
                         !cornerText
                             ? 'grid-cols-[minmax(0,1fr)]'
@@ -2196,7 +2202,14 @@ function MediaTile({
     const url = webUrl(opt<string | null>('media_url'));
     const caption = opt<string>('caption');
     const fit =
-        opt<string>('fit') === 'cover' ? 'object-cover' : 'object-contain';
+        (
+            {
+                cover: 'object-cover',
+                fill: 'object-fill',
+                none: 'object-none',
+                'scale-down': 'object-scale-down',
+            } as Record<string, string>
+        )[opt<string>('fit')] ?? 'object-contain';
     const every = Number(opt<string>('reload_every')) || 0;
     // Loaded again every so many minutes: a snapshot that changes behind the same address.
     const round = every > 0 ? Math.floor(now / (every * 60_000)) : 0;
@@ -2267,7 +2280,7 @@ function MediaTile({
         <>
             {body}
             {caption && (
-                <span className="lj-tile-small shrink-0 text-center">
+                <span className="lj-tile-small lj-tile-pad shrink-0 text-center">
                     {caption}
                 </span>
             )}

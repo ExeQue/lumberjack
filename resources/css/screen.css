@@ -304,3 +304,13 @@
 .lj-kiosk[data-idle='true'] * {
     cursor: none !important;
 }
+
+/* A tile without its padding (media to the edges): its title and line keep theirs. */
+.lj-tile[data-bare] {
+    gap: 0;
+    padding: 0;
+}
+
+.lj-tile[data-bare] .lj-tile-pad {
+    padding: 0.5em 1em;
+}
