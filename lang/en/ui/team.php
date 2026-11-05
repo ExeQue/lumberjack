@@ -8,7 +8,6 @@ return [
         'title' => 'Not in a team yet',
         'body' => 'You join a team when someone invites you to it. Ask a team owner or an administrator of this Lumberjack for an invitation; it arrives by email.',
     ],
-    'heading' => 'Team: :team',
     'actions' => 'Actions',
     'members' => [
         'title' => 'Members',
@@ -73,6 +72,10 @@ return [
     'retention' => [
         'title' => 'Team retention',
         'description' => 'Default and maximum for every project of the team. Empty uses the application value; each value is capped by the application.',
+        // Save bar on the team and application retention pages
+        'unsaved' => 'Unsaved changes',
+        // Button; resets the form to the saved values
+        'discard' => 'Discard',
     ],
     'create' => [
         'title' => 'Create a team',

@@ -56,6 +56,7 @@ return [
         'environments_hint' => 'Comma separated. Empty means all.',
         'environments_placeholder' => 'e.g. production',
         'on_without_channel' => 'On, but no channel is ticked: this rule sends nowhere.',
+        'without_team_channel' => '{1} :count rule is on without a team channel; projects can still add their own.|[2,*] :count rules are on without a team channel; projects can still add their own.',
         'thresholds' => [
             'title' => 'Alert when',
             'size' => 'More than this many jobs wait',

@@ -72,6 +72,46 @@ function pending(row: RetentionRow, data: RetentionForm): number | null {
 type Level = 'application' | 'team' | 'project';
 
 /**
+ * Save for a retention form. While there are edits it is one compact row pinned to the
+ * bottom of the screen, so it hides as little of the table as possible.
+ */
+export function RetentionSaveBar({
+    dirty,
+    processing,
+    onDiscard,
+}: {
+    dirty: boolean;
+    processing: boolean;
+    onDiscard: () => void;
+}) {
+    const t = useT();
+
+    return (
+        <div
+            className={cn(
+                'flex items-center gap-2',
+                dirty &&
+                    'sticky bottom-0 -mx-4 -mb-4 rounded-b-lg border-t border-line bg-panel px-4 py-2',
+            )}
+        >
+            {dirty && (
+                <>
+                    <span className="mr-auto truncate text-xs text-ink-2">
+                        {t('team.retention.unsaved')}
+                    </span>
+                    <Button variant="ghost" onClick={onDiscard}>
+                        {t('team.retention.discard')}
+                    </Button>
+                </>
+            )}
+            <Button type="submit" variant="primary" disabled={processing}>
+                {t('common.save')}
+            </Button>
+        </div>
+    );
+}
+
+/**
  * One grouped table of every data type at a level: what it inherits, what it stores, the cap
  * from above, how much is stored and up to when the next prune deletes.
  */
@@ -224,7 +264,8 @@ export function RetentionTable({
                                                         max={cap ?? 3650}
                                                         inputMode="numeric"
                                                         // Muted and in the text font, so an empty field does not read as a value.
-                                                        className="w-24 font-mono placeholder:font-sans placeholder:italic"
+                                                        // Scroll margin keeps a focused field clear of the pinned save bar.
+                                                        className="w-24 scroll-mb-16 font-mono placeholder:font-sans placeholder:italic"
                                                         placeholder={t(
                                                             'settings.retention.inherit',
                                                         )}
@@ -254,6 +295,7 @@ export function RetentionTable({
                                                             <label className="flex items-center gap-1.5 text-xs text-ink-2">
                                                                 <input
                                                                     type="checkbox"
+                                                                    className="scroll-mb-16"
                                                                     checked={
                                                                         forever
                                                                     }

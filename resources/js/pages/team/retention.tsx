@@ -1,15 +1,15 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import {
+    RetentionSaveBar,
     RetentionTable,
     retentionFormData,
     retentionPayload,
 } from '@/components/lj/retention-table';
 import { LiveNotice } from '@/components/lj/live-notice';
 import { TopBar } from '@/components/lj/top-bar';
-import { Button, Card, PageTitle } from '@/components/lj/ui';
+import { Card, PageTitle } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 import { useTeamLive, useFormSync } from '@/lib/use-live';
 import { retention as teamRetention } from '@/routes/team';
 import type {
@@ -70,21 +70,11 @@ export default function TeamRetention({
                             readOnly={!admin}
                         />
                         {admin && (
-                            // Pinned to the bottom of the screen while there is something to save.
-                            <div
-                                className={cn(
-                                    form.isDirty &&
-                                        'sticky bottom-0 -mx-4 -mb-4 rounded-b-lg border-t border-line bg-panel px-4 py-3',
-                                )}
-                            >
-                                <Button
-                                    type="submit"
-                                    variant="primary"
-                                    disabled={form.processing}
-                                >
-                                    {t('common.save')}
-                                </Button>
-                            </div>
+                            <RetentionSaveBar
+                                dirty={form.isDirty}
+                                processing={form.processing}
+                                onDiscard={() => form.reset()}
+                            />
                         )}
                     </form>
                 </Card>

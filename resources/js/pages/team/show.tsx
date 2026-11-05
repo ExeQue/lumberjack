@@ -108,7 +108,7 @@ export default function TeamShow({
                 crumbs={[{ label: team.name }, { label: t('common.nav.team') }]}
             />
             <PageBody>
-                <PageTitle title={t('team.heading', { team: team.name })} />
+                <PageTitle title={t('team.title')} />
 
                 <Card aria-labelledby="h-members">
                     <CardHeader
@@ -747,7 +747,7 @@ export default function TeamShow({
                                                                 key={
                                                                     project.uuid
                                                                 }
-                                                                className="inline-flex items-center gap-2"
+                                                                className="inline-flex items-center gap-2 pointer-coarse:min-h-10"
                                                             >
                                                                 <input
                                                                     type="checkbox"
@@ -783,7 +783,7 @@ export default function TeamShow({
                                             {scopes.map((scope) => (
                                                 <label
                                                     key={scope}
-                                                    className="inline-flex items-center gap-2"
+                                                    className="inline-flex items-center gap-2 pointer-coarse:min-h-10"
                                                 >
                                                     <input
                                                         type="radio"

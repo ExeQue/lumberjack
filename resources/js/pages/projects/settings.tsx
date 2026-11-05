@@ -1,5 +1,6 @@
 import { Relative } from '@/components/lj/relative';
 import {
+    RetentionSaveBar,
     RetentionTable,
     retentionFormData,
     retentionPayload,
@@ -1850,15 +1851,11 @@ function RetentionSection({
                     </fieldset>
                 )}
 
-                <div>
-                    <Button
-                        type="submit"
-                        variant="primary"
-                        disabled={form.processing}
-                    >
-                        {t('common.save')}
-                    </Button>
-                </div>
+                <RetentionSaveBar
+                    dirty={form.isDirty}
+                    processing={form.processing}
+                    onDiscard={() => form.reset()}
+                />
             </form>
         </Section>
     );
