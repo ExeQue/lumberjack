@@ -112,7 +112,7 @@ export function RetentionTable({
     };
 
     return (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
             <table className={tableClass}>
                 <thead>
                     <tr>
@@ -128,7 +128,8 @@ export function RetentionTable({
                         <th className={cn(thClass, 'text-right')}>
                             {t('settings.retention.rows')}
                         </th>
-                        <th className={thClass}>
+                        {/* Secondary: gives its width to Deletes before on narrower screens. */}
+                        <th className={cn(thClass, 'hidden lg:table-cell')}>
                             {t('settings.retention.oldest')}
                         </th>
                         <th className={thClass}>
@@ -168,7 +169,7 @@ export function RetentionTable({
                                             <td
                                                 className={cn(
                                                     tdClass,
-                                                    'max-w-80',
+                                                    'max-w-80 min-w-36',
                                                 )}
                                             >
                                                 <div className="font-medium">
@@ -181,7 +182,7 @@ export function RetentionTable({
                                             <td
                                                 className={cn(
                                                     tdClass,
-                                                    'text-xs whitespace-nowrap text-ink-2',
+                                                    'min-w-28 text-xs text-ink-2',
                                                 )}
                                             >
                                                 <div>
@@ -222,7 +223,8 @@ export function RetentionTable({
                                                         min={1}
                                                         max={cap ?? 3650}
                                                         inputMode="numeric"
-                                                        className="w-24 font-mono"
+                                                        // Muted and in the text font, so an empty field does not read as a value.
+                                                        className="w-24 font-mono placeholder:font-sans placeholder:italic"
                                                         placeholder={t(
                                                             'settings.retention.inherit',
                                                         )}
@@ -294,9 +296,14 @@ export function RetentionTable({
                                                                 )}
                                                             </label>
                                                         )}
-                                                    {set && !readOnly && (
+                                                    {/* Kept in place when hidden, so the row does not grow when a value is typed. */}
+                                                    {!readOnly && (
                                                         <Button
                                                             variant="ghost"
+                                                            className={cn(
+                                                                !set &&
+                                                                    'invisible',
+                                                            )}
                                                             onClick={() =>
                                                                 setData({
                                                                     days: {
@@ -395,7 +402,7 @@ export function RetentionTable({
                                             <td
                                                 className={cn(
                                                     tdClass,
-                                                    'text-xs whitespace-nowrap text-ink-2',
+                                                    'hidden text-xs whitespace-nowrap text-ink-2 lg:table-cell',
                                                 )}
                                             >
                                                 {stat?.oldest_at ? (
@@ -409,7 +416,7 @@ export function RetentionTable({
                                             <td
                                                 className={cn(
                                                     tdClass,
-                                                    'text-xs whitespace-nowrap text-ink-2',
+                                                    'min-w-28 text-xs text-ink-2',
                                                 )}
                                             >
                                                 {applies === null

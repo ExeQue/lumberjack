@@ -771,6 +771,16 @@ function RuleRow({
     };
 
     const firstError = Object.values(errors)[0];
+    // Save shows once something differs from the stored rule.
+    const dirty =
+        enabled !== rule.enabled ||
+        selected.length !== rule.channels.length ||
+        selected.some((id) => !rule.channels.includes(id)) ||
+        environments !== rule.environments.join(', ') ||
+        (rule.settings !== null &&
+            (['size', 'age_minutes', 'sustain_minutes'] as const).some(
+                (key) => thresholds[key] !== String(rule.settings?.[key] ?? ''),
+            ));
 
     return (
         <form
@@ -788,7 +798,7 @@ function RuleRow({
                 disabled={disabled}
                 onClick={() => setEnabled(!enabled)}
                 className={cn(
-                    'relative mt-0.5 h-5 w-9 shrink-0 cursor-pointer rounded-full border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-not-allowed disabled:opacity-50',
+                    'relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-not-allowed disabled:opacity-50',
                     enabled
                         ? 'border-amber bg-amber'
                         : 'border-line-strong bg-panel-2',
@@ -797,8 +807,8 @@ function RuleRow({
                 <span
                     aria-hidden="true"
                     className={cn(
-                        'absolute top-0.5 size-3.5 rounded-full bg-ink transition-all',
-                        enabled ? 'left-[18px]' : 'left-0.5',
+                        'absolute top-0.5 size-[18px] rounded-full bg-ink transition-all',
+                        enabled ? 'left-[22px]' : 'left-0.5',
                     )}
                 />
             </button>
@@ -849,6 +859,11 @@ function RuleRow({
                             {channel.name}
                         </label>
                     ))
+                )}
+                {enabled && selected.length === 0 && channels.length > 0 && (
+                    <p className="text-xs text-warn">
+                        {t('alerts.rules.on_without_channel')}
+                    </p>
                 )}
             </fieldset>
             {rule.settings ? (
@@ -909,27 +924,29 @@ function RuleRow({
                     <Input
                         id={`rule-env-${rule.id}`}
                         className="font-mono"
-                        placeholder="production"
+                        placeholder={t('alerts.rules.environments_placeholder')}
                         value={environments}
                         disabled={disabled}
                         onChange={(e) => setEnvironments(e.target.value)}
                     />
                 </Field>
             )}
-            {!disabled && (
+            {!disabled && (dirty || firstError || actions) && (
                 <div className="flex w-full flex-wrap items-center justify-end gap-3">
                     {firstError && (
                         <p className="text-xs text-err">{firstError}</p>
                     )}
                     {actions}
-                    <Button
-                        type="submit"
-                        variant="primary"
-                        disabled={processing}
-                    >
-                        {t('common.save')}
-                        <span className="sr-only"> {rule.label}</span>
-                    </Button>
+                    {dirty && (
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            disabled={processing}
+                        >
+                            {t('common.save')}
+                            <span className="sr-only"> {rule.label}</span>
+                        </Button>
+                    )}
                 </div>
             )}
         </form>

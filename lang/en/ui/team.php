@@ -46,6 +46,8 @@ return [
         'empty' => 'No tokens yet',
         'name' => 'Name',
         'projects' => 'Projects',
+        // A token that reaches every project of the team
+        'all_projects' => 'All projects (:count)',
         'scope' => 'Scope',
         'created_by' => 'Created by',
         'inactive' => 'Stopped',

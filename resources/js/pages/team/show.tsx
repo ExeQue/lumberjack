@@ -117,7 +117,7 @@ export default function TeamShow({
                         description={t('team.members.description')}
                     />
                     <div className="flex flex-col gap-5 p-4">
-                        <div className="overflow-x-auto">
+                        <div className="relative overflow-x-auto">
                             <table className={tableClass}>
                                 <thead>
                                     <tr>
@@ -495,7 +495,7 @@ export default function TeamShow({
                         {tokens.length === 0 ? (
                             <EmptyState title={t('team.tokens.empty')} />
                         ) : (
-                            <div className="overflow-x-auto">
+                            <div className="relative overflow-x-auto">
                                 <table className={tableClass}>
                                     <thead>
                                         <tr>
@@ -543,7 +543,20 @@ export default function TeamShow({
                                                         'text-ink-2',
                                                     )}
                                                 >
-                                                    {token.projects.join(', ')}
+                                                    {team.projects.length > 1 &&
+                                                    token.projects.length ===
+                                                        team.projects.length
+                                                        ? t(
+                                                              'team.tokens.all_projects',
+                                                              {
+                                                                  count: team
+                                                                      .projects
+                                                                      .length,
+                                                              },
+                                                          )
+                                                        : token.projects.join(
+                                                              ', ',
+                                                          )}
                                                 </td>
                                                 <td className={tdClass}>
                                                     <Badge>
