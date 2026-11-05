@@ -168,7 +168,7 @@ describe('a QR code widget', function () {
 
         match ($drawn) {
             true => expect(strtolower($qr['svg']))->toStartWith('<svg')->toContain('#f0a93b')
-                ->and(strtolower($qr['light']))->toStartWith('<svg')->toContain('#16191d')->not->toContain('#ffffff'),
+                ->and(strtolower($qr['light']))->toStartWith('<svg')->toContain('#b5720f')->not->toContain('#ffffff'),
             false => expect($qr)->toBe(['svg' => null, 'light' => null]),
             null => expect($qr)->toBeNull(),
         };
