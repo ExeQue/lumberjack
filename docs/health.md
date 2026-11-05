@@ -1,8 +1,8 @@
 # Health
 
 The **Health** page of a project shows whether the things your app depends on work:
-its database, cache, queues and disks, the URLs people visit, the certificates they
-use. Checks come from two places, and both work the same once a result is in.
+its database, cache, queues and disks, the URLs people visit and their certificates.
+Checks come from two places. Once a result is in, both work the same.
 
 | Source              | Where it runs                        | Set up                            |
 | ------------------- | ------------------------------------ | --------------------------------- |
@@ -11,22 +11,23 @@ use. Checks come from two places, and both work the same once a result is in.
 
 ## Checks the app reports
 
-An SDK runs checks inside the app and sends one `health` event per check with the
-normal ingest batch. How checks are registered and scheduled is up to the SDK; see
-its documentation.
+The SDK runs checks inside the app and sends their results with the rest of the app's
+data. How you register and schedule checks is up to the SDK. See its documentation.
 
 A check is known by its **slug** (`database:pgsql`, `disk:s3`, `queue:redis:default`)
 within an environment. A slug Lumberjack has not seen before becomes a new check on
-its first result; nothing has to be set up on this side. A result with an unknown
-status or a slug that is not lowercase letters, digits and `: . _ -` (at most 100
-characters) is skipped, and the rest of the batch is kept. Each result carries a
-status (`ok`, `warning` or `failed`), a message, up to 20 numeric metrics and how long
-the check took; `latency_ms` is shown as the check's latency.
+its first result. You set up nothing in Lumberjack. A slug uses lowercase letters,
+digits and `: . _ -`, at most 100 characters. A result with another slug or an unknown
+status is ignored.
 
-A result may also carry `interval_minutes`: how often the app runs the check, in whole
-minutes (1 to 1440), when it runs less often than on every scheduler run. The Health
-page shows it next to the check (**every 15 min**), and it decides when the check goes
-stale. A result without it, or with a value outside that range, is recorded as before.
+Each result has a status (`ok`, `warning` or `failed`), a message, up to 20 numeric
+metrics and how long the check took. The `latency_ms` metric is shown as the check's
+latency.
+
+A result may also carry `interval_minutes`: how often the app runs the check, from 1 to
+1440 minutes. Send it when the check runs less often than every minute. The Health page
+shows it next to the check (**every 15 min**), and it sets when the check goes
+[stale](#stale-checks).
 
 ### Database metrics
 
@@ -38,42 +39,42 @@ A check that watches a database may send these metrics with each result:
 | `connections`     | Connections open right now             |
 | `max_connections` | Connections the database server allows |
 
-The Health page shows them next to the latency (**13.8 MB · 4 of 100 conns**), and
-they feed the database widgets of [status screens](./screens#widgets) and the `db_size`,
+The Health page shows them next to the latency (**13.8 MB · 4 of 100 conns**). They also feed the database widgets of [status screens](./screens#widgets) and the `db_size`,
 `db_connections` and `db_connections_used` series of the [metrics API](./metrics-api#series).
 Any reported check that sends them counts, whatever its slug.
 
-When several servers report the same slug, each server keeps its own state, and the
-check shows the worst of them. One server with a full disk is not hidden by two
-healthy ones; the row lists the hosts with their status, and the details show each
-host's last result.
+When several servers report the same slug, each server has its own state and the check
+shows the worst of them. The row lists the hosts with their status, and the details
+show each host's last result.
 
 ### Stale checks
 
-A check that stops reporting shows as **stale** (gray), not down: the app may have
-been switched off, or the check renamed. A check whose results carry `interval_minutes`
-is stale after 2.5 times that interval without a result (so after 37.5 minutes for a
-check that runs every 15 minutes). Without it, a check is stale after three times its
-usual spacing without a result (so after 3 minutes for a check that runs every minute),
-or after 15 minutes while the spacing is not known yet. A stale check has no uptime and
-sends no alert; it comes back by itself with its next result. **Archive** puts away a
-check that will not report again, for example after renaming a slug.
+A check that stops reporting shows as **stale** in gray, not as down. A check is stale
+when no result came in for:
+
+- 2.5 times its `interval_minutes`, when it sends one: 37.5 minutes for a check that
+  runs every 15 minutes;
+- otherwise 3 times its usual spacing: 3 minutes for a check that runs every minute;
+- 15 minutes while its spacing is not known yet.
+
+A stale check has no uptime and sends no alerts. Its next result brings it back.
+**Archive** puts away a check that will not report again, for example after you renamed
+its slug.
 
 ### Cleaning up
 
-- **Hosts** that stop reporting a check (a replaced Kubernetes pod, a retired server)
-  are forgotten after 24 hours, so the host list does not grow with every deploy.
-- **Reported checks** that have sent nothing for 7 days are archived by themselves.
-  An archived check that reports again comes back with its history.
-- **Delete** in a check's details removes it with its results and outages. A reported
-  check that is deleted but still registered in the app comes back as a new check on
-  its next result, so remove it from the app first.
+- **Hosts** that stop reporting a check, such as a replaced pod, are removed from it
+  after 24 hours.
+- **Reported checks** that sent nothing for 7 days are archived. An archived check that
+  reports again comes back with its history.
+- **Delete** in a check's details deletes it with its results and outages. A deleted
+  check that the app still runs comes back as a new check with its next result, so
+  remove it from the app first.
 
 ## Checks Lumberjack runs
 
-**Add check** offers five types. Each runs every 1, 5, 15 or 60 minutes, can carry an
-environment label, and runs on the low-priority `health` queue of the background
-workers. Only team owners and admins add, edit, archive and delete checks.
+**Add check** offers five types. Each runs every 1, 5, 15 or 60 minutes and can have an
+environment label. Only team owners and admins add, edit, archive and delete checks.
 
 | Type      | Checks                                                                                                                                                           |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -103,18 +104,11 @@ php artisan backup:run && curl -fsS -m 10 https://lumberjack.example.com/api/hea
 
 ### Private networks
 
-HTTP, SSL and TCP checks resolve the host first and refuse it when any address it
-has is private, loopback, link-local, carrier-grade NAT or otherwise reserved (IPv4 and
-IPv6, including NAT64 and 6to4 forms of those), so a check
-cannot be used to reach this server or the network behind it. The check then connects
-to the address it checked. Redirects are followed by hand, at most three, each checked
-the same way. Timeouts are short (10 seconds for HTTP unless set otherwise, 15 at most),
-and an HTTP check reads at most the first megabyte of a body to look for its text.
+HTTP, SSL and TCP checks only reach public addresses. A host that resolves to a
+private, loopback, link-local or otherwise reserved address is rejected, in IPv4 and
+IPv6. Redirects are followed up to three times, and each one is checked the same way.
 
-A project can have at most 50 checks that Lumberjack runs; set
-`LUMBERJACK_HEALTH_MAX_CHECKS` to change that.
-
-Self-hosters who want to watch internal services can turn this off:
+To watch internal services, turn this off:
 
 ```dotenv
 LUMBERJACK_HEALTH_ALLOW_PRIVATE=true
@@ -133,9 +127,8 @@ counted per host:
   getting better. After **recover after** (5) good results in a row it is **ok**
   again. A bad result while recovering puts it back where it was, degraded or down.
 
-Down after is never below degrade after: a lower value counts as degrade after. Set
-both the same to go straight from ok to down on failures, as Lumberjack did before
-down after existed.
+A **down after** below **degrade after** counts as **degrade after**. Set both the same
+to go straight from ok to down on failures.
 
 A check that was ok, fails every minute and then passes again, with the defaults:
 
@@ -149,66 +142,68 @@ A check that was ok, fails every minute and then passes again, with the defaults
 | 7 to 9 | ok     | recovering |
 | 10     | ok     | ok         |
 
-It sends a degraded alert at minute 2, a down alert at minute 5 and a recovered one
-at minute 10; recovering sends nothing.
+It sends a degraded alert at minute 2, a down alert at minute 5 and a recovered alert
+at minute 10. Recovering sends no alert.
 
-Checks the app reports send their own thresholds; the details let you set others for
-a slug (leave all three empty to go back to the app's). The details also hold a display
-name and description, and **mute**, which keeps showing the check but sends no
+Checks the app reports send their own thresholds. In the check's details you can set
+others for a slug. Leave all three empty to use the app's again. The details also hold
+a display name, a description and **mute**: a muted check is still shown but sends no
 alerts.
 
 ![The Health page with the reported checks and the details of one open](./screenshots/health.png)
 
-Each time a check becomes degraded or down an **outage** starts, with the first
-message; it ends when the check is ok again, so it stays open while recovering. The details list the last 20 outages with their duration and the worst
-status they reached, next to the last 50 results and a chart of how long the check
-took. An archived check can be restored from the **Archived** list.
+### Outages and uptime
 
-**Uptime** is the share of the period (top of the page) the check was not down, counted
-from when the check was added. Degraded time counts as up, as on a status page;
-recovering counts as the outage it is part of. While a check is down, its uptime keeps
-dropping on the page every second, not only when a new result comes in. The
-strip on each row has one segment per part of the period, colored by the worst the
-check was in it.
+An **outage** starts when a check becomes degraded or down, with the first message. It
+ends when the check is ok again, so it stays open while the check is recovering. The
+details list the last 20 outages with their duration and the worst status they
+reached, the last 50 results and a chart of how long the check took. Restore an
+archived check from the **Archived** list.
 
-The project overview shows how many checks are ok, and below its numbers every check
-as a chip, worst first: down in red, degraded in amber, recovering in blue, stale and
-pending in gray.
-Hover a chip for its last message, click it for its details on the Health page. The
-sidebar counts the checks that are degraded or down; recovering ones are left out.
+**Uptime** is the share of the period, picked at the top of the page, in which the
+check was not down, counted from when the check was added. Degraded time counts as up.
+Recovering time counts as part of the outage. While a check is down, its uptime drops
+live on the page. The strip on each row has one segment per part of the period,
+colored by the worst status in it.
+
+### On the overview and sidebar
+
+The project overview shows how many checks are ok, and every check as a chip, worst
+first: down in red, degraded in amber, recovering in blue, stale and pending in gray.
+Hover a chip for its last message. Click it to open its details on the Health page.
+The sidebar counts the checks that are degraded or down.
 
 ## Alerts
 
-Three alert rules, all on by default, each with its own channels and environments:
-**Health check degraded** when a check keeps warning or starts failing, **Health check down** when
-it keeps failing (also when a degraded check goes down), and **Health check recovered** when
-it is ok again. Recovering sends nothing, and going back from recovering to degraded or
-down is not a new alert.
-So a check going down can page someone while a degraded one only posts to a channel,
-or recoveries can be left out. A check that is degraded or down is still followed while
-its rule is off: turning **Health check degraded** off does not stop the later down or
-recovered message.
-Every step for the worse is sent at once: ok to degraded, and degraded to down, also
-when the check recovered a minute ago. There is no time window that holds alerts back;
-the thresholds already keep a flapping check quiet, since it has to fail
-`degrade_after` times in a row before it is degraded and pass `recover_after` times
-before it is ok again.
+Three alert rules send health alerts. All are on by default, and each has its own
+channels and environments:
 
-Muted and archived checks send nothing.
+| Rule                       | Sent when                                                       |
+| -------------------------- | --------------------------------------------------------------- |
+| **Health check degraded**  | A check keeps warning or starts failing                         |
+| **Health check down**      | A check keeps failing, also when a degraded check goes down     |
+| **Health check recovered** | A check is ok again                                             |
+
+For example, a down check can page someone while a degraded one only posts to a
+channel. Turning one rule off does not stop the others: with **Health check degraded**
+off, the later down and recovered alerts are still sent.
+
+Each step for the worse is sent at once: ok to degraded, and degraded to down. Going
+from recovering back to degraded or down is not a new alert. The thresholds keep a
+flapping check quiet. Muted and archived checks send no alerts.
 See [Alerts](./alerts#webhooks) for the webhook body.
 
 ## Reading states from the app
 
-The app can read back where its reported checks stand, to skip a broken dependency
-or show a notice before people run into it. Lumberjack answers in two places, with the
-same body:
+The app can read the state of its reported checks, for example to skip a broken
+dependency or show a notice. Lumberjack answers in two places, with the same body:
 
 - **The agent's heartbeat.** `POST /api/ingest/heartbeat` answers with the states
   under `health`. An agent that sends `environment` gets the checks of that
   environment; without it, those of every environment.
 - **`GET /api/health`**, with the server token as a bearer token, for apps that ask
   without an agent. `?environment=` and `?slug=` narrow the list. A missing or unknown
-  token gets a 401; more than 120 requests a minute per project get a 429.
+  token gets a 401. More than 120 requests a minute per project get a 429.
 
 ```json
 {
@@ -237,13 +232,19 @@ same body:
 | `since`       | When it entered the state; for `stale`, its last result. `null` when nothing came in yet |
 | `message`     | The latest result's message, `null` when it had none                                     |
 | `hosts`       | Only when several servers report the slug: each server's own state                       |
-| `at`          | When Lumberjack worked the list out                                                      |
+| `at`          | When the answer was made                                                                 |
 
-Only checks the app reports are listed, archived ones left out; checks Lumberjack
-runs have no slug for the app to ask by. The answer is cached for up to 10 seconds
-and starts fresh as soon as a result moves a check.
+Only checks the app reports are listed, without archived ones. Checks Lumberjack runs
+have no slug, so they are not listed.
 
-## Retention
+## Limits
 
-Results (14 days by default) and outages (a year by default; uptime is counted from
-them) each have their own [retention](./projects#retention).
+| What                                       | Limit                                                                         |
+| ------------------------------------------ | ----------------------------------------------------------------------------- |
+| Checks Lumberjack runs, per project        | 50. Set `LUMBERJACK_HEALTH_MAX_CHECKS` to change it                           |
+| Timeout of a check                         | 15 seconds                                                                    |
+| Body an HTTP check searches                | The first megabyte                                                            |
+| Metrics per reported result                | 20                                                                            |
+| Heartbeat pings                            | 60 a minute                                                                   |
+| `GET /api/health`                          | 120 requests a minute per project                                             |
+| Kept results and outages                   | 14 days and 365 days by default, see [retention](./projects#retention)        |

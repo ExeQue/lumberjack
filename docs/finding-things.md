@@ -1,8 +1,11 @@
 # Finding things
 
+Move around Lumberjack with the sidebar, the command palette and a few keyboard
+shortcuts.
+
 ## The sidebar
 
-The sidebar keeps related pages behind one entry; each of them shows the others as tabs
+The sidebar keeps related pages behind one entry. Each of them shows the others as tabs
 under the top bar:
 
 | Entry   | Tabs                          |
@@ -11,19 +14,22 @@ under the top bar:
 | Screens | Screens, Displays             |
 | Team    | Members and tokens, Retention |
 
-Overview, Issues, Requests, Database, Browser, Jobs, Logs, Health and Releases (the project), and Projects and Alerts (the
-team) are pages of their own. An entry's badge adds up its tabs' counts; each tab shows
-its own.
+The project's Overview, Issues, Requests, Database, Browser, Jobs, Logs, Health and
+Releases, and the team's Projects and Alerts, are pages of their own. An entry's badge
+adds up its tabs' counts. Each tab shows its own count.
 
-**Settings**, last in the project's list, opens the project's settings, whose menu also
-lists the **Data sources**; members, who cannot change the settings, see **Data sources**
-there instead (read only). The
-**Administration** section, for system administrators, folds away and opens on its own
-on an administration page.
+**Settings**, last in the project's list, opens the project's settings. Their menu also
+lists the **Data sources**. Members cannot change the settings, so they see **Data
+sources** there instead, read only.
+
+The **Administration** section is for system administrators. It is folded and opens by
+itself on an administration page.
+
+`Ctrl+B` (`⌘B` on a Mac) hides or shows the sidebar.
 
 ## The command palette
 
-Press `Ctrl+K` (`⌘K` on a Mac), or click **Search** at the top of the sidebar.
+Press `Ctrl+K` (`⌘K` on a Mac) or click **Search** at the top of the sidebar.
 
 Without typing anything you can jump to:
 
@@ -59,3 +65,18 @@ and users:
 - Every other character, `%` and `_` included, is searched for as itself.
 
 The Logs page is different: it searches whole words, see [Logs](./performance#logs).
+
+## Keyboard shortcuts
+
+On a Mac, use `⌘` where this table says `Ctrl`.
+
+| Keys         | Where                     | Does                                                                                     |
+| ------------ | ------------------------- | ---------------------------------------------------------------------------------------- |
+| `Ctrl+K`     | Any page with the sidebar | Opens or closes the [command palette](#the-command-palette).                             |
+| `Ctrl+B`     | Any page with the sidebar | Hides or shows the sidebar.                                                              |
+| `←` `→`      | The tabs of an issue      | Moves to the previous or next tab.                                                       |
+| `Ctrl+Enter` | A note on an issue        | Posts the note.                                                                          |
+| `@`          | A note on an issue        | Tags a team member or an agent, see [Working on an issue](./issues#working-on-an-issue). |
+
+The screen designer has keys of its own to move, resize and remove widgets, see
+[The designer](./screens#the-designer).

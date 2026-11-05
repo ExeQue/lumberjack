@@ -49,7 +49,10 @@ export default defineConfig({
     },
 
     themeConfig: {
-        nav: [{ text: 'Run it with Docker', link: '/docs/docker' }],
+        nav: [
+            { text: 'Guides', link: '/docs/guides/' },
+            { text: 'Run it with Docker', link: '/docs/docker' },
+        ],
 
         sidebar: [
             {
@@ -57,6 +60,40 @@ export default defineConfig({
                 items: [
                     { text: 'Introduction', link: '/' },
                     { text: 'Running with Docker', link: '/docs/docker' },
+                ],
+            },
+            {
+                text: 'Guides',
+                items: [
+                    { text: 'Overview', link: '/docs/guides/' },
+                    {
+                        text: 'Know when production breaks',
+                        link: '/docs/guides/alerting',
+                    },
+                    {
+                        text: 'Find why a page is slow',
+                        link: '/docs/guides/slow-pages',
+                    },
+                    {
+                        text: 'Check a release',
+                        link: '/docs/guides/releases',
+                    },
+                    {
+                        text: 'Watch queues and jobs',
+                        link: '/docs/guides/background-work',
+                    },
+                    {
+                        text: 'Put a status screen on a TV',
+                        link: '/docs/guides/status-tv',
+                    },
+                    {
+                        text: 'Let an AI agent read your errors',
+                        link: '/docs/guides/ai-agents',
+                    },
+                    {
+                        text: 'Show metrics in Grafana',
+                        link: '/docs/guides/grafana',
+                    },
                 ],
             },
             {
@@ -74,6 +111,7 @@ export default defineConfig({
                     { text: 'Health', link: '/docs/health' },
                     { text: 'Status screens', link: '/docs/screens' },
                     { text: 'Widgets', link: '/docs/widgets' },
+                    { text: 'Data sources', link: '/docs/data-sources' },
                     { text: 'Finding things', link: '/docs/finding-things' },
                     { text: 'MCP', link: '/docs/mcp' },
                     {
@@ -90,6 +128,7 @@ export default defineConfig({
                         link: '/docs/administration',
                     },
                     { text: 'Ingest and API', link: '/docs/api' },
+                    { text: 'Development', link: '/docs/development' },
                 ],
             },
         ],

@@ -1,30 +1,60 @@
 # Performance and traces
 
-Pick a period (1 h, 24 h, 7 d, 30 d) and an environment at the top of each page. The
-period starts at 24 h, except on Logs, where it starts at 1 h. Hover a chart to see the
-value of each bucket.
+These pages show how the app performs: requests, database queries, browser speed, jobs,
+scheduled tasks, commands and logs. Each one links to the traces behind it.
 
-The pages update live: the overview, issues, routes, queries, browser, releases, jobs,
-schedule, commands, logs, health and agents reload in place as data arrives, at most
-once a second.
+## Period and environment
 
-![The overview of a project](./screenshots/overview.png)
+Every page has two pickers at the top:
 
-| Page     | Shows                                                                                                                                                                                                                |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Overview | Requests, error rate, p95, failed jobs, open issues and health checks, with the change from the period before; charts of requests, exceptions and response times; the latest issues, slowest routes and failed jobs. |
-| Routes   | Requests, p50/p95/p99, 5xx rate and Apdex per route. Click a route for its p50 and p95 over the period, its status codes (2xx to 5xx) and its 10 slowest requests with their query counts.                           |
-| Queries  | Queries grouped by normalized SQL, highlighted (as in traces): calls, total time, share of database time, p95 and max. N+1 patterns are flagged.                                                                     |
-| Browser  | Core Web Vitals of browser page views: p75 LCP, INP and CLS, split by device, over time and per page, and the browser errors. See [Browser](#browser).                                                               |
-| Jobs     | Runs, failure rate, stuck and retried jobs, duration and wait time per job class. Click a job for its runs.                                                                                                          |
-| Schedule | Scheduled tasks per environment with their last and next run. A task that does not run when expected is marked missed and becomes an issue.                                                                          |
-| Commands | Console commands with runs, failures and duration. Click a command for its runs.                                                                                                                                     |
-| Logs     | Log lines by channel and level, with full-text search.                                                                                                                                                               |
+- **Period**: **1 h**, **24 h**, **7 d** or **30 d**. It starts at 24 h, except on Logs,
+  where it starts at 1 h. Changes are compared with the period before.
+- **Environment**: **All environments**, or one of the environments the project sent
+  data from in the last week.
+
+The pickers are part of the page address, so a link opens with the same choice. Hover a
+chart to see the value of each bar or point. The pages update live as data arrives.
 
 ## Overview
 
-Open issues count every environment, whatever the period. Failed jobs show the failure
-rate and how many are stuck; the p95 shows the p50 and p99 under it.
+The **Overview** is the first page of a project.
+
+![The overview of a project](./screenshots/overview.png)
+
+At the top, a card for each key figure, with the change from the period before:
+
+| Card                  | Shows                                                                         |
+| --------------------- | ----------------------------------------------------------------------------- |
+| **Requests**          | Requests in the period                                                        |
+| **Error rate**        | The share of requests that answered 5xx, and how many exceptions were recorded |
+| **p95 response time** | 95% of requests were faster than this. The p50 and p99 show below it          |
+| **Failed jobs**       | The share of job runs that failed, and how many are stuck                     |
+| **Open issues**       | Open issues in all environments, whatever the period                          |
+| **Health checks**     | How many [health checks](./health) are ok, and how many are down, degraded or stale |
+
+Below the cards, a chip for each health check shows its state in color: red for down,
+amber for degraded, blue for recovering, gray for stale or pending. Click a chip for
+the check's details.
+
+Then come charts of **Requests over time**, **Exceptions over time** and **Response
+times** (p95 and p50), and the **Latest issues**, **Slowest routes (p95)** and **Failed
+jobs** of the period. When the app samples its data, a note says so; see
+[Sampling](#sampling).
+
+## Pages
+
+- **Requests**: each route's requests, p50, p95 and p99, error rate and
+  [Apdex](#apdex). See [Requests](#requests).
+- **Database**: queries grouped by SQL, with their calls, time and N+1 flags. See
+  [Database](#database).
+- **Browser**: Core Web Vitals of real page views, per device and page, and browser
+  errors. See [Browser](#browser).
+- **Jobs**: runs, failures, duration and wait time per job class, and the queues. See
+  [Jobs](#jobs).
+- **Schedule**: scheduled tasks with their last and next run. See [Schedule](#schedule).
+- **Commands**: console commands with their runs, failures and duration. See
+  [Commands](#commands).
+- **Logs**: log lines by channel and level, with search. See [Logs](#logs).
 
 ## Requests
 
@@ -32,16 +62,17 @@ rate and how many are stuck; the p95 shows the p50 and p99 under it.
 
 ![The Requests page with the routes table](./screenshots/routes.png)
 
-Sort by highest p95 (the default), most requests, highest error rate, most total time
-or lowest [Apdex](#apdex). **Search routes or names** uses the [search syntax](./finding-things#search-syntax)
-and matches a route's URI or its framework name (`orders.show`), which shows muted next to
-the URI.
+Each route shows its requests, p50, p95 and p99, 5xx rate and [Apdex](#apdex). Sort by
+highest p95 (the default), most requests, highest error rate, most total time or lowest
+Apdex. **Search routes or names** uses the [search syntax](./finding-things#search-syntax)
+and matches a route's URI or its route name, such as `orders.show`.
 
-When requests came in on more than one domain in the period (`shop.example.com` and
-`api.example.com`), a **Domain** picker appears next to the search. With **All domains**
-the same route on two domains is two rows, each with its domain in a **Domain** column;
-picking a domain narrows the table, the detail and the sparklines to it. Requests an
-older SDK counted without a domain show as _unknown_.
+Click a route for its p50 and p95 over the period, its status codes (2xx to 5xx) and its
+10 slowest requests with their query counts.
+
+When requests came in on more than one domain in the period, a **Domain** picker appears
+next to the search. With **All domains**, the same route on two domains shows as two
+rows, with a **Domain** column. Pick a domain to show only its requests.
 
 ## Database
 
@@ -50,123 +81,115 @@ older SDK counted without a domain show as _unknown_.
 ![The Database page: queries grouped by SQL with the share of database time](./screenshots/queries.png)
 
 The top shows the number of queries, the total database time and the slowest single
-query. Filter by connection, search the SQL, and sort by most total time, highest p95 or
-most calls. **Most from** is the line in the app that ran the query most often.
-With 7 or 30 days selected, Most from and the N+1 flag look at the last 24 hours only.
+query. Each query shows its calls, total time, share of database time, p95 and max.
+Filter by connection, search the SQL, and sort by most total time, highest p95 or most
+calls. **Most from** is the line in the app that ran the query most often.
 
-A query is flagged **N+1** when the same query runs 5 times or more in one request or
-job; the badge says how many times per request.
+A query is flagged **N+1** when it runs 5 times or more in one request or job. The badge
+says how many times per request. With 7 or 30 days picked, **Most from** and the N+1 flag
+cover the last 24 hours only.
 
 ## Jobs
 
 ![The Jobs page with the Queues card, the job classes and the latest failed runs](./screenshots/jobs.png)
 
-Filter by queue and sort by highest failure rate, most runs, highest p95 duration or
-highest p95 wait. Below the job classes are the **latest failed, stuck and released
+Each job class shows its runs, failure rate, stuck and retried jobs, duration and wait
+time. Click a job for its runs. Filter by queue and sort by highest failure rate, most
+runs, highest p95 duration or highest p95 wait. Below the job classes are the **latest failed, stuck and released
 runs**, with their parameters, an **Open trace** and the issue they became.
 
 A run is **Queued**, **Processing**, **Processed**, **Released** (put back on the
-queue), **Failed** or **Stuck**. It is stuck when it has been processing for longer than
-its timeout plus 2 minutes (a job that sends no timeout counts as 10 minutes), checked
-every minute. A banner says how many are stuck and links to them.
+queue), **Failed** or **Stuck**. A run is stuck when it has been processing for longer
+than its timeout plus 2 minutes. A job without a timeout counts as 10 minutes. A banner
+says how many runs are stuck and links to them.
 
 ## Queues
 
 The Jobs page shows a **Queues** card once agents report queue sizes (the queues the SDK
 is set to watch). Per connection and queue:
 
-- **Waiting:** jobs on the queue now, from the latest heartbeat. Several agents report
-  the same queue, so this is the latest sample, not their sum. Gray when no agent has
-  reported it for 5 minutes.
-- **Workers:** how many workers run on the queue, from the latest heartbeat, where the
-  SDK counts them (from each worker's sign of life in the app's cache); red when jobs
-  wait with none. A worker that takes several queues counts on each.
-- **Oldest pending:** how long the oldest waiting job has waited, where the queue driver
-  can tell (Redis, database).
+- **Waiting:** jobs on the queue now. Gray when no agent has reported the queue for 5
+  minutes.
+- **Workers:** how many workers run on the queue, when the SDK reports it. Red when
+  jobs wait and no worker runs. A worker on several queues counts on each.
+- **Oldest pending:** how long the oldest waiting job has waited, for Redis and database
+  queues.
 - **p95 wait:** time from queued to started of the jobs that ran in the period.
 - **Size:** the highest size per bucket over the period; hover for each bucket.
 - **Alert:** the queue's own [backlog alert](./alerts#queue-backlog) thresholds, for
-  whoever may change the project. **custom** marks a queue that has some, **muted** one
-  that never alerts.
+  team owners and admins. **custom** marks a queue with its own thresholds, **muted** a
+  queue that never alerts.
 
-The card lists at most 20 queues.
-
-Queue size keeps growing when every worker is dead, while no job starts and so no wait
-is measured. A [queue backlog alert](./alerts) fires on it.
+When every worker is dead, no job starts but the queue keeps growing. A
+[queue backlog alert](./alerts#queue-backlog) catches that.
 
 ## Schedule
 
 ![The Schedule page with each task's cron, status and its recent runs](./screenshots/schedule.png)
 
 Each task shows its cron, its latest status (**Running**, **Finished**, **Failed**,
-**Skipped** or **Missed**), the last and next run and a strip of its last 20 runs; click
-it for the runs with their exit code and host. A run is late after a minute, and
-**missed** when it has not started 5 minutes after its time; a missed run becomes an
-issue. A task that has not been reported for 24 hours is no longer flagged. **Forget
-task** (owners and admins) deletes a task that is gone from the app, with its runs; it
-comes back if the app still runs it.
+**Skipped** or **Missed**), the last and next run and a strip of its last 20 runs. Click
+a task for its runs with their exit code and host.
+
+A run is late after a minute, and **missed** when it has not started 5 minutes after
+its time. A missed run becomes an issue. A task that has not been reported for 24 hours
+is no longer flagged. **Forget task**, for owners and admins, deletes a task that is
+gone from the app, with its runs. It comes back if the app still runs it.
 
 ## Commands
 
 ![The Commands page with runs, failures and duration per command](./screenshots/commands.png)
 
 Each command shows its runs, failures, average and longest duration, last run and
-status; the latest runs below show their arguments and options, exit code and host.
-Long-running queue workers are left out: they run until they are stopped.
+status. The latest runs below show their arguments and options, exit code and host.
+Queue workers are not listed.
 
 ## Logs
 
 ![The Logs page with the channel list, the levels and the latest lines](./screenshots/logs.png)
 
 Filter by channel, minimum level (debug to emergency) and release, and search the
-messages. The page shows the newest 200 lines; narrow the filters to see older ones.
-The search is a full-text search on words, not the `*` syntax of the other search
+messages. The page shows the newest 200 lines. Narrow the filters to see older ones.
+The search matches whole words. It does not use the `*` syntax of the other search
 fields. **Manage channels** opens the project's [log channels](./projects#settings).
 
-New lines appear by themselves while you are at the top. When you have scrolled down
-or selected text, the page holds them back and offers **Show new lines** instead.
+New lines appear while you are at the top of the list. When you have scrolled down or
+selected text, **Show new lines** appears instead.
 
 ## Sampling
 
-A busy app's SDK may record only a share of its runs (see its own docs). The pages then
-show estimates, marked **Estimated from a 10% sample** (the lowest rate in the period),
-and work them out like this:
+A busy app's SDK may record only a share of its requests; see the SDK's docs. The pages
+then show estimates, marked **Estimated from a 10% sample** with the lowest rate in the
+period.
 
-- **Requests, throughput, error rate and status codes** come from the request counts the
-  SDK sends for every request, sampled or not, so they are exact. Where an environment
-  has no counts yet (an SDK that does not send them), its request runs are weighed
-  instead: a sampled run stands for `1 / sample_rate` requests, a run kept only for being
-  slow counts once. From the first counted minute in the period on, an environment uses
-  its counts only, so a host left on an older SDK next to one that counts goes uncounted.
-- **p50, p95 and p99** come only from sampled runs: runs kept for being slow would pull
-  them up. A route whose requests were counted but none sampled shows no percentiles.
-- **Apdex** takes the share of satisfied and tolerated requests from the sampled runs and
-  applies it to the counted requests that were not a 5xx.
-- **Queries** weigh calls and total time the same way: a query of a sampled run stands
-  for `1 / sample_rate` calls, one of a run kept for being slow or failed, or a slow query
-  kept on its own, counts once. A slow run that was also sampled counts `1 / sample_rate`,
-  so slow queries are overcounted by up to `1 - sample_rate` of themselves: a small share
-  of the calls. The p95 only reads sampled queries; the max reads all.
-- **Releases** have no counts per release, so their requests and error rate weigh the
-  request runs; their p95 reads sampled runs only.
-- **Jobs, commands and scheduled tasks** are recorded on every run, sampled or not (only
-  their queries are sampled), so their counts, failure rates and durations stay exact.
+- **Exact:** request counts, throughput, error rate and status codes, as the SDK counts
+  every request. Jobs, commands and scheduled tasks are recorded on every run, so their
+  counts, failure rates and durations are exact too.
+- **From the sample:** p50, p95 and p99, Apdex, and query calls and times. A route whose
+  requests were counted but none sampled shows no percentiles.
+- **Releases** estimate their requests and error rate from the recorded requests.
 
 ## Apdex
 
-Apdex scores a route from 0 to 1 by how its requests felt. A request within 500 ms is
-satisfied, within 2 s counts half, and slower or a 5xx counts nothing. Below 0.85 shows
-in amber, below 0.7 in red. Sort by lowest Apdex to find the routes people wait on.
+Apdex scores a route from 0 to 1 by how fast its requests felt:
+
+| Request                | Counts |
+| ---------------------- | ------ |
+| Within 500 ms          | 1      |
+| Within 2 s             | ½      |
+| Slower, or a 5xx error | 0      |
+
+A score below 0.85 shows in amber, below 0.7 in red. Sort by lowest Apdex to find the
+routes people wait on.
 
 ## Browser
 
-**Browser** in the sidebar shows how fast pages are for the people using them, measured
-by the [browser script](./projects#browser-script). It measures Core Web Vitals on every
-page view and sends them once, when the page is hidden or left, with the class of
-device the page was viewed on: mobile, tablet or desktop.
+**Browser** in the sidebar shows how fast pages are for the people using them. The
+[browser script](./projects#browser-script) measures Core Web Vitals on every page view,
+with the class of device: mobile, tablet or desktop.
 
 At the top, cards show page views and the 75th percentile (p75) of each vital, colored
-by Google's thresholds, with the share of page views each vital rated good and the
+by Google's thresholds. Each card also shows the share of page views rated good and the
 change from the period before:
 
 | Vital | Good     | Poor     |
@@ -180,21 +203,19 @@ interaction of the page view.
 
 **All**, **Mobile**, **Tablet** and **Desktop** next to the title narrow every figure on
 the page to one class of device. **LCP by device** puts the p75 LCP of the three side
-by side, whichever is picked. A page view sent by an older browser script has no
-device class: it counts under **All** only.
+by side.
 
 Below them, a chart per vital shows its p75 per bucket of the period, and **Pages**
-lists each browser page (its path, with numeric and UUID segments grouped as `{id}`)
-with page views and the p75 of LCP, INP, CLS, TTFB (time to first byte) and FCP (first
+lists each page path, with ids grouped as `{id}`, with page views and the p75 of LCP, INP, CLS, TTFB (time to first byte) and FCP (first
 contentful paint). Sort it by most viewed or slowest LCP.
 
 **Browser errors** counts the occurrences of browser issues in the period, on every
 device, and lists the issues with the most; **All issues** opens the issues list
 filtered to browser errors.
 
-Values below zero or above a minute are dropped as broken measurements. Web vitals
-have their own [retention](./projects#retention), 30 days by default. A project that
-never received any shows how to add the browser script instead.
+Values below zero or above a minute are ignored. Web vitals are kept for 30 days by
+default, see [retention](./projects#retention). Until a project receives any, the page
+shows how to add the browser script.
 
 ## Traces
 
@@ -207,12 +228,19 @@ id. **Open trace** (on a request, a run or an occurrence) shows it on one time a
   notifications and Redis commands,
 - log lines and exceptions.
 
-The header names the request's route, its route name and domain when the SDK sent
-them. Each step is a bar placed where it started, as long as it took. Above the timeline a
-summary counts the queries, outgoing calls, cache operations and misses, mails,
-notifications, Redis commands, log lines and exceptions. A trace shows at most 500
-steps. Which spans are recorded is up to the SDK.
+The header names the request's route, route name and domain. Each step is a bar that
+starts when the step started and is as long as it took. Above the timeline, a summary
+counts the queries, outgoing calls, cache operations and misses, mails, notifications,
+Redis commands, log lines and exceptions. Which spans are recorded depends on the SDK.
 
 ![A trace of a failed job: its queries, a log line and the exception, on one time axis](./screenshots/trace.png)
 
 Paste a trace id in the [command palette](./finding-things) to open it.
+
+## Limits
+
+| What                        | Limit                                 |
+| --------------------------- | ------------------------------------- |
+| Queues on the Queues card   | 20                                    |
+| Log lines on the Logs page  | The newest 200 that match the filters |
+| Steps in a trace            | 500                                   |

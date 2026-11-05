@@ -171,13 +171,13 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
     docker compose logs lumberjack | grep -A2 'setup token'
     ```
 
-    Setup creates the first administrator with credentials of your own choosing.
-    See [administration.md](administration.md).
+    Setup creates the first administrator. See
+    [Setup and system administration](./administration.md).
 
 ### While the image is private
 
-The image on GHCR is private for now. Sign in to the registry before steps 3
-and 4, with a GitHub token that has the `read:packages` scope:
+The image on GHCR is private for now. Before steps 3 and 4, sign in to the registry
+with a GitHub token that has the `read:packages` scope:
 
 ```bash
 echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
@@ -192,19 +192,19 @@ Everything is set through environment variables in `.env.docker`.
 | `APP_URL`                                | (required)     | The public address, e.g. `https://lumberjack.example.com`                                                                                                                                                                                                                                                                                       |
 | `APP_KEY`                                | (required)     | Encryption key. Keep it: changing it signs everyone out and breaks stored secrets                                                                                                                                                                                                                                                               |
 | `DB_PASSWORD`                            | (required)     | Password of the bundled Postgres                                                                                                                                                                                                                                                                                                                |
-| `LUMBERJACK_SETUP_TOKEN`                 | generated      | Locks first-run setup. Without one, a token is generated on first start, printed in the log and kept in `storage/app/setup/token`                                                                                                                                                                                                               |
+| `LUMBERJACK_SETUP_TOKEN`                 | generated      | Locks first-run setup. Without one, a token is generated on first start and printed in the log |
 | `LUMBERJACK_PORT`                        | `8080`         | Port on the host                                                                                                                                                                                                                                                                                                                                |
 | `HORIZON_INGEST_PROCESSES`               | `2`            | Most workers for incoming telemetry                                                                                                                                                                                                                                                                                                             |
 | `HORIZON_BACKGROUND_PROCESSES`           | `2`            | Most workers for everything else (alerts, pruning)                                                                                                                                                                                                                                                                                              |
 | `MAIL_*`                                 |                | SMTP for invitations, password resets and e-mail alerts; see [Mail](./administration#mail) for the two sender addresses                                                                                                                                                                                                                         |
-| `TRUSTED_PROXIES`                        | Docker ranges  | Proxies whose `X-Forwarded-*` headers are believed: `127.0.0.1,172.16.0.0/12`. Comma separated; `*` for any (not recommended)                                                                                                                                                                                                                   |
+| `TRUSTED_PROXIES`                        | Docker ranges  | Proxies whose `X-Forwarded-*` headers are trusted: `127.0.0.1,172.16.0.0/12`. Comma separated, `*` for any (not recommended) |
 | `LUMBERJACK_MIGRATE`                     | `true`         | Run database migrations on start                                                                                                                                                                                                                                                                                                                |
 | `LOG_LEVEL`                              | `info`         | How much Lumberjack itself logs, to the container's output                                                                                                                                                                                                                                                                                      |
-| `SESSION_SECURE_COOKIE`                  | from `APP_URL` | `true` when `APP_URL` starts with `https://`: the session cookie is then only sent over HTTPS                                                                                                                                                                                                                                                   |
+| `SESSION_SECURE_COOKIE`                  | from `APP_URL` | `true` when `APP_URL` starts with `https://`: the session cookie is then only sent over HTTPS |
 | `ALERTS_WEBHOOKS_ALLOW_PRIVATE`          | `false`        | Allow alert channels to [private addresses](./alerts#channels)                                                                                                                                                                                                                                                                                  |
 | `LUMBERJACK_HEALTH_ALLOW_PRIVATE`        | `false`        | Allow health checks of [private addresses](./health#private-networks)                                                                                                                                                                                                                                                                           |
 | `REVERB_CLIENT_HOST`, `_PORT`, `_SCHEME` | from `APP_URL` | Where browsers open the live-update WebSocket, when it is not `APP_URL`                                                                                                                                                                                                                                                                         |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`  | generated      | Keys that sign [browser notifications](./teams#browser-notifications). Made on first use and kept in the database, encrypted with `APP_KEY`. Set them (`php artisan webpush:vapid --show`) to pin them, e.g. when several app servers must agree or the database is restored elsewhere. New keys make every browser turn notifications on again |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`  | generated      | Keys that sign [browser notifications](./teams#browser-notifications). Generated automatically. Set them to keep them across a database restore, see [Command line](./administration#command-line) |
 | `VAPID_SUBJECT`                          | `APP_URL`      | Who push services contact about this server: a `mailto:` address or an `https://` URL                                                                                                                                                                                                                                                           |
 
 ### Your own Postgres or Redis
@@ -214,10 +214,9 @@ Set `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (or
 remove the `postgres` or `redis` service and its `depends_on` entry from
 `compose.yaml`. Lumberjack needs Postgres 16 or newer and Redis 7 or newer.
 
-`localhost` does not work as the host: inside the container it is the container
-itself. For a Postgres or Redis on the same server, use `host.docker.internal`
-(compose.yaml maps it to the server). The service has to accept connections from
-the Docker network:
+Do not use `localhost` as the host: inside the container it is the container itself.
+For a Postgres or Redis on the same server, use `host.docker.internal`. The service
+must accept connections from the Docker network:
 
 - Postgres: `listen_addresses` includes the Docker bridge (e.g. `'*'` or
   `172.17.0.1`), and `pg_hba.conf` allows the Docker subnet, e.g.
@@ -225,14 +224,14 @@ the Docker network:
 - Redis: `bind` includes the bridge address, and `protected-mode` is off or a
   password is set (`REDIS_PASSWORD`).
 
-Alternatively, `network_mode: host` on the `lumberjack` service makes `localhost`
-the server itself (Linux only). Lumberjack then listens on port 8080 of the
-server directly and `ports:` is ignored.
+On Linux you can instead set `network_mode: host` on the `lumberjack` service. Then
+`localhost` is the server itself, Lumberjack listens on port 8080 of the server, and
+`ports:` is ignored.
 
 ## Reverse proxy
 
-Live updates use WebSockets on the same host and port as the app (path `/app`).
-The proxy has to pass the `Upgrade` header through and set `X-Forwarded-Proto`.
+Live updates use WebSockets on the same host and port as the app, under the path
+`/app`. The proxy must pass the `Upgrade` header through and set `X-Forwarded-Proto`.
 
 **Caddy**
 
@@ -260,18 +259,21 @@ location / {
 **Traefik** handles WebSockets without extra settings; route the host to port 8080.
 
 `TRUSTED_PROXIES` lists the proxies whose `X-Forwarded-For`, `-Proto` and `-Host`
-headers are believed. The default covers a proxy on the same server or in a Docker
-network (`127.0.0.1,172.16.0.0/12`). If your proxy connects from somewhere else, set it
-to the proxy's address. Keep the list short: anyone connecting from a trusted address
-can claim any client IP, which defeats the login and ingest rate limits. Links in mails
-and alerts always use `APP_URL`, whatever host a request names.
+headers are trusted. The default, `127.0.0.1,172.16.0.0/12`, covers a proxy on the same
+server or in a Docker network. If your proxy connects from somewhere else, set it to the
+proxy's address.
+
+Keep the list short: anyone who connects from a trusted address can claim any client IP
+and get around the login and ingest rate limits.
+
+Links in mails and alerts always use `APP_URL`.
 
 ## Data and backups
 
 | Volume               | Holds                                                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `postgres-data`      | Everything Lumberjack records. Back this up: `docker compose exec postgres pg_dump -U lumberjack lumberjack > backup.sql` |
-| `redis-data`         | Queues and cache; Lumberjack recovers without it                                                                          |
+| `redis-data`         | Queues and cache. Lumberjack recovers without it                                                                          |
 | `lumberjack-storage` | The setup flag and the generated setup token                                                                              |
 
 ## Updating
@@ -281,15 +283,15 @@ docker compose pull
 docker compose --env-file .env.docker up -d
 ```
 
-The version under your name at the bottom of the sidebar says which one is running; it opens **About**.
+The version at the bottom of the sidebar shows which one is running.
 
-Migrations run on start. To run them yourself instead, set
-`LUMBERJACK_MIGRATE=false` and run
+Migrations run on start. To run them yourself, set `LUMBERJACK_MIGRATE=false` and run
 `docker compose exec lumberjack php artisan migrate --force`.
 
 ## Commands
 
-Artisan runs inside the container:
+Run artisan inside the container. All commands are on
+[Setup and system administration](./administration#command-line).
 
 ```bash
 docker compose exec lumberjack php artisan lumberjack:make-admin you@example.com
@@ -298,25 +300,22 @@ docker compose exec lumberjack php artisan setup:clear
 
 ## Inside the image
 
-Supervisord runs four processes and restarts any that stops. All of them log to
-the container's output (`docker compose logs lumberjack`).
+The container runs four processes and restarts any that stops. All of them log to the
+container's output (`docker compose logs lumberjack`).
 
 | Process   |                                                         |
 | --------- | ------------------------------------------------------- |
-| web       | FrankenPHP on port 8080; forwards `/app` to Reverb      |
+| web       | FrankenPHP on port 8080, forwards `/app` to Reverb      |
 | reverb    | WebSockets, on 127.0.0.1:8081 inside the container only |
 | horizon   | Queue workers                                           |
 | scheduler | `schedule:work`                                         |
 
-Horizon runs two groups of workers: the ingest workers take the `ingest` queue
-(`HORIZON_INGEST_PROCESSES`), the background workers take `alerts`, `default` and
-`health`, in that order (`HORIZON_BACKGROUND_PROCESSES`). So a flood of telemetry never
-holds back an alert, and health checks wait behind both.
+Horizon runs two groups of workers:
 
-Reverb's credentials are derived from `APP_KEY`, so there is nothing to set for
-them (`REVERB_APP_ID`, `REVERB_APP_KEY` and `REVERB_APP_SECRET` override them). Its HTTP API is not reachable from outside the container.
+- **Ingest** workers take the `ingest` queue. Set their number with
+  `HORIZON_INGEST_PROCESSES`.
+- **Background** workers take `alerts`, `default` and `health`, in that order. Set
+  their number with `HORIZON_BACKGROUND_PROCESSES`.
 
-The keys for browser notifications need nothing either: the first time someone opens
-their notification settings, or a notification goes out, Lumberjack makes a VAPID key pair and keeps
-it in the database, encrypted with `APP_KEY`. `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`
-override it.
+Reverb needs no settings. `REVERB_APP_ID`, `REVERB_APP_KEY` and `REVERB_APP_SECRET`
+override its generated credentials.
