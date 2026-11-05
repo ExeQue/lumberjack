@@ -544,6 +544,7 @@ final class WidgetSchema
                     ['key' => 'data_source', 'type' => 'data_source', 'default' => null, 'data' => true, 'span' => 2, 'when' => ['counts_to' => ['calendar']]],
                     ['key' => 'calendar_count', 'type' => 'select', 'options' => ['both', 'end', 'start'], 'default' => 'both', 'data' => false, 'span' => 2, 'when' => ['counts_to' => ['calendar']]],
                     ['key' => 'calendar_text', 'type' => 'select', 'options' => ['title', 'status'], 'default' => 'title', 'data' => false, 'span' => 2, 'when' => ['counts_to' => ['calendar']]],
+                    ['key' => 'format', 'type' => 'select', 'options' => ['24', '12'], 'default' => '24', 'data' => false, 'span' => 1, 'when' => ['counts_to' => ['calendar']]],
                     ['key' => 'countdown_label', 'type' => 'text', 'default' => null, 'data' => false, 'span' => 2, 'when' => ['counts_to' => ['moment']]],
                     ['key' => 'after', 'type' => 'select', 'options' => ['since', 'zero', 'hide'], 'default' => 'since', 'data' => false, 'span' => 2, 'when' => ['counts_to' => ['moment']]],
                     $toggle('seconds', true),
