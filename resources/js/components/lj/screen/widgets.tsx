@@ -2162,9 +2162,10 @@ function webUrl(value: string | null): string | null {
 
 /**
  * A YouTube or Vimeo page as its player, muted and looping (a TV cannot autoplay with
- * sound); any other page as it is.
+ * sound), subtitles on or off; any other page as it is. YouTube takes "off" as a wish
+ * only: it may still show them on a muted video.
  */
-function embedUrl(url: string): string {
+function embedUrl(url: string, subtitles: boolean): string {
     const youtube = url.match(
         /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([\w-]{11})/i,
     );
@@ -2172,13 +2173,13 @@ function embedUrl(url: string): string {
     if (youtube) {
         const id = youtube[1];
 
-        return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&playsinline=1`;
+        return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&playsinline=1&iv_load_policy=3&cc_load_policy=${subtitles ? 1 : 0}`;
     }
 
     const vimeo = url.match(/^https?:\/\/(?:www\.)?vimeo\.com\/(\d+)/i);
 
     return vimeo
-        ? `https://player.vimeo.com/video/${vimeo[1]}?autoplay=1&muted=1&loop=1&background=1`
+        ? `https://player.vimeo.com/video/${vimeo[1]}?autoplay=1&muted=1&loop=1&background=1${subtitles ? '' : '&texttrack=false'}`
         : url;
 }
 
@@ -2255,7 +2256,7 @@ function MediaTile({
         body = (
             <iframe
                 key={`${source}#${round}`}
-                src={embedUrl(source)}
+                src={embedUrl(source, opt<boolean>('subtitles') === true)}
                 title={widget.title ?? t('screens.kinds.media')}
                 className={cn(box, 'border-0')}
                 sandbox="allow-scripts allow-same-origin allow-presentation"
