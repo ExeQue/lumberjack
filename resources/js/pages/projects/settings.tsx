@@ -379,7 +379,7 @@ export default function ProjectSettings(props: Props) {
                 <div className="grid items-start gap-5 lg:grid-cols-[180px_minmax(0,1fr)]">
                     <nav
                         aria-label={t('settings.toc')}
-                        className="flex flex-wrap gap-1 lg:sticky lg:top-6 lg:flex-col"
+                        className="flex min-w-0 gap-1 whitespace-nowrap max-lg:overflow-x-auto max-lg:pb-1 lg:sticky lg:top-6 lg:flex-col"
                     >
                         {SECTIONS.map((section) => [
                             // The data sources are a page of their own, listed with the settings.
@@ -391,6 +391,13 @@ export default function ProjectSettings(props: Props) {
                                 >
                                     {t('common.nav.data_sources')}
                                 </Link>
+                            ),
+                            section === 'danger' && (
+                                <span
+                                    key="danger-separator"
+                                    aria-hidden="true"
+                                    className="mx-1.5 w-px shrink-0 self-stretch bg-line lg:mx-0 lg:my-2 lg:h-px lg:w-auto"
+                                />
                             ),
                             <a
                                 key={section}

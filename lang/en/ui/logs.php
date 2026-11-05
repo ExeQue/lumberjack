@@ -27,4 +27,6 @@ return [
     'limit_reached' => 'Showing the newest :limit lines. Narrow the filters to see older ones.',
     'empty_title' => 'No log lines',
     'empty_body' => 'Nothing matches the filters in this period.',
+    // Button, :period is e.g. "24 h"
+    'widen_period' => 'Show the last :period',
 ];

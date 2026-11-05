@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import Heading from '@/components/heading';
 import { BrowserNotifications } from '@/components/lj/browser-notifications';
 import type { PushSettings } from '@/components/lj/browser-notifications';
@@ -28,10 +28,6 @@ export default function NotificationsSettings({
 
     return (
         <>
-            <Head title={t('settings.notifications.title')} />
-
-            <h1 className="sr-only">{t('settings.notifications.title')}</h1>
-
             <NotificationSettings
                 preferences={notifications}
                 presets={presets}

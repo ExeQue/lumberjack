@@ -139,7 +139,10 @@ export default function Notifications({
                                 return (
                                     <li
                                         key={item.id}
-                                        className="flex items-start gap-3 px-3 py-2.5"
+                                        className={cn(
+                                            'flex items-start gap-3 px-3 py-2.5',
+                                            !item.read && 'bg-amber/5',
+                                        )}
                                     >
                                         <Icon
                                             className="mt-0.5 size-4 shrink-0 text-ink-3"
@@ -152,7 +155,7 @@ export default function Notifications({
                                         >
                                             <span
                                                 className={cn(
-                                                    'truncate',
+                                                    'line-clamp-2 break-words',
                                                     !item.read &&
                                                         'font-medium text-ink',
                                                 )}
@@ -185,7 +188,7 @@ export default function Notifications({
                                             onClick={() =>
                                                 setRead(item, !item.read)
                                             }
-                                            className="shrink-0 cursor-pointer text-[12px] text-ink-3 hover:text-ink"
+                                            className="-my-1 inline-flex min-h-8 shrink-0 cursor-pointer items-center rounded-md px-2 text-[12px] text-ink-3 hover:bg-panel-2 hover:text-ink"
                                         >
                                             {item.read
                                                 ? t('notifications.mark_unread')

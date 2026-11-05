@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import { TopBar } from '@/components/lj/top-bar';
 import { PageTitle, navActiveClass } from '@/components/lj/ui';
@@ -25,13 +25,31 @@ const sections = [
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const t = useT();
     const { isCurrentOrParentUrl } = useCurrentUrl();
+    const current = sections.find((section) =>
+        isCurrentOrParentUrl(section.href),
+    );
+    const title = current
+        ? t(`settings.account.${current.key}`)
+        : t('settings.account.title');
 
     return (
         <>
-            <TopBar crumbs={[{ label: t('settings.account.title') }]} />
+            <Head
+                title={
+                    current
+                        ? `${title} · ${t('settings.account.title')}`
+                        : title
+                }
+            />
+            <TopBar
+                crumbs={[
+                    { label: t('settings.account.title'), href: toUrl(edit()) },
+                    ...(current ? [{ label: title }] : []),
+                ]}
+            />
             <PageBody>
                 <PageTitle
-                    title={t('settings.account.title')}
+                    title={title}
                     description={t('settings.account.description')}
                 />
                 <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
@@ -40,16 +58,16 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                         className="flex flex-wrap gap-1 lg:flex-col"
                     >
                         {sections.map((section) => {
-                            const current = isCurrentOrParentUrl(section.href);
+                            const active = section === current;
 
                             return (
                                 <Link
                                     key={toUrl(section.href)}
                                     href={section.href}
-                                    aria-current={current ? 'page' : undefined}
+                                    aria-current={active ? 'page' : undefined}
                                     className={cn(
                                         'lj-nav-item rounded-md px-2.5 py-1.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink',
-                                        current && navActiveClass,
+                                        active && navActiveClass,
                                     )}
                                 >
                                     {t(`settings.account.${section.key}`)}
