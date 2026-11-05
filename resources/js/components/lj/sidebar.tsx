@@ -9,6 +9,7 @@ import {
     Search,
     UserCog,
 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { NotificationBell } from '@/components/lj/notification-bell';
 import {
     openCommandPalette,
@@ -41,7 +42,7 @@ function NavLink({ item }: { item: NavItem }) {
         return (
             <a
                 href={item.href}
-                className="lj-nav-item flex h-8 items-center justify-between rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink"
+                className="lj-nav-item flex h-8 items-center justify-between rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink [@media(max-height:800px)]:h-7"
             >
                 {item.label}
                 <ExternalLink
@@ -57,7 +58,7 @@ function NavLink({ item }: { item: NavItem }) {
             href={item.href}
             aria-current={item.active ? 'page' : undefined}
             className={cn(
-                'lj-nav-item flex h-8 items-center justify-between rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink',
+                'lj-nav-item flex h-8 items-center justify-between rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-panel-2 hover:text-ink [@media(max-height:800px)]:h-7',
                 item.active && navActiveClass,
             )}
         >
@@ -71,7 +72,8 @@ function NavLink({ item }: { item: NavItem }) {
     );
 }
 
-export function Sidebar() {
+/** `bell`: whether the notification bell sits in the header; the top bar has it otherwise. */
+export function Sidebar({ bell = true }: { bell?: boolean }) {
     const t = useT();
     const [sound, setSound] = useSoundSetting();
     const page = usePage<{
@@ -103,10 +105,29 @@ export function Sidebar() {
         counts,
         is_admin,
     );
+    const links = useRef<HTMLDivElement>(null);
+
+    // On a short screen the open page's entry may be below the fold: bring it up.
+    useEffect(() => {
+        // Only this list scrolls; scrollIntoView would move the page too.
+        const box = links.current;
+        const item = box?.querySelector('[aria-current="page"]');
+
+        if (box && item) {
+            const top =
+                item.getBoundingClientRect().top -
+                box.getBoundingClientRect().top;
+
+            if (top < 0 || top + item.clientHeight > box.clientHeight) {
+                box.scrollTop += top - box.clientHeight / 2;
+            }
+        }
+    }, []);
+
     return (
         <nav
             aria-label={t('common.nav.label')}
-            className="flex min-h-full w-full flex-col gap-5 bg-rail px-3 py-4 text-[13px] lg:h-full"
+            className="flex min-h-full w-full flex-col gap-5 bg-rail px-3 py-4 text-[13px] lg:h-full [@media(max-height:800px)]:gap-3 [@media(max-height:800px)]:py-3"
         >
             <div className="flex items-center justify-between gap-2">
                 <Link
@@ -118,7 +139,7 @@ export function Sidebar() {
                         Lumberjack
                     </span>
                 </Link>
-                <NotificationBell />
+                {bell && <NotificationBell />}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -204,51 +225,57 @@ export function Sidebar() {
                 )}
             </div>
 
-            {projectNav.length > 0 && (
+            {/* The links scroll between the switchers and the user; a fade hints at more below. */}
+            <div
+                ref={links}
+                className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto [mask-image:linear-gradient(to_bottom,black_calc(100%-1.5rem),transparent)] pb-6 [@media(max-height:800px)]:gap-3"
+            >
+                {projectNav.length > 0 && (
+                    <div className="flex flex-col gap-0.5">
+                        <span className="px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-ink-3 uppercase">
+                            {t('common.nav.project')}
+                        </span>
+                        {projectNav
+                            .filter((item) => !item.hidden)
+                            .map((item) => (
+                                <NavLink key={item.href} item={item} />
+                            ))}
+                    </div>
+                )}
+
                 <div className="flex flex-col gap-0.5">
                     <span className="px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-ink-3 uppercase">
-                        {t('common.nav.project')}
+                        {t('common.nav.team_section')}
                     </span>
-                    {projectNav
+                    {teamNav
                         .filter((item) => !item.hidden)
                         .map((item) => (
                             <NavLink key={item.href} item={item} />
                         ))}
                 </div>
-            )}
 
-            <div className="flex flex-col gap-0.5">
-                <span className="px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-ink-3 uppercase">
-                    {t('common.nav.team_section')}
-                </span>
-                {teamNav
-                    .filter((item) => !item.hidden)
-                    .map((item) => (
-                        <NavLink key={item.href} item={item} />
-                    ))}
+                {adminNav.length > 0 && (
+                    // Folded away unless an admin page is open: most days it is not needed.
+                    <details
+                        open={adminNav.some((item) => item.active) || undefined}
+                        className="group flex flex-col gap-0.5"
+                    >
+                        <summary className="flex cursor-pointer list-none items-center justify-between px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-ink-3 uppercase hover:text-ink-2 [&::-webkit-details-marker]:hidden">
+                            {t('admin.nav.section')}
+                            <ChevronRight
+                                className="size-3 transition-transform group-open:rotate-90"
+                                aria-hidden="true"
+                            />
+                        </summary>
+                        {adminNav.map((item) => (
+                            <NavLink key={item.href} item={item} />
+                        ))}
+                    </details>
+                )}
             </div>
 
-            {adminNav.length > 0 && (
-                // Folded away unless an admin page is open: most days it is not needed.
-                <details
-                    open={adminNav.some((item) => item.active) || undefined}
-                    className="group flex flex-col gap-0.5"
-                >
-                    <summary className="flex cursor-pointer list-none items-center justify-between px-2.5 pb-1.5 text-[11px] font-medium tracking-wide text-ink-3 uppercase hover:text-ink-2 [&::-webkit-details-marker]:hidden">
-                        {t('admin.nav.section')}
-                        <ChevronRight
-                            className="size-3 transition-transform group-open:rotate-90"
-                            aria-hidden="true"
-                        />
-                    </summary>
-                    {adminNav.map((item) => (
-                        <NavLink key={item.href} item={item} />
-                    ))}
-                </details>
-            )}
-
             <DropdownMenu>
-                <DropdownMenuTrigger className="mt-auto flex cursor-pointer items-center gap-2.5 border-t border-line px-2.5 pt-3 text-left">
+                <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2.5 border-t border-line px-2.5 pt-3 text-left">
                     <span
                         aria-hidden="true"
                         className="inline-flex size-7 items-center justify-center rounded-full border border-line-strong bg-panel-2 text-[11px] font-semibold text-ink-2"

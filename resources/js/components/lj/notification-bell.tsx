@@ -30,7 +30,7 @@ const PERSONAL_EVENTS = [
  * The bell: how many notifications are unread, kept live, and the latest few in a list
  * that loads when it opens. Opening one marks it read.
  */
-export function NotificationBell() {
+export function NotificationBell({ className }: { className?: string }) {
     const t = useT();
     const { notifications_unread, auth } = usePage<{
         notifications_unread: number;
@@ -111,19 +111,29 @@ export function NotificationBell() {
                 aria-label={t('notifications.bell', {
                     count: unreadLabel(unread),
                 })}
-                className="relative inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-ink-3 hover:bg-panel hover:text-ink"
-            >
-                <Bell className="size-4" aria-hidden="true" />
-                {unread > 0 && (
-                    <span
-                        aria-hidden="true"
-                        className="absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-amber px-1 text-center text-[10px] leading-4 font-semibold text-black"
-                    >
-                        {unreadLabel(unread)}
-                    </span>
+                className={cn(
+                    'inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-ink-3 hover:bg-panel hover:text-ink',
+                    className,
                 )}
+            >
+                {/* The count sits on the icon, whatever the size of the button. */}
+                <span className="relative">
+                    <Bell className="size-4" aria-hidden="true" />
+                    {unread > 0 && (
+                        <span
+                            aria-hidden="true"
+                            className="absolute -top-2.5 -right-2.5 min-w-4 rounded-full bg-amber px-1 text-center text-[10px] leading-4 font-semibold text-black"
+                        >
+                            {unreadLabel(unread)}
+                        </span>
+                    )}
+                </span>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-80">
+            <DropdownMenuContent
+                align="start"
+                collisionPadding={16}
+                className="w-[min(20rem,calc(100vw-2rem))]"
+            >
                 <div className="flex items-center justify-between gap-2">
                     <DropdownMenuLabel>
                         {t('notifications.title')}
@@ -148,8 +158,8 @@ export function NotificationBell() {
                         {t('notifications.empty')}
                     </p>
                 ) : (
-                    // Header and footer stay; the list scrolls within what fits on screen.
-                    <div className="max-h-[calc(var(--radix-dropdown-menu-content-available-height)-6rem)] overflow-y-auto">
+                    // Header and footer stay; the list scrolls within 70% of the screen, or less if that does not fit.
+                    <div className="max-h-[calc(min(70vh,var(--radix-dropdown-menu-content-available-height))-7rem)] overflow-y-auto">
                         {items.map((item) => {
                             const Icon = NOTIFICATION_KINDS[item.kind] ?? Bell;
 
@@ -166,7 +176,7 @@ export function NotificationBell() {
                                     <span className="flex min-w-0 flex-1 flex-col">
                                         <span
                                             className={cn(
-                                                'truncate',
+                                                'line-clamp-2 break-words',
                                                 !item.read && 'font-medium',
                                             )}
                                         >

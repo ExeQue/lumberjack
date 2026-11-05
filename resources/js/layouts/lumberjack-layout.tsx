@@ -1,15 +1,27 @@
 import { usePage } from '@inertiajs/react';
 import { Menu } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import { CommandPalette } from '@/components/lj/command-palette';
 import { FlashMessages } from '@/components/lj/flash';
 import { LiveSidebar } from '@/components/lj/live-sidebar';
 import { LogMark } from '@/components/lj/logo';
 import { NewIssueToasts } from '@/components/lj/new-issue-toasts';
+import { NotificationBell } from '@/components/lj/notification-bell';
 import { Sidebar } from '@/components/lj/sidebar';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useT } from '@/lib/i18n';
+
+// The width (Tailwind's lg) from which the sidebar sits beside the page.
+const wide =
+    typeof window === 'undefined'
+        ? undefined
+        : window.matchMedia('(min-width: 1024px)');
+const onWideChange = (callback: () => void) => {
+    wide?.addEventListener('change', callback);
+
+    return () => wide?.removeEventListener('change', callback);
+};
 
 export default function LumberjackLayout({
     children,
@@ -19,6 +31,12 @@ export default function LumberjackLayout({
     const t = useT();
     const url = usePage().url;
     const [menuOpen, setMenuOpen] = useState(false);
+    // One bell at a time: in the sidebar beside the page, else in the top bar.
+    const isWide = useSyncExternalStore(
+        onWideChange,
+        () => wide?.matches ?? true,
+        () => true,
+    );
 
     // A link in the menu navigates; the menu then closes on its own.
     useEffect(() => setMenuOpen(false), [url]);
@@ -27,7 +45,7 @@ export default function LumberjackLayout({
         <div className="flex min-h-screen flex-col bg-ground font-sans text-[13px] text-ink lg:flex-row">
             {/* Desktop: the sidebar beside the page. */}
             <div className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[232px] lg:flex-none lg:[scrollbar-gutter:stable] lg:self-start lg:overflow-y-auto lg:border-r lg:border-line lg:bg-rail">
-                <Sidebar />
+                <Sidebar bell={isWide} />
             </div>
 
             {/* Phone and tablet: a bar with the menu behind a button, so the page starts at the top. */}
@@ -47,6 +65,7 @@ export default function LumberjackLayout({
                         Lumberjack
                     </span>
                 </span>
+                {!isWide && <NotificationBell className="ml-auto size-11" />}
             </header>
             <CommandPalette />
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -57,7 +76,7 @@ export default function LumberjackLayout({
                     <SheetTitle className="sr-only">
                         {t('common.nav.label')}
                     </SheetTitle>
-                    <Sidebar />
+                    <Sidebar bell={false} />
                 </SheetContent>
             </Sheet>
 
