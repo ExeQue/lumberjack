@@ -71,6 +71,19 @@ class MetricSeriesQuery
     }
 
     /**
+     * The share of the window's sampled requests that took at most $ms, null without any:
+     * a latency objective's good share, read from the runs the SDK picked like the percentiles.
+     */
+    public function shareWithin(MetricFilter $filter, MetricWindow $window, int $ms): ?float
+    {
+        $value = $this->sampledRuns($filter, $window)
+            ->selectRaw('COUNT(*) FILTER (WHERE duration_us <= ?)::float / NULLIF(COUNT(*), 0) AS value', [$ms * 1000])
+            ->value('value');
+
+        return $value !== null ? (float) $value : null;
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     private function bucketed(Metric $metric, MetricFilter $filter, MetricWindow $window, ?MetricGroup $group): array

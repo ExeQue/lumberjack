@@ -15,4 +15,8 @@ enum WidgetType: string
     case Chart = 'chart';
     case List = 'list';
     case Health = 'health';
+    /** Every project of the scope as a traffic light. */
+    case Overview = 'overview';
+    /** One service level objective and its error budget. */
+    case Slo = 'slo';
 }

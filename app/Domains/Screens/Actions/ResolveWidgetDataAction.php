@@ -7,6 +7,7 @@ namespace App\Domains\Screens\Actions;
 use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\Alerts\Models\QueueAlertThreshold;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Queries\DataSourceValuesQuery;
 use App\Domains\Health\Models\HealthCheck;
@@ -51,7 +52,8 @@ use Illuminate\Support\Str;
  * (previous, yesterday, last_week, none) and sparkline for a stat; min and max for a
  * gauge; split_by (a metric group or project), top and overlay_previous for a chart;
  * limit, sort (newest, most_frequent, last_seen, worst) and only_problems for a list; checks (uuids) and
- * only_problems for health; data_source, json_path, and for a list label_path and value_path,
+ * only_problems for health; new_issues and stale_as for the overview; slo_target,
+ * slo_custom_target and threshold_ms for an SLO; data_source, json_path, and for a list label_path and value_path,
  * for External JSON; data_source, days_before, days_after, upcoming_only and timezone for a
  * calendar. Display options are the widget's own business.
  */
@@ -66,6 +68,18 @@ class ResolveWidgetDataAction
     private LruCache $memo;
 
     public const int LIST_LIMIT = 10;
+
+    /** New open issues in the period that turn a project amber on the overview. */
+    public const int NEW_ISSUES_AMBER = 3;
+
+    /** The targets an SLO offers, in percent of good requests, _ for the decimal point (a dot would split the translation key). */
+    public const array SLO_TARGETS = ['99', '99_5', '99_9', '99_95', '99_99'];
+
+    /** Fast enough for a latency SLO, in milliseconds. */
+    public const int SLO_THRESHOLD_MS = 500;
+
+    /** An SLO's burn rate reads this share of the period, the latest, and at least five minutes. */
+    public const int SLO_BURN_SHARE = 24;
 
     /** Requests per minute "now" averages this many minutes. */
     public const int RATE_WINDOW_MINUTES = 5;
@@ -108,6 +122,8 @@ class ResolveWidgetDataAction
             $type === WidgetType::Chart => $this->chart($source, $projects, $scope, $options, $aggregatesOnly),
             $type === WidgetType::List => $this->listRows($source, $projects, $scope, $options, $limits, $aggregatesOnly),
             $type === WidgetType::Health => $this->checks($projects, $scope, $options, $aggregatesOnly),
+            $type === WidgetType::Overview => $this->overview($team, $projects, $scope, $options),
+            $type === WidgetType::Slo => $this->slo($source, $projects, $scope, $options),
         };
 
         // The period it covers, for the tile's corner label; health and the latest report are now.
@@ -510,6 +526,168 @@ class ResolveWidgetDataAction
     }
 
     /**
+     * {summary: {total, ok, amber, red}, projects: [{project, name, state, reasons}]}: each
+     * project of the scope with its state (ok, amber or red), the worst of its reasons:
+     * checks_down and escalating (red), checks_degraded (amber; stale counts with them
+     * unless stale_as is ok), backlog (its worst queue, red or amber as the queues list
+     * judges it) and new_issues (open issues first seen in the period, amber from the
+     * new_issues option). A reason is {reason, state, count, queue}, red ones first.
+     * Every project is read in the same few queries, however many the scope has.
+     *
+     * @param  Collection<int, Project>  $projects
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    private function overview(Team $team, Collection $projects, WidgetScope $scope, array $options): array
+    {
+        $ids = $projects->modelKeys();
+        $staleCounts = ($options['stale_as'] ?? 'degraded') !== 'ok';
+        $newAmber = max(1, (int) ($options['new_issues'] ?? self::NEW_ISSUES_AMBER));
+        $since = $scope->period->since();
+        $summaries = $this->memo->remember('health-summaries:'.implode(',', $ids).':'.($scope->environment ?? '*'), fn (): array => $this->health->summaries($projects, $scope->environment));
+        $issues = $ids === [] ? collect() : Issue::query()->whereIn('project_id', $ids)->whereOpen()
+            ->groupBy('project_id')
+            ->selectRaw('project_id, COUNT(*) FILTER (WHERE escalated_at > ?) AS escalating_count, COUNT(*) FILTER (WHERE first_seen_at >= ?) AS new_count', [now()->subMinutes(DetectEscalationAction::ACTIVE_MINUTES), $since])
+            ->toBase()->get()->keyBy('project_id');
+        $backlogs = $this->backlogs($team, $ids, $since);
+        $rank = ['red' => 0, 'amber' => 1];
+        $cells = [];
+
+        foreach ($projects as $project) {
+            $summary = $summaries[$project->id];
+            $counts = $issues->get($project->id);
+            $degraded = $summary['degraded'] + ($staleCounts ? $summary['stale'] : 0);
+            $backlog = $backlogs[$project->id] ?? null;
+            $reasons = array_values(array_filter([
+                $summary['down'] > 0 ? ['reason' => 'checks_down', 'state' => 'red', 'count' => $summary['down'], 'queue' => null] : null,
+                (int) ($counts->escalating_count ?? 0) > 0 ? ['reason' => 'escalating', 'state' => 'red', 'count' => (int) $counts->escalating_count, 'queue' => null] : null,
+                $backlog !== null ? ['reason' => 'backlog', ...$backlog] : null,
+                $degraded > 0 ? ['reason' => 'checks_degraded', 'state' => 'amber', 'count' => $degraded, 'queue' => null] : null,
+                (int) ($counts->new_count ?? 0) >= $newAmber ? ['reason' => 'new_issues', 'state' => 'amber', 'count' => (int) $counts->new_count, 'queue' => null] : null,
+            ]));
+            usort($reasons, fn (array $a, array $b): int => $rank[$a['state']] <=> $rank[$b['state']]);
+
+            $cells[] = ['project' => $project->slug, 'name' => $project->name, 'state' => $reasons[0]['state'] ?? 'ok', 'reasons' => $reasons];
+        }
+
+        $states = array_count_values(array_column($cells, 'state'));
+
+        return [
+            'summary' => ['total' => count($cells), 'ok' => $states['ok'] ?? 0, 'amber' => $states['amber'] ?? 0, 'red' => $states['red'] ?? 0],
+            'projects' => $cells,
+        ];
+    }
+
+    /**
+     * The worst queue backlog of each project, as the queues list judges it (queueState)
+     * without a widget's limits: {state, count (queues past half their thresholds), queue}
+     * by project id, left out while every queue is fine. Three queries for all projects:
+     * the latest sample of each queue, the backlog rules, the queues' own thresholds.
+     *
+     * @param  array<int, int|string>  $ids
+     * @return array<int, array{state: string, count: int, queue: string}>
+     */
+    private function backlogs(Team $team, array $ids, CarbonImmutable $since): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $samples = DB::table('queue_samples')
+            ->selectRaw('DISTINCT ON (project_id, connection, queue) project_id, connection, queue, size, oldest_age_s')
+            ->whereIn('project_id', $ids)->where('sampled_at', '>=', $since)
+            ->orderBy('project_id')->orderBy('connection')->orderBy('queue')->orderByDesc('sampled_at')
+            ->get();
+
+        if ($samples->isEmpty()) {
+            return [];
+        }
+
+        $rules = AlertRule::query()->whereType(AlertRuleType::QueueBacklog)
+            ->where(fn ($q) => $q->whereForTeam($team)->orWhereIn('project_id', $ids))->get();
+        $teamRule = $rules->firstWhere('project_id', null);
+        $own = QueueAlertThreshold::query()->whereIn('project_id', $ids)->get()
+            ->keyBy(fn (QueueAlertThreshold $t): string => "{$t->project_id}|{$t->connection}|{$t->queue}");
+        $worst = [];
+
+        foreach ($samples as $sample) {
+            // The project's own rule, else the team's; a queue's thresholds only refine a rule.
+            $rule = $rules->firstWhere('project_id', $sample->project_id) ?? $teamRule;
+            $threshold = $own->get("{$sample->project_id}|{$sample->connection}|{$sample->queue}");
+            $settings = match (true) {
+                $rule === null => new QueueBacklogSettings(),
+                $threshold !== null => $rule->queueBacklogSettings()->overriddenBy($threshold),
+                default => $rule->queueBacklogSettings(),
+            };
+            $state = $this->backlogState($settings, ['size' => $sample->size !== null ? (int) $sample->size : null, 'oldest_age_s' => $sample->oldest_age_s !== null ? (int) $sample->oldest_age_s : null])['state'];
+
+            if ($state === 'ok') {
+                continue;
+            }
+
+            $current = $worst[$sample->project_id] ?? null;
+            $count = ($current['count'] ?? 0) + 1;
+            $worse = $current === null || ($state === 'red' && $current['state'] === 'amber');
+
+            $worst[$sample->project_id] = $worse
+                ? ['state' => $state, 'count' => $count, 'queue' => (string) $sample->queue]
+                : [...$current, 'count' => $count];
+        }
+
+        return $worst;
+    }
+
+    /**
+     * {value, target, budget_remaining, burn_rate, burn_seconds, threshold_ms, state}: value
+     * is the share of good requests over the period (availability: without a 5xx, from the
+     * request counts; latency: the sampled runs at or under threshold_ms), target the
+     * objective as a share. The error budget is 1 - target; budget_remaining is 1 - the
+     * share of it the period used (below 0 once overspent). burn_rate is how fast the
+     * budget burns now: the bad share of the latest burn_seconds (a twenty-fourth of the
+     * period) over the budget, 1 spending exactly the budget. Red with no budget left,
+     * amber burning faster than 1 or under a quarter left; null values without traffic.
+     *
+     * @param  Collection<int, Project>  $projects
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    private function slo(WidgetSource $source, Collection $projects, WidgetScope $scope, array $options): array
+    {
+        $picked = (string) ($options['slo_target'] ?? '99_9');
+        $percent = $this->number($picked === 'custom' ? ($options['slo_custom_target'] ?? null) : str_replace('_', '.', $picked));
+        $target = max(0.5, min(0.99999, ($percent ?? 99.9) / 100));
+        $thresholdMs = max(1, (int) ($this->number($options['threshold_ms'] ?? null) ?? self::SLO_THRESHOLD_MS));
+        $filter = $this->filter($source, $projects, $scope);
+        $window = MetricWindow::forPeriod($scope->period);
+        $burnSeconds = max(300, intdiv($window->to->getTimestamp() - $window->from->getTimestamp(), self::SLO_BURN_SHARE));
+        $good = fn (MetricWindow $w): ?float => $source->id === 'latency'
+            ? $this->metrics->shareWithin($filter, $w, $thresholdMs)
+            // From the counts, as the error rate's four decimals are all of a 99.99% budget.
+            : (($requests = $this->metrics->value(Metric::Requests, $filter, $w)) > 0 ? 1 - $this->metrics->value(Metric::Errors, $filter, $w) / $requests : null);
+
+        $value = $good($window);
+        $recent = $good(MetricWindow::between($window->to->subSeconds($burnSeconds), $window->to));
+        $budget = 1 - $target;
+        $remaining = $value !== null ? round(1 - (1 - $value) / $budget, 4) : null;
+        $burn = $recent !== null ? round((1 - $recent) / $budget, 2) : null;
+
+        return [
+            'value' => $value !== null ? round($value, 6) : null,
+            'target' => $target,
+            'budget_remaining' => $remaining,
+            'burn_rate' => $burn,
+            'burn_seconds' => $burnSeconds,
+            'threshold_ms' => $source->id === 'latency' ? $thresholdMs : null,
+            'state' => match (true) {
+                $remaining === null => null,
+                $remaining <= 0 => 'red',
+                ($burn ?? 0) > 1 || $remaining < 0.25 => 'amber',
+                default => 'ok',
+            },
+        ];
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     private function healthRows(Project $project, WidgetScope $scope): array
@@ -592,7 +770,7 @@ class ResolveWidgetDataAction
                     // labels and text values are whatever the endpoint calls things.
                     ->map(fn (array $r, int $i): array => $aggregatesOnly ? [...$r, 'label' => '#'.($i + 1), 'value' => is_string($r['value']) ? null : $r['value']] : $r)->all(),
             ],
-            WidgetType::Health => [],
+            default => [],
         };
 
         return ['as_of' => $source?->last_ok_at?->toIso8601String(), ...$data];
@@ -799,6 +977,17 @@ class ResolveWidgetDataAction
             ? QueueBacklogSettings::forQueue($rule, $project, $q['connection'], $q['queue'])
             : new QueueBacklogSettings();
 
+        return $this->backlogState($settings, $q);
+    }
+
+    /**
+     * A queue against its backlog thresholds: red past them, amber past half of them.
+     *
+     * @param  array{size: int|null, oldest_age_s: int|null}  $q
+     * @return array{state: string, reason: string|null}
+     */
+    private function backlogState(QueueBacklogSettings $settings, array $q): array
+    {
         if ($settings->muted) {
             return ['state' => 'ok', 'reason' => null];
         }

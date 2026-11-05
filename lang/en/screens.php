@@ -127,5 +127,12 @@ return [
         'health' => [
             'checks' => 'Health checks',
         ],
+        'overview' => [
+            'projects' => 'Project overview',
+        ],
+        'slo' => [
+            'availability' => 'Availability SLO',
+            'latency' => 'Latency SLO',
+        ],
     ],
 ];

@@ -132,6 +132,8 @@ const STARTERS: Record<WidgetKind, string | null> = {
     chart: 'requests_errors',
     list: 'latest_issues',
     health: 'checks',
+    overview: 'projects',
+    slo: 'availability',
     clock: null,
     countdown: null,
     message: null,

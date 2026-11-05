@@ -33,6 +33,8 @@ export type WidgetKind =
     | 'chart'
     | 'list'
     | 'health'
+    | 'overview'
+    | 'slo'
     | 'clock'
     | 'countdown'
     | 'message'
@@ -145,6 +147,8 @@ export const DATA_KINDS: WidgetKind[] = [
     'chart',
     'list',
     'health',
+    'overview',
+    'slo',
 ];
 /** Addresses one media widget shows in turn; WidgetSchema::MAX_SLIDES. */
 export const MAX_SLIDES = 20;
