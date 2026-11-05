@@ -194,7 +194,7 @@ export default function QueriesIndex({
                     </Select>
                 </div>
 
-                <Card className="overflow-x-auto">
+                <Card className="relative overflow-x-auto">
                     {stats.rows.length === 0 ? (
                         <EmptyState
                             title={
@@ -212,7 +212,9 @@ export default function QueriesIndex({
                                     <th className={thClass}>
                                         {t('queries.columns.sql')}
                                     </th>
-                                    <th className={thClass}>
+                                    <th
+                                        className={`${thClass} hidden md:table-cell`}
+                                    >
                                         {t('queries.columns.connection')}
                                     </th>
                                     <th className={`${thClass} text-right`}>
@@ -224,10 +226,14 @@ export default function QueriesIndex({
                                     <th className={`${thClass} text-right`}>
                                         p95
                                     </th>
-                                    <th className={`${thClass} text-right`}>
+                                    <th
+                                        className={`${thClass} hidden text-right md:table-cell`}
+                                    >
                                         {t('queries.columns.max')}
                                     </th>
-                                    <th className={thClass}>
+                                    <th
+                                        className={`${thClass} hidden lg:table-cell`}
+                                    >
                                         {t(
                                             filters.period === '7d' ||
                                                 filters.period === '30d'
@@ -244,13 +250,13 @@ export default function QueriesIndex({
                                         className="hover:bg-panel-2/60"
                                     >
                                         <td
-                                            className={`${tdClass} max-w-[520px] min-w-[360px]`}
+                                            className={`${tdClass} max-w-[520px] min-w-44 md:min-w-[360px]`}
                                         >
                                             <HighlightedCode
                                                 code={q.sql}
                                                 language="sql"
                                                 title={q.sql}
-                                                className="line-clamp-2 font-mono text-xs break-all text-ink"
+                                                className="line-clamp-2 font-mono text-xs wrap-anywhere text-ink"
                                             />
                                             {(q.location || q.n_plus_one) && (
                                                 <span className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
@@ -273,14 +279,16 @@ export default function QueriesIndex({
                                                         </Badge>
                                                     )}
                                                     {q.location && (
-                                                        <span className="font-mono break-all text-ink-3">
+                                                        <span className="font-mono wrap-anywhere text-ink-3">
                                                             {q.location}
                                                         </span>
                                                     )}
                                                 </span>
                                             )}
                                         </td>
-                                        <td className={tdClass}>
+                                        <td
+                                            className={`${tdClass} hidden md:table-cell`}
+                                        >
                                             <Badge>{q.connection}</Badge>
                                         </td>
                                         <td
@@ -289,7 +297,7 @@ export default function QueriesIndex({
                                             {formatNumber(q.calls)}
                                         </td>
                                         <td
-                                            className={`${tdClass} min-w-[140px]`}
+                                            className={`${tdClass} min-w-24 md:min-w-[140px]`}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <div
@@ -314,12 +322,12 @@ export default function QueriesIndex({
                                             {formatDuration(q.p95)}
                                         </td>
                                         <td
-                                            className={`${tdClass} ${numClass}`}
+                                            className={`${tdClass} ${numClass} hidden md:table-cell`}
                                         >
                                             {formatDuration(q.max)}
                                         </td>
                                         <td
-                                            className={`${tdClass} font-mono text-xs whitespace-nowrap text-ink-2`}
+                                            className={`${tdClass} hidden font-mono text-xs whitespace-nowrap text-ink-2 lg:table-cell`}
                                         >
                                             {q.most_from ?? '-'}
                                         </td>

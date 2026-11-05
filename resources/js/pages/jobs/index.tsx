@@ -291,7 +291,7 @@ export default function JobsIndex({
                     />
                 )}
 
-                <Card className="overflow-x-auto">
+                <Card className="relative overflow-x-auto">
                     {jobs.length === 0 ? (
                         <EmptyState title={t('jobs.empty_title')}>
                             {t('jobs.empty_body')}
@@ -316,10 +316,14 @@ export default function JobsIndex({
                                         <th className={`${thClass} text-right`}>
                                             {t('jobs.columns.p95_duration')}
                                         </th>
-                                        <th className={`${thClass} text-right`}>
+                                        <th
+                                            className={`${thClass} hidden text-right md:table-cell`}
+                                        >
                                             {t('jobs.columns.p95_wait')}
                                         </th>
-                                        <th className={`${thClass} text-right`}>
+                                        <th
+                                            className={`${thClass} hidden text-right lg:table-cell`}
+                                        >
                                             {t('jobs.columns.retries')}
                                         </th>
                                         <th className={thClass}>
@@ -398,12 +402,12 @@ export default function JobsIndex({
                                                     )}
                                                 </td>
                                                 <td
-                                                    className={`${tdClass} ${numClass}`}
+                                                    className={`${tdClass} ${numClass} hidden md:table-cell`}
                                                 >
                                                     {formatDuration(j.p95_wait)}
                                                 </td>
                                                 <td
-                                                    className={`${tdClass} ${numClass}`}
+                                                    className={`${tdClass} ${numClass} hidden lg:table-cell`}
                                                 >
                                                     {formatNumber(j.retries)}
                                                 </td>
@@ -480,7 +484,7 @@ export default function JobsIndex({
                     {runs.length === 0 ? (
                         <EmptyState title={t('jobs.runs.empty')} />
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="relative overflow-x-auto">
                             <table className={tableClass}>
                                 <thead>
                                     <tr>
@@ -496,13 +500,17 @@ export default function JobsIndex({
                                         <th className={thClass}>
                                             {t('jobs.runs.columns.queued')}
                                         </th>
-                                        <th className={`${thClass} text-right`}>
+                                        <th
+                                            className={`${thClass} hidden text-right md:table-cell`}
+                                        >
                                             {t('jobs.runs.columns.wait')}
                                         </th>
                                         <th className={`${thClass} text-right`}>
                                             {t('jobs.runs.columns.duration')}
                                         </th>
-                                        <th className={thClass}>
+                                        <th
+                                            className={`${thClass} hidden lg:table-cell`}
+                                        >
                                             {t('jobs.runs.columns.host')}
                                         </th>
                                         <th className={thClass}>
@@ -613,7 +621,7 @@ export default function JobsIndex({
                                                 )}
                                             </td>
                                             <td
-                                                className={`${tdClass} ${numClass}`}
+                                                className={`${tdClass} ${numClass} hidden md:table-cell`}
                                             >
                                                 {formatDuration(r.wait_us)}
                                             </td>
@@ -623,14 +631,14 @@ export default function JobsIndex({
                                                 {formatDuration(r.duration_us)}
                                             </td>
                                             <td
-                                                className={`${tdClass} font-mono text-xs`}
+                                                className={`${tdClass} hidden font-mono text-xs lg:table-cell`}
                                             >
                                                 {r.host ?? '-'}
                                             </td>
                                             <td
                                                 className={`${tdClass} text-right`}
                                             >
-                                                <span className="inline-flex gap-3">
+                                                <span className="inline-flex gap-3 whitespace-nowrap">
                                                     {r.trace_id && (
                                                         <Link
                                                             href={
@@ -639,7 +647,7 @@ export default function JobsIndex({
                                                                     r.trace_id,
                                                                 ]).url
                                                             }
-                                                            className="text-xs text-ink-2 hover:text-amber hover:underline"
+                                                            className="inline-block py-1 text-xs text-ink-2 hover:text-amber hover:underline"
                                                         >
                                                             {t('traces.open')}
                                                         </Link>
@@ -652,7 +660,7 @@ export default function JobsIndex({
                                                                     r.issue,
                                                                 ]).url
                                                             }
-                                                            className="text-xs text-amber hover:underline"
+                                                            className="inline-block py-1 text-xs text-amber hover:underline"
                                                         >
                                                             {t(
                                                                 'jobs.runs.view_issue',
@@ -847,7 +855,7 @@ function QueuesCard({
                 title={t('jobs.queues.title')}
                 description={t('jobs.queues.description')}
             />
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
                 <table className={tableClass}>
                     <thead>
                         <tr>
@@ -863,7 +871,9 @@ function QueuesCard({
                             <th className={`${thClass} text-right`}>
                                 {t('jobs.queues.columns.oldest')}
                             </th>
-                            <th className={`${thClass} text-right`}>
+                            <th
+                                className={`${thClass} hidden text-right md:table-cell`}
+                            >
                                 {t('jobs.queues.columns.p95_wait')}
                             </th>
                             <th className={thClass}>
@@ -939,7 +949,9 @@ function QueuesCard({
                                                 : q.oldest_age_s * 1_000_000,
                                         )}
                                     </td>
-                                    <td className={`${tdClass} ${numClass}`}>
+                                    <td
+                                        className={`${tdClass} ${numClass} hidden md:table-cell`}
+                                    >
                                         {formatDuration(q.p95_wait)}
                                     </td>
                                     <td className={`${tdClass} min-w-48`}>

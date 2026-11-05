@@ -244,7 +244,7 @@ export default function RoutesIndex({
                     }
                 />
 
-                <Card className="overflow-x-auto">
+                <Card className="relative overflow-x-auto">
                     {routes.length === 0 ? (
                         <EmptyState title={t('routes.empty_title')}>
                             {t('routes.empty_body')}
@@ -257,20 +257,26 @@ export default function RoutesIndex({
                                         {t('routes.columns.route')}
                                     </th>
                                     {split && (
-                                        <th className={thClass}>
+                                        <th
+                                            className={`${thClass} hidden lg:table-cell`}
+                                        >
                                             {t('routes.columns.domain')}
                                         </th>
                                     )}
                                     <th className={`${thClass} text-right`}>
                                         {t('routes.columns.requests')}
                                     </th>
-                                    <th className={`${thClass} text-right`}>
+                                    <th
+                                        className={`${thClass} hidden text-right md:table-cell`}
+                                    >
                                         p50
                                     </th>
                                     <th className={`${thClass} text-right`}>
                                         p95
                                     </th>
-                                    <th className={`${thClass} text-right`}>
+                                    <th
+                                        className={`${thClass} hidden text-right md:table-cell`}
+                                    >
                                         p99
                                     </th>
                                     <th className={`${thClass} text-right`}>
@@ -292,7 +298,9 @@ export default function RoutesIndex({
                                     >
                                         {t('routes.columns.apdex')}
                                     </th>
-                                    <th className={thClass}>
+                                    <th
+                                        className={`${thClass} hidden md:table-cell`}
+                                    >
                                         {t('routes.columns.trend')}
                                     </th>
                                 </tr>
@@ -312,7 +320,7 @@ export default function RoutesIndex({
                                             <td
                                                 className={cn(
                                                     tdClass,
-                                                    'min-w-[280px]',
+                                                    'min-w-48 md:min-w-[280px]',
                                                     active &&
                                                         'shadow-[inset_2px_0_0_var(--lj-amber)]',
                                                 )}
@@ -321,24 +329,41 @@ export default function RoutesIndex({
                                                     type="button"
                                                     aria-pressed={active}
                                                     onClick={() => pick(r)}
-                                                    className="lj-row-link cursor-pointer text-left font-mono text-xs text-ink hover:text-amber"
+                                                    className="lj-row-link cursor-pointer text-left font-mono text-xs wrap-anywhere text-ink hover:text-amber"
                                                 >
                                                     <span className="text-ink-3">
                                                         {r.method}
                                                     </span>{' '}
                                                     {r.route}
+                                                    {/* Wraps whole onto the next line rather than mid-name. */}
                                                     {r.route_name && (
-                                                        <span className="ml-2 text-ink-3">
+                                                        <span className="ml-2 inline-block text-ink-3">
                                                             {r.route_name}
                                                         </span>
                                                     )}
                                                 </button>
+                                                {/* The domain column shows from lg, below it the domain sits under the route. */}
+                                                {split && (
+                                                    <span
+                                                        className={cn(
+                                                            'block font-mono text-[11px] lg:hidden',
+                                                            r.domain
+                                                                ? 'text-ink-2'
+                                                                : 'text-ink-3',
+                                                        )}
+                                                    >
+                                                        {r.domain ||
+                                                            t(
+                                                                'routes.domain.unknown',
+                                                            )}
+                                                    </span>
+                                                )}
                                             </td>
                                             {split && (
                                                 <td
                                                     className={cn(
                                                         tdClass,
-                                                        'font-mono text-xs',
+                                                        'hidden font-mono text-xs lg:table-cell',
                                                         r.domain
                                                             ? 'text-ink-2'
                                                             : 'text-ink-3',
@@ -356,7 +381,7 @@ export default function RoutesIndex({
                                                 {formatNumber(r.requests)}
                                             </td>
                                             <td
-                                                className={`${tdClass} ${numClass}`}
+                                                className={`${tdClass} ${numClass} hidden md:table-cell`}
                                             >
                                                 {formatDuration(r.p50)}
                                             </td>
@@ -366,7 +391,7 @@ export default function RoutesIndex({
                                                 {formatDuration(r.p95)}
                                             </td>
                                             <td
-                                                className={`${tdClass} ${numClass}`}
+                                                className={`${tdClass} ${numClass} hidden md:table-cell`}
                                             >
                                                 {formatDuration(r.p99)}
                                             </td>
@@ -402,7 +427,9 @@ export default function RoutesIndex({
                                                     ? '-'
                                                     : r.apdex.toFixed(2)}
                                             </td>
-                                            <td className={tdClass}>
+                                            <td
+                                                className={`${tdClass} hidden md:table-cell`}
+                                            >
                                                 <Sparkline
                                                     values={r.series ?? []}
                                                     tips={spreadTips(

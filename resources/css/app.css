@@ -363,3 +363,16 @@
         @apply bg-background text-foreground;
     }
 }
+
+/*
+ * Touch screens: checkboxes and radios large enough to hit with a finger. Outside any
+ * layer, so it wins over size utilities such as size-4.
+ */
+@media (pointer: coarse) {
+    input[type='checkbox'],
+    input[type='radio'],
+    [data-slot='checkbox'] {
+        width: 20px;
+        height: 20px;
+    }
+}
