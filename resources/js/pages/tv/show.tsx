@@ -39,6 +39,9 @@ const HEARTBEAT_MS = 60_000;
  * Displays reloads it in place; removing the display sends it back to the pairing code.
  * A heartbeat every minute catches what a missed broadcast said.
  */
+/** How long the display shows its name when identified; IdentifyDisplayAction::SECONDS. */
+const IDENTIFY_SECONDS = 10;
+
 export default function TvShow({
     slot,
     display,
@@ -69,6 +72,46 @@ export default function TvShow({
     useEcho(display_channel, '.display.changed', () => router.reload());
     useEcho(display_channel, '.display.removed', () => unpair());
     useEcho(display_channel, '.display.reload', () => reloadSoon());
+
+    // Identify: the display's name over everything for a few seconds.
+    const [identify, setIdentify] = useState<string | null>(null);
+
+    useEcho<{ name: string }>(display_channel, '.display.identify', (e) =>
+        setIdentify(e.name),
+    );
+
+    useEffect(() => {
+        if (identify === null) {
+            return;
+        }
+
+        const timer = window.setTimeout(
+            () => setIdentify(null),
+            IDENTIFY_SECONDS * 1000,
+        );
+
+        return () => window.clearTimeout(timer);
+    }, [identify]);
+
+    const overlay = identify !== null && (
+        <div
+            role="status"
+            className="lj-screen fixed inset-0 z-50 flex animate-in items-center justify-center bg-black/70 fade-in"
+            data-theme="dark"
+        >
+            <div
+                className="flex flex-col items-center gap-[1vmin] rounded-[2vmin] border-[0.6vmin] border-(--s-amber) bg-(--s-panel) px-[6vmin] py-[4vmin] text-center"
+                style={{ transform: `rotate(${rotation}deg)` }}
+            >
+                <span className="text-[3vmin] text-(--s-ink-2)">
+                    {t('screens.kiosk.identify')}
+                </span>
+                <span className="text-[9vmin] leading-none font-bold">
+                    {identify}
+                </span>
+            </div>
+        </div>
+    );
 
     useEffect(() => {
         // The window's size goes along, so the designer can preview a screen at it.
@@ -142,6 +185,7 @@ export default function TvShow({
                 data-theme="dark"
             >
                 <Head title={display.name} />
+                {overlay}
                 <span
                     aria-hidden="true"
                     className="flex size-[4vw] items-center justify-center rounded-[0.8vw] bg-(--s-panel) [&_svg]:size-[2.6vw]"
@@ -190,6 +234,7 @@ export default function TvShow({
                 );
             })}
             <Head title={shown.screen.name} />
+            {overlay}
         </KioskRotation.Provider>
     );
 }

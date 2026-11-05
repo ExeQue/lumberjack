@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Http\Controllers;
 
+use App\Domains\Screens\Actions\IdentifyDisplayAction;
 use App\Domains\Screens\Actions\RemoveDisplayAction;
 use App\Domains\Screens\Actions\RequestReloadAction;
 use App\Domains\Screens\Actions\UpdateDisplayAction;
@@ -92,6 +93,15 @@ class DisplayController
         }
 
         return back()->with('status', __('screens.reload.sent_display', ['name' => $display->fullName()]));
+    }
+
+    /** The TV shows its name for a few seconds, to find it on a wall of them. */
+    public function identify(Display $display, IdentifyDisplayAction $action): RedirectResponse
+    {
+        Gate::authorize('update', $display);
+        $action->execute($display);
+
+        return back()->with('status', __('screens.identify.sent', ['name' => $display->fullName(), 'seconds' => IdentifyDisplayAction::SECONDS]));
     }
 
     public function destroy(Request $request, Display $display, RemoveDisplayAction $action): RedirectResponse

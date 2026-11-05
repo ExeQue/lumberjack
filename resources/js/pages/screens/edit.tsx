@@ -44,7 +44,10 @@ import { DATA_KINDS, LAYOUT_KINDS } from '@/components/lj/screen/types';
 import { SharePanel } from '@/components/lj/screen/share-panel';
 import type { Sharing } from '@/components/lj/screen/share-panel';
 import { TvInstructions } from '@/components/lj/screen/tv-instructions';
-import { update as displayUpdate } from '@/routes/displays';
+import {
+    identify as displayIdentify,
+    update as displayUpdate,
+} from '@/routes/displays';
 import type { TvInstructionsProps } from '@/components/lj/screen/tv-instructions';
 import { useScreenData } from '@/components/lj/screen/use-screen-data';
 import { WidgetTile } from '@/components/lj/screen/widgets';
@@ -1287,9 +1290,31 @@ export default function EditScreen(props: Props) {
                                                 key={display.uuid}
                                                 className="flex items-center justify-between gap-3 text-sm"
                                             >
-                                                <span className="min-w-0 truncate">
+                                                <span className="min-w-0 flex-1 truncate">
                                                     {display.name}
                                                 </span>
+                                                <Button
+                                                    variant="ghost"
+                                                    title={t(
+                                                        'screens.displays.identify_hint',
+                                                    )}
+                                                    onClick={() =>
+                                                        router.post(
+                                                            displayIdentify(
+                                                                display.uuid,
+                                                            ).url,
+                                                            {},
+                                                            {
+                                                                preserveScroll: true,
+                                                                preserveState: true,
+                                                            },
+                                                        )
+                                                    }
+                                                >
+                                                    {t(
+                                                        'screens.displays.identify',
+                                                    )}
+                                                </Button>
                                                 {display.shows_this ? (
                                                     <span className="text-xs text-ink-3">
                                                         {t(

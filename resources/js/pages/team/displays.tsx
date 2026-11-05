@@ -34,7 +34,7 @@ import {
     reload as reloadDevice,
     update as updateDevice,
 } from '@/routes/devices';
-import { destroy, reload, update } from '@/routes/displays';
+import { destroy, identify, reload, update } from '@/routes/displays';
 import type { TeamShared } from '@/types/lumberjack';
 
 /** One window of a device, /tv/{slot}. */
@@ -514,6 +514,22 @@ function DeviceCard({
                                     <td
                                         className={`${tdClass} text-right whitespace-nowrap`}
                                     >
+                                        <Button
+                                            variant="ghost"
+                                            title={t(
+                                                'screens.displays.identify_hint',
+                                            )}
+                                            aria-label={`${t('screens.displays.identify')}: ${display.label}`}
+                                            onClick={() =>
+                                                router.post(
+                                                    identify(display.uuid).url,
+                                                    {},
+                                                    { preserveScroll: true },
+                                                )
+                                            }
+                                        >
+                                            {t('screens.displays.identify')}
+                                        </Button>
                                         <Button
                                             variant="ghost"
                                             title={t(
