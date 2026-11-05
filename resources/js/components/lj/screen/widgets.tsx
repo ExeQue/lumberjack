@@ -2683,21 +2683,27 @@ function Countdown({
     // The lines under the number hang below it, so they never move it off its place.
     return (
         <span className="relative">
-            <span
-                className="lj-tile-big block whitespace-nowrap tabular-nums"
-                style={fit(big, size.fontSize as string | undefined)}
-            >
-                {big}
-            </span>
-            <span className="absolute inset-x-0 top-full flex flex-col">
+            <span className="block whitespace-nowrap">
+                <span
+                    className="lj-tile-big tabular-nums"
+                    style={fit(
+                        days > 0 ? `${big} ${clock}` : big,
+                        size.fontSize as string | undefined,
+                    )}
+                >
+                    {big}
+                </span>
+                {/* Days far off: the hours beside them, smaller, on the same line. */}
                 {days > 0 && (
                     <span
-                        className="font-mono whitespace-nowrap text-(--s-ink-2) tabular-nums"
-                        style={fit(clock, 'min(18cqh, 8cqw)')}
+                        className="ml-[0.4em] font-mono text-(--s-ink-2) tabular-nums"
+                        style={fit(`${big} ${clock}`, 'min(18cqh, 8cqw)')}
                     >
                         {clock}
                     </span>
                 )}
+            </span>
+            <span className="absolute inset-x-0 top-full flex flex-col">
                 {line && (
                     // With the tile, as the numbers are: a third of their height or so.
                     <span
