@@ -72,6 +72,7 @@ class ImportScreenAction
             'screen.show_header' => ['required', 'boolean'],
             // Files from before the clock could be hidden show it.
             'screen.show_clock' => ['sometimes', 'boolean'],
+            'screen.clock_format' => ['sometimes', 'in:24,12'],
             'screen.theme' => ['required', Rule::enum(ScreenTheme::class)],
             'screen.light_from' => $time,
             'screen.light_to' => $time,
@@ -186,6 +187,7 @@ class ImportScreenAction
                 'fit' => ScreenFit::from((string) $file['fit']),
                 'show_header' => (bool) $file['show_header'],
                 'show_clock' => (bool) ($file['show_clock'] ?? true),
+                'clock_format' => in_array($file['clock_format'] ?? null, ['24', '12'], true) ? $file['clock_format'] : '24',
                 'theme' => ScreenTheme::from((string) $file['theme']),
                 'light_from' => (string) $file['light_from'],
                 'light_to' => (string) $file['light_to'],

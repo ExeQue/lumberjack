@@ -237,7 +237,7 @@ export function kioskClock(screen: Screen, at: number): string {
         timeZone: screen.timezone ?? undefined,
         hour: '2-digit',
         minute: '2-digit',
-        hourCycle: 'h23',
+        hourCycle: screen.clock_format === '12' ? 'h12' : 'h23',
     }).format(new Date(at));
 }
 

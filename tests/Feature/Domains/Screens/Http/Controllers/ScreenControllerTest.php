@@ -333,7 +333,7 @@ describe('saving from the designer', function () {
 
     it('saves the theme, its schedule and the default scope', function () {
         $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), [
-            'theme' => 'schedule', 'light_from' => '06:30', 'light_to' => '20:00', 'timezone' => 'America/New_York',
+            'theme' => 'schedule', 'light_from' => '06:30', 'light_to' => '20:00', 'timezone' => 'America/New_York', 'clock_format' => '12',
             'scope' => ['projects' => [$this->project->uuid], 'environment' => 'production', 'period' => '7d'],
         ])->assertOk();
 
@@ -341,13 +341,14 @@ describe('saving from the designer', function () {
         expect($screen->theme)->toBe(ScreenTheme::Schedule)
             ->and($screen->light_from)->toBe('06:30')
             ->and($screen->timezone)->toBe('America/New_York')
+            ->and($screen->clock_format)->toBe('12')
             ->and($screen->scope)->toBe(['projects' => [$this->project->uuid], 'environment' => 'production', 'period' => '7d']);
     });
 
     it('refuses a time that is not one and a zone that does not exist', function () {
         $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), [
-            'light_from' => '25:00', 'timezone' => 'Mars/Olympus', 'theme' => 'sepia',
-        ])->assertJsonValidationErrors(['light_from', 'timezone', 'theme']);
+            'light_from' => '25:00', 'timezone' => 'Mars/Olympus', 'theme' => 'sepia', 'clock_format' => '13',
+        ])->assertJsonValidationErrors(['light_from', 'timezone', 'theme', 'clock_format']);
     });
 
     it('saves the display\'s aspect and orientation, and refuses others', function () {

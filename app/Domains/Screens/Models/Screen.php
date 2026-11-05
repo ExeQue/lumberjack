@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property ScreenFit $fit
  * @property bool $show_header whether the TV shows the name, scope, live state and clock above the grid
  * @property bool $show_clock whether that header shows the clock
+ * @property string $clock_format '24' or '12' hours
  * @property ScreenTheme $theme
  * @property string $light_from HH:MM
  * @property string $light_to HH:MM
@@ -49,7 +50,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets', 'share_key', 'share_key_hash', 'share_titles'])]
+#[Fillable(['team_id', 'name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'clock_format', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets', 'share_key', 'share_key_hash', 'share_titles'])]
 #[Hidden(['share_key', 'share_key_hash'])]
 #[UseEloquentBuilder(ScreenBuilder::class)]
 #[UseFactory(ScreenFactory::class)]

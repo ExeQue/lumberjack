@@ -234,6 +234,7 @@ type Settings = Pick<
     | 'fit'
     | 'show_header'
     | 'show_clock'
+    | 'clock_format'
     | 'theme'
     | 'light_from'
     | 'light_to'
@@ -292,6 +293,7 @@ const SETTINGS: (keyof Settings)[] = [
     'fit',
     'show_header',
     'show_clock',
+    'clock_format',
     'theme',
     'light_from',
     'light_to',

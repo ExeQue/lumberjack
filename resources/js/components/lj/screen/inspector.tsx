@@ -1877,6 +1877,28 @@ export function ScreenSettings({
                     {t('screens.settings.show_clock')}
                 </label>
             )}
+            {screen.show_header && screen.show_clock && (
+                <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="screen-clock-format">
+                        {t('screens.fields.format.label')}
+                    </Label>
+                    <Select
+                        id="screen-clock-format"
+                        value={screen.clock_format}
+                        onChange={(e) =>
+                            onChange({
+                                clock_format: e.target.value as '24' | '12',
+                            })
+                        }
+                    >
+                        {(['24', '12'] as const).map((format) => (
+                            <option key={format} value={format}>
+                                {t(`screens.fields.format.options.${format}`)}
+                            </option>
+                        ))}
+                    </Select>
+                </div>
+            )}
             <div className="flex flex-col gap-1.5">
                 <Label htmlFor="screen-theme">
                     {t('screens.designer.theme')}
