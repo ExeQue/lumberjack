@@ -42,7 +42,9 @@
     overflow-x: auto;
 }
 
-.vp-doc p[align='center']:has(> a > img[src*='badge'], > img[src*='badge']) img {
+.vp-doc
+    p[align='center']:has(> a > img[src*='badge'], > img[src*='badge'])
+    img {
     display: block;
     flex: none;
     height: 16px;
