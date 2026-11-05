@@ -136,19 +136,18 @@ class ResolveScreenDataAction
     }
 
     /**
-     * {svg, light}: the picture for a dark screen and for a light one (a scheduled theme
-     * switches between them); null while there is nothing to encode; the whole answer null when it cannot
+     * {svg}: null while there is nothing to encode; the whole answer null when it cannot
      * be encoded (a link that is not one). The same options draw the same picture, so it
      * is kept for a day, and drawn again when the QR styles in config/qr.php change.
      *
      * @param  array<string, mixed>  $options
-     * @return array{svg: string|null, light: string|null}|null
+     * @return array{svg: string|null}|null
      */
     private function qr(array $options): ?array
     {
-        return Cache::remember('screen-qr:v3:'.md5(serialize([$options, config('qr.styles'), config('qr.colors')])), 86400, function () use ($options): ?array {
+        return Cache::remember('screen-qr:v4:'.md5(serialize([$options, config('qr.styles'), config('qr.colors')])), 86400, function () use ($options): ?array {
             try {
-                return ['svg' => ScreenQr::widgetSvg($options), 'light' => ScreenQr::widgetSvg($options, 'lumberjack-light')];
+                return ['svg' => ScreenQr::widgetSvg($options)];
             } catch (Throwable) {
                 return null;
             }
