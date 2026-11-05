@@ -633,7 +633,11 @@ export function WidgetInspector({
                 return (
                     <label
                         key={field.key}
-                        className="col-span-2 flex items-center gap-2 text-[13px] text-ink-2"
+                        className={cn(
+                            'flex items-center gap-2 text-[13px] text-ink-2',
+                            // Half width: on the line of the select beside it.
+                            span || 'self-end pb-2',
+                        )}
                     >
                         <input
                             type="checkbox"
