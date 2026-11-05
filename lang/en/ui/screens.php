@@ -396,7 +396,7 @@ return [
         'content' => ['label' => 'Holds', 'options' => ['link' => 'A link', 'wifi' => 'A wifi network', 'text' => 'Text']],
         'url' => ['label' => 'Link', 'placeholder' => 'https://'],
         'ssid' => ['label' => 'Network name', 'placeholder' => 'Guests'],
-        'password' => ['label' => 'Password', 'placeholder' => 'Empty for an open network'],
+        'password' => ['label' => 'Password', 'placeholder' => 'The network\'s password'],
         'security' => ['label' => 'Security', 'options' => ['WPA' => 'WPA', 'WEP' => 'WEP', 'nopass' => 'None']],
         'hidden_network' => ['label' => 'Hidden network'],
         'qr_text' => ['label' => 'Text', 'placeholder' => 'Anything a phone should read'],

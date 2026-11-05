@@ -42,8 +42,10 @@ final class ScreenQr
     {
         $value = fn (string $key): string => trim((string) ($options[$key] ?? ''));
 
+        $security = $value('security') ?: 'WPA';
+
         $qr = match ($options['content'] ?? 'link') {
-            'wifi' => $value('ssid') === '' ? null : Qr::wifi($value('ssid'), $value('password') ?: null, $value('security') ?: 'WPA', (bool) ($options['hidden_network'] ?? false)),
+            'wifi' => $value('ssid') === '' ? null : Qr::wifi($value('ssid'), $security === 'nopass' ? null : ($value('password') ?: null), $security, (bool) ($options['hidden_network'] ?? false)),
             'text' => $value('qr_text') === '' ? null : Qr::text($value('qr_text')),
             default => $value('url') === '' ? null : Qr::url($value('url')),
         };
