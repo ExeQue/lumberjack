@@ -26,6 +26,7 @@ use App\Domains\Screens\Exceptions\UnknownWidgetSourceException;
 use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Models\Team;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -624,5 +625,58 @@ describe('external Prometheus', function () {
         DB::table('data_source_fetches')->delete();
 
         expect(($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)('http_requests_total', ['compare' => 'none']))['value'])->toBeNull();
+    });
+});
+
+describe('a calendar', function () {
+    beforeEach(function () {
+        // A Wednesday, 13:00 in Copenhagen: the lunch talk is on, the early sync over.
+        $this->travelTo(CarbonImmutable::parse('2026-11-04 12:00:30', 'UTC'));
+        $this->calendar = DataSource::factory()->for($this->project)->ical((string) file_get_contents(base_path('tests/Fixtures/DataSources/calendar.ics')))->create();
+        $this->rows = fn (array $options = [], bool $aggregatesOnly = false): array => app(ResolveWidgetDataAction::class)->execute(
+            $this->project->team,
+            WidgetType::List,
+            'calendar',
+            new WidgetScope(),
+            ['data_source' => $this->calendar->uuid, 'timezone' => 'Europe/Copenhagen', ...$options],
+            $aggregatesOnly,
+        )['rows'];
+        $this->brief = fn (array $rows): array => array_map(fn (array $r): string => trim("{$r['day']} ".($r['all_day'] ? 'all day' : "{$r['start']}-{$r['end']}")." {$r['title']} {$r['state']}"), $rows);
+    });
+
+    it('lists the days in the screen\'s time zone, all-day events first, marking the one on now', function () {
+        expect(($this->brief)(($this->rows)(['days_after' => '1'])))->toBe([
+            '2026-11-04 12:30-14:00 Lunch talk amber',
+            '2026-11-05 all day Release day',
+            '2026-11-05 09:00-09:30 Deploy',
+        ])->and(($this->rows)(['days_after' => '0'])[0])->toMatchArray(['location' => 'Canteen', 'project' => $this->project->slug]);
+    });
+
+    it('keeps what has ended when asked, from the days back', function () {
+        expect(($this->brief)(($this->rows)(['days_before' => '7', 'days_after' => '0', 'upcoming_only' => false])))->toBe([
+            '2026-11-02 09:30-09:45 Standup',
+            '2026-11-04 08:00-08:30 Early sync',
+            '2026-11-04 12:30-14:00 Lunch talk amber',
+        ]);
+    });
+
+    it('expands a weekly event over the month, its excluded date skipped and its moved one moved', function () {
+        expect(array_values(array_filter(($this->brief)(($this->rows)(['days_after' => '30'])), fn (string $r): bool => str_contains($r, 'Standup'))))->toBe([
+            '2026-11-17 14:00-14:15 Standup (moved)',
+            '2026-11-23 09:30-09:45 Standup',
+            '2026-11-30 09:30-09:45 Standup',
+        ]);
+    });
+
+    it('shows a share link without names the times alone', function () {
+        expect(($this->rows)(['days_after' => '1'], aggregatesOnly: true))->each->toMatchArray(['title' => null, 'location' => null]);
+    });
+
+    it('reads only an iCalendar source of the team', function () {
+        $json = DataSource::factory()->for($this->project)->create(['last_ok_at' => now(), 'last_body' => '{"orders": 1}']);
+        $other = DataSource::factory()->ical((string) $this->calendar->last_body)->create();
+
+        expect(($this->rows)(['data_source' => $json->uuid]))->toBe([])
+            ->and(($this->rows)(['data_source' => $other->uuid]))->toBe([]);
     });
 });

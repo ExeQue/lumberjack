@@ -69,7 +69,12 @@ class ResolveScreenDataAction
                 }
 
                 $scope = $this->scope($screen, [...$widget, 'scope' => [...$own, ...$item['scope']]]);
-                $options = $this->options($type, [...(array) ($widget['options'] ?? []), ...$item['options']]);
+                $options = $this->options($type, $source, [...(array) ($widget['options'] ?? []), ...$item['options']]);
+
+                // A calendar's days are the screen's.
+                if ($source === 'calendar') {
+                    $options['timezone'] = $screen->timezone ?? config('app.timezone');
+                }
                 $key = 'screen-data:'.md5(serialize([$screen->team_id, $type->value, $source, $scope, $options, $aggregatesOnly]));
 
                 $data[$widget['id']][$at] = Cache::remember($key, self::CACHE_SECONDS, function () use ($screen, $type, $source, $scope, $options, $aggregatesOnly): ?array {
@@ -115,16 +120,16 @@ class ResolveScreenDataAction
     }
 
     /**
-     * The options the data depends on, defaults filled in; a list fitting its tile asks
-     * for as many rows as any tile shows.
+     * The options the data of the source depends on, defaults filled in (a field for
+     * other sources left out); a list fitting its tile asks for as many rows as any tile shows.
      *
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    private function options(WidgetType $type, array $stored): array
+    private function options(WidgetType $type, string $source, array $stored): array
     {
         $fields = WidgetSchema::fields($type->value);
-        $options = array_intersect_key(WidgetSchema::options($type->value, $stored), array_filter($fields, fn (array $f): bool => $f['data']));
+        $options = array_intersect_key(WidgetSchema::options($type->value, $stored), array_filter($fields, fn (array $f): bool => $f['data'] && in_array($source, $f['sources'] ?? [$source], true)));
 
         if (($options['limit'] ?? null) === 'auto') {
             $options['limit'] = WidgetSchema::LIST_FIT_LIMIT;

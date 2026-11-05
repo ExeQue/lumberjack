@@ -264,3 +264,46 @@ describe('a Prometheus source', function () {
             ->and(DB::table('data_source_fetches')->count())->toBe(0);
     });
 });
+
+describe('an iCalendar source', function () {
+    beforeEach(function () {
+        $this->feed = (string) file_get_contents(base_path('tests/Fixtures/DataSources/calendar.ics'));
+        $this->fetchCalendar = function (?string $lastFeed = null): DataSource {
+            $source = DataSource::factory()->ical($lastFeed)->create();
+            app(FetchDataSourceAction::class)->execute($source);
+
+            return $source->refresh();
+        };
+    });
+
+    it('keeps the feed as the latest body only, asking for a calendar', function () {
+        Http::fake(['*' => Http::response($this->feed, 200, ['Content-Type' => 'text/calendar'])]);
+
+        $source = ($this->fetchCalendar)();
+
+        expect($source->last_error)->toBeNull()
+            ->and($source->last_body)->toBe($this->feed)
+            ->and(DB::table('data_source_fetches')->count())->toBe(0);
+        Http::assertSent(fn (Request $request): bool => str_starts_with($request->header('Accept')[0], 'text/calendar'));
+    });
+
+    it('fails on what is not a feed, keeping the last good one', function () {
+        Http::fake(['*' => Http::response('<html><body>Sign in to Google Calendar</body></html>')]);
+
+        $source = ($this->fetchCalendar)($this->feed);
+
+        expect($source->last_error)->toContain('not an iCalendar feed')
+            ->and($source->last_body)->toBe($this->feed);
+    });
+
+    it('reads a feed larger than other sources may be', function () {
+        $event = "BEGIN:VEVENT\r\nUID:%d@example.com\r\nSUMMARY:".str_repeat('x', 200)."\r\nDTSTART:20260101T090000Z\r\nEND:VEVENT\r\n";
+        $large = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\n".implode('', array_map(fn (int $i): string => sprintf($event, $i), range(1, 6000)))."END:VCALENDAR\r\n";
+        Http::fake(['*' => Http::response($large)]);
+
+        $source = ($this->fetchCalendar)();
+
+        expect(strlen($large))->toBeGreaterThan(FetchDataSourceAction::MAX_BODY_BYTES)
+            ->and($source->last_error)->toBeNull();
+    });
+});

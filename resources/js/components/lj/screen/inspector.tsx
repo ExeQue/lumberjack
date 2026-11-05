@@ -30,11 +30,11 @@ export type Catalog = {
     projects: { uuid: string; name: string }[];
     environments: string[];
     checks: { uuid: string; name: string; project: string | null }[];
-    /** The team's data sources, which External JSON values pick from. */
+    /** The team's data sources, which External JSON values and calendars pick from. */
     data_sources?: {
         uuid: string;
         name: string;
-        format: 'json' | 'prometheus';
+        format: 'json' | 'prometheus' | 'ical';
         project: string | null;
     }[];
     /** The screen's uuid, for the External JSON preview; without it there is none. */
@@ -710,7 +710,11 @@ export function WidgetInspector({
                 );
             }
             case 'data_source': {
-                const all = catalog.data_sources ?? [];
+                // A calendar reads an iCalendar source, External JSON any other.
+                const calendar = target.source?.id === 'calendar';
+                const all = (catalog.data_sources ?? []).filter(
+                    (s) => (s.format === 'ical') === calendar,
+                );
                 // By project, like the checks.
                 const groups = Object.entries(
                     Object.groupBy(all, (s) => s.project ?? ''),
@@ -1419,24 +1423,26 @@ export function WidgetInspector({
             )}
 
             {/* A data source is its own scope: projects and filters do not apply. */}
-            {scopeSection && valueSource?.id !== 'external_json' && (
-                <Section
-                    key={scopeSection.id}
-                    title={t(`screens.sections.${scopeSection.id}`)}
-                    open={false}
-                >
-                    {scopeSection.fields
-                        // The period is Over above; a value with nothing to filter has no filter.
-                        .filter(
-                            (field) =>
-                                field.key !== 'period' &&
-                                (field.key !== 'filter' || filterOn) &&
-                                (field.key !== 'domain' ||
-                                    filterOn === 'route'),
-                        )
-                        .map((field) => renderField(field, true))}
-                </Section>
-            )}
+            {scopeSection &&
+                valueSource?.id !== 'external_json' &&
+                valueSource?.id !== 'calendar' && (
+                    <Section
+                        key={scopeSection.id}
+                        title={t(`screens.sections.${scopeSection.id}`)}
+                        open={false}
+                    >
+                        {scopeSection.fields
+                            // The period is Over above; a value with nothing to filter has no filter.
+                            .filter(
+                                (field) =>
+                                    field.key !== 'period' &&
+                                    (field.key !== 'filter' || filterOn) &&
+                                    (field.key !== 'domain' ||
+                                        filterOn === 'route'),
+                            )
+                            .map((field) => renderField(field, true))}
+                    </Section>
+                )}
         </>
     );
 

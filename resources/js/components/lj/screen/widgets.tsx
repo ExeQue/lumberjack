@@ -1454,11 +1454,20 @@ type RowText = {
     at?: string;
 };
 
+/** A calendar day (Y-m-d) as its short weekday, in the language of the page. */
+function weekday(day: string): string {
+    return new Intl.DateTimeFormat(document.documentElement.lang || 'en', {
+        weekday: 'short',
+        timeZone: 'UTC',
+    }).format(new Date(`${day}T12:00:00Z`));
+}
+
 function rowText(
     source: string,
     row: Row,
     t: Translate,
     narrow = false,
+    multiDay = false,
 ): RowText {
     const percent = (v: unknown) =>
         v === null || v === undefined ? '-' : formatPercent(Number(v), 0);
@@ -1606,6 +1615,34 @@ function rowText(
                         : undefined,
                 at: row.last_seen_at as string,
             };
+        case 'calendar': {
+            // The day leads the time once the window spans more than today.
+            const day = multiDay ? weekday(String(row.day)) + ' ' : '';
+
+            return {
+                key:
+                    day +
+                    (row.all_day
+                        ? t('screens.list.calendar.all_day')
+                        : String(row.start)),
+                main: String(row.title ?? t('screens.list.calendar.busy')),
+                tag:
+                    tone === 'amber'
+                        ? { text: t('screens.list.calendar.now'), tone }
+                        : undefined,
+                count:
+                    [
+                        row.location,
+                        row.all_day
+                            ? null
+                            : t('screens.list.calendar.until', {
+                                  time: String(row.end),
+                              }),
+                    ]
+                        .filter(Boolean)
+                        .join(' · ') || undefined,
+            };
+        }
         case 'external_json':
             return {
                 main: String(row.label ?? ''),
@@ -1643,8 +1680,10 @@ function List({ widget, schema, data, now, t }: BodyProps) {
         );
     }
 
+    // A calendar over several days names the day of each event.
+    const multiDay = new Set(rows.map((row) => row.day)).size > 1;
     const texts = rows.map((row) =>
-        rowText(String(data.source), row, t, narrow),
+        rowText(String(data.source), row, t, narrow, multiDay),
     );
     const showCount = !narrow && opt<boolean>('show_count') !== false;
     const showAge = !narrow && opt<boolean>('show_age') !== false;

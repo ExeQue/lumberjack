@@ -17,6 +17,7 @@ return [
         'too_large' => 'The response is larger than :max KB.',
         'not_json' => 'The response is not valid JSON.',
         'no_samples' => 'The response has no Prometheus samples (expected the text format, lines like name{label="value"} 1).',
+        'not_ical' => 'The response is not an iCalendar feed (expected text starting with BEGIN:VCALENDAR, as an .ics address answers).',
         'headers_unreadable' => 'Its header values cannot be decrypted (was APP_KEY changed?); save them again.',
     ],
 ];

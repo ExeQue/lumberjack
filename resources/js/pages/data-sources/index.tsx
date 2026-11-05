@@ -47,7 +47,7 @@ type DataSourceRow = {
     uuid: string;
     name: string;
     url: string;
-    format: 'json' | 'prometheus';
+    format: 'json' | 'prometheus' | 'ical';
     header_names: string[];
     interval_minutes: number;
     timeout_s: number;
@@ -408,18 +408,19 @@ function SourceDialog({
                                         name="format"
                                         defaultValue={source?.format ?? 'json'}
                                     >
-                                        {(['json', 'prometheus'] as const).map(
-                                            (format) => (
-                                                <option
-                                                    key={format}
-                                                    value={format}
-                                                >
-                                                    {t(
-                                                        `data_sources.formats.${format}`,
-                                                    )}
-                                                </option>
-                                            ),
-                                        )}
+                                        {(
+                                            [
+                                                'json',
+                                                'prometheus',
+                                                'ical',
+                                            ] as const
+                                        ).map((format) => (
+                                            <option key={format} value={format}>
+                                                {t(
+                                                    `data_sources.formats.${format}`,
+                                                )}
+                                            </option>
+                                        ))}
                                     </Select>
                                 </Field>
                                 <Field

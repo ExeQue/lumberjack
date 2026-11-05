@@ -67,6 +67,15 @@ describe('the page', function () {
         expect($response->getContent())->not->toContain('s3cret');
     });
 
+    it('shows a calendar\'s address without its path, which holds its key', function () {
+        $this->source->update(['format' => DataSourceFormat::Ical, 'url' => 'https://calendar.google.com/calendar/ical/team%40example.com/private-s3cret/basic.ics?hl=da']);
+
+        $response = $this->actingAs($this->member)->get(route('data-sources.index', $this->project))
+            ->assertInertia(fn (Assert $page) => $page->where('sources.0.url', 'https://calendar.google.com/***?hl=***'));
+
+        expect($response->getContent())->not->toContain('s3cret');
+    });
+
     it('gives the screen designer the sources by name and format only', function () {
         $screen = Screen::factory()->for($this->project->team)->create();
 

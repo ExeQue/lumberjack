@@ -6,6 +6,7 @@ namespace App\Domains\DataSources\Queries;
 
 use App\Domains\DataSources\Enums\DataSourceFormat;
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Support\Ical;
 use App\Domains\DataSources\Support\JsonPath;
 use App\Domains\DataSources\Support\Prometheus;
 use App\Domains\Metrics\Data\MetricWindow;
@@ -13,6 +14,7 @@ use App\Domains\Shared\Support\LruCache;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -47,6 +49,23 @@ class DataSourceValuesQuery
         return $this->memo->remember("latest:{$source->id}:{$source->last_ok_at?->getTimestamp()}", fn (): mixed => $source->format === DataSourceFormat::Prometheus
             ? Prometheus::parse($source->last_body)
             : json_decode($source->last_body, true));
+    }
+
+    /**
+     * The events of an iCalendar source's latest feed in the window (Ical::events). A large
+     * feed is slow to parse, so the window's events are kept until the next good fetch.
+     *
+     * @return list<array{title: string, location: string|null, start: int, end: int, all_day: bool}>
+     */
+    public function events(DataSource $source, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        if ($source->format !== DataSourceFormat::Ical || $source->last_body === null) {
+            return [];
+        }
+
+        $key = "data-source-events:{$source->id}:{$source->last_ok_at?->getTimestamp()}:{$from->getTimestamp()}:{$to->getTimestamp()}:{$from->getTimezone()->getName()}";
+
+        return Cache::remember($key, 3600, fn (): array => Ical::events((string) $source->last_body, $from, $to));
     }
 
     /**

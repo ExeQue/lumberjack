@@ -476,7 +476,14 @@ final class WidgetSchema
             ],
             'list' => [
                 $section('rows', [
-                    ...$external(true),
+                    // The data source a calendar reads too, an iCalendar one.
+                    ...array_map(fn (array $field): array => $field['key'] === 'data_source' ? [...$field, 'sources' => ['external_json', 'calendar']] : $field, $external(true)),
+                    // The days a calendar shows around today.
+                    ...array_map(fn (array $field): array => [...$field, 'data' => true, 'sources' => ['calendar']], [
+                        ['key' => 'days_before', 'type' => 'select', 'options' => ['0', '1', '7'], 'default' => '0', 'span' => 1],
+                        ['key' => 'days_after', 'type' => 'select', 'options' => ['0', '1', '7', '30'], 'default' => '7', 'span' => 1],
+                        ['key' => 'upcoming_only', 'type' => 'toggle', 'default' => true, 'span' => 2],
+                    ]),
                     $select('limit', ['auto', '3', '5', '10', '20'], 'auto', true),
                     $select('sort', ['newest', 'worst', 'last_seen', 'most_frequent'], 'newest', true),
                     $toggle('only_problems', false, true),

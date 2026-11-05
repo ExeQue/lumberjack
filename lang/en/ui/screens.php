@@ -351,6 +351,9 @@ return [
         'limit' => ['label' => 'Rows', 'options' => ['auto' => 'Fit to tile', '3' => '3', '5' => '5', '10' => '10', '20' => '20']],
         'sort' => ['label' => 'Sort', 'options' => ['newest' => 'Newest first', 'worst' => 'Most important first', 'last_seen' => 'Last reported first', 'most_frequent' => 'Most frequent']],
         'only_problems' => ['label' => 'Only what needs attention'],
+        'days_before' => ['label' => 'Days back', 'options' => ['0' => 'From today', '1' => 'From yesterday', '7' => 'A week back']],
+        'days_after' => ['label' => 'Days ahead', 'options' => ['0' => 'Rest of today', '1' => 'Until tomorrow', '7' => 'A week', '30' => '30 days']],
+        'upcoming_only' => ['label' => 'Only what has not ended'],
         'show_age' => ['label' => 'Show age'],
         'show_count' => ['label' => 'Show count'],
         'show_project' => ['label' => 'Show project'],
@@ -490,6 +493,8 @@ return [
         'queue' => ['waiting' => 'Waiting :age'],
         'meter' => ['cpu' => 'CPU', 'memory' => 'Mem', 'disk' => 'Disk'],
         'usage' => ['cpu' => 'CPU :value', 'memory' => 'Memory :value', 'disk' => 'Disk :value'],
+        // A calendar row: the all-day label stands in for a start time, now marks an event on.
+        'calendar' => ['all_day' => 'All day', 'now' => 'Now', 'until' => 'until :time', 'busy' => 'Busy'],
         'escalating' => 'Escalating',
         'regressed' => 'Regressed',
         'task_status' => [
@@ -508,6 +513,7 @@ return [
             'queues' => ['default' => ''],
             'hosts' => ['default' => ''],
             'agents' => ['default' => ''],
+            'calendar' => ['default' => ''],
         ],
         'issue_status' => [
             'open' => 'Open',
