@@ -111,17 +111,20 @@ const VIEWERS_EVERY_MS = 15_000;
 const COLS = [2, 3, 4, 5, 6, 8, 10, 12];
 const PERIODS = ['1h', '24h', '7d', '30d'];
 
-/** What a new widget of each kind starts as. */
-const STARTERS: Record<WidgetKind, Pick<Widget, 'source' | 'w' | 'h'>> = {
-    stat: { source: 'requests', w: 1, h: 1 },
-    gauge: { source: 'error_rate', w: 1, h: 1 },
-    chart: { source: 'requests_errors', w: 2, h: 2 },
-    list: { source: 'latest_issues', w: 2, h: 2 },
-    health: { source: 'checks', w: 1, h: 1 },
-    clock: { source: null, w: 1, h: 1 },
-    qr: { source: null, w: 1, h: 1 },
-    media: { source: null, w: 2, h: 2 },
-    empty: { source: null, w: 1, h: 1 },
+/**
+ * What a new widget of each kind shows first. Every new widget is 1 x 1, so it fits any
+ * free cell; it is resized from there.
+ */
+const STARTERS: Record<WidgetKind, string | null> = {
+    stat: 'requests',
+    gauge: 'error_rate',
+    chart: 'requests_errors',
+    list: 'latest_issues',
+    health: 'checks',
+    clock: null,
+    qr: null,
+    media: null,
+    empty: null,
 };
 
 /** Resize handles, invisible: which edges each moves, where it sits, and its cursor. */
@@ -505,12 +508,7 @@ export default function EditScreen(props: Props) {
             widgets.map((w) => (w.id === id ? { ...w, ...fields } : w)),
         );
 
-    const starterSize = (kind: WidgetKind) => ({
-        w: Math.min(STARTERS[kind].w, screen.cols),
-        h: Math.min(STARTERS[kind].h, screen.rows),
-    });
-
-    /** A new widget at the cells given, else in the first free spot (1 x 1 if need be). */
+    /** A new 1 x 1 widget at the cell given, else in the first free one. */
     const add = (kind: WidgetKind, at?: { x: number; y: number }) => {
         if (screen.widgets.length >= props.limits.max_widgets) {
             toast.error(t('screens.designer.too_many'));
@@ -518,15 +516,8 @@ export default function EditScreen(props: Props) {
             return;
         }
 
-        let size = starterSize(kind);
-        let spot =
-            at ??
-            firstFree(screen.widgets, screen.cols, screen.rows, size.w, size.h);
-
-        if (!spot) {
-            size = { w: 1, h: 1 };
-            spot = firstFree(screen.widgets, screen.cols, screen.rows, 1, 1);
-        }
+        const spot =
+            at ?? firstFree(screen.widgets, screen.cols, screen.rows, 1, 1);
 
         if (!spot) {
             toast.error(t('screens.designer.no_room'));
@@ -537,10 +528,11 @@ export default function EditScreen(props: Props) {
         const widget: Widget = {
             id: newWidgetId(),
             type: kind,
-            source: STARTERS[kind].source,
+            source: STARTERS[kind],
             rotate: [],
             ...spot,
-            ...size,
+            w: 1,
+            h: 1,
             title: null,
             options: {},
             scope: {},
@@ -1349,7 +1341,8 @@ export default function EditScreen(props: Props) {
                                                     'copy';
                                                 startDrag({
                                                     kind,
-                                                    ...starterSize(kind),
+                                                    w: 1,
+                                                    h: 1,
                                                     dx: 0,
                                                     dy: 0,
                                                 });
