@@ -205,9 +205,11 @@ by topic (traffic, issues, jobs and queues, hosts and agents, databases, health)
 
 A list of queues judges each queue like its [backlog alert](./alerts#queue-backlog): red
 past the project's thresholds (its own for that queue, or the rule's: 1,000 jobs or 10
-minutes by default), amber past half of them, and says why (**Backlog** or **Waiting**).
-A muted queue stays calm. Limits set on the widget replace that and count on its size.
-Each row also says how many workers run on the queue, where the agent knows.
+minutes by default), amber past half of them: the number of jobs waiting turns that color,
+and a queue whose jobs wait too long says **Waiting** and for how long. A muted queue stays
+calm. Limits set on the widget replace that and count on its size. Each row has the queue's
+full name, its jobs waiting on the right, and how many workers run on it, where the agent
+knows.
 The database values read what [database health checks](./health#database-metrics) report:
 the size is the latest each database reported, added up over the databases in scope, connections
 the same; the gauge shows the database with the largest share of its connections in use

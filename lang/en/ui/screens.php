@@ -487,7 +487,7 @@ return [
         'workers' => '{0} no workers|{1} 1 worker|[2,*] :count workers',
         'host_usage' => 'CPU :cpu · memory :memory · disk :disk',
         'offline' => 'Offline',
-        'queue' => ['backlog' => 'Backlog', 'waiting' => 'Waiting :age'],
+        'queue' => ['waiting' => 'Waiting :age'],
         'meter' => ['cpu' => 'CPU', 'memory' => 'Mem', 'disk' => 'Disk'],
         'usage' => ['cpu' => 'CPU :value', 'memory' => 'Memory :value', 'disk' => 'Disk :value'],
         'escalating' => 'Escalating',
