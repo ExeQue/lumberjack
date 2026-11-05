@@ -2192,18 +2192,28 @@ function stopOnRemove(element: HTMLVideoElement | HTMLImageElement | null) {
         return;
     }
 
-    return () => {
-        if (element instanceof HTMLVideoElement) {
-            element.pause();
-        }
+    // After the commit: only an element that really left the page. Strict mode detaches
+    // and attaches a ref again on the same, still shown element.
+    return () =>
+        queueMicrotask(() => {
+            if (element.isConnected) {
+                return;
+            }
 
-        element.removeAttribute('src');
+            if (element instanceof HTMLVideoElement) {
+                element.pause();
+            }
 
-        if (element instanceof HTMLVideoElement) {
-            element.load();
-        }
-    };
+            element.removeAttribute('src');
+
+            if (element instanceof HTMLVideoElement) {
+                element.load();
+            }
+        });
 }
+
+/** How long one slide fades into the next. */
+const MEDIA_FADE_MS = 700;
 
 /**
  * An image (a camera's MJPEG stream too), a video or a web page from an address the
@@ -2253,8 +2263,77 @@ function MediaTile({
         url && kind === 'image' && every > 0
             ? `${url}${url.includes('?') ? '&' : '?'}_lj=${round}`
             : url;
-    const box =
-        'min-h-0 w-full flex-1 pointer-events-none animate-in fade-in duration-700';
+    // The slide before stays a moment, fading out under the new one fading in.
+    const [previous, setPrevious] = useState<string | null>(null);
+    const shown = useRef(source);
+
+    useEffect(() => {
+        if (shown.current === source) {
+            return;
+        }
+
+        setPrevious(shown.current);
+        shown.current = source;
+        const timer = window.setTimeout(() => setPrevious(null), MEDIA_FADE_MS);
+
+        return () => window.clearTimeout(timer);
+    }, [source]);
+
+    const layer =
+        'pointer-events-none size-full min-h-0 min-w-0 [grid-area:1/1] duration-700';
+    const media = (src: string, leaving: boolean): ReactNode => {
+        const className = cn(
+            layer,
+            leaving
+                ? 'animate-out fill-mode-forwards fade-out'
+                : 'animate-in fade-in',
+        );
+
+        if (kind === 'video') {
+            return (
+                <video
+                    key={src}
+                    ref={stopOnRemove}
+                    src={src}
+                    className={cn(className, fit)}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    onError={() => !leaving && setFailed(src)}
+                />
+            );
+        }
+
+        if (kind === 'page') {
+            return (
+                <iframe
+                    // A page loads again by its round.
+                    key={leaving ? src : `${src}#${round}`}
+                    src={embedUrl(src, opt<boolean>('subtitles') === true)}
+                    title={widget.title ?? t('screens.kinds.media')}
+                    className={cn(className, 'border-0')}
+                    sandbox="allow-scripts allow-same-origin allow-presentation"
+                    allow="autoplay; encrypted-media"
+                    // The origin only: YouTube's player refuses to play without one (error 153).
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    loading="lazy"
+                />
+            );
+        }
+
+        return (
+            <img
+                key={src}
+                ref={stopOnRemove}
+                src={src}
+                alt={leaving ? '' : caption || widget.title || ''}
+                className={cn(className, fit)}
+                referrerPolicy="no-referrer"
+                onError={() => !leaving && setFailed(src)}
+            />
+        );
+    };
 
     let body: ReactNode;
 
@@ -2274,45 +2353,12 @@ function MediaTile({
                 {t('screens.media.failed')}
             </span>
         );
-    } else if (kind === 'video') {
-        body = (
-            <video
-                key={source}
-                ref={stopOnRemove}
-                src={source}
-                className={cn(box, fit)}
-                autoPlay
-                muted
-                loop
-                playsInline
-                onError={() => setFailed(source)}
-            />
-        );
-    } else if (kind === 'page') {
-        body = (
-            <iframe
-                key={`${source}#${round}`}
-                src={embedUrl(source, opt<boolean>('subtitles') === true)}
-                title={widget.title ?? t('screens.kinds.media')}
-                className={cn(box, 'border-0')}
-                sandbox="allow-scripts allow-same-origin allow-presentation"
-                allow="autoplay; encrypted-media"
-                // The origin only: YouTube's player refuses to play without one (error 153).
-                referrerPolicy="strict-origin-when-cross-origin"
-                loading="lazy"
-            />
-        );
     } else {
         body = (
-            <img
-                key={source}
-                ref={stopOnRemove}
-                src={source}
-                alt={caption || widget.title || ''}
-                className={cn(box, fit)}
-                referrerPolicy="no-referrer"
-                onError={() => setFailed(source)}
-            />
+            <div className="grid min-h-0 w-full flex-1">
+                {previous && previous !== source && media(previous, true)}
+                {media(source, false)}
+            </div>
         );
     }
 
