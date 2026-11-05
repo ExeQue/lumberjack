@@ -11,6 +11,10 @@ docs.
 The [browser script](./projects.md#browser-script) is served by Lumberjack itself and needs no
 library.
 
+Libraries hand their data to a local agent, which sends it on with retry and a disk spool:
+[`exeque/lumberjack-agent`](https://github.com/ExeQue/lumberjack-agent). It also runs on its own,
+for an app without a library, and its README describes the line protocol for writing one.
+
 ## Laravel
 
 ```bash
