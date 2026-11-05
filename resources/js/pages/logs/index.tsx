@@ -189,7 +189,33 @@ export default function LogsIndex({
                 <PageTitle title={t('logs.title')} />
 
                 <div className="flex flex-wrap items-start gap-4">
-                    <Card className="flex flex-[1_1_220px] flex-col gap-0.5 p-2">
+                    {/* Narrow screens: a select, so the channel list does not push the lines down. */}
+                    <div className="flex w-full items-center gap-3 md:hidden">
+                        <label className="sr-only" htmlFor="log-channel">
+                            {t('logs.channels')}
+                        </label>
+                        <Select
+                            id="log-channel"
+                            value={filters.channel}
+                            onChange={(e) => apply({ channel: e.target.value })}
+                            className="min-w-0 flex-1"
+                        >
+                            {channelOptions.map((c) => (
+                                <option key={c.value} value={c.value}>
+                                    {`${c.label} (${formatNumber(c.count)})`}
+                                </option>
+                            ))}
+                        </Select>
+                        {project.can_administer && (
+                            <Link
+                                href={projectSettings(project.uuid).url}
+                                className="py-2 text-xs whitespace-nowrap text-amber hover:underline"
+                            >
+                                {t('logs.manage_channels')}
+                            </Link>
+                        )}
+                    </div>
+                    <Card className="hidden flex-[1_1_220px] flex-col gap-0.5 p-2 md:flex">
                         <div
                             role="group"
                             aria-label={t('logs.channels')}
@@ -266,15 +292,24 @@ export default function LogsIndex({
                         )}
 
                         <div className="flex flex-wrap gap-2">
-                            <Segmented
-                                label={t('logs.min_level')}
-                                value={filters.level}
-                                onChange={(level) => apply({ level })}
-                                options={levels.map((level) => ({
-                                    value: level,
-                                    label: t(`common.levels.${level}`),
-                                }))}
-                            />
+                            {/* Visible label: one pressed segment reads as "only debug", but it means "debug and above". */}
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <span
+                                    className="text-xs whitespace-nowrap text-ink-3"
+                                    aria-hidden="true"
+                                >
+                                    {t('logs.min_level')}
+                                </span>
+                                <Segmented
+                                    label={t('logs.min_level')}
+                                    value={filters.level}
+                                    onChange={(level) => apply({ level })}
+                                    options={levels.map((level) => ({
+                                        value: level,
+                                        label: t(`common.levels.${level}`),
+                                    }))}
+                                />
+                            </div>
                             <label className="sr-only" htmlFor="log-search">
                                 {t('logs.search')}
                             </label>

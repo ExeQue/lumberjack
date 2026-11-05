@@ -29,6 +29,7 @@ import {
     formatDuration,
     formatNumber,
     formatPercent,
+    formatRelative,
 } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -352,7 +353,24 @@ function ChecksTable({
                                     </span>
                                 )}
                             </td>
-                            <td className={cn(tdClass, numClass)}>
+                            {/* A stale check's figures are old: dimmed, with their age on hover. */}
+                            <td
+                                className={cn(
+                                    tdClass,
+                                    numClass,
+                                    check.state === 'stale' && 'text-ink-3',
+                                )}
+                                title={
+                                    check.state === 'stale' &&
+                                    check.last_result_at
+                                        ? t('health.stale_values', {
+                                              time: formatRelative(
+                                                  check.last_result_at,
+                                              ),
+                                          })
+                                        : undefined
+                                }
+                            >
                                 {check.last_result_at
                                     ? latency(check.metrics, check.duration_us)
                                     : '-'}

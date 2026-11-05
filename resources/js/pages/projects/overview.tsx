@@ -113,6 +113,7 @@ function LatencyChart({
     const height = 140;
     const max = Math.max(1, ...series.map((p) => p.p95 ?? 0));
     const x = (i: number) => (i / Math.max(1, series.length - 1)) * width;
+    const gapWidth = width / Math.max(1, series.length - 1);
     const y = (v: number) => height - 4 - (v / max) * (height - 8);
     const segments = (key: 'p50' | 'p95') =>
         series
@@ -162,6 +163,12 @@ function LatencyChart({
                             <span className="h-0.5 w-3 rounded bg-ink-3" />
                             p50
                         </span>
+                        {series.some((p) => p.p95 === null) && (
+                            <span className="flex items-center gap-1.5">
+                                <span className="h-2.5 w-3 rounded-sm bg-line" />
+                                {t('overview.charts.no_requests')}
+                            </span>
+                        )}
                     </span>
                 }
             />
@@ -183,6 +190,21 @@ function LatencyChart({
                             role="img"
                             aria-label={summary}
                         >
+                            {/* Buckets without requests have no response time: shade them, so a line that stops early reads as "no traffic", not as a broken chart. */}
+                            {series.map(
+                                (p, i) =>
+                                    p.p95 === null && (
+                                        <rect
+                                            key={`gap-${p.t}`}
+                                            x={x(i) - gapWidth / 2}
+                                            width={gapWidth}
+                                            y={0}
+                                            height={height}
+                                            fill="var(--lj-line)"
+                                            opacity={0.5}
+                                        />
+                                    ),
+                            )}
                             {segments('p50').map((points, i) => (
                                 <polyline
                                     key={`p50-${i}`}
@@ -375,17 +397,8 @@ function HealthCard({
             <StatCard
                 label={t('overview.kpis.health')}
                 value={
-                    bad + summary.stale > 0
-                        ? joinNotes(
-                              bad > 0
-                                  ? t('overview.kpis.health_problems', {}, bad)
-                                  : '',
-                              summary.stale > 0
-                                  ? t('overview.kpis.health_stale', {
-                                        count: formatNumber(summary.stale),
-                                    })
-                                  : '',
-                          )
+                    bad > 0
+                        ? t('overview.kpis.health_problems', {}, bad)
                         : t('overview.kpis.health_value', {
                               ok: formatNumber(summary.ok),
                               total: formatNumber(summary.total),

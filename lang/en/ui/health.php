@@ -8,6 +8,8 @@ return [
     'attention' => ':down down, :degraded degraded.',
     'attention_stale' => '{1} 1 stale: it stopped reporting.|[2,*] :count stale: they stopped reporting.',
     // Title on the Stale badge.
+    // Hover on a stale check's latency, e.g. "Last result 5 hours ago".
+    'stale_values' => 'Last result :time',
     'stale_hint' => 'No report within its expected interval: 2.5 times the interval the app sends, or three times its usual interval without one.',
     'add' => 'Add check',
     'states' => ['ok' => 'OK', 'recovering' => 'Recovering', 'degraded' => 'Degraded', 'down' => 'Down', 'stale' => 'Stale', 'pending' => 'Pending'],
