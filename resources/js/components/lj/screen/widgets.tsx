@@ -1523,28 +1523,28 @@ function rowText(
             };
         case 'queues':
             return {
-                key: String(row.queue),
-                main: String(row.size ?? '-'),
-                // Why it needs attention: too many waiting, or waiting too long.
-                tag:
-                    tone === 'red' || tone === 'amber'
-                        ? {
-                              text:
-                                  row.reason === 'age'
-                                      ? t('screens.list.queue.waiting', {
-                                            age: duration(
-                                                Number(row.oldest_age_s ?? 0),
-                                            ),
-                                        })
-                                      : t('screens.list.queue.backlog'),
-                              tone,
-                          }
-                        : undefined,
+                // The name gets the room; the jobs waiting stand right, colored when too many.
+                main: String(row.queue),
+                tag: {
+                    text:
+                        row.size === null || row.size === undefined
+                            ? '-'
+                            : formatNumber(Number(row.size)),
+                    tone: tone === 'red' || tone === 'amber' ? tone : null,
+                },
                 count:
                     [
+                        // Why it needs attention when the count alone does not say: waiting too long.
+                        (tone === 'red' || tone === 'amber') &&
+                        row.reason === 'age'
+                            ? t('screens.list.queue.waiting', {
+                                  age: duration(Number(row.oldest_age_s ?? 0)),
+                              })
+                            : null,
                         typeof row.workers === 'number'
                             ? t('screens.list.workers', {}, row.workers)
                             : null,
+                        row.reason !== 'age' &&
                         row.oldest_age_s !== null &&
                         row.oldest_age_s !== undefined
                             ? t('screens.list.oldest', {
