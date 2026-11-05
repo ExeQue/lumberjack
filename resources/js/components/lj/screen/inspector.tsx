@@ -1,4 +1,4 @@
-import { Settings } from 'lucide-react';
+import { Plus, Settings, X } from 'lucide-react';
 import {
     useEffect,
     useId,
@@ -7,7 +7,7 @@ import {
     useSyncExternalStore,
 } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Input, inputClass, Label, Select } from '@/components/lj/ui';
+import { Button, Input, Label, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { PATH_FIELDS, PathConfig, useJsonPreview } from './json-path-help';
@@ -22,7 +22,7 @@ import type {
     Widget,
     WidgetScope,
 } from './types';
-import { ROTATING_KINDS } from './types';
+import { MAX_SLIDES, ROTATING_KINDS } from './types';
 
 export type Catalog = {
     schema: Schema;
@@ -931,36 +931,76 @@ export function WidgetInspector({
                         </Select>
                     </div>
                 );
-            case 'urls':
+            case 'urls': {
+                // Kept as one address a line; edited as a row each, empty rows included.
+                const urls = String(raw ?? '').split('\n');
+                const setUrls = (list: string[]) =>
+                    setOption(field.key, list.join('\n'));
+
                 return (
                     <div
                         key={field.key}
                         className={cn('flex flex-col gap-1', span)}
                     >
                         <Label
-                            htmlFor={id(field.key)}
+                            htmlFor={id(`${field.key}-0`)}
                             className="text-xs text-ink-2"
                         >
                             {fieldLabel(field.key)}
                         </Label>
-                        <textarea
-                            id={id(field.key)}
-                            rows={3}
-                            wrap="off"
-                            value={String(raw ?? '')}
-                            placeholder={t(
-                                `screens.fields.${field.key}.placeholder`,
-                            )}
-                            onChange={(e) =>
-                                setOption(field.key, e.target.value)
-                            }
-                            className={cn(inputClass, 'h-auto resize-y py-2')}
-                        />
+                        {urls.map((url, i) => (
+                            <div key={i} className="flex gap-1">
+                                <Input
+                                    id={id(`${field.key}-${i}`)}
+                                    type="url"
+                                    value={url}
+                                    placeholder={t(
+                                        `screens.fields.${field.key}.placeholder`,
+                                    )}
+                                    onChange={(e) =>
+                                        setUrls(
+                                            urls.map((u, j) =>
+                                                j === i ? e.target.value : u,
+                                            ),
+                                        )
+                                    }
+                                />
+                                {urls.length > 1 && (
+                                    <Button
+                                        variant="ghost"
+                                        aria-label={t(
+                                            'screens.inspector.remove_url',
+                                        )}
+                                        onClick={() =>
+                                            setUrls(
+                                                urls.filter((_, j) => j !== i),
+                                            )
+                                        }
+                                    >
+                                        <X
+                                            className="size-4"
+                                            aria-hidden="true"
+                                        />
+                                    </Button>
+                                )}
+                            </div>
+                        ))}
+                        {urls.length < MAX_SLIDES && (
+                            <Button
+                                variant="ghost"
+                                className="self-start"
+                                onClick={() => setUrls([...urls, ''])}
+                            >
+                                <Plus className="size-4" aria-hidden="true" />
+                                {t('screens.inspector.add_url')}
+                            </Button>
+                        )}
                         <span className="text-xs text-ink-3">
                             {t(`screens.fields.${field.key}.hint`)}
                         </span>
                     </div>
                 );
+            }
             case 'timezone':
                 return (
                     <div
