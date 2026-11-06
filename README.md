@@ -63,6 +63,8 @@ straight to the [ingest API](https://exeque.github.io/lumberjack/docs/api) from 
 
 ## Reference
 
+- [Installing from source](https://exeque.github.io/lumberjack/docs/source): Lumberjack as a
+  plain Laravel application, without Docker.
 - [Running Lumberjack with Docker](https://exeque.github.io/lumberjack/docs/docker): installation, settings, reverse proxy,
   backups and updates.
 - [Libraries](https://exeque.github.io/lumberjack/docs/libraries): the libraries your apps send data with.

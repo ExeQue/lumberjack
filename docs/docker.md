@@ -9,6 +9,8 @@ reverse proxy (TLS) ──► :8080 lumberjack ──► postgres
                                          └─► redis
 ```
 
+Rather run it without Docker? See [Installing from source](./source.md).
+
 ## Install with one command
 
 On a server with Docker Compose or Podman Compose, in the folder Lumberjack should live in:
@@ -25,13 +27,9 @@ curl -fsSL https://exeque.github.io/lumberjack/install.sh | sh -s podman
 
 The script asks for the address people open Lumberjack on, puts `compose.yaml` and a
 filled-in `.env.docker` in a `lumberjack` folder, starts Lumberjack and prints the setup
-token. It also leaves `lumberjack/update.sh` behind for updates. To read it first:
-
-```bash
-curl -fsSLO https://exeque.github.io/lumberjack/install.sh
-less install.sh
-sh install.sh
-```
+token. It also leaves `lumberjack/update.sh` behind for updates. Read
+[the script on GitHub](https://github.com/ExeQue/lumberjack/blob/main/install.sh) before you
+run it.
 
 Set `APP_URL` or `LUMBERJACK_PORT` (default `8080`) in front of `sh` to skip the question or
 use another port, e.g. `curl -fsSL .../install.sh | APP_URL=https://lumberjack.example.com sh`.
