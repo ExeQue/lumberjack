@@ -31,6 +31,17 @@ token. It also leaves `lumberjack/update.sh` behind for updates. Read
 [the script on GitHub](https://github.com/ExeQue/lumberjack/blob/main/install.sh) before you
 run it.
 
+Or hand it to a coding agent first:
+
+```text
+Review the install script at https://exeque.github.io/lumberjack/install.sh before I run
+it. Do not run it. Fetch it and compare it with install.sh at the latest release on
+https://github.com/ExeQue/lumberjack. Tell me, in short lists: every file and folder it
+creates or changes, every command it runs and whether any needs root, every address it
+contacts, and how it makes and stores the secrets. Flag anything that does not match the
+version on GitHub or that a plain installer would not need.
+```
+
 Set `APP_URL` or `LUMBERJACK_PORT` (default `8080`) in front of `sh` to skip the question or
 use another port, e.g. `curl -fsSL .../install.sh | APP_URL=https://lumberjack.example.com sh`.
 Then point your reverse proxy at the port (see [Reverse proxy](#reverse-proxy)), and fill in
