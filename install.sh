@@ -94,6 +94,9 @@ if [ -f .env.docker ]; then
 fi
 
 [ -f compose.yaml ] || download "$SOURCE/compose.yaml" compose.yaml
+# The database and the app's storage live in these folders; Podman, unlike Docker,
+# does not create them.
+mkdir -p data/postgres data/storage
 
 url=${APP_URL:-}
 if [ -z "$url" ]; then

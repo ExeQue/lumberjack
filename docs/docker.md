@@ -93,8 +93,9 @@ the mail settings in `lumberjack/.env.docker`.
                 VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
                 VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
                 VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+            # Uploads, the setup flag and logs, in a folder next to this file like the database.
             volumes:
-                - lumberjack-storage:/app/storage
+                - ./data/storage:/app/storage
             # Lets DB_HOST / REDIS_HOST=host.docker.internal reach services on this server.
             extra_hosts:
                 - 'host.docker.internal:host-gateway'
@@ -111,8 +112,9 @@ the mail settings in `lumberjack/.env.docker`.
                 POSTGRES_DB: ${DB_DATABASE:-lumberjack}
                 POSTGRES_USER: ${DB_USERNAME:-lumberjack}
                 POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+            # A folder next to this file, so the database is easy to find, copy and back up.
             volumes:
-                - postgres-data:/var/lib/postgresql
+                - ./data/postgres:/var/lib/postgresql
             healthcheck:
                 test:
                     [
@@ -136,8 +138,6 @@ the mail settings in `lumberjack/.env.docker`.
                 retries: 20
 
     volumes:
-        lumberjack-storage:
-        postgres-data:
         redis-data:
     ```
 
@@ -185,9 +185,11 @@ the mail settings in `lumberjack/.env.docker`.
 
     Also fill in `APP_URL` and `DB_PASSWORD`.
 
-4. Start it:
+4. Start it. The database and the app's storage are kept in `data/` next to
+   `compose.yaml`; Docker makes the folders, Podman needs them made first:
 
     ```bash
+    mkdir -p data/postgres data/storage
     docker compose --env-file .env.docker up -d
     ```
 
@@ -285,13 +287,34 @@ Links in mails and alerts always use `APP_URL`.
 
 ## Data and backups
 
-| Volume               | Holds                                                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `postgres-data`      | Everything Lumberjack records. Back this up: `docker compose exec postgres pg_dump -U lumberjack lumberjack > backup.sql` |
-| `redis-data`         | Queues and cache. Lumberjack recovers without it                                                                          |
-| `lumberjack-storage` | The setup flag and the generated setup token                                                                              |
+| Where           | Holds                                                                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `data/postgres` | A folder next to `compose.yaml`: everything Lumberjack records. Back it up with `docker compose exec postgres pg_dump -U lumberjack lumberjack > backup.sql` |
+| `redis-data`    | Queues and cache. Lumberjack recovers without it                                                                                                             |
+| `data/storage`  | Next to it: uploads, the setup flag and the generated setup token                                                                                            |
 
 ## Updating
+
+### From an install with Docker volumes
+
+Before 0.1.3 the database and the app's storage lived in Docker volumes named
+`postgres-data` and `lumberjack-storage`. An install made with the script keeps them,
+since `update.sh` never changes `compose.yaml`. To move to the folders anyway, take the
+new `compose.yaml` and copy the data across once, with Lumberjack stopped:
+
+```bash
+docker compose --env-file .env.docker down
+mkdir -p data/postgres data/storage
+for pair in postgres-data:postgres lumberjack-storage:storage; do
+    docker run --rm -v "$(basename "$PWD")_${pair%%:*}:/from" -v "$PWD/data/${pair##*:}:/to" \
+        docker.io/library/alpine cp -a /from/. /to/
+done
+docker compose --env-file .env.docker up -d
+```
+
+When Lumberjack runs with everything in place, `docker volume rm` the old volumes.
+
+### Every update
 
 Installed with the script? Run `lumberjack/update.sh`. It pulls the image and restarts
 Lumberjack on the engine it was installed with, and leaves `compose.yaml` and `.env.docker`

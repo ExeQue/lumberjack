@@ -45,8 +45,9 @@ services:
             VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
             VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
             VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+        # Uploads, the setup flag and logs, in a folder next to this file like the database.
         volumes:
-            - lumberjack-storage:/app/storage
+            - ./data/storage:/app/storage
         # Lets DB_HOST / REDIS_HOST=host.docker.internal reach services on this server.
         extra_hosts:
             - 'host.docker.internal:host-gateway'
@@ -63,8 +64,9 @@ services:
             POSTGRES_DB: ${DB_DATABASE:-lumberjack}
             POSTGRES_USER: ${DB_USERNAME:-lumberjack}
             POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+        # A folder next to this file, so the database is easy to find, copy and back up.
         volumes:
-            - postgres-data:/var/lib/postgresql
+            - ./data/postgres:/var/lib/postgresql
         healthcheck:
             test:
                 [
@@ -88,6 +90,4 @@ services:
             retries: 20
 
 volumes:
-    lumberjack-storage:
-    postgres-data:
     redis-data:

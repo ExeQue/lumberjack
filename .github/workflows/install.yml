@@ -62,6 +62,10 @@ jobs:
           test -x lumberjack/update.sh
           grep -q "^COMPOSE=\"$ENGINE compose\"$" lumberjack/update.sh
           test "$(stat -c %a lumberjack/.env.docker)" = 600
+          # The database and the storage land in folders next to compose.yaml. They
+          # belong to the containers' users, so root looks.
+          sudo find lumberjack/data/postgres -mindepth 1 | grep -q .
+          sudo test -d lumberjack/data/storage/app/setup
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 200
 
       - name: Update keeps an edited compose.yaml
