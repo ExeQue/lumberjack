@@ -81,3 +81,26 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  # The install files go on the release too, with their checksums, so what the docs
+  # site serves can be checked against what was released.
+  release-files:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Attach the install files and their checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir release && cd release
+          cp ../install.sh ../compose.yaml .
+          cp ../.env.docker.example env.docker.example
+          sha256sum install.sh compose.yaml env.docker.example > SHA256SUMS
+          gh release upload "$GITHUB_REF_NAME" install.sh compose.yaml env.docker.example SHA256SUMS --clobber --repo "$GITHUB_REPOSITORY"

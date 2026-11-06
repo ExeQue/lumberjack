@@ -29,17 +29,25 @@ The script asks for the address people open Lumberjack on, puts `compose.yaml` a
 filled-in `.env.docker` in a `lumberjack` folder, starts Lumberjack and prints the setup
 token. It also leaves `lumberjack/update.sh` behind for updates. Read
 [the script on GitHub](https://github.com/ExeQue/lumberjack/blob/main/install.sh) before you
-run it.
+run it. Every release carries the script, the files it downloads and their checksums, so
+you can check that what you got is what was released:
+
+```bash
+curl -fsSLO https://exeque.github.io/lumberjack/install.sh
+curl -fsSL https://github.com/ExeQue/lumberjack/releases/latest/download/SHA256SUMS | sha256sum -c --ignore-missing
+sh install.sh
+```
 
 Or hand it to a coding agent first:
 
 ```text
 Review the install script at https://exeque.github.io/lumberjack/install.sh before I run
-it. Do not run it. Fetch it and compare it with install.sh at the latest release on
-https://github.com/ExeQue/lumberjack. Tell me, in short lists: every file and folder it
-creates or changes, every command it runs and whether any needs root, every address it
-contacts, and how it makes and stores the secrets. Flag anything that does not match the
-version on GitHub or that a plain installer would not need.
+it. Do not run it. Fetch it and check it against SHA256SUMS on the latest release of
+https://github.com/ExeQue/lumberjack, and compare it with install.sh in that release. Tell
+me, in short lists: every file and folder it creates or changes, every command it runs and
+whether any needs root, every address it contacts, and how it makes and stores the
+secrets. Flag anything that does not match the version on GitHub or that a plain installer
+would not need.
 ```
 
 Set `APP_URL` or `LUMBERJACK_PORT` (default `8080`) in front of `sh` to skip the question or
