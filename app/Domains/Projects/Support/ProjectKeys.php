@@ -16,6 +16,11 @@ final class ProjectKeys
         return 'lj_srv_'.Str::random(40);
     }
 
+    public static function newPullToken(): string
+    {
+        return 'lj_pull_'.Str::random(40);
+    }
+
     public static function newPublicKey(): string
     {
         return 'pk_'.Str::lower(Str::random(24));

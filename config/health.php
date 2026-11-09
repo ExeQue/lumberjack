@@ -18,11 +18,18 @@ return [
 
     'allow_private' => (bool) env('LUMBERJACK_HEALTH_ALLOW_PRIVATE', false),
 
+    // Connected apps are pulled on addresses anyone administering a project can enter, so
+    // private ones are refused even with the setting above on, unless this says otherwise.
+    'data_sources_allow_private' => (bool) env('LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE', false),
+
     // The most checks Lumberjack runs for one project.
     'max_checks_per_project' => (int) env('LUMBERJACK_HEALTH_MAX_CHECKS', 50),
 
     // The low-priority queue the checks run on; the background workers take it after alerts.
     'queue' => 'health',
+
+    // Pulls from connected apps have their own workers: a slow app waits only on these.
+    'data_sources_queue' => 'data-sources',
 
     /*
     |--------------------------------------------------------------------------
@@ -175,6 +182,7 @@ return [
         'raid' => 'RAID',
         'ram' => 'RAM',
         'roadrunner' => 'RoadRunner',
+        'seo' => 'SEO',
         'sms' => 'SMS',
         'sso' => 'SSO',
         'truenas' => 'TrueNAS',

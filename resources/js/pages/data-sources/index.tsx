@@ -37,6 +37,12 @@ import {
     update as sourceUpdate,
 } from '@/routes/data-sources';
 import {
+    destroy as connectionDestroy,
+    rotate as connectionRotate,
+    update as connectionUpdate,
+    store as connectionStore,
+} from '@/routes/data-source-connections';
+import {
     settings as projectSettings,
     show as projectShow,
 } from '@/routes/projects';
@@ -58,9 +64,32 @@ type DataSourceRow = {
     preview: string | null;
 };
 
+/** A source a connected app offers: read-only here, it comes and goes with the app. */
+type ConnectedRow = {
+    uuid: string;
+    name: string;
+    key: string;
+    environment: string | null;
+    shape: 'number' | 'series' | 'list' | 'table';
+    status: 'connected' | 'failing' | 'archived';
+    last_ok_at: string | null;
+    last_error: string | null;
+};
+
+type ConnectionRow = {
+    uuid: string;
+    environment: string;
+    url: string;
+    status: 'connected' | 'waiting' | 'failing';
+    last_ok_at: string | null;
+    last_error: string | null;
+};
+
 type Props = {
     project: ProjectHeader;
     sources: DataSourceRow[];
+    connected: ConnectedRow[];
+    connections: ConnectionRow[];
 };
 
 function When({ iso }: { iso: string | null }) {
@@ -75,7 +104,12 @@ function When({ iso }: { iso: string | null }) {
     );
 }
 
-export default function DataSourcesIndex({ project, sources }: Props) {
+export default function DataSourcesIndex({
+    project,
+    sources,
+    connected,
+    connections,
+}: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const [dialog, setDialog] = useState<DataSourceRow | 'new' | null>(null);
@@ -120,6 +154,12 @@ export default function DataSourcesIndex({ project, sources }: Props) {
                             </Button>
                         )
                     }
+                />
+
+                <ConnectedSources
+                    project={project}
+                    sources={connected}
+                    connections={connections}
                 />
 
                 <Card aria-labelledby="data-sources-title">
@@ -196,6 +236,405 @@ export default function DataSourcesIndex({ project, sources }: Props) {
                 )}
             </PageBody>
         </>
+    );
+}
+
+const CONNECTED_TONES = {
+    connected: 'ok',
+    failing: 'err',
+    waiting: undefined,
+    archived: undefined,
+} as const;
+
+function ConnectedSources({
+    project,
+    sources,
+    connections,
+}: {
+    project: ProjectHeader;
+    sources: ConnectedRow[];
+    connections: ConnectionRow[];
+}) {
+    const t = useT();
+    const [connecting, setConnecting] = useState(false);
+    const [changingUrl, setChangingUrl] = useState<ConnectionRow | null>(null);
+
+    return (
+        <Card aria-labelledby="connected-sources-title" className="mb-6">
+            <CardHeader
+                id="connected-sources-title"
+                title={t('data_sources.connected.title')}
+                description={t('data_sources.connected.hint')}
+                aside={
+                    project.can_administer && (
+                        <Button
+                            variant="primary"
+                            onClick={() => setConnecting(true)}
+                        >
+                            {t('data_sources.connected.connect')}
+                        </Button>
+                    )
+                }
+            />
+            {connections.length === 0 ? (
+                <EmptyState title={t('data_sources.connected.empty_title')}>
+                    {t('data_sources.connected.empty_body')}
+                </EmptyState>
+            ) : (
+                <ul className="divide-y divide-line border-b border-line">
+                    {connections.map((connection) => (
+                        <li
+                            key={connection.uuid}
+                            className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+                        >
+                            <span className="min-w-0">
+                                <span className="flex items-center gap-2 font-medium">
+                                    {connection.environment}
+                                    <Badge
+                                        tone={
+                                            CONNECTED_TONES[connection.status]
+                                        }
+                                    >
+                                        {t(
+                                            `data_sources.connected.statuses.${connection.status}`,
+                                        )}
+                                    </Badge>
+                                </span>
+                                <span className="block truncate font-mono text-xs text-ink-3">
+                                    {connection.url}
+                                </span>
+                                {connection.last_error && (
+                                    <span className="block text-xs wrap-break-word text-ink-2">
+                                        {connection.last_error}
+                                    </span>
+                                )}
+                            </span>
+                            {project.can_administer && (
+                                <span className="inline-flex flex-wrap gap-2">
+                                    <Button
+                                        onClick={() =>
+                                            setChangingUrl(connection)
+                                        }
+                                    >
+                                        {t('data_sources.connected.change_url')}
+                                    </Button>
+                                    <ConfirmButton
+                                        question={t(
+                                            'data_sources.connected.rotate_question',
+                                        )}
+                                        confirmLabel={t(
+                                            'data_sources.connected.rotate',
+                                        )}
+                                        onConfirm={() =>
+                                            router.post(
+                                                connectionRotate([
+                                                    project.uuid,
+                                                    connection.uuid,
+                                                ]).url,
+                                                {},
+                                                { preserveScroll: true },
+                                            )
+                                        }
+                                    >
+                                        {t('data_sources.connected.rotate')}
+                                    </ConfirmButton>
+                                    <ConfirmButton
+                                        question={t(
+                                            'data_sources.connected.disconnect_question',
+                                            {
+                                                environment:
+                                                    connection.environment,
+                                            },
+                                        )}
+                                        confirmLabel={t(
+                                            'data_sources.connected.disconnect',
+                                        )}
+                                        onConfirm={() =>
+                                            router.delete(
+                                                connectionDestroy([
+                                                    project.uuid,
+                                                    connection.uuid,
+                                                ]).url,
+                                                { preserveScroll: true },
+                                            )
+                                        }
+                                    >
+                                        {t('data_sources.connected.disconnect')}
+                                    </ConfirmButton>
+                                </span>
+                            )}
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {changingUrl && (
+                <Dialog open onOpenChange={() => setChangingUrl(null)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>
+                                {t('data_sources.connected.change_url')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {t('data_sources.connected.change_url_body')}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <Form
+                            {...connectionUpdate.form([
+                                project.uuid,
+                                changingUrl.uuid,
+                            ])}
+                            options={{ preserveScroll: true }}
+                            onSuccess={() => setChangingUrl(null)}
+                            className="flex flex-col gap-4"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <Field
+                                        label={t('data_sources.connected.url')}
+                                        htmlFor="connection-new-url"
+                                        hint={t(
+                                            'data_sources.connected.url_hint',
+                                        )}
+                                        error={errors.url}
+                                    >
+                                        <Input
+                                            id="connection-new-url"
+                                            name="url"
+                                            type="url"
+                                            required
+                                            autoFocus
+                                            maxLength={2000}
+                                            className="font-mono"
+                                            defaultValue={changingUrl.url}
+                                            autoComplete="off"
+                                        />
+                                    </Field>
+                                    <DialogFooter>
+                                        <Button
+                                            onClick={() => setChangingUrl(null)}
+                                        >
+                                            {t('common.cancel')}
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            variant="primary"
+                                            disabled={processing}
+                                        >
+                                            {t(
+                                                'data_sources.connected.save_url',
+                                            )}
+                                        </Button>
+                                    </DialogFooter>
+                                </>
+                            )}
+                        </Form>
+                    </DialogContent>
+                </Dialog>
+            )}
+            {connecting && (
+                <Dialog
+                    open
+                    onOpenChange={(open) => !open && setConnecting(false)}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>
+                                {t('data_sources.connected.form_title')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {t('data_sources.connected.form_setup')}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <Form
+                            {...connectionStore.form(project.uuid)}
+                            options={{ preserveScroll: true }}
+                            onSuccess={() => setConnecting(false)}
+                            className="flex flex-col gap-4"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <Field
+                                        label={t(
+                                            'data_sources.connected.environment',
+                                        )}
+                                        htmlFor="connection-environment"
+                                        error={errors.environment}
+                                    >
+                                        <Input
+                                            id="connection-environment"
+                                            name="environment"
+                                            required
+                                            autoFocus
+                                            maxLength={64}
+                                            defaultValue="production"
+                                            autoComplete="off"
+                                        />
+                                    </Field>
+                                    <Field
+                                        label={t('data_sources.connected.url')}
+                                        htmlFor="connection-url"
+                                        hint={t(
+                                            'data_sources.connected.url_hint',
+                                        )}
+                                        error={errors.url}
+                                    >
+                                        <Input
+                                            id="connection-url"
+                                            name="url"
+                                            type="url"
+                                            required
+                                            maxLength={2000}
+                                            className="font-mono"
+                                            placeholder="https://your-app.example/lumberjack/datasources"
+                                            autoComplete="off"
+                                        />
+                                    </Field>
+                                    <DialogFooter>
+                                        <Button
+                                            onClick={() => setConnecting(false)}
+                                        >
+                                            {t('common.cancel')}
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            variant="primary"
+                                            disabled={processing}
+                                        >
+                                            {t(
+                                                'data_sources.connected.connect',
+                                            )}
+                                        </Button>
+                                    </DialogFooter>
+                                </>
+                            )}
+                        </Form>
+                    </DialogContent>
+                </Dialog>
+            )}
+            {sources.length === 0 ? (
+                connections.length > 0 && (
+                    <p className="px-4 py-3 text-sm text-ink-3">
+                        {t('data_sources.connected.no_sources')}
+                    </p>
+                )
+            ) : (
+                <div className="relative overflow-x-auto">
+                    <table className={tableClass}>
+                        <thead>
+                            <tr>
+                                <th className={thClass}>
+                                    {t('data_sources.columns.name')}
+                                </th>
+                                <th className={thClass}>
+                                    {t('data_sources.connected.columns.shape')}
+                                </th>
+                                <th className={thClass}>
+                                    {t(
+                                        'data_sources.connected.columns.environment',
+                                    )}
+                                </th>
+                                <th className={thClass}>
+                                    {t('data_sources.columns.status')}
+                                </th>
+                                {project.can_administer && (
+                                    <th className={thClass}>
+                                        <span className="sr-only">
+                                            {t('data_sources.columns.actions')}
+                                        </span>
+                                    </th>
+                                )}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sources.map((source) => (
+                                <tr key={source.uuid} className="align-top">
+                                    <td className={cn(tdClass, 'max-w-96')}>
+                                        <span className="block font-medium">
+                                            {source.name}
+                                        </span>
+                                        <Mono>{source.key}</Mono>
+                                    </td>
+                                    <td className={tdClass}>
+                                        <Badge>
+                                            {t(
+                                                `data_sources.connected.shapes.${source.shape}`,
+                                            )}
+                                        </Badge>
+                                    </td>
+                                    <td className={cn(tdClass, 'text-xs')}>
+                                        {source.environment ?? ''}
+                                    </td>
+                                    <td
+                                        className={cn(
+                                            tdClass,
+                                            'max-w-72 min-w-40 text-xs text-ink-2',
+                                        )}
+                                    >
+                                        <Badge
+                                            tone={
+                                                CONNECTED_TONES[source.status]
+                                            }
+                                        >
+                                            {t(
+                                                `data_sources.connected.statuses.${source.status}`,
+                                            )}
+                                        </Badge>
+                                        {source.last_error && (
+                                            <span className="mt-1 block wrap-break-word text-err">
+                                                {source.last_error}
+                                            </span>
+                                        )}
+                                        {source.last_ok_at && (
+                                            <span className="block text-ink-3">
+                                                {t('data_sources.last_ok')}{' '}
+                                                <When iso={source.last_ok_at} />
+                                            </span>
+                                        )}
+                                    </td>
+                                    {project.can_administer && (
+                                        <td
+                                            className={cn(
+                                                tdClass,
+                                                'text-right whitespace-nowrap',
+                                            )}
+                                        >
+                                            {source.status === 'archived' && (
+                                                <ConfirmButton
+                                                    question={t(
+                                                        'data_sources.connected.remove_question',
+                                                        {
+                                                            source: source.name,
+                                                        },
+                                                    )}
+                                                    confirmLabel={t(
+                                                        'data_sources.connected.remove',
+                                                    )}
+                                                    onConfirm={() =>
+                                                        router.delete(
+                                                            sourceDestroy([
+                                                                project.uuid,
+                                                                source.uuid,
+                                                            ]).url,
+                                                            {
+                                                                preserveScroll: true,
+                                                            },
+                                                        )
+                                                    }
+                                                >
+                                                    {t(
+                                                        'data_sources.connected.remove',
+                                                    )}
+                                                </ConfirmButton>
+                                            )}
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </Card>
     );
 }
 

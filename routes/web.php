@@ -13,6 +13,7 @@ use App\Domains\Administration\Http\Middleware\EnsureUserIsAdmin;
 use App\Domains\Alerts\Http\Controllers\AlertController;
 use App\Domains\Alerts\Http\Controllers\QueueAlertThresholdController;
 use App\Domains\Commands\Http\Controllers\CommandController;
+use App\Domains\DataSources\Http\Controllers\DataSourceConnectionController;
 use App\Domains\DataSources\Http\Controllers\DataSourceController;
 use App\Domains\Health\Http\Controllers\HealthController;
 use App\Domains\Issues\Http\Controllers\IssueActionController;
@@ -134,6 +135,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('health/{healthCheck}', [HealthController::class, 'destroy'])->name('health.destroy');
         Route::get('data-sources', [DataSourceController::class, 'index'])->name('data-sources.index');
         Route::post('data-sources', [DataSourceController::class, 'store'])->name('data-sources.store');
+        Route::post('data-sources/connections', [DataSourceConnectionController::class, 'store'])->name('data-source-connections.store');
+        Route::patch('data-sources/connections/{dataSourceConnection}', [DataSourceConnectionController::class, 'update'])->name('data-source-connections.update');
+        Route::post('data-sources/connections/{dataSourceConnection}/pull-token', [DataSourceConnectionController::class, 'rotate'])->name('data-source-connections.rotate');
+        Route::delete('data-sources/connections/{dataSourceConnection}', [DataSourceConnectionController::class, 'destroy'])->name('data-source-connections.destroy');
         Route::put('data-sources/{dataSource}', [DataSourceController::class, 'update'])->name('data-sources.update');
         Route::post('data-sources/{dataSource}/fetch', [DataSourceController::class, 'fetch'])->middleware('throttle:10,1')->name('data-sources.fetch');
         Route::delete('data-sources/{dataSource}', [DataSourceController::class, 'destroy'])->name('data-sources.destroy');

@@ -23,7 +23,7 @@ final class ScreenFile
     public const int MAX_KILOBYTES = 256;
 
     /**
-     * @return array{project: string, environment: string, slug?: string, name?: string}
+     * @return array{project: string, environment: string, slug?: string, name?: string, url_hash?: string}
      */
     public static function checkKey(HealthCheck $check, string $project): array
     {
@@ -31,6 +31,8 @@ final class ScreenFile
             'project' => $project,
             'environment' => $check->environment,
             ...($check->slug !== null ? ['slug' => $check->slug] : ['name' => $check->displayName()]),
+            // A name made from the host says too little: two checks can share it. Hashed, as an address can hold a secret.
+            ...($check->slug === null && $check->name === null && is_string($check->setting('url')) ? ['url_hash' => hash('sha256', $check->setting('url'))] : []),
         ];
     }
 

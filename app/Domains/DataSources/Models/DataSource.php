@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Models;
 
+use App\Domains\DataSources\Eloquent\Builders\DataSourceBuilder;
 use App\Domains\DataSources\Enums\DataSourceFormat;
+use App\Domains\DataSources\Enums\DataSourceShape;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
 use Database\Factories\DataSourceFactory;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * An external endpoint of a project that Lumberjack fetches every interval, for screen
@@ -39,15 +43,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $last_status_code
  * @property string|null $last_error
  * @property string|null $last_body
+ * @property string|null $key
+ * @property string $environment
+ * @property DataSourceShape|null $shape
+ * @property int|null $cache_seconds
+ * @property int|null $data_source_connection_id
+ * @property-read DataSourceConnection|null $connection
+ * @property CarbonImmutable|null $archived_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
 #[Fillable([
     'project_id', 'name', 'url', 'format', 'headers', 'interval_minutes', 'timeout_s', 'next_fetch_at',
     'last_fetched_at', 'last_ok_at', 'last_status_code', 'last_error', 'last_body',
+    'key', 'environment', 'shape', 'cache_seconds', 'data_source_connection_id', 'archived_at',
 ])]
 #[Hidden(['headers', 'last_body'])]
 #[UseFactory(DataSourceFactory::class)]
+#[UseEloquentBuilder(DataSourceBuilder::class)]
 class DataSource extends Model
 {
     /** @use HasFactory<DataSourceFactory> */
@@ -63,6 +76,18 @@ class DataSource extends Model
         return ['uuid'];
     }
 
+    /** @return HasMany<DataSourceWindow, $this> */
+    public function windows(): HasMany
+    {
+        return $this->hasMany(DataSourceWindow::class);
+    }
+
+    /** @return BelongsTo<DataSourceConnection, $this> */
+    public function connection(): BelongsTo
+    {
+        return $this->belongsTo(DataSourceConnection::class, 'data_source_connection_id');
+    }
+
     public function getRouteKeyName(): string
     {
         return 'uuid';
@@ -76,6 +101,9 @@ class DataSource extends Model
             'next_fetch_at' => 'datetime',
             'last_fetched_at' => 'datetime',
             'last_ok_at' => 'datetime',
+            'shape' => DataSourceShape::class,
+            'cache_seconds' => 'integer',
+            'archived_at' => 'datetime',
         ];
     }
 

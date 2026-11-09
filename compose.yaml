@@ -29,9 +29,13 @@ services:
             REDIS_PASSWORD: ${REDIS_PASSWORD:-}
             # The reverse proxy in front: a proxy on this server or in a Docker network connects from 172.16.0.0/12.
             TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,172.16.0.0/12}
-            # Queue workers: ingest handles incoming telemetry, background the rest.
+            # Queue workers: ingest handles incoming telemetry, pull fetches from connected apps, background the rest.
             HORIZON_INGEST_PROCESSES: ${HORIZON_INGEST_PROCESSES:-2}
             HORIZON_BACKGROUND_PROCESSES: ${HORIZON_BACKGROUND_PROCESSES:-2}
+            HORIZON_PULL_PROCESSES: ${HORIZON_PULL_PROCESSES:-2}
+            LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE: ${LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE:-false}
+            LUMBERJACK_HEALTH_ALLOW_PRIVATE: ${LUMBERJACK_HEALTH_ALLOW_PRIVATE:-false}
+            ALERTS_WEBHOOKS_ALLOW_PRIVATE: ${ALERTS_WEBHOOKS_ALLOW_PRIVATE:-false}
             MAIL_MAILER: ${MAIL_MAILER:-smtp}
             MAIL_HOST: ${MAIL_HOST:-}
             MAIL_PORT: ${MAIL_PORT:-587}

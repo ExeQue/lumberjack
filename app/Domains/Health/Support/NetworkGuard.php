@@ -99,12 +99,12 @@ class NetworkGuard
      * and first $maxBytes. Never streamed, as only curl applies the pin; so the timeout
      * set on $request is one for the whole request, not for each read.
      */
-    public function send(PendingRequest $request, string $method, string $url, int $maxBytes): Response
+    public function send(PendingRequest $request, string $method, string $url, int $maxBytes, ?bool $allowPrivate = null): Response
     {
         $body = new CappedStream($maxBytes);
 
         try {
-            return $request->withOptions([...$this->pin($url), 'sink' => StreamWrapper::getResource($body)])->send($method, $url);
+            return $request->withOptions([...$this->pin($url, $allowPrivate), 'sink' => StreamWrapper::getResource($body)])->send($method, $url);
         } catch (RequestException $e) {
             // Cut off on an error status: the status is the answer.
             return $e->response;

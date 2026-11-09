@@ -106,7 +106,45 @@ In the screen designer, pick the widget, then the source under **Data source**:
 Charts read the source's history: each answer up to 64 KB is kept, 30 days by default.
 See [retention](./projects#retention), under **Data source history**.
 
+## Connected sources
+
+An app using the Laravel package can offer its own sources: a figure, a series, a list or a
+table, computed by the app for the period a screen shows. See
+[data sources in the package](https://github.com/ExeQue/laravel-lumberjack/blob/main/docs/data-sources.md).
+
+1. Under **From your apps**, choose **Connect app**. Give the environment and the https address
+   of the endpoint, such as `https://your-app.example/lumberjack/datasources`.
+2. The pull token is shown once. Set it as `LUMBERJACK_PULL_TOKEN` in the app.
+3. Lumberjack asks the app every five minutes which sources it has. Until it answers, the
+   connection reads **Waiting for the app**.
+
+Nothing goes through the agent: Lumberjack pulls it all, signing every call with the token,
+which never travels itself. It only uses https, and the app answers 404 to anything else. A
+source is pulled one per call, only while a screen shows that period and about 12 minutes
+after, every five minutes or as often as the app caches it (`#[CacheFor]`), up to once a day and at
+least once per the length of the period.
+One app gets at most four pulls queued per minute, so with many sources on screens they refresh less often.
+An app that moved gets its new address with **Change address**; its token, sources and widgets stay.
+A failed pull is tried again after five minutes, then 10, 20, 40 and every 80 minutes until it answers.
+A private address is refused even with `LUMBERJACK_HEALTH_ALLOW_PRIVATE` on.
+`LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE=true` allows it.
+
+**Rotate token** makes a new one. Pulls go on with the one the app holds, and change over by
+themselves within five minutes of the app answering to the new one.
+
+| Status              | Meaning                                                                                                                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connected           | Pulls work for what screens show now, or none of its periods is on a screen. |
+| Waiting for the app | It has never given a valid answer: it is not deployed with the token yet, or the address is wrong. The reason is shown.                                                                            |
+| Failing             | The last call for a period on a screen failed; the reason is shown under it. A screen keeps what it last got, with its real age.                                                                                            |
+| No longer offered   | A complete list from the app no longer has this source. It comes back if it returns, or can be removed. An app that lists nothing at all archives nothing, as an empty list is more often a fault. |
+
+Each connection is one environment, so the same key can exist in several.
+
 ## Limits
+
+An app can offer 200 sources and a project hold 1000 connected ones, counting those no longer offered until removed or 30 days old, and 20 connections. Past that, the connection says what was left out. The table is for endpoints added by hand. A connected source follows no redirects, may answer
+up to 4 MB, and keeps up to 256 KB per period.
 
 | What                   | Limit                                         |
 | ---------------------- | --------------------------------------------- |

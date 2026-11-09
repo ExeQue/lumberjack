@@ -7,6 +7,7 @@ use App\Domains\DataSources\Http\Controllers\DataSourceController;
 use App\Domains\DataSources\Http\Requests\SaveDataSourceRequest;
 use App\Domains\DataSources\Jobs\FetchDataSource;
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\DataSources\Policies\DataSourcePolicy;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Models\Screen;
@@ -80,7 +81,7 @@ describe('the page', function () {
         $screen = Screen::factory()->for($this->project->team)->create();
 
         $response = $this->actingAs($this->member)->get(route('screens.edit', $screen))
-            ->assertInertia(fn (Assert $page) => $page->where('data_sources', [['uuid' => $this->source->uuid, 'name' => 'Orders API', 'format' => 'json', 'project' => $this->project->name]]));
+            ->assertInertia(fn (Assert $page) => $page->where('data_sources', [['uuid' => $this->source->uuid, 'name' => 'Orders API', 'format' => 'json', 'shape' => null, 'environment' => null, 'project' => $this->project->name]]));
 
         expect($response->getContent())->not->toContain('t0p-s3cret')
             ->and($response->getContent())->not->toContain('example.com/stats.json');
@@ -231,4 +232,57 @@ describe('who may change sources', function () {
         'fetch' => ['post', 'data-sources.fetch'],
         'delete' => ['delete', 'data-sources.destroy'],
     ]);
+});
+
+describe('connected sources', function () {
+    beforeEach(fn () => $this->connected = DataSource::factory()->for($this->project)->connected()->create());
+
+    it('cannot be edited, fetched by hand or removed while the app offers them', function () {
+        $this->actingAs($this->admin);
+
+        $this->put(route('data-sources.update', [$this->project, $this->connected]), ($this->form)())->assertNotFound();
+        $this->post(route('data-sources.fetch', [$this->project, $this->connected]))->assertNotFound();
+        $this->delete(route('data-sources.destroy', [$this->project, $this->connected]))->assertNotFound();
+    });
+
+    it('can be removed once the app no longer offers them', function () {
+        $this->connected->update(['archived_at' => now()]);
+
+        $this->actingAs($this->admin)->delete(route('data-sources.destroy', [$this->project, $this->connected]))->assertRedirect();
+
+        expect(DataSource::query()->whereKey($this->connected->id)->exists())->toBeFalse();
+    });
+
+    it('cannot be created by hand', function () {
+        $this->actingAs($this->admin)->post(route('data-sources.store', $this->project), ($this->form)(['format' => DataSourceFormat::Connected->value]))->assertSessionHasErrors('format');
+    });
+
+    it('read failing only for a period still being shown, with its reason', function () {
+        $window = DataSourceWindow::factory()->forSource($this->connected)->create(['error' => 'Timed out', 'requested_at' => now()]);
+        $status = fn (Assert $page, string $status, ?string $error) => $page->where('connected.0.status', $status)->where('connected.0.last_error', $error);
+
+        $this->actingAs($this->member)->get(route('data-sources.index', $this->project))->assertInertia(fn (Assert $page) => $status($page, 'failing', 'Timed out'));
+
+        $window->update(['requested_at' => now()->subHour()]);
+
+        $this->get(route('data-sources.index', $this->project))->assertInertia(fn (Assert $page) => $status($page, 'connected', null));
+    });
+
+    it('are listed apart, with their connection and no token', function () {
+        $response = $this->actingAs($this->member)->get(route('data-sources.index', $this->project))->assertInertia(fn (Assert $page) => $page
+            ->has('sources', 1)
+            ->where('connected.0.key', 'orders:total')
+            ->where('connected.0.status', 'connected')
+            ->where('connections.0.environment', 'production')
+            ->where('connections.0.status', 'waiting')
+            ->missing('connections.0.pull_token'));
+
+        expect($response->getContent())->not->toContain('lj_pull_test');
+    });
+
+    it('still shows the page after APP_KEY changed', function () {
+        DB::table('data_source_connections')->update(['pull_token' => 'not-encrypted']);
+
+        $this->actingAs($this->admin)->get(route('data-sources.index', $this->project))->assertOk();
+    });
 });

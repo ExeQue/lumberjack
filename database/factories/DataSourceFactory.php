@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Domains\DataSources\Enums\DataSourceFormat;
+use App\Domains\DataSources\Enums\DataSourceShape;
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -24,6 +26,27 @@ class DataSourceFactory extends Factory
             'interval_minutes' => 5,
             'timeout_s' => 10,
         ];
+    }
+
+    /**
+     * A source a connected app offers, on the project's connection (made when it has none).
+     */
+    public function connected(string $key = 'orders:total', DataSourceShape $shape = DataSourceShape::Number): static
+    {
+        return $this->state(fn (): array => [
+            'name' => 'Orders',
+            'url' => 'https://app.example.com/lumberjack/data-sources',
+            'format' => DataSourceFormat::Connected,
+            'key' => $key,
+            'shape' => $shape,
+            'environment' => 'production',
+            'data_source_connection_id' => fn (array $attributes): int => (DataSourceConnection::query()->where('project_id', $attributes['project_id'])->first() ?? DataSourceConnection::factory()->create(['project_id' => $attributes['project_id']]))->id,
+        ]);
+    }
+
+    public function archived(): static
+    {
+        return $this->state(fn (): array => ['archived_at' => now()]);
     }
 
     /**

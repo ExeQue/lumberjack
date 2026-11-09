@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Actions;
 
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Support\ScreenFile;
@@ -30,9 +31,15 @@ class ExportScreenAction
         $scope = fn (array $scope): array => array_key_exists('projects', $scope)
             ? [...$scope, 'projects' => array_values(array_filter(array_map(fn (mixed $uuid): ?string => $projects[$uuid] ?? null, (array) $scope['projects'])))]
             : $scope;
-        $options = fn (array $options): array => array_key_exists('checks', $options)
-            ? [...$options, 'checks' => array_values(array_filter(array_map(fn (mixed $uuid): ?array => $checks[$uuid] ?? null, (array) $options['checks'])))]
-            : $options;
+        $connected = DataSource::query()->whereIn('project_id', array_keys($slugs))->whereConnected()->get()
+            ->mapWithKeys(fn (DataSource $s): array => [$s->uuid => ['project' => (string) $slugs[$s->project_id], 'environment' => $s->environment, 'key' => $s->key]])
+            ->all();
+        $options = fn (array $options): array => [
+            ...$options,
+            ...(array_key_exists('checks', $options) ? ['checks' => array_values(array_filter(array_map(fn (mixed $uuid): ?array => $checks[$uuid] ?? null, (array) $options['checks'])))] : []),
+            // A connected source has the same key wherever the app is connected.
+            ...(is_string($options['data_source'] ?? null) && isset($connected[$options['data_source']]) ? ['data_source' => $connected[$options['data_source']]] : []),
+        ];
         $portable = fn (array $item): array => [
             ...$item,
             ...(isset($item['scope']) ? ['scope' => $scope((array) $item['scope'])] : []),

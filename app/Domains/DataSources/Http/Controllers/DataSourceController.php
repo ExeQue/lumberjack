@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Http\Controllers;
 
+use App\Domains\DataSources\Actions\DispatchDueDataSourceWindowsAction;
 use App\Domains\DataSources\Actions\SaveDataSourceAction;
+use App\Domains\DataSources\Enums\DataSourceFormat;
 use App\Domains\DataSources\Http\Requests\SaveDataSourceRequest;
 use App\Domains\DataSources\Jobs\FetchDataSource;
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
 use Illuminate\Http\RedirectResponse;
@@ -31,7 +34,33 @@ class DataSourceController
 
         return Inertia::render('data-sources/index', [
             'project' => $presenter->header($project, $request->user()),
-            'sources' => fn (): array => $project->dataSources()->orderBy('name')->get()->map(fn (DataSource $s): array => [
+            'connections' => fn (): array => $project->dataSourceConnections()->orderBy('environment')->get()->map(fn (DataSourceConnection $c): array => [
+                'uuid' => $c->uuid,
+                'environment' => $c->environment,
+                'url' => $c->url,
+                'status' => match (true) {
+                    $c->last_ok_at === null => 'waiting',
+                    $c->last_error !== null => 'failing',
+                    default => 'connected',
+                },
+                'last_ok_at' => $c->last_ok_at?->toIso8601String(),
+                'last_error' => $c->last_error,
+            ])->all(),
+            'connected' => fn (): array => $project->dataSources()->whereConnected()->with(['windows' => fn ($query) => $query->whereNotNull('error')->where('requested_at', '>=', now()->subMinutes(DispatchDueDataSourceWindowsAction::ACTIVE_MINUTES))->latest('id')])->orderBy('environment')->orderBy('name')->get()->map(fn (DataSource $s): array => [
+                'uuid' => $s->uuid,
+                'name' => $s->name,
+                'key' => $s->key,
+                'environment' => $s->environment !== '' ? $s->environment : null,
+                'shape' => $s->shape?->value,
+                'status' => match (true) {
+                    $s->archived_at !== null => 'archived',
+                    $s->windows->isNotEmpty() => 'failing',
+                    default => 'connected',
+                },
+                'last_ok_at' => $s->last_ok_at?->toIso8601String(),
+                'last_error' => $s->windows->first()?->error,
+            ])->all(),
+            'sources' => fn (): array => $project->dataSources()->whereNotConnected()->orderBy('name')->get()->map(fn (DataSource $s): array => [
                 'uuid' => $s->uuid,
                 'name' => $s->name,
                 'url' => $s->maskedUrl(),
@@ -60,6 +89,7 @@ class DataSourceController
     public function update(SaveDataSourceRequest $request, Project $project, DataSource $dataSource, SaveDataSourceAction $action): RedirectResponse
     {
         Gate::authorize('update', $dataSource);
+        abort_if($dataSource->format === DataSourceFormat::Connected, 404);
 
         $action->execute($project, $dataSource, $request->validated());
 
@@ -69,6 +99,7 @@ class DataSourceController
     public function fetch(Project $project, DataSource $dataSource): RedirectResponse
     {
         Gate::authorize('update', $dataSource);
+        abort_if($dataSource->format === DataSourceFormat::Connected, 404);
 
         FetchDataSource::dispatch($dataSource);
 
@@ -78,6 +109,8 @@ class DataSourceController
     public function destroy(Project $project, DataSource $dataSource): RedirectResponse
     {
         Gate::authorize('update', $dataSource);
+        // A connected source comes and goes with its app; only one the app dropped can be removed.
+        abort_if($dataSource->format === DataSourceFormat::Connected && $dataSource->archived_at === null, 404);
 
         $dataSource->delete();
 

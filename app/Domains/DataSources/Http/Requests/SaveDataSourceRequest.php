@@ -54,7 +54,7 @@ class SaveDataSourceRequest extends FormRequest
                     $fail(__('data_sources.url_credentials'));
                 }
             }],
-            'format' => ['required', Rule::enum(DataSourceFormat::class)],
+            'format' => ['required', Rule::enum(DataSourceFormat::class)->except(DataSourceFormat::Connected)],
             'interval_minutes' => ['required', 'integer', 'min:1', 'max:1440'],
             'timeout_s' => ['required', 'integer', 'min:1', 'max:'.RunHealthCheckAction::MAX_TIMEOUT_S],
             'headers' => ['nullable', 'array', 'max:'.self::MAX_HEADERS],

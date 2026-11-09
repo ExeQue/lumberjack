@@ -4,6 +4,18 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- Connected data sources: connect an app using the Laravel package under **Data sources**, and Lumberjack pulls the figures, series, lists and tables it offers, to show on a screen. Pulled only over https, signed with a pull token per connection, one source per call, and only for what a screen shows.
+
+### Changed
+
+- The name of an HTTP check without one of its own is its host, not its whole address.
+
+### Fixed
+
+- Health check chips on a screen could read just "HTTP:" or "SSL:" with no address.
+
 ## [0.1.10] - 2026-11-09
 
 ### Added

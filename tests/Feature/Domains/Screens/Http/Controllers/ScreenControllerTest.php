@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\Project;
@@ -203,6 +204,14 @@ describe('the pages', function () {
             ->has('environments')
             ->has('checks')
             ->where('limits.max_cols', Screen::MAX_COLS));
+    });
+
+    it('names a check without a name of its own by what it looks at', function () {
+        HealthCheck::query()->delete();
+        HealthCheck::factory()->for($this->project)->monitored()->create(['name' => null]);
+
+        $this->actingAs($this->user)->get(route('screens.edit', $this->screen))
+            ->assertInertia(fn (Assert $page) => $page->where('checks.0.name', 'HTTP: example.com'));
     });
 
     it('reads the environments of all the team\'s projects in the same few queries', function () {

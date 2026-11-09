@@ -153,7 +153,7 @@ class FetchDataSourceAction
             ->accept(match ($source->format) {
                 DataSourceFormat::Prometheus => 'text/plain;version=0.0.4;q=1.0, */*;q=0.1',
                 DataSourceFormat::Ical => 'text/calendar, */*;q=0.1',
-                DataSourceFormat::Json => 'application/json',
+                DataSourceFormat::Json, DataSourceFormat::Connected => 'application/json',
             })
             ->withHeaders($headers), 'GET', $url, self::maxBytes($source) + 1);
     }

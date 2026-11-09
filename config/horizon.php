@@ -236,6 +236,20 @@ return [
             'timeout' => 3700,
             'nice' => 0,
         ],
+        'pulls' => [
+            'connection' => 'redis',
+            'queue' => ['data-sources'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'size',
+            'minProcesses' => 1,
+            'maxProcesses' => 2,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256,
+            'tries' => 1,
+            'timeout' => 90,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -249,10 +263,16 @@ return [
             'background' => [
                 'maxProcesses' => (int) env('HORIZON_BACKGROUND_PROCESSES', 2),
             ],
+            'pulls' => [
+                'maxProcesses' => (int) env('HORIZON_PULL_PROCESSES', 2),
+            ],
         ],
 
         'local' => [
             'ingest' => [
+                'maxProcesses' => 2,
+            ],
+            'pulls' => [
                 'maxProcesses' => 2,
             ],
             'background' => [

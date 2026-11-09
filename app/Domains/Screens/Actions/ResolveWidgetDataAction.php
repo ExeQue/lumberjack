@@ -8,7 +8,10 @@ use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\QueueAlertThreshold;
+use App\Domains\DataSources\Enums\DataSourceFormat;
+use App\Domains\DataSources\Enums\DataSourceShape;
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Queries\ConnectedDataSourceQuery;
 use App\Domains\DataSources\Queries\DataSourceValuesQuery;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Models\HealthCheckHost;
@@ -92,6 +95,7 @@ class ResolveWidgetDataAction
         private readonly AgentMetricsQuery $agents,
         private readonly HealthChecksQuery $health,
         private readonly DataSourceValuesQuery $dataSources,
+        private readonly ConnectedDataSourceQuery $connectedSources,
     ) {
         $this->memo = new LruCache(200);
     }
@@ -728,6 +732,11 @@ class ResolveWidgetDataAction
     private function external(Team $team, WidgetType $type, WidgetScope $scope, array $options, array $limits, bool $aggregatesOnly): array
     {
         $source = $this->dataSource($team, $options);
+
+        if ($source?->format === DataSourceFormat::Connected) {
+            return $this->connected($team, $source, $type, $scope, $options, $limits, $aggregatesOnly);
+        }
+
         $path = (string) ($options['json_path'] ?? '');
         $window = MetricWindow::forPeriod($scope->period);
         $value = $source !== null ? $this->dataSources->number($source, $path) : null;
@@ -775,6 +784,47 @@ class ResolveWidgetDataAction
         };
 
         return ['as_of' => $source?->last_ok_at?->toIso8601String(), ...$data];
+    }
+
+    /**
+     * A source a connected app offers: what it last answered for the screen's period, for the
+     * widgets its shape fits. A share link without names shows no names, as for External JSON.
+     *
+     * @param  array<string, mixed>  $options
+     * @param  array{amber: float|null, red: float|null, low_is_bad: bool}  $limits
+     * @return array<string, mixed>
+     */
+    private function connected(Team $team, DataSource $source, WidgetType $type, WidgetScope $scope, array $options, array $limits, bool $aggregatesOnly): array
+    {
+        $window = $source->archived_at === null ? $this->connectedSources->window($source, $scope->period) : null;
+        $value = $window !== null && $source->shape === DataSourceShape::Number && is_numeric($window->data) ? (float) $window->data : null;
+
+        $data = match ($type) {
+            WidgetType::Stat => ['value' => $value, 'previous' => null, 'change' => null, 'state' => $value !== null ? $this->state($value, $limits) : null, 'limits' => $limits, 'sparkline' => null],
+            WidgetType::Gauge => [
+                'value' => $value,
+                'min' => $this->number($options['min'] ?? null) ?? 0.0,
+                'max' => $this->number($options['max'] ?? null) ?? max(1.0, ($limits['red'] ?? 0) * 1.5, $value ?? 0),
+                'state' => $value !== null ? $this->state($value, $limits) : null,
+                'limits' => $limits,
+            ],
+            WidgetType::Chart => [
+                'interval' => MetricWindow::forPeriod($scope->period)->interval(),
+                'red' => $this->number($options['red'] ?? null),
+                'series' => $window !== null && $source->shape === DataSourceShape::Series ? [['name' => $aggregatesOnly ? 'source 1' : $source->name, 'points' => $this->connectedSources->series($window)]] : [],
+            ],
+            WidgetType::List => [
+                'columns' => ['label', 'value'],
+                'rows' => collect($window !== null && in_array($source->shape, [DataSourceShape::List, DataSourceShape::Table], true) ? $this->connectedSources->rows($window) : [])
+                    ->map(fn (array $r): array => ['project' => $team->projects->find($source->project_id)?->slug, ...$r, 'state' => is_float($r['value']) ? $this->state($r['value'], $limits) : null])
+                    ->when((bool) ($options['only_problems'] ?? false))->filter(fn (array $r): bool => in_array($r['state'], ['amber', 'red'], true))
+                    ->take(max(1, min(100, (int) ($options['limit'] ?? self::LIST_LIMIT))))->values()
+                    ->map(fn (array $r, int $i): array => $aggregatesOnly ? [...$r, 'label' => '#'.($i + 1), 'value' => is_string($r['value']) ? null : $r['value']] : $r)->all(),
+            ],
+            default => [],
+        };
+
+        return ['as_of' => $window?->fetched_at?->toIso8601String(), ...$data];
     }
 
     /**

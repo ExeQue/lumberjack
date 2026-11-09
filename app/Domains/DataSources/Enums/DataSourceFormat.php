@@ -14,4 +14,7 @@ enum DataSourceFormat: string
     case Json = 'json';
     case Prometheus = 'prometheus';
     case Ical = 'ical';
+
+    /** Offered by a connected app and pulled by signature; never added by hand. */
+    case Connected = 'connected';
 }

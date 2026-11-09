@@ -197,11 +197,11 @@ class ScreenPresenter
         return [
             ...$this->catalog(),
             'environments' => $this->environments->forProjects($projects),
-            'checks' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->orderBy('name')->orderBy('slug')->get(['uuid', 'project_id', 'name', 'slug', 'type'])
-                ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name])->values()->all(),
+            'checks' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->get(['uuid', 'project_id', 'name', 'slug', 'type', 'config'])
+                ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name])->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all(),
             // External values pick one; names and formats only, never a URL or header.
-            'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->orderBy('name')->get(['uuid', 'project_id', 'name', 'format'])
-                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'format' => $s->format->value, 'project' => $projects->find($s->project_id)?->name])->values()->all(),
+            'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->orderBy('name')->get(['uuid', 'project_id', 'name', 'format', 'shape', 'environment'])
+                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name])->values()->all(),
             // Names a filter can pick from, so a queue, host, domain or database check is chosen, not typed.
             'filters' => [
                 'queue' => QueueSample::query()->whereIn('project_id', $projects->modelKeys())->where('sampled_at', '>=', now()->subDays(7))

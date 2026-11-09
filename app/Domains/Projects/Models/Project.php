@@ -6,6 +6,7 @@ namespace App\Domains\Projects\Models;
 
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Label;
@@ -109,6 +110,12 @@ class Project extends Model
     public function healthChecks(): HasMany
     {
         return $this->hasMany(HealthCheck::class);
+    }
+
+    /** @return HasMany<DataSourceConnection, $this> */
+    public function dataSourceConnections(): HasMany
+    {
+        return $this->hasMany(DataSourceConnection::class);
     }
 
     /** @return HasMany<DataSource, $this> */

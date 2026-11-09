@@ -24,7 +24,7 @@ class DispatchDueDataSourcesAction
         $queued = 0;
 
         // Only what the claim needs: the job loads the rest, headers too, when it runs.
-        DataSource::query()->select(['id', 'interval_minutes'])->tap($due)->chunkById(500, function (Collection $sources) use ($due, &$queued): void {
+        DataSource::query()->select(['id', 'interval_minutes'])->whereNotConnected()->tap($due)->chunkById(500, function (Collection $sources) use ($due, &$queued): void {
             foreach ($sources as $source) {
                 // Claimed only if still due, so two schedulers never both queue it.
                 $claimed = DataSource::query()->whereKey($source->id)->tap($due)

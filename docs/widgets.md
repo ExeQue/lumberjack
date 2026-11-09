@@ -300,6 +300,13 @@ it ends.
 Rows are grouped by day, all-day events first, then by start time. An event happening now
 says **Now** in amber. A list over more than one day shows the weekday before the time.
 
+### Connected data sources
+
+A source your app offers (see [Connected sources](data-sources.md#connected-sources)) is
+picked under **External JSON** like any other, with no paths to set. Its shape decides
+where it is offered: a number on a stat or gauge, a series on a chart, a list or table on a
+list, where a table's first column is the label and its second the value.
+
 ### External JSON
 
 A stat, gauge, chart or list can read a project's data source (**Data sources** on the

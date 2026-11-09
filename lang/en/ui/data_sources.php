@@ -10,7 +10,43 @@ return [
     'list_hint' => 'JSON, Prometheus or iCalendar endpoints Lumberjack fetches on their interval. Screen widgets read a number or rows from the latest response, with JSONPath or a Prometheus selector, charts from the history, and a calendar list its events.',
     'empty_title' => 'No data sources yet',
     'empty_body' => 'Add a JSON or Prometheus endpoint to show its figures on a screen: a stat, a gauge, a chart or a list.',
-    'formats' => ['json' => 'JSON', 'prometheus' => 'Prometheus', 'ical' => 'iCalendar (.ics)'],
+    'formats' => ['json' => 'JSON', 'prometheus' => 'Prometheus', 'ical' => 'iCalendar (.ics)', 'connected' => 'Connected'],
+    'connected' => [
+        'title' => 'From your apps',
+        'hint' => 'Apps using the Laravel package. Lumberjack asks them which sources they offer, and pulls a source only while a screen shows it.',
+        'empty_title' => 'No apps connected',
+        'empty_body' => 'Connect an app to show its figures on a screen.',
+        'no_sources' => 'No sources yet. They appear here once the app answers.',
+        // Button
+        'connect' => 'Connect app',
+        'form_title' => 'Connect an app',
+        'form_setup' => 'A pull token is shown once when you connect. Set it as LUMBERJACK_PULL_TOKEN in the app.',
+        'environment' => 'Environment',
+        'url' => 'Address',
+        'url_hint' => 'The APP_URL of the app followed by the path of the endpoint, by default /lumberjack/datasources.',
+        // Button
+        'change_url' => 'Change address',
+        'change_url_body' => 'For an app that moved. Its token and sources stay, and so do the widgets that show them.',
+        // Button
+        'save_url' => 'Save address',
+        // Button
+        'rotate' => 'Rotate token',
+        'rotate_question' => 'Make a new pull token? Pulls go on with the current one until the app has the new one.',
+        // Button
+        'disconnect' => 'Disconnect',
+        'disconnect_question' => 'Disconnect :environment? Its sources are removed, and widgets that show them go empty.',
+        // Button
+        'remove' => 'Remove',
+        'remove_question' => 'Remove :source? Widgets that show it go empty.',
+        'columns' => ['key' => 'Key', 'shape' => 'Shape', 'environment' => 'Environment'],
+        'shapes' => ['number' => 'Number', 'series' => 'Series', 'list' => 'List', 'table' => 'Table'],
+        'statuses' => [
+            'connected' => 'Connected',
+            'waiting' => 'Waiting for the app',
+            'failing' => 'Failing',
+            'archived' => 'No longer offered',
+        ],
+    ],
     'never' => 'Never',
     'last_ok' => 'Last OK',
     'every' => '{1} Every minute|[2,*] Every :count min',

@@ -94,9 +94,13 @@ the mail settings in `lumberjack/.env.docker`.
                 REDIS_PASSWORD: ${REDIS_PASSWORD:-}
                 # The reverse proxy in front: a proxy on this server or in a Docker network connects from 172.16.0.0/12.
                 TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,172.16.0.0/12}
-                # Queue workers: ingest handles incoming telemetry, background the rest.
+                # Queue workers: ingest handles incoming telemetry, pull fetches from connected apps, background the rest.
                 HORIZON_INGEST_PROCESSES: ${HORIZON_INGEST_PROCESSES:-2}
                 HORIZON_BACKGROUND_PROCESSES: ${HORIZON_BACKGROUND_PROCESSES:-2}
+                HORIZON_PULL_PROCESSES: ${HORIZON_PULL_PROCESSES:-2}
+                LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE: ${LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE:-false}
+                LUMBERJACK_HEALTH_ALLOW_PRIVATE: ${LUMBERJACK_HEALTH_ALLOW_PRIVATE:-false}
+                ALERTS_WEBHOOKS_ALLOW_PRIVATE: ${ALERTS_WEBHOOKS_ALLOW_PRIVATE:-false}
                 MAIL_MAILER: ${MAIL_MAILER:-smtp}
                 MAIL_HOST: ${MAIL_HOST:-}
                 MAIL_PORT: ${MAIL_PORT:-587}
@@ -181,10 +185,11 @@ the mail settings in `lumberjack/.env.docker`.
     # Port on the host the reverse proxy connects to.
     LUMBERJACK_PORT=8080
 
-    # Queue workers at most: ingest handles incoming telemetry, background the rest.
+    # Queue workers at most: ingest handles incoming telemetry, pull fetches from connected apps, background the rest.
     # Raise them on a busy server.
     HORIZON_INGEST_PROCESSES=2
     HORIZON_BACKGROUND_PROCESSES=2
+    HORIZON_PULL_PROCESSES=2
 
     # Mail, for invitations, password resets and e-mail alerts.
     MAIL_HOST=
@@ -233,6 +238,7 @@ the mail settings in `lumberjack/.env.docker`.
 | `LUMBERJACK_PORT`                        | `8080`                             | Port on the host                                                                                                                                                                                   |
 | `HORIZON_INGEST_PROCESSES`               | `2`                                | Most workers for incoming telemetry                                                                                                                                                                |
 | `HORIZON_BACKGROUND_PROCESSES`           | `2`                                | Most workers for everything else (alerts, pruning)                                                                                                                                                 |
+| `HORIZON_PULL_PROCESSES`                 | `2`                                | Most workers pulling data sources from connected apps                                                                                                                                              |
 | `MAIL_*`                                 |                                    | SMTP for invitations, password resets and e-mail alerts; see [Mail](./administration#mail) for the two sender addresses                                                                            |
 | `TRUSTED_PROXIES`                        | Docker ranges                      | Proxies whose `X-Forwarded-*` headers are trusted: `127.0.0.1,172.16.0.0/12`. Comma separated, `*` for any (not recommended)                                                                       |
 | `LUMBERJACK_MIGRATE`                     | `true`                             | Run database migrations on start                                                                                                                                                                   |
@@ -240,6 +246,7 @@ the mail settings in `lumberjack/.env.docker`.
 | `SESSION_SECURE_COOKIE`                  | from `APP_URL`                     | `true` when `APP_URL` starts with `https://`: the session cookie is then only sent over HTTPS                                                                                                      |
 | `ALERTS_WEBHOOKS_ALLOW_PRIVATE`          | `false`                            | Allow alert channels to [private addresses](./alerts#channels)                                                                                                                                     |
 | `LUMBERJACK_HEALTH_ALLOW_PRIVATE`        | `false`                            | Allow health checks of [private addresses](./health#private-networks)                                                                                                                              |
+| `LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE`  | `false`                            | Let connected data sources pull from private addresses.                                                                                                                                            |
 | `LUMBERJACK_UPDATE_CHECK`                | `true`                             | Ask GitHub for [newer releases](./administration#update-check)                                                                                                                                     |
 | `REVERB_CLIENT_HOST`, `_PORT`, `_SCHEME` | from `APP_URL`                     | Where browsers open the live-update WebSocket, when it is not `APP_URL`                                                                                                                            |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`  | generated                          | Keys that sign [browser notifications](./teams#browser-notifications). Generated automatically. Set them to keep them across a database restore, see [Command line](./administration#command-line) |
@@ -368,11 +375,12 @@ output.
 | horizon   | Queue workers                                           |
 | scheduler | `schedule:work`                                         |
 
-Horizon runs two groups of workers:
+Horizon runs three groups of workers:
 
 - **Ingest** workers take the `ingest` queue (`HORIZON_INGEST_PROCESSES`).
 - **Background** workers take `alerts`, `default` and `health`, in that order
   (`HORIZON_BACKGROUND_PROCESSES`).
+- **Pull** workers take `data-sources`, the pulls from connected apps (`HORIZON_PULL_PROCESSES`).
 
 Reverb needs no settings. `REVERB_APP_ID`, `REVERB_APP_KEY` and `REVERB_APP_SECRET`
 override its generated credentials.

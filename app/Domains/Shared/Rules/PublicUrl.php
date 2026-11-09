@@ -18,7 +18,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 final class PublicUrl implements ValidationRule
 {
     /**
-     * @param  bool|null  $allowPrivate  null takes alerts.webhooks.allow_private; data sources pass health.allow_private
+     * @param  bool|null  $allowPrivate  null takes alerts.webhooks.allow_private; connected apps pass health.data_sources_allow_private
      */
     public function __construct(
         private readonly ?bool $allowPrivate = null,

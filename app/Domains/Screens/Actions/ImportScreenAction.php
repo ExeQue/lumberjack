@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Actions;
 
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Screens\Data\ScreenImport;
 use App\Domains\Screens\Enums\ScreenAspect;
@@ -118,8 +119,15 @@ class ImportScreenAction
 
             foreach ((array) $given as $key) {
                 $key = is_array($key) ? $key : [];
-                $matches = $checks->filter(fn (HealthCheck $c): bool => ($slugs[$c->project_id] ?? null) === ($key['project'] ?? null)
-                    && (isset($key['slug']) ? $c->slug === $key['slug'] : (isset($key['name']) && $c->slug === null && $c->displayName() === $key['name'])));
+                $matches = $checks->filter(fn (HealthCheck $c): bool => (string) ($slugs[$c->project_id] ?? '') === (is_scalar($key['project'] ?? null) ? (string) $key['project'] : null)
+                    && (match (true) {
+                        isset($key['slug']) => $c->slug === $key['slug'],
+                        isset($key['url_hash']) => $c->slug === null && is_string($c->setting('url')) && hash('sha256', $c->setting('url')) === $key['url_hash'],
+                        default => isset($key['name']) && $c->slug === null && in_array($key['name'], [$c->displayName(), 'HTTP: '.rtrim((string) preg_replace('#^https?://#i', '', (string) $c->setting('url')), '/')], true),
+                    }));
+                // A name from an older file held the whole address, and is the surer match.
+                $exact = $matches->filter(fn (HealthCheck $c): bool => isset($key['name']) && $key['name'] === 'HTTP: '.rtrim((string) preg_replace('#^https?://#i', '', (string) $c->setting('url')), '/'));
+                $matches = $exact->isNotEmpty() ? $exact : $matches;
                 $check = $matches->firstWhere('environment', $key['environment'] ?? null) ?? $matches->first();
 
                 if ($check !== null) {
@@ -132,11 +140,31 @@ class ImportScreenAction
             return $uuids;
         };
 
+        // A connected source by its project, key and environment, or that key in another environment.
+        $connected = DataSource::query()->whereIn('project_id', array_values($projectIds))->whereConnected()->whereNotArchived()->orderBy('id')->get();
+        $resolveSource = function (array $key) use ($connected, $slugs, &$droppedChecks): ?string {
+            $matches = $connected->filter(fn (DataSource $s): bool => (string) ($slugs[$s->project_id] ?? '') === (is_scalar($key['project'] ?? null) ? (string) $key['project'] : null) && $s->key === ($key['key'] ?? null));
+            $source = $matches->firstWhere('environment', $key['environment'] ?? '') ?? $matches->first();
+
+            if ($source === null) {
+                $droppedChecks[] = ScreenFile::checkLabel(['project' => $key['project'] ?? null, 'slug' => $key['key'] ?? null]);
+            }
+
+            return $source?->uuid;
+        };
+
         $resolve = fn (array $item): array => [
             ...$item,
             ...(isset($item['scope']['projects']) && is_array($item['scope']) ? ['scope' => [...$item['scope'], 'projects' => $resolveProjects($item['scope']['projects'])]] : []),
             ...(isset($item['options']['checks']) && is_array($item['options']) ? ['options' => [...$item['options'], 'checks' => $resolveChecks($item['options']['checks'])]] : []),
         ];
+        $resolve = function (array $item) use ($resolve, $resolveSource): array {
+            $item = $resolve($item);
+
+            return is_array($item['options']['data_source'] ?? null)
+                ? [...$item, 'options' => [...$item['options'], 'data_source' => $resolveSource($item['options']['data_source'])]]
+                : $item;
+        };
 
         $widgets = [];
         $seen = [];

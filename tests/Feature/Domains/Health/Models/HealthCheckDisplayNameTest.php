@@ -24,7 +24,7 @@ describe('the name of a health check', function () {
     it('names a check Lumberjack runs from its settings', function (HealthCheckType $type, array $config, string $expected) {
         expect((new HealthCheck(['type' => $type, 'config' => $config]))->displayName())->toBe($expected);
     })->with([
-        'http' => [HealthCheckType::Http, ['url' => 'https://eazy.photo/up/'], 'HTTP: eazy.photo/up'],
+        'http' => [HealthCheckType::Http, ['url' => 'https://eazy.photo/up/'], 'HTTP: eazy.photo'],
         'ssl' => [HealthCheckType::Ssl, ['host' => 'eazy.photo'], 'SSL: eazy.photo'],
         'ssl on the default port' => [HealthCheckType::Ssl, ['host' => 'eazy.photo', 'port' => 443], 'SSL: eazy.photo'],
         'ssl on another port' => [HealthCheckType::Ssl, ['host' => 'eazy.photo', 'port' => 8443], 'SSL: eazy.photo:8443'],

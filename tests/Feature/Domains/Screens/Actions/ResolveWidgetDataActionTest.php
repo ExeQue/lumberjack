@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Domains\Alerts\Models\QueueAlertThreshold;
 use App\Domains\DataSources\Enums\DataSourceFormat;
+use App\Domains\DataSources\Enums\DataSourceShape;
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\DataSources\Support\Prometheus;
 use App\Domains\Health\Enums\HealthStatus;
 use App\Domains\Health\Models\HealthCheck;
@@ -780,5 +782,54 @@ describe('a calendar', function () {
 
         expect(($this->rows)(['data_source' => $json->uuid]))->toBe([])
             ->and(($this->rows)(['data_source' => $other->uuid]))->toBe([]);
+    });
+});
+
+describe('connected data sources', function () {
+    beforeEach(function () {
+        $this->connected = function (DataSourceShape $shape, mixed $data): array {
+            $source = DataSource::factory()->for($this->project)->connected('a:'.$shape->value, $shape)->create(['name' => 'App']);
+            DataSourceWindow::factory()->forSource($source)->answered($data)->create();
+
+            return ['data_source' => $source->uuid];
+        };
+    });
+
+    it('shows a number', function () {
+        $data = ($this->resolve)(WidgetType::Stat, 'external_json', ($this->connected)(DataSourceShape::Number, 42), new WidgetScope(period: Period::Day));
+
+        expect($data['value'])->toBe(42.0);
+    });
+
+    it('shows a series on a chart', function () {
+        $data = ($this->resolve)(WidgetType::Chart, 'external_json', ($this->connected)(DataSourceShape::Series, [['at' => 0, 'value' => 2]]), new WidgetScope(period: Period::Day));
+
+        expect($data['series'][0]['points'])->toBe([['t' => '1970-01-01T00:00:00Z', 'v' => 2.0]]);
+    });
+
+    it('shows a table by its first two columns', function () {
+        $data = ($this->resolve)(WidgetType::List, 'external_json', ($this->connected)(DataSourceShape::Table, ['columns' => ['a', 'b', 'c'], 'rows' => [['one', 5, 'x']]]), new WidgetScope(period: Period::Day));
+
+        expect($data['rows'][0])->toMatchArray(['label' => 'one', 'value' => 5.0]);
+    });
+
+    it('shows no names on a share link', function () {
+        $data = app(ResolveWidgetDataAction::class)->execute($this->project->team, WidgetType::List, 'external_json', new WidgetScope(period: Period::Day), ($this->connected)(DataSourceShape::List, [['label' => 'secret', 'value' => 'text'], ['label' => 'other', 'value' => 2]]), aggregatesOnly: true);
+
+        expect($data['rows'][0])->toMatchArray(['label' => '#1', 'value' => null])
+            ->and($data['rows'][1])->toMatchArray(['label' => '#2', 'value' => 2.0]);
+    });
+
+    it('asks for the period it shows, and asks nothing of an archived source', function () {
+        $source = DataSource::factory()->for($this->project)->connected()->archived()->create();
+
+        ($this->resolve)(WidgetType::Stat, 'external_json', ['data_source' => $source->uuid], new WidgetScope(period: Period::Day));
+
+        expect(DataSourceWindow::query()->where('data_source_id', $source->id)->exists())->toBeFalse();
+
+        $source->update(['archived_at' => null]);
+        ($this->resolve)(WidgetType::Stat, 'external_json', ['data_source' => $source->uuid], new WidgetScope(period: Period::Day));
+
+        expect(DataSourceWindow::query()->where('data_source_id', $source->id)->value('period'))->toBe('24h');
     });
 });

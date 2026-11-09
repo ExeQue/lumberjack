@@ -162,7 +162,7 @@ class HealthCheck extends Model
         $port = (int) $this->setting('port');
 
         return match ($this->type) {
-            HealthCheckType::Http => 'HTTP: '.rtrim((string) preg_replace('#^https?://#i', '', (string) $this->setting('url')), '/'),
+            HealthCheckType::Http => 'HTTP: '.parse_url((string) $this->setting('url'), PHP_URL_HOST),
             HealthCheckType::Ssl => 'SSL: '.$host.(in_array($port, [0, 443], true) ? '' : ':'.$port),
             HealthCheckType::Tcp => 'TCP: '.$host.':'.$port,
             HealthCheckType::Domain => 'Domain: '.$this->setting('domain'),

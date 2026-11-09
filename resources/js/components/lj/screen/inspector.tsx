@@ -1,3 +1,11 @@
+/** The shapes of connected source each widget can show. */
+const CONNECTED_SHAPES: Record<string, string[]> = {
+    stat: ['number'],
+    gauge: ['number'],
+    chart: ['series'],
+    list: ['list', 'table'],
+};
+
 import { Plus, Settings, X } from 'lucide-react';
 import {
     useEffect,
@@ -41,7 +49,10 @@ export type Catalog = {
     data_sources?: {
         uuid: string;
         name: string;
-        format: 'json' | 'prometheus' | 'ical';
+        format: 'json' | 'prometheus' | 'ical' | 'connected';
+        /** A connected source's shape, which decides the widgets that can show it. */
+        shape?: 'number' | 'series' | 'list' | 'table' | null;
+        environment?: string | null;
         project: string | null;
     }[];
     /** The screen's uuid, for the External JSON preview; without it there is none. */
@@ -530,7 +541,16 @@ export function WidgetInspector({
         }
 
         // An External JSON value's paths are set in a dialog, summed up here.
+        // A connected source's answer has no history to compare with or to draw.
+        if (connected && ['compare', 'sparkline'].includes(field.key)) {
+            return null;
+        }
+
         if (PATH_FIELDS.includes(field.key)) {
+            if (connected) {
+                return null;
+            }
+
             return (
                 field.key === 'json_path' && (
                     <PathConfig
@@ -723,7 +743,12 @@ export function WidgetInspector({
                     target.source?.id === 'calendar' ||
                     widget.type === 'countdown';
                 const all = (catalog.data_sources ?? []).filter(
-                    (s) => (s.format === 'ical') === calendar,
+                    (s) =>
+                        (s.format === 'ical') === calendar &&
+                        (s.format !== 'connected' ||
+                            CONNECTED_SHAPES[widget.type]?.includes(
+                                s.shape ?? '',
+                            )),
                 );
                 // By project, like the checks.
                 const groups = Object.entries(
@@ -755,7 +780,9 @@ export function WidgetInspector({
                                 <optgroup key={project} label={project}>
                                     {group?.map((s) => (
                                         <option key={s.uuid} value={s.uuid}>
-                                            {s.name}
+                                            {s.environment
+                                                ? `${s.name} (${s.environment})`
+                                                : s.name}
                                         </option>
                                     ))}
                                 </optgroup>
@@ -1202,9 +1229,14 @@ export function WidgetInspector({
         valueSource?.id === 'external_json' &&
         catalog.data_sources?.find((s) => s.uuid === effective('data_source'))
             ?.format === 'prometheus';
+    // A connected source declares its form, so there is no path to set.
+    const connected =
+        valueSource?.id === 'external_json' &&
+        catalog.data_sources?.find((s) => s.uuid === effective('data_source'))
+            ?.format === 'connected';
     const preview = useJsonPreview(
         part === 'all' ? catalog.screen : undefined,
-        valueSource?.id === 'external_json'
+        valueSource?.id === 'external_json' && !connected
             ? effective('data_source') || undefined
             : undefined,
         widget.type,

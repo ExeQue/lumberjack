@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Screens\Actions\CopyScreenToTeamAction;
 use App\Domains\Screens\Actions\ExportScreenAction;
@@ -203,6 +204,49 @@ describe('importing a screen', function () {
     });
 });
 
+describe('checks named by their host', function () {
+    it('finds the right one of two on the same host', function () {
+        $url = fn (string $path): array => ['url' => 'https://example.com/'.$path];
+        foreach ([$this->project, $this->otherProject] as $project) {
+            HealthCheck::query()->where('project_id', $project->id)->delete();
+        }
+        $source = HealthCheck::factory()->for($this->project)->monitored(config: $url('b'))->create(['name' => null]);
+        HealthCheck::factory()->for($this->otherProject)->monitored(config: $url('a'))->create(['name' => null]);
+        $target = HealthCheck::factory()->for($this->otherProject)->monitored(config: $url('b'))->create(['name' => null]);
+        $this->screen->update(['widgets' => [[...$this->screen->widgets[3], 'options' => ['checks' => [$source->uuid]], 'rotate' => []]]]);
+
+        $import = app(ImportScreenAction::class)->read($this->otherProject->team, app(ExportScreenAction::class)->execute($this->screen->refresh()));
+
+        expect($import->attributes['widgets'][0]['options']['checks'])->toBe([$target->uuid]);
+    });
+});
+
+describe('connected data sources', function () {
+    beforeEach(function () {
+        $source = DataSource::factory()->for($this->project)->connected()->create(['environment' => 'production']);
+        $this->source = $source;
+        $this->file = app(ExportScreenAction::class)->execute(tap($this->screen)->update(['widgets' => [[...$this->screen->widgets[0], 'options' => ['data_source' => $source->uuid]]]]));
+    });
+
+    it('exports one by its key, never its uuid', function () {
+        expect($this->file['screen']['widgets'][0]['options']['data_source'])->toBe(['project' => 'shop', 'environment' => 'production', 'key' => 'orders:total']);
+    });
+
+    it('finds it again in the team importing, and says so when it has none', function () {
+        $same = DataSource::factory()->for($this->otherProject)->connected()->create(['environment' => 'production']);
+
+        $import = app(ImportScreenAction::class)->read($this->otherProject->team, $this->file);
+
+        expect($import->attributes['widgets'][0]['options']['data_source'])->toBe($same->uuid);
+
+        $same->delete();
+        $import = app(ImportScreenAction::class)->read($this->otherProject->team, $this->file);
+
+        expect($import->attributes['widgets'][0]['options']['data_source'] ?? null)->toBeNull()
+            ->and($import->droppedChecks)->toBe(['shop: orders:total']);
+    });
+});
+
 describe('copying a screen to another team', function () {
     beforeEach(function () {
         $this->otherProject->team->members()->attach($this->user, ['role' => TeamRole::Member->value]);
@@ -242,4 +286,21 @@ describe('copying a screen to another team', function () {
     it('is only for screens the user can see', function () {
         $this->actingAs($this->other)->post(route('screens.copy', $this->screen), ['team' => $this->otherProject->team->uuid])->assertForbidden();
     });
+});
+
+it('still finds an unnamed HTTP check from a file exported with its whole path', function () {
+    $check = HealthCheck::factory()->for($this->otherProject)->monitored()->create(['slug' => null, 'name' => null, 'config' => ['url' => 'https://example.com/status']]);
+    $file = ($this->file)();
+    $file['screen']['widgets'][3]['options']['checks'] = [['project' => $this->otherProject->slug, 'name' => 'HTTP: example.com/status']];
+
+    $import = app(ImportScreenAction::class)->read($this->otherProject->team, $file);
+
+    expect($import->attributes['widgets'][3]['options']['checks'])->toBe([$check->uuid]);
+});
+
+it('drops a check whose project in the file is not text', function () {
+    $file = ($this->file)();
+    $file['screen']['widgets'][3]['options']['checks'] = [['project' => [], 'slug' => 'x']];
+
+    expect(app(ImportScreenAction::class)->read($this->otherProject->team, $file)->droppedChecks)->toContain('?: x');
 });
