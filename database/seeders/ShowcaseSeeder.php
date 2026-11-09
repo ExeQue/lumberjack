@@ -32,6 +32,7 @@ class ShowcaseSeeder extends Seeder
             ShowcaseHealthSeeder::class,
             ShowcaseLogsSeeder::class,
             ShowcaseAlertsSeeder::class,
+            ShowcaseCustomAlertsSeeder::class,
             ShowcaseScreensSeeder::class,
             ShowcaseWidgetsSeeder::class,
         ]);
