@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-09
+
 ### Added
 
 - A searchable tree select for data sources, widget sources and time zones, as deep as the groups go.
@@ -158,7 +160,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/ExeQue/lumberjack/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/ExeQue/lumberjack/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/ExeQue/lumberjack/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/ExeQue/lumberjack/compare/v0.2.0...v0.3.0
