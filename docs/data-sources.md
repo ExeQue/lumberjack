@@ -134,9 +134,9 @@ themselves within five minutes of the app answering to the new one.
 
 | Status              | Meaning                                                                                                                                                                                            |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Connected           | Pulls work for what screens show now, or none of its periods is on a screen. |
+| Connected           | Pulls work for what screens show now, or none of its periods is on a screen.                                                                                                                       |
 | Waiting for the app | It has never given a valid answer: it is not deployed with the token yet, or the address is wrong. The reason is shown.                                                                            |
-| Failing             | The last call for a period on a screen failed; the reason is shown under it. A screen keeps what it last got, with its real age.                                                                                            |
+| Failing             | The last call for a period on a screen failed; the reason is shown under it. A screen keeps what it last got, with its real age.                                                                   |
 | No longer offered   | A complete list from the app no longer has this source. It comes back if it returns, or can be removed. An app that lists nothing at all archives nothing, as an empty list is more often a fault. |
 
 Each connection is one environment, so the same key can exist in several.
