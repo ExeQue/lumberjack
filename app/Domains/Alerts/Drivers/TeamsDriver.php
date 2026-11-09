@@ -67,12 +67,11 @@ class TeamsDriver implements ChannelDriver
                 ['type' => 'Table', 'firstRowAsHeader' => true, 'columns' => array_fill(0, count($table['headers']), ['width' => 1]), 'rows' => [$row($table['headers']), ...array_map(fn (array $cells): array => $row(array_pad($cells, count($table['headers']), '')), $table['rows'])]],
             ])->all(),
             $text($message->context(), ['isSubtle' => true, 'size' => 'Small']),
-        ], actions: array_map(fn (array $link): array => array_filter([
+        ], actions: array_map(fn (array $link): array => [
             'type' => 'Action.OpenUrl',
             'title' => $link['label'],
             'url' => $link['url'],
-            'style' => ['primary' => 'positive', 'danger' => 'destructive'][$link['style']] ?? null,
-        ]), $message->links()), version: '1.5'));
+        ], $message->links()), version: '1.5'));
     }
 
     #[Override]

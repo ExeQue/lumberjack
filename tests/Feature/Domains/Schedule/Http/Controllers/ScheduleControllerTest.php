@@ -17,7 +17,7 @@ uses(ReadsQueryCounts::class);
 
 beforeEach(function () {
     $this->project = Project::factory()->create();
-    $this->task = ScheduledTask::factory()->for($this->project)->create();
+    $this->task = ScheduledTask::factory()->for($this->project)->create(['command' => 'artisan reports:send']);
     ScheduledTaskRun::factory()->for($this->task, 'task')->count(3)->create();
 });
 
@@ -31,6 +31,7 @@ describe('the schedule page', function () {
             ->assertInertia(fn (Assert $page) => $page
                 ->component('schedule/index')
                 ->where('tasks.0.name', 'artisan reports:send')
+                ->where('tasks.0.command', 'artisan reports:send')
                 ->where('tasks.0.recent', ['finished', 'finished', 'finished'])
                 ->has('runs', 3));
     });

@@ -5,7 +5,6 @@ import { ConfirmButton } from '@/components/lj/confirm-button';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
-    Button,
     Card,
     CardHeader,
     EmptyState,
@@ -16,6 +15,14 @@ import {
     thClass,
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { formatDateTime, formatDuration } from '@/lib/format';
 import { useT } from '@/lib/i18n';
@@ -39,6 +46,7 @@ type Status = 'running' | 'finished' | 'failed' | 'skipped' | 'missed';
 type Task = {
     id: number;
     name: string;
+    command: string | null;
     environment: string | null;
     expression: string;
     timezone: string | null;
@@ -87,6 +95,10 @@ const dot: Record<Status, string> = {
 };
 
 const GRACE_MINUTES = 5;
+
+/** The scheduler's description of a task, when it has one beside its command. */
+const description = (task: Task): string | null =>
+    task.command !== null && task.command !== task.name ? task.name : null;
 
 function When({ iso }: { iso: string | null }) {
     const t = useT();
@@ -246,11 +258,16 @@ export default function ScheduleIndex({
                                                     }
                                                     className="lj-row-link text-left hover:text-amber"
                                                 >
-                                                    {task.name}
+                                                    {task.command ?? task.name}
                                                 </button>
                                                 {task.environment && (
                                                     <span className="ml-2 text-ink-3">
                                                         {task.environment}
+                                                    </span>
+                                                )}
+                                                {description(task) && (
+                                                    <span className="mt-0.5 block font-sans text-ink-3">
+                                                        {description(task)}
                                                     </span>
                                                 )}
                                             </td>
@@ -354,183 +371,199 @@ export default function ScheduleIndex({
                     )}
                 </Card>
 
-                {selected && (
-                    <Card aria-labelledby="runs-title">
-                        <CardHeader
-                            id="runs-title"
-                            title={t('schedule.runs.title', {
-                                task: selected.name,
-                            })}
-                            aside={
-                                <span className="flex gap-2">
-                                    {project.can_administer && (
-                                        <ConfirmButton
-                                            question={t(
-                                                'schedule.forget_question',
-                                                { task: selected.name },
-                                            )}
-                                            confirmLabel={t('schedule.forget')}
-                                            onConfirm={() =>
-                                                router.delete(
-                                                    forgetTask([
-                                                        project.uuid,
-                                                        selected.id,
-                                                    ]).url,
-                                                    { preserveScroll: true },
-                                                )
-                                            }
-                                        >
-                                            {t('schedule.forget')}
-                                        </ConfirmButton>
-                                    )}
-                                    <Button
-                                        variant="ghost"
-                                        onClick={() => select(null)}
-                                    >
-                                        {t('schedule.runs.close')}
-                                    </Button>
-                                </span>
-                            }
-                        />
-                        {runs.length === 0 ? (
-                            <EmptyState title={t('schedule.runs.empty')} />
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className={tableClass}>
-                                    <thead>
-                                        <tr>
-                                            <th className={thClass}>
-                                                {t('schedule.columns.status')}
-                                            </th>
-                                            <th className={thClass}>
-                                                {t('schedule.runs.started')}
-                                            </th>
-                                            <th
-                                                className={cn(
-                                                    thClass,
-                                                    'text-right',
-                                                )}
-                                            >
-                                                {t('schedule.columns.duration')}
-                                            </th>
-                                            <th
-                                                className={cn(
-                                                    thClass,
-                                                    'text-right',
-                                                )}
-                                            >
-                                                {t('schedule.runs.exit_code')}
-                                            </th>
-                                            <th className={thClass}>
-                                                {t('schedule.runs.host')}
-                                            </th>
-                                            <th className={thClass}>
-                                                <span className="sr-only">
+                <Dialog
+                    open={selected !== null}
+                    onOpenChange={(open) => !open && select(null)}
+                >
+                    {selected && (
+                        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+                            <DialogHeader>
+                                <DialogTitle className="pr-6 font-mono text-sm break-words">
+                                    {t('schedule.runs.title', {
+                                        task: selected.command ?? selected.name,
+                                    })}
+                                </DialogTitle>
+                                <DialogDescription>
+                                    {description(selected) ??
+                                        selected.expression}
+                                </DialogDescription>
+                            </DialogHeader>
+                            {runs.length === 0 ? (
+                                <EmptyState title={t('schedule.runs.empty')} />
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className={tableClass}>
+                                        <thead>
+                                            <tr>
+                                                <th className={thClass}>
                                                     {t(
-                                                        'schedule.runs.view_issue',
+                                                        'schedule.columns.status',
                                                     )}
-                                                </span>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {runs.map((run) => (
-                                            <tr
-                                                key={run.id}
-                                                className="hover:bg-panel-2/60"
-                                            >
-                                                <td className={tdClass}>
-                                                    <Badge
-                                                        tone={tone[run.status]}
-                                                    >
-                                                        {t(
-                                                            `schedule.statuses.${run.status}`,
-                                                        )}
-                                                    </Badge>
-                                                </td>
-                                                <td
+                                                </th>
+                                                <th className={thClass}>
+                                                    {t('schedule.runs.started')}
+                                                </th>
+                                                <th
                                                     className={cn(
-                                                        tdClass,
-                                                        'text-xs whitespace-nowrap text-ink-2',
-                                                    )}
-                                                >
-                                                    <When
-                                                        iso={run.started_at}
-                                                    />
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
-                                                        numClass,
-                                                    )}
-                                                >
-                                                    {formatDuration(
-                                                        run.duration_us,
-                                                    )}
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
-                                                        numClass,
-                                                    )}
-                                                >
-                                                    {run.exit_code ?? '-'}
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
-                                                        'font-mono text-xs',
-                                                    )}
-                                                >
-                                                    {run.host ?? '-'}
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
+                                                        thClass,
                                                         'text-right',
                                                     )}
                                                 >
-                                                    <span className="inline-flex gap-3">
-                                                        {run.trace_id && (
-                                                            <Link
-                                                                href={
-                                                                    traceShow([
-                                                                        project.uuid,
-                                                                        run.trace_id,
-                                                                    ]).url
-                                                                }
-                                                                className="text-xs text-ink-2 hover:text-amber hover:underline"
-                                                            >
-                                                                {t(
-                                                                    'traces.open',
-                                                                )}
-                                                            </Link>
-                                                        )}
-                                                        {run.issue && (
-                                                            <Link
-                                                                href={
-                                                                    issueShow([
-                                                                        project.uuid,
-                                                                        run.issue,
-                                                                    ]).url
-                                                                }
-                                                                className="text-xs text-amber hover:underline"
-                                                            >
-                                                                {t(
-                                                                    'schedule.runs.view_issue',
-                                                                )}
-                                                            </Link>
+                                                    {t(
+                                                        'schedule.columns.duration',
+                                                    )}
+                                                </th>
+                                                <th
+                                                    className={cn(
+                                                        thClass,
+                                                        'text-right',
+                                                    )}
+                                                >
+                                                    {t(
+                                                        'schedule.runs.exit_code',
+                                                    )}
+                                                </th>
+                                                <th className={thClass}>
+                                                    {t('schedule.runs.host')}
+                                                </th>
+                                                <th className={thClass}>
+                                                    <span className="sr-only">
+                                                        {t(
+                                                            'schedule.runs.view_issue',
                                                         )}
                                                     </span>
-                                                </td>
+                                                </th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </Card>
-                )}
+                                        </thead>
+                                        <tbody>
+                                            {runs.map((run) => (
+                                                <tr
+                                                    key={run.id}
+                                                    className="hover:bg-panel-2/60"
+                                                >
+                                                    <td className={tdClass}>
+                                                        <Badge
+                                                            tone={
+                                                                tone[run.status]
+                                                            }
+                                                        >
+                                                            {t(
+                                                                `schedule.statuses.${run.status}`,
+                                                            )}
+                                                        </Badge>
+                                                    </td>
+                                                    <td
+                                                        className={cn(
+                                                            tdClass,
+                                                            'text-xs whitespace-nowrap text-ink-2',
+                                                        )}
+                                                    >
+                                                        <When
+                                                            iso={run.started_at}
+                                                        />
+                                                    </td>
+                                                    <td
+                                                        className={cn(
+                                                            tdClass,
+                                                            numClass,
+                                                        )}
+                                                    >
+                                                        {formatDuration(
+                                                            run.duration_us,
+                                                        )}
+                                                    </td>
+                                                    <td
+                                                        className={cn(
+                                                            tdClass,
+                                                            numClass,
+                                                        )}
+                                                    >
+                                                        {run.exit_code ?? '-'}
+                                                    </td>
+                                                    <td
+                                                        className={cn(
+                                                            tdClass,
+                                                            'font-mono text-xs',
+                                                        )}
+                                                    >
+                                                        {run.host ?? '-'}
+                                                    </td>
+                                                    <td
+                                                        className={cn(
+                                                            tdClass,
+                                                            'text-right',
+                                                        )}
+                                                    >
+                                                        <span className="inline-flex gap-3">
+                                                            {run.trace_id && (
+                                                                <Link
+                                                                    href={
+                                                                        traceShow(
+                                                                            [
+                                                                                project.uuid,
+                                                                                run.trace_id,
+                                                                            ],
+                                                                        ).url
+                                                                    }
+                                                                    className="text-xs text-ink-2 hover:text-amber hover:underline"
+                                                                >
+                                                                    {t(
+                                                                        'traces.open',
+                                                                    )}
+                                                                </Link>
+                                                            )}
+                                                            {run.issue && (
+                                                                <Link
+                                                                    href={
+                                                                        issueShow(
+                                                                            [
+                                                                                project.uuid,
+                                                                                run.issue,
+                                                                            ],
+                                                                        ).url
+                                                                    }
+                                                                    className="text-xs text-amber hover:underline"
+                                                                >
+                                                                    {t(
+                                                                        'schedule.runs.view_issue',
+                                                                    )}
+                                                                </Link>
+                                                            )}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            {project.can_administer && (
+                                <DialogFooter>
+                                    <ConfirmButton
+                                        question={t(
+                                            'schedule.forget_question',
+                                            {
+                                                task: selected.name,
+                                            },
+                                        )}
+                                        confirmLabel={t('schedule.forget')}
+                                        onConfirm={() =>
+                                            router.delete(
+                                                forgetTask([
+                                                    project.uuid,
+                                                    selected.id,
+                                                ]).url,
+                                                { preserveScroll: true },
+                                            )
+                                        }
+                                    >
+                                        {t('schedule.forget')}
+                                    </ConfirmButton>
+                                </DialogFooter>
+                            )}
+                        </DialogContent>
+                    )}
+                </Dialog>
             </PageBody>
         </>
     );

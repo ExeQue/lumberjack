@@ -4,6 +4,19 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-09
+
+### Changed
+
+- The Schedule page shows the command a task runs, with its description under it. Needs `exeque/laravel-lumberjack` 0.1.3.
+- A task's runs open in a dialog.
+
+### Fixed
+
+- Telegram buttons on custom alerts use the primary and danger styles.
+- A custom alert with a link Discord or Slack would refuse no longer loses the message: link labels are cut at 75 characters and URLs over 512 are dropped.
+- A scheduled artisan command with a description no longer makes two issues when it fails.
+
 ## [0.1.4] - 2026-11-09
 
 ### Added
@@ -46,7 +59,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/ExeQue/lumberjack/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/ExeQue/lumberjack/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/ExeQue/lumberjack/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/ExeQue/lumberjack/compare/v0.1.1...v0.1.2

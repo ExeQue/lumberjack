@@ -55,7 +55,7 @@ class TelegramDriver implements ChannelDriver
     private function sendCustom(NotificationChannel $channel, CustomAlertMessage $message): void
     {
         $alert = $message->alert;
-        $buttons = array_map(fn (array $link): array => ['text' => $link['label'], 'url' => $link['url']], $message->links());
+        $buttons = array_map(fn (array $link): array => array_filter(['text' => $link['label'], 'url' => $link['url'], 'style' => $link['style']]), $message->links());
 
         $this->post($channel, mb_substr(implode("\n", array_filter([
             $message->level()->emoji().' <b>'.self::escape($alert->title).'</b>',

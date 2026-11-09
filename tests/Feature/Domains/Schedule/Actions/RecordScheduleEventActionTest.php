@@ -8,6 +8,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Schedule\Actions\RecordScheduleEventAction;
 use App\Domains\Schedule\Enums\ScheduledRunStatus;
 use App\Domains\Schedule\Models\ScheduledTask;
+use App\Domains\Schedule\Models\ScheduledTaskRun;
 
 covers(RecordScheduleEventAction::class);
 
@@ -65,5 +66,26 @@ describe('a run', function () {
         $run = ($this->record)(($this->event)('started'));
 
         expect($run?->status)->toBe(ScheduledRunStatus::Finished);
+    });
+});
+
+describe('the command of a task', function () {
+    it('keeps the command beside the description that names the task', function () {
+        ($this->record)(($this->event)('finished', ['name' => 'Send the reports', 'command' => 'artisan reports:send']));
+
+        expect(ScheduledTask::sole())->name->toBe('Send the reports')->command->toBe('artisan reports:send');
+    });
+
+    it('keeps the command when a later event from an older SDK has none', function () {
+        ($this->record)(($this->event)('finished', ['name' => 'Send the reports', 'command' => 'artisan reports:send']));
+        ($this->record)(($this->event)('finished', ['name' => 'Send the reports']));
+
+        expect(ScheduledTask::sole()->command)->toBe('artisan reports:send');
+    });
+
+    it('leaves the issue to the command run when an artisan command with a description exits non-zero', function () {
+        ($this->record)(($this->event)('finished', ['name' => 'Send the reports', 'command' => 'artisan reports:send', 'exit_code' => 1]));
+
+        expect(ScheduledTaskRun::sole()->occurrence_id)->toBeNull();
     });
 });

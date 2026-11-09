@@ -56,6 +56,7 @@ class RecordScheduleEventAction
 
         $task = ScheduledTask::query()->firstOrNew(['project_id' => $project->id, 'environment' => $envelope->environment ?? '', 'name' => $name]);
         $task->fill([
+            'command' => Envelope::short($event['command'] ?? null, 1000) ?? $task->command,
             'expression' => Envelope::short($event['expression'] ?? null) ?? ($task->expression ?? '* * * * *'),
             'timezone' => Envelope::short($event['timezone'] ?? null) ?? $task->timezone,
             'next_run_at' => isset($event['next_run_at']) ? Envelope::time($event['next_run_at']) : $task->next_run_at,
@@ -91,7 +92,7 @@ class RecordScheduleEventAction
 
         // An artisan command that exits non-zero reports itself as a failed command run,
         // so its scheduled run does not make a second issue; its exception, if any, still does.
-        $commandReportsItself = str_starts_with($task->name, 'artisan ') && ! is_array($event['exception'] ?? null);
+        $commandReportsItself = str_starts_with($task->command ?? $task->name, 'artisan ') && ! is_array($event['exception'] ?? null);
 
         if ($status === ScheduledRunStatus::Failed && $run->occurrence_id === null && ! $commandReportsItself) {
             $run->occurrence_id = $this->recordOccurrenceAction->execute($project, $this->failure($project, $task, $event, $envelope, $at, $exitCode))->id;

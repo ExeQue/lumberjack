@@ -34,6 +34,12 @@ class RecordCustomAlertAction
     /** Discord's limit for one row of link buttons. */
     private const int MAX_LINKS = 5;
 
+    /** Slack's limit for a button's text, the shortest of the channels. */
+    private const int MAX_LINK_LABEL = 75;
+
+    /** Discord refuses a whole message over a longer button URL, and Pushover takes no more. */
+    private const int MAX_URL = 512;
+
     /**
      * @param  array<string, mixed>  $event
      */
@@ -141,7 +147,7 @@ class RecordCustomAlertAction
         $kept = [];
 
         foreach (is_array($links) ? array_filter($links, 'is_array') : [] as $link) {
-            $label = Envelope::short($link['label'] ?? null, 80);
+            $label = Envelope::short($link['label'] ?? null, self::MAX_LINK_LABEL);
             $url = self::url($link['url'] ?? null);
 
             if ($label !== null && $url !== null && count($kept) < self::MAX_LINKS) {
@@ -155,8 +161,10 @@ class RecordCustomAlertAction
     /** Only web addresses: a javascript: link in a mail or chat message must never get through. */
     private static function url(mixed $url): ?string
     {
-        $url = Envelope::short($url, 2000);
+        if (! is_string($url) || strlen($url) > self::MAX_URL) {
+            return null;
+        }
 
-        return $url !== null && filter_var($url, FILTER_VALIDATE_URL) !== false && preg_match('~^https?://~i', $url) === 1 ? $url : null;
+        return filter_var($url, FILTER_VALIDATE_URL) !== false && preg_match('~^https?://~i', $url) === 1 ? $url : null;
     }
 }

@@ -114,7 +114,7 @@ worker is dead.
 
 ![The Schedule page with each task's cron, status and its recent runs](./screenshots/schedule.png)
 
-Each task shows its cron, its latest status (**Running**, **Finished**, **Failed**,
+Each task shows the command it runs with its description under it, its cron, its latest status (**Running**, **Finished**, **Failed**,
 **Skipped** or **Missed**), the last and next run and a strip of its last 20 runs. A
 task's details list its runs with their exit code and host.
 

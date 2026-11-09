@@ -23,8 +23,6 @@ return [
     'empty_body' => 'The Lumberjack package reports tasks when the app\'s scheduler runs them (php artisan schedule:work, or schedule:run every minute).',
     'runs' => [
         'title' => 'Runs of :task',
-        // Button
-        'close' => 'Close',
         'empty' => 'No runs yet',
         'started' => 'Started',
         'exit_code' => 'Exit code',

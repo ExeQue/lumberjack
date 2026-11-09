@@ -155,9 +155,9 @@ topics** on the Alerts page, so moving an alert to another channel needs no depl
 - Every message names the project and the environment.
 
 The level sets the color and the urgency: `info`, `success`, `warning` or `critical`.
-What a link looks like depends on the channel: Slack and Teams color a primary or danger
-button, Discord shows gray link buttons, and Telegram, ntfy and Pushover ignore the
-style. Pushover shows one link and lists the rest in the text, ntfy shows three. A
+What a link looks like depends on the channel: Slack and Telegram color a primary or danger
+button. Discord link buttons cannot be colored, and Teams, ntfy and Pushover have no style
+for them. Pushover shows one link and lists the rest in the text, ntfy shows three. A
 webhook gets everything as JSON, with `event` set to `custom_alert`.
 
 **Sent alerts** lists the latest 25 and how each channel went, including the alerts that

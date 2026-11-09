@@ -160,18 +160,18 @@ An event of type `alert` sends a [custom alert](./alerts#custom-alerts):
 }
 ```
 
-| Field                         | Notes                                                                       |
-| ----------------------------- | --------------------------------------------------------------------------- |
-| `title`                       | Required. An event without it is skipped.                                   |
-| `topic`                       | Which topic to send to. Made into a slug. Without it, `default`.            |
-| `level`                       | `info`, `success`, `warning` or `critical`. Sets the color and the urgency. |
-| `message`                     | The text under the title.                                                   |
-| `url`                         | Where the title links to. `http` or `https` only.                           |
-| `fields`                      | At most 20, each with `name`, `value` and `inline`.                         |
-| `tables`                      | At most 3, with `title`, `headers` (at most 8) and `rows` (at most 20).     |
-| `links`                       | At most 5, with `label`, `url` and a `style` of `primary` or `danger`.      |
-| `dedupe_key`,`dedupe_minutes` | A repeat of the key within the minutes is listed, but not sent.             |
-| `timestamp`                   | When it happened.                                                           |
+| Field                         | Notes                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `title`                       | Required. An event without it is skipped.                                                                    |
+| `topic`                       | Which topic to send to. Made into a slug. Without it, `default`.                                             |
+| `level`                       | `info`, `success`, `warning` or `critical`. Sets the color and the urgency.                                  |
+| `message`                     | The text under the title.                                                                                    |
+| `url`                         | Where the title links to. `http` or `https` only.                                                            |
+| `fields`                      | At most 20, each with `name`, `value` and `inline`.                                                          |
+| `tables`                      | At most 3, with `title`, `headers` (at most 8) and `rows` (at most 20).                                      |
+| `links`                       | At most 5, with `label` (at most 75 characters), `url` (at most 512) and a `style` of `primary` or `danger`. |
+| `dedupe_key`,`dedupe_minutes` | A repeat of the key within the minutes is listed, but not sent.                                              |
+| `timestamp`                   | When it happened.                                                                                            |
 
 ## Browser
 

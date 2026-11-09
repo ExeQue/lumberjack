@@ -61,6 +61,16 @@ describe('recording an alert', function () {
             ]);
     });
 
+    it('keeps links within what every channel takes', function () {
+        $alert = ($this->record)(['title' => 'A', 'links' => [
+            ['label' => str_repeat('x', 100), 'url' => 'https://example.test/a'],
+            ['label' => 'Too long', 'url' => 'https://example.test/'.str_repeat('y', 512)],
+        ]]);
+
+        expect($alert->content['links'])->toHaveCount(1)
+            ->and(mb_strlen($alert->content['links'][0]['label']))->toBe(75);
+    });
+
     it('cuts a long table and says how many rows were left out', function () {
         $alert = ($this->record)(['title' => 'A', 'tables' => [['headers' => ['a'], 'rows' => array_fill(0, 25, ['x'])]]]);
 
@@ -130,6 +140,15 @@ describe('delivering an alert', function () {
         ($this->record)(['title' => 'Paid', 'level' => 'success', 'topic' => 'default']);
 
         Http::assertSent(fn ($request): bool => $request['event'] === 'custom_alert');
+    });
+
+    it('styles a Telegram button', function () {
+        Http::fake(['*' => Http::response(['ok' => true], 200)]);
+        ($this->topic)('default')->channels()->attach(NotificationChannel::factory()->for($this->project->team)->create(['type' => ChannelType::Telegram, 'config' => ['bot_token' => '123456:'.str_repeat('a', 35), 'chat_id' => '-100123']]));
+
+        ($this->record)(['title' => 'A', 'links' => [['label' => 'Refund', 'url' => 'https://example.test/r', 'style' => 'danger']]]);
+
+        Http::assertSent(fn ($request): bool => str_contains($request->body(), 'danger'));
     });
 
     it('reaches every kind of channel', function (ChannelType $type, array $config) {
