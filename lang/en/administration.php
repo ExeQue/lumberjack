@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'suspended' => 'This account is suspended. Ask an administrator of this Lumberjack.',
+    'update_checked' => 'Checked for a newer release.',
+    'update_check_failed' => 'Could not reach GitHub to check for a newer release.',
     'last_admin' => 'Lumberjack needs at least one administrator.',
     'not_yourself' => 'You cannot do that to your own account.',
     'team_created' => 'Team :name created.',

@@ -19,6 +19,7 @@ describe('the about page', function () {
                 ->where('version', '0.2.0')
                 ->where('revision', '9885421c0ffe')
                 ->where('release_url', 'https://github.com/ExeQue/lumberjack/releases/tag/v0.2.0')
+                ->where('changelog_url', 'https://github.com/ExeQue/lumberjack/blob/main/CHANGELOG.md')
                 ->where('system', null));
     });
 

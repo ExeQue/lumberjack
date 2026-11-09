@@ -84,6 +84,7 @@ The scheduler runs these by itself.
 | `lumberjack:fetch-data-sources`           | Every minute    | Fetches the [external JSON](./widgets#external-json) sources that are due. |
 | `lumberjack:notify-offline-agents`        | Every minute    | Tells members who want it when an agent goes offline.                      |
 | `horizon:snapshot`                        | Every 5 minutes | Records queue metrics for the Horizon dashboard.                           |
+| `lumberjack:check-for-update`             | Every 6 hours   | Asks GitHub whether a newer release is out.                                |
 | `model:prune`                             | Every hour      | Deletes agents and health check hosts not seen for 24 hours.               |
 | `lumberjack:archive-silent-health-checks` | Every day       | Archives reported health checks that sent nothing for a week.              |
 | `lumberjack:prune`                        | Every day       | Deletes data older than its retention.                                     |
@@ -174,12 +175,22 @@ choose a new one.
 ## About
 
 Click the version at the bottom of the sidebar to open **About**. It shows the version,
-the commit it was built from, and links to the release notes and the documentation.
+the commit it was built from, and links to the release notes, the changelog and the
+documentation.
 System administrators also see PHP, Laravel, the database, and the queue, cache and
 session drivers.
 
 The Docker image shows its release version. A git checkout shows its tag, or "dev"
 without git.
+
+### Update check
+
+Every six hours Lumberjack asks GitHub for the latest release. When a newer one is out,
+system administrators see it next to the version in the sidebar and on **About**, with a
+link to its release notes. **Check now** on About asks right away.
+
+The check sends nothing about your installation. Set `LUMBERJACK_UPDATE_CHECK=false` to
+turn it off, and Lumberjack makes no such request.
 
 ## Security
 

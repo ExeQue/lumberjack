@@ -4,6 +4,11 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- System administrators are told when a newer release is out, checked every six hours or right away with **Check now** on About. `LUMBERJACK_UPDATE_CHECK=false` turns it off.
+- About links to the changelog.
+
 ## [0.1.8] - 2026-11-09
 
 ### Added

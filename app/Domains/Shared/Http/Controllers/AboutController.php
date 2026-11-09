@@ -21,12 +21,19 @@ class AboutController
     public function __invoke(Request $request): Response
     {
         $version = AppVersion::version();
+        $latest = AppVersion::latestRelease();
 
         return Inertia::render('about', [
             'version' => $version,
             'revision' => AppVersion::revision(),
-            'release_url' => AppVersion::isRelease() ? 'https://github.com/ExeQue/lumberjack/releases/tag/v'.ltrim($version, 'v') : null,
+            'release_url' => AppVersion::isRelease() ? AppVersion::releaseUrl($version) : null,
+            'changelog_url' => 'https://github.com/ExeQue/lumberjack/blob/main/CHANGELOG.md',
             'docs_url' => config('lumberjack.docs_url'),
+            'update' => $request->user()?->isAdmin() && config('lumberjack.update_check') ? [
+                'latest' => $latest,
+                'url' => $latest !== null ? AppVersion::releaseUrl($latest['version']) : null,
+                'available' => AppVersion::updateAvailable() !== null,
+            ] : null,
             // The stack, for an administrator filing a bug; nobody else needs to know it.
             'system' => $request->user()?->isAdmin() ? [
                 'php' => PHP_VERSION,

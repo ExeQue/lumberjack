@@ -55,6 +55,7 @@ export function FlashMessages() {
                     'role',
                     'token',
                     'user_id',
+                    'update_check',
                 ].includes(key),
             )
         ) {

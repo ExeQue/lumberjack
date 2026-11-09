@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domains\Administration\Http\Controllers\AdminAuditController;
 use App\Domains\Administration\Http\Controllers\AdminTeamController;
+use App\Domains\Administration\Http\Controllers\AdminUpdateCheckController;
 use App\Domains\Administration\Http\Controllers\AdminUserController;
 use App\Domains\Administration\Http\Controllers\OnboardingController;
 use App\Domains\Administration\Http\Controllers\SetupController;
@@ -159,6 +160,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // System administration: every team and user on this Lumberjack.
     Route::prefix('admin')->middleware(EnsureUserIsAdmin::class)->group(function () {
+        Route::post('update-check', AdminUpdateCheckController::class)->name('admin.update-check');
         Route::get('teams', [AdminTeamController::class, 'index'])->name('admin.teams.index');
         Route::post('teams', [AdminTeamController::class, 'store'])->name('admin.teams.store');
         Route::post('teams/{team}/open', [AdminTeamController::class, 'open'])->name('admin.teams.open');

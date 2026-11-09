@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Administration\Console\Commands\CheckForUpdateCommand;
 use App\Domains\Alerts\Console\Commands\CheckQueueBacklogsCommand;
 use App\Domains\DataSources\Console\Commands\FetchDataSourcesCommand;
 use App\Domains\Health\Console\Commands\ArchiveSilentHealthChecksCommand;
@@ -24,6 +25,7 @@ Schedule::command(CheckQueueBacklogsCommand::class)->everyMinute()->withoutOverl
 Schedule::command(RunHealthChecksCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(FetchDataSourcesCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(NotifyOfflineAgentsCommand::class)->everyMinute()->withoutOverlapping();
+Schedule::command(CheckForUpdateCommand::class)->everySixHours()->withoutOverlapping();
 Schedule::command(ArchiveSilentHealthChecksCommand::class)->daily()->withoutOverlapping();
 Schedule::command(PruneTelemetryCommand::class)->dailyAt('03:15')->timezone('Europe/Copenhagen')->withoutOverlapping();
 Schedule::command('horizon:snapshot')->everyFiveMinutes();

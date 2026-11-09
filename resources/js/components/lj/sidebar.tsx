@@ -94,8 +94,16 @@ export function Sidebar({ bell = true }: { bell?: boolean }) {
         auth: { user: { name: string } };
         is_admin: boolean;
         app_version: string;
+        update_available: string | null;
     }>();
-    const { team, teams, auth, is_admin, app_version: appVersion } = page.props;
+    const {
+        team,
+        teams,
+        auth,
+        is_admin,
+        app_version: appVersion,
+        update_available: updateAvailable,
+    } = page.props;
     const project =
         page.props.project ?? page.props.sidebar_project ?? undefined;
     const counts = page.props.sidebar_project?.counts;
@@ -341,6 +349,13 @@ export function Sidebar({ bell = true }: { bell?: boolean }) {
                 className="-mt-3 shrink-0 truncate px-2.5 font-mono text-[11px] text-ink-3 hover:text-ink-2"
             >
                 {appVersion}
+                {updateAvailable && (
+                    <span className="ml-1.5 text-amber">
+                        {t('about.update.sidebar', {
+                            version: updateAvailable,
+                        })}
+                    </span>
+                )}
             </Link>
         </nav>
     );

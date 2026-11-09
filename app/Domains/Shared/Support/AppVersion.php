@@ -14,6 +14,8 @@ use Throwable;
  */
 final class AppVersion
 {
+    public const string LATEST_RELEASE_KEY = 'app-version:latest-release';
+
     private const int GIT_CACHE_SECONDS = 300;
 
     /** "0.1.5", or in a checkout e.g. "v0.1.4-298-g9885421"; "dev" when nothing says. */
@@ -44,6 +46,38 @@ final class AppVersion
     public static function isRelease(): bool
     {
         return preg_match('/^v?\d+\.\d+\.\d+$/', self::version()) === 1;
+    }
+
+    public static function releaseUrl(string $version): string
+    {
+        return 'https://github.com/ExeQue/lumberjack/releases/tag/v'.ltrim($version, 'v');
+    }
+
+    /**
+     * The newest release the last check found; null before the first check or with checks off.
+     *
+     * @return array{version: string, checked_at: string}|null
+     */
+    public static function latestRelease(): ?array
+    {
+        if (! config('lumberjack.update_check')) {
+            return null;
+        }
+
+        /** @var array{version: string, checked_at: string}|null $latest */
+        $latest = Cache::get(self::LATEST_RELEASE_KEY);
+
+        return $latest;
+    }
+
+    /** The newer release to move to; null when up to date, unknown, or on a build between releases. */
+    public static function updateAvailable(): ?string
+    {
+        $latest = self::latestRelease();
+
+        return $latest !== null && self::isRelease() && version_compare($latest['version'], ltrim(self::version(), 'v'), '>')
+            ? $latest['version']
+            : null;
     }
 
     private static function git(string $command): ?string

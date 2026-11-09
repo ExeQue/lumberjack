@@ -21,6 +21,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Update check
+    |--------------------------------------------------------------------------
+    |
+    | Asks GitHub every six hours whether a newer release is out, and tells
+    | system administrators. Off, this Lumberjack makes no such request.
+    |
+    */
+
+    'update_check' => (bool) env('LUMBERJACK_UPDATE_CHECK', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Documentation
     |--------------------------------------------------------------------------
     |

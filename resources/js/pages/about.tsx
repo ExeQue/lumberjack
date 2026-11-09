@@ -1,17 +1,27 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { ExternalLink } from 'lucide-react';
+import { useState } from 'react';
 import { LogMark } from '@/components/lj/logo';
+import { Relative } from '@/components/lj/relative';
 import { TopBar } from '@/components/lj/top-bar';
-import { Card, CardHeader, PageTitle } from '@/components/lj/ui';
+import { Button, Card, CardHeader, PageTitle } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
+import { updateCheck } from '@/routes/admin';
 
 type Props = {
     version: string;
     revision: string | null;
     /** The release notes, for a tagged release. */
     release_url: string | null;
+    changelog_url: string;
     docs_url: string;
+    /** The last check for a newer release; for system administrators, unless checks are off. */
+    update: {
+        latest: { version: string; checked_at: string } | null;
+        url: string | null;
+        available: boolean;
+    } | null;
     /** What it runs on; for system administrators only. */
     system: Record<string, string | null> | null;
 };
@@ -21,10 +31,23 @@ export default function About({
     version,
     revision,
     release_url: releaseUrl,
+    changelog_url: changelogUrl,
     docs_url: docsUrl,
+    update,
     system,
 }: Props) {
     const t = useT();
+    const [checking, setChecking] = useState(false);
+    const checkNow = () =>
+        router.post(
+            updateCheck().url,
+            {},
+            {
+                preserveScroll: true,
+                onStart: () => setChecking(true),
+                onFinish: () => setChecking(false),
+            },
+        );
     const link =
         'inline-flex items-center gap-1 py-1 text-amber hover:underline';
 
@@ -73,6 +96,18 @@ export default function About({
                             </a>
                         )}
                         <a
+                            href={changelogUrl}
+                            className={link}
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            {t('about.changelog')}
+                            <ExternalLink
+                                className="size-3.5"
+                                aria-hidden="true"
+                            />
+                        </a>
+                        <a
                             href={docsUrl}
                             className={link}
                             target="_blank"
@@ -85,6 +120,49 @@ export default function About({
                             />
                         </a>
                     </div>
+                    {update && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3 text-sm">
+                            <span className="text-ink-2">
+                                {update.latest === null ? (
+                                    t('about.update.never_checked')
+                                ) : update.available ? (
+                                    <a
+                                        href={update.url ?? undefined}
+                                        className={link}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        {t('about.update.available', {
+                                            version: update.latest.version,
+                                        })}
+                                        <ExternalLink
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    </a>
+                                ) : (
+                                    t(
+                                        version.replace(/^v/, '') ===
+                                            update.latest.version
+                                            ? 'about.update.current'
+                                            : 'about.update.latest',
+                                        { version: update.latest.version },
+                                    )
+                                )}
+                                {update.latest && (
+                                    <span className="ml-2 text-ink-3">
+                                        {t('about.update.checked')}{' '}
+                                        <Relative
+                                            iso={update.latest.checked_at}
+                                        />
+                                    </span>
+                                )}
+                            </span>
+                            <Button onClick={checkNow} disabled={checking}>
+                                {t('about.update.check')}
+                            </Button>
+                        </div>
+                    )}
                 </Card>
                 {system && (
                     <Card>
