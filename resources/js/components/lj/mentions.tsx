@@ -35,6 +35,20 @@ export function toStored(text: string, candidates: Mentionable[]): string {
         );
 }
 
+/** A stored note with its tags back as the names they stand for. */
+export function withMentionNames(
+    body: string,
+    candidates: Mentionable[],
+): string {
+    return body.replace(TAG, (raw, mcp: string | undefined, id: string) => {
+        const who = candidates.find(
+            (c) => c.id === Number(id) && !!c.agent === (mcp !== undefined),
+        );
+
+        return who ? `@${who.name}` : raw;
+    });
+}
+
 /**
  * A stored note as markdown, with its tags as chips. Markdown becomes React
  * elements, never raw HTML, so a note cannot inject anything into the page.

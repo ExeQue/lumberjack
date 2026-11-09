@@ -46,6 +46,7 @@ return [
         'reopen' => 'Re-open',
         'create_repo_issue' => 'Create GitHub issue',
         'open_repo_issue' => 'Open GitHub issue',
+        'copy_markdown' => 'Copy as Markdown',
     ],
     'stats' => [
         'occurrences' => 'Occurrences',

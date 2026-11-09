@@ -4,6 +4,14 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- **Copy as Markdown** on an issue copies its details, latest stacktrace, context, notes and history, ready to hand to an agent.
+
+### Fixed
+
+- A long release hash on an issue is cut to fit its card, with the full value on hover.
+
 ## [0.1.7] - 2026-11-09
 
 ### Changed

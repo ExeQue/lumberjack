@@ -58,6 +58,10 @@ Below the chart are the tabs **Stacktrace**, **Occurrences** (each with its requ
 user, environment, release, host and a link to its trace), **Notes** and **History**.
 The left and right arrow keys move between tabs.
 
+**Copy as Markdown** puts the issue on the clipboard with its details, the latest occurrence
+with stacktrace and context, the notes and the history, ready to paste to an agent that
+cannot reach Lumberjack over [MCP](./mcp.md).
+
 ## The stacktrace
 
 Each frame shows the lines around it, highlighted as PHP, JavaScript or TypeScript, with

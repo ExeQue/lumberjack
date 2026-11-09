@@ -1,11 +1,17 @@
 import { Relative } from '@/components/lj/relative';
 import { Head, router, useForm, usePage, Link } from '@inertiajs/react';
-import { ChevronRight, CircleDot, Eye, EyeOff } from 'lucide-react';
+import { ChevronRight, CircleDot, Copy, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 import { Fragment, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent, KeyboardEvent } from 'react';
 import { LabelEditor } from '@/components/lj/labels';
 import type { IssueLabel } from '@/components/lj/labels';
-import { MentionTextarea, NoteBody, toStored } from '@/components/lj/mentions';
+import {
+    MentionTextarea,
+    NoteBody,
+    toStored,
+    withMentionNames,
+} from '@/components/lj/mentions';
 import {
     Dialog,
     DialogContent,
@@ -38,6 +44,7 @@ import { PageBody } from '@/layouts/lumberjack-layout';
 import { formatDateTime, formatNumber, formatTime } from '@/lib/format';
 import { languageOf, useHighlightedLines } from '@/lib/highlight';
 import { useT } from '@/lib/i18n';
+import { issueMarkdown } from '@/lib/issue-markdown';
 import { cn } from '@/lib/utils';
 import { useTeamLive } from '@/lib/use-live';
 import { useProjectLive } from '@/lib/use-project-live';
@@ -744,6 +751,21 @@ export default function IssueShow({
     // Resolve and ignore ask for an optional comment, which becomes a note.
     const [closing, setClosing] = useState<'resolved' | 'ignored' | null>(null);
 
+    const copyAsMarkdown = () =>
+        void navigator.clipboard
+            .writeText(
+                issueMarkdown({
+                    url: window.location.origin + window.location.pathname,
+                    project: project.name,
+                    issue,
+                    latest,
+                    notes,
+                    history,
+                    nameMentions: (body) => withMentionNames(body, mentionable),
+                }),
+            )
+            .then(() => toast.success(t('common.copied')));
+
     const createRepoIssue = () =>
         router.post(
             repoIssue(key).url,
@@ -999,6 +1021,10 @@ export default function IssueShow({
                                 </Button>
                             )
                         )}
+                        <Button onClick={copyAsMarkdown}>
+                            <Copy className="size-3.5" aria-hidden="true" />
+                            {t('issue.actions.copy_markdown')}
+                        </Button>
                     </div>
                 </div>
 
@@ -1030,11 +1056,15 @@ export default function IssueShow({
                         ],
                         [
                             t('issue.stats.releases'),
-                            <span className="font-mono">
-                                {issue.last_release ?? '-'}
+                            <span className="flex min-w-0 gap-1 font-mono">
+                                <span
+                                    className="truncate"
+                                    title={issue.last_release ?? undefined}
+                                >
+                                    {issue.last_release ?? '-'}
+                                </span>
                                 {issue.releases > 1 && (
-                                    <span className="text-ink-3">
-                                        {' '}
+                                    <span className="shrink-0 text-ink-3">
                                         {t('issue.stats.more_releases', {
                                             count: issue.releases - 1,
                                         })}
@@ -1051,7 +1081,7 @@ export default function IssueShow({
                     ].map(([label, value], i) => (
                         <div
                             key={i}
-                            className="flex flex-col gap-1 rounded-lg border border-line bg-panel px-3.5 py-3"
+                            className="flex min-w-0 flex-col gap-1 rounded-lg border border-line bg-panel px-3.5 py-3"
                         >
                             <Eyebrow>{label}</Eyebrow>
                             <span className="text-sm">{value}</span>
