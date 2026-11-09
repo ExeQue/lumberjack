@@ -4,6 +4,12 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-09
+
+### Changed
+
+- A missed scheduled task says that Lumberjack received no record of the run, not that the scheduler never ran it.
+
 ## [0.1.5] - 2026-11-09
 
 ### Changed
@@ -59,7 +65,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/ExeQue/lumberjack/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/ExeQue/lumberjack/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/ExeQue/lumberjack/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/ExeQue/lumberjack/compare/v0.1.2...v0.1.3

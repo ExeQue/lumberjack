@@ -51,7 +51,7 @@ class MarkMissedScheduledTasksAction
                 $occurrence = $this->recordOccurrenceAction->execute($task->project, new IssueSignal(
                     source: IssueSource::Server,
                     title: 'Scheduled task missed: '.$task->name,
-                    message: "Due at {$due->toIso8601String()} ({$task->expression}), but the scheduler never ran it.",
+                    message: "Due at {$due->toIso8601String()} ({$task->expression}), but Lumberjack received no record of this run.",
                     file: null,
                     line: null,
                     stacktrace: [],
