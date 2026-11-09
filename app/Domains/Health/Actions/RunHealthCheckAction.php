@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace App\Domains\Health\Actions;
 
+use App\Domains\DataSources\Support\JsonPath;
 use App\Domains\Health\Data\HealthResultData;
 use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Enums\HealthResultStatus;
 use App\Domains\Health\Exceptions\HealthExceptionInterface;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Support\DnsResolver;
+use App\Domains\Health\Support\DomainExpiryLookup;
 use App\Domains\Health\Support\NetworkGuard;
+use App\Domains\Health\Support\SmtpProbe;
 use App\Domains\Health\Support\TcpProbe;
 use App\Domains\Health\Support\TlsCertificateReader;
+use Carbon\CarbonInterface;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
 use Illuminate\Http\Client\ConnectionException;
@@ -40,6 +44,8 @@ class RunHealthCheckAction
         private readonly DnsResolver $dns,
         private readonly TcpProbe $tcp,
         private readonly TlsCertificateReader $tls,
+        private readonly DomainExpiryLookup $domains,
+        private readonly SmtpProbe $smtp,
         private readonly RecordHealthResultAction $recordHealthResultAction,
     ) {
     }
@@ -55,6 +61,8 @@ class RunHealthCheckAction
                 HealthCheckType::Tcp => $this->tcp($check),
                 HealthCheckType::Dns => $this->dns($check),
                 HealthCheckType::Heartbeat => $this->heartbeat($check),
+                HealthCheckType::Domain => $this->domain($check),
+                HealthCheckType::Smtp => $this->smtp($check),
                 null => null,
             };
         } catch (HealthExceptionInterface|ConnectionException $e) {
@@ -97,9 +105,44 @@ class RunHealthCheckAction
         return match (true) {
             $response->status() !== $expected => new HealthResultData(HealthResultStatus::Failed, __('health.results.http_status', ['expected' => $expected, 'got' => $response->status()]), $metrics),
             $contains !== '' && ! str_contains(substr($response->body(), 0, self::MAX_BODY_BYTES), $contains) => new HealthResultData(HealthResultStatus::Failed, __('health.results.http_body', ['text' => $contains]), $metrics),
+            ($jsonFailure = $this->jsonFailure($check, $response, $metrics)) !== null => $jsonFailure,
             is_numeric($maxLatency) && $ms > (int) $maxLatency => new HealthResultData(HealthResultStatus::Warning, __('health.results.http_slow', ['ms' => $ms, 'max' => (int) $maxLatency]), $metrics),
             default => new HealthResultData(HealthResultStatus::Ok, __('health.results.http_ok', ['status' => $response->status(), 'ms' => $ms]), $metrics),
         };
+    }
+
+    /**
+     * The failure when the JSON body is not what the check wants; null when it is, or when
+     * it wants nothing. With no expected value, the path only has to match.
+     *
+     * @param  array<string, float|int>  $metrics
+     */
+    private function jsonFailure(HealthCheck $check, Response $response, array $metrics): ?HealthResultData
+    {
+        $path = (string) $check->setting('json_path', '');
+
+        if ($path === '') {
+            return null;
+        }
+
+        $body = json_decode($response->body(), true);
+
+        if ($body === null) {
+            return new HealthResultData(HealthResultStatus::Failed, __('health.results.http_not_json'), $metrics);
+        }
+
+        $found = JsonPath::find($body, $path);
+
+        if ($found === []) {
+            return new HealthResultData(HealthResultStatus::Failed, __('health.results.http_json_missing', ['path' => $path]), $metrics);
+        }
+
+        $expected = (string) $check->setting('json_expected', '');
+        $values = array_map(fn (mixed $value): string => is_scalar($value) && ! is_bool($value) ? (string) $value : (string) json_encode($value), $found);
+
+        return $expected === '' || in_array($expected, $values, true)
+            ? null
+            : new HealthResultData(HealthResultStatus::Failed, __('health.results.http_json_mismatch', ['path' => $path, 'expected' => $expected, 'got' => mb_substr(implode(', ', $values), 0, 200)]), $metrics);
     }
 
     private function request(string $method, string $url, int $timeout): Response
@@ -115,15 +158,36 @@ class RunHealthCheckAction
     {
         $host = (string) $check->setting('host');
         $expires = $this->tls->expiresAt($this->guard->resolve($host), $host, (int) $check->setting('port', 443), 10);
+
+        return $this->expiry($check, $expires, 'health.results.ssl_expires', warnDays: 14, failDays: 3);
+    }
+
+    private function domain(HealthCheck $check): HealthResultData
+    {
+        return $this->expiry($check, $this->domains->expiresAt((string) $check->setting('domain')), 'health.results.domain_expires', warnDays: 30, failDays: 7);
+    }
+
+    private function expiry(HealthCheck $check, CarbonInterface $expires, string $messageKey, int $warnDays, int $failDays): HealthResultData
+    {
         $days = (int) floor(now()->diffInDays($expires, false));
         $metrics = ['days_left' => $days];
-        $message = __('health.results.ssl_expires', ['days' => $days, 'date' => $expires->toDateString()]);
+        $message = __($messageKey, ['days' => $days, 'date' => $expires->toDateString()]);
 
         return match (true) {
-            $days <= (int) $check->setting('fail_days', 3) => new HealthResultData(HealthResultStatus::Failed, $message, $metrics),
-            $days <= (int) $check->setting('warn_days', 14) => new HealthResultData(HealthResultStatus::Warning, $message, $metrics),
+            $days <= (int) $check->setting('fail_days', $failDays) => new HealthResultData(HealthResultStatus::Failed, $message, $metrics),
+            $days <= (int) $check->setting('warn_days', $warnDays) => new HealthResultData(HealthResultStatus::Warning, $message, $metrics),
             default => new HealthResultData(HealthResultStatus::Ok, $message, $metrics),
         };
+    }
+
+    private function smtp(HealthCheck $check): HealthResultData
+    {
+        $host = (string) $check->setting('host');
+        $started = hrtime(true);
+        $greeting = $this->smtp->check($this->guard->resolve($host), $host, (int) $check->setting('port'), (string) $check->setting('encryption', SmtpProbe::ENCRYPTION_STARTTLS), (float) min((int) $check->setting('timeout_s', 10), self::MAX_TIMEOUT_S));
+        $ms = round((hrtime(true) - $started) / 1e6, 1);
+
+        return new HealthResultData(HealthResultStatus::Ok, __('health.results.smtp_ok', ['ms' => $ms, 'greeting' => $greeting]), ['latency_ms' => $ms]);
     }
 
     private function tcp(HealthCheck $check): HealthResultData

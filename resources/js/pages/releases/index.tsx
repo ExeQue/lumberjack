@@ -4,7 +4,6 @@ import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
     Card,
-    CardHeader,
     EmptyState,
     PageTitle,
     numClass,
@@ -12,6 +11,12 @@ import {
     tdClass,
     thClass,
 } from '@/components/lj/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import {
     formatDateTime,
@@ -276,14 +281,21 @@ export default function ReleasesIndex({
                     )}
                 </Card>
 
-                {filters.release !== '' && newIssues && (
-                    <Card aria-labelledby="release-detail">
-                        <CardHeader
-                            id="release-detail"
-                            title={t('releases.detail.title', {
-                                release: filters.release,
-                            })}
-                            aside={
+                <Dialog
+                    open={filters.release !== '' && !!newIssues}
+                    onOpenChange={(open) => !open && pick(filters.release)}
+                >
+                    {filters.release !== '' && newIssues && (
+                        <DialogContent
+                            aria-describedby={undefined}
+                            className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+                        >
+                            <DialogHeader>
+                                <DialogTitle className="pr-6 text-sm break-words">
+                                    {t('releases.detail.title', {
+                                        release: filters.release,
+                                    })}
+                                </DialogTitle>
                                 <Link
                                     href={
                                         issuesIndex(project.uuid, {
@@ -294,52 +306,52 @@ export default function ReleasesIndex({
                                 >
                                     {t('releases.detail.all')}
                                 </Link>
-                            }
-                        />
-                        {newIssues.length === 0 ? (
-                            <p className="p-4 text-ink-3">
-                                {t('releases.detail.empty')}
-                            </p>
-                        ) : (
-                            <ul>
-                                {newIssues.map((issue) => (
-                                    <li
-                                        key={issue.id}
-                                        className="flex flex-wrap items-center justify-between gap-3 border-t border-line/60 px-4 py-2 first:border-t-0"
-                                    >
-                                        <Link
-                                            href={
-                                                issueShow([
-                                                    project.uuid,
-                                                    issue.id,
-                                                ]).url
-                                            }
-                                            className="min-w-0 truncate text-ink hover:text-amber"
+                            </DialogHeader>
+                            {newIssues.length === 0 ? (
+                                <p className="p-4 text-ink-3">
+                                    {t('releases.detail.empty')}
+                                </p>
+                            ) : (
+                                <ul className="min-w-0">
+                                    {newIssues.map((issue) => (
+                                        <li
+                                            key={issue.id}
+                                            className="flex flex-wrap items-center justify-between gap-3 border-t border-line/60 px-4 py-2 first:border-t-0"
                                         >
-                                            {issue.reference && (
-                                                <span className="mr-2 font-mono text-xs text-ink-3">
-                                                    {issue.reference}
-                                                </span>
-                                            )}
-                                            {issue.title}
-                                        </Link>
-                                        <Badge>
-                                            {t(
-                                                'releases.detail.occurrences',
-                                                {
-                                                    count: formatNumber(
-                                                        issue.occurrences,
-                                                    ),
-                                                },
-                                                issue.occurrences,
-                                            )}
-                                        </Badge>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </Card>
-                )}
+                                            <Link
+                                                href={
+                                                    issueShow([
+                                                        project.uuid,
+                                                        issue.id,
+                                                    ]).url
+                                                }
+                                                className="min-w-0 truncate text-ink hover:text-amber"
+                                            >
+                                                {issue.reference && (
+                                                    <span className="mr-2 font-mono text-xs text-ink-3">
+                                                        {issue.reference}
+                                                    </span>
+                                                )}
+                                                {issue.title}
+                                            </Link>
+                                            <Badge>
+                                                {t(
+                                                    'releases.detail.occurrences',
+                                                    {
+                                                        count: formatNumber(
+                                                            issue.occurrences,
+                                                        ),
+                                                    },
+                                                    issue.occurrences,
+                                                )}
+                                            </Badge>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </DialogContent>
+                    )}
+                </Dialog>
             </PageBody>
         </>
     );

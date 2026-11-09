@@ -6,12 +6,14 @@ import { cn } from '@/lib/utils';
  * An on/off control. The label names what it turns on for assistive technology.
  */
 export function Switch({
+    id,
     checked,
     onChange,
     label,
     disabled = false,
     small = false,
 }: {
+    id?: string;
     checked: boolean;
     onChange: (checked: boolean) => void;
     label: string;
@@ -21,6 +23,7 @@ export function Switch({
 }) {
     return (
         <button
+            id={id}
             type="button"
             role="switch"
             aria-checked={checked}

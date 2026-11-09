@@ -41,6 +41,7 @@ import {
     thClass,
     numClass,
     navActiveClass,
+    Switch,
 } from '@/components/lj/ui';
 import { LiveNotice } from '@/components/lj/live-notice';
 import { PageBody } from '@/layouts/lumberjack-layout';
@@ -872,17 +873,14 @@ function PublicStatsField({
         >
             <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2">
-                    <input
+                    <Switch
                         id="public-stats"
-                        type="checkbox"
-                        className="size-4 accent-amber"
+                        small
                         checked={settings.stats_url !== null}
-                        onChange={(e) =>
-                            save(
-                                e.target.checked,
-                                settings.stats_include_titles,
-                            )
+                        onChange={(on) =>
+                            save(on, settings.stats_include_titles)
                         }
+                        label={t('settings.keys.public_stats_enable')}
                     />
                     <Label htmlFor="public-stats">
                         {t('settings.keys.public_stats_enable')}
@@ -918,12 +916,12 @@ function PublicStatsField({
                             </ConfirmButton>
                         </div>
                         <div className="flex items-center gap-2">
-                            <input
+                            <Switch
                                 id="public-stats-titles"
-                                type="checkbox"
-                                className="size-4 accent-amber"
+                                small
                                 checked={settings.stats_include_titles}
-                                onChange={(e) => save(true, e.target.checked)}
+                                onChange={(on) => save(true, on)}
+                                label={t('settings.keys.public_stats_titles')}
                             />
                             <Label htmlFor="public-stats-titles">
                                 {t('settings.keys.public_stats_titles')}
@@ -2255,14 +2253,12 @@ function RepositorySection({ project, repository }: Props) {
                     />
                 </Field>
                 <div className="flex items-center gap-2">
-                    <input
+                    <Switch
                         id="repo-public"
-                        type="checkbox"
-                        className="size-4 accent-amber"
+                        small
                         checked={form.data.allow_public}
-                        onChange={(e) =>
-                            form.setData('allow_public', e.target.checked)
-                        }
+                        onChange={(on) => form.setData('allow_public', on)}
+                        label={t('settings.repository.allow_public')}
                     />
                     <Label htmlFor="repo-public">
                         {t('settings.repository.allow_public')}

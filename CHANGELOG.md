@@ -4,6 +4,18 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- Health checks Lumberjack runs: **Domain expiry** and **SMTP server**, and HTTP checks can require a value at a JSON path.
+- About shows system administrators the size of the database.
+- Schedule can sort by next run first.
+
+### Changed
+
+- A reported health check without a name of its own reads as its slug in words: `queue:default` is shown as **Queue: Default**, with the slug under it.
+- The name of a check Lumberjack runs is optional, and comes from its settings: an SSL check on example.com is **SSL: example.com**.
+- The details of a health check, route, release, job and command open in a dialog instead of under the list.
+
 ## [0.1.9] - 2026-11-09
 
 ### Added

@@ -9,6 +9,7 @@ import {
     CardHeader,
     EmptyState,
     PageTitle,
+    Select,
     numClass,
     tableClass,
     tdClass,
@@ -70,7 +71,10 @@ type Run = {
     issue: string | null;
 };
 
-type Filters = DashboardFilters & { task: number | null };
+type Filters = DashboardFilters & {
+    task: number | null;
+    sort: 'name' | 'next';
+};
 
 type Props = {
     project: ProjectHeader;
@@ -130,9 +134,9 @@ export default function ScheduleIndex({
 
     useProjectLive(project.uuid, ['schedule.changed'], ['tasks', 'runs']);
 
-    const select = (task: number | null) => {
+    const apply = (changes: Partial<Filters>) => {
         const query = Object.fromEntries(
-            Object.entries({ ...filters, task }).filter(
+            Object.entries({ ...filters, ...changes }).filter(
                 ([, v]) => v !== null && v !== '',
             ),
         ) as Record<string, string>;
@@ -143,6 +147,7 @@ export default function ScheduleIndex({
             { preserveState: true, preserveScroll: true, replace: true },
         );
     };
+    const select = (task: number | null) => apply({ task });
 
     return (
         <>
@@ -167,6 +172,32 @@ export default function ScheduleIndex({
                 <PageTitle
                     title={t('schedule.title')}
                     description={t('schedule.description', {}, tasks.length)}
+                    actions={
+                        <>
+                            <label
+                                htmlFor="schedule-sort"
+                                className="text-xs text-ink-3"
+                            >
+                                {t('schedule.sort.label')}
+                            </label>
+                            <Select
+                                id="schedule-sort"
+                                value={filters.sort}
+                                onChange={(e) =>
+                                    apply({
+                                        sort: e.target.value as Filters['sort'],
+                                    })
+                                }
+                            >
+                                <option value="name">
+                                    {t('schedule.sort.name')}
+                                </option>
+                                <option value="next">
+                                    {t('schedule.sort.next')}
+                                </option>
+                            </Select>
+                        </>
+                    }
                 />
 
                 {attention > 0 && (

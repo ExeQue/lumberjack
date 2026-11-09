@@ -34,7 +34,8 @@ describe('the about page', function () {
         $this->actingAs(User::factory()->systemAdmin()->create())->get(route('about'))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('system.php', PHP_VERSION)
-                ->has('system.database'));
+                ->has('system.database')
+                ->where('system.database_size', fn (string $size): bool => preg_match('/^\d+(\.\d+)? (bytes|kB|MB|GB|TB)$/', $size) === 1));
     });
 
     it('gives every page the version for the user menu', function () {

@@ -215,3 +215,87 @@ describe('the schedule', function () {
         Queue::assertPushedOn('health', RunHealthCheck::class);
     });
 });
+
+describe('json values in http checks', function () {
+    it('compares the value at a path', function (array $config, string $body, HealthResultStatus $expected) {
+        Http::fake(['*' => Http::response($body)]);
+
+        expect(($this->run)(HealthCheckType::Http, ['url' => 'https://example.com/up', ...$config])->status)->toBe($expected);
+    })->with([
+        'a matching value' => [['json_path' => 'status', 'json_expected' => 'ok'], '{"status":"ok"}', HealthResultStatus::Ok],
+        'a nested boolean' => [['json_path' => 'checks.db', 'json_expected' => 'true'], '{"checks":{"db":true}}', HealthResultStatus::Ok],
+        'another value' => [['json_path' => 'status', 'json_expected' => 'ok'], '{"status":"down"}', HealthResultStatus::Failed],
+        'a path that only has to exist' => [['json_path' => 'status'], '{"status":"down"}', HealthResultStatus::Ok],
+        'a missing path' => [['json_path' => 'status'], '{"state":"ok"}', HealthResultStatus::Failed],
+        'a body that is not json' => [['json_path' => 'status'], 'All good', HealthResultStatus::Failed],
+    ]);
+});
+
+describe('domain expiry checks', function () {
+    beforeEach(function () {
+        $this->rdap = fn (string $date) => Http::fake([
+            'data.iana.org/*' => Http::response(['services' => [[['photo'], ['https://rdap.nic.photo/']]]]),
+            'rdap.nic.photo/domain/eazy.photo' => Http::response(['events' => [['eventAction' => 'registration', 'eventDate' => '2020-01-01T00:00:00Z'], ['eventAction' => 'expiration', 'eventDate' => $date]]]),
+        ]);
+    });
+
+    it('reads the date from rdap and grades it by the days left', function (int $days, HealthResultStatus $expected) {
+        ($this->rdap)(now()->addDays($days)->addHour()->toIso8601String());
+
+        $result = ($this->run)(HealthCheckType::Domain, ['domain' => 'eazy.photo']);
+
+        expect($result->status)->toBe($expected)
+            ->and($result->metrics['days_left'])->toBe($days);
+    })->with([
+        'far off' => [90, HealthResultStatus::Ok],
+        'inside the warning' => [20, HealthResultStatus::Warning],
+        'inside the failure' => [5, HealthResultStatus::Failed],
+    ]);
+
+    it('asks whois for a top-level domain without rdap', function () {
+        Http::fake(['data.iana.org/*' => Http::response(['services' => []])]);
+        $this->fakeWhois('whois.example', 'Domain: dr.dk'."\n".'Expires:              '.now()->addDays(90)->toDateString()."\n");
+
+        $result = ($this->run)(HealthCheckType::Domain, ['domain' => 'dr.dk']);
+
+        expect($result->status)->toBe(HealthResultStatus::Ok)
+            ->and($result->message)->toContain('expires in');
+    });
+
+    it('fails and says so when the registry publishes no date', function () {
+        Http::fake(['data.iana.org/*' => Http::response(['services' => []])]);
+        $this->fakeWhois('whois.example', 'Domain: example.de'."\n".'Status: connect'."\n");
+
+        $result = ($this->run)(HealthCheckType::Domain, ['domain' => 'example.de']);
+
+        expect($result->status)->toBe(HealthResultStatus::Failed)
+            ->and($result->message)->toContain('does not publish');
+    });
+
+    it('fails for a domain the registry does not know', function () {
+        Http::fake([
+            'data.iana.org/*' => Http::response(['services' => [[['photo'], ['https://rdap.nic.photo/']]]]),
+            'rdap.nic.photo/*' => Http::response([], 404),
+        ]);
+
+        expect(($this->run)(HealthCheckType::Domain, ['domain' => 'gone.photo'])->message)->toContain('not registered');
+    });
+});
+
+describe('smtp checks', function () {
+    it('passes when the server answers and fails when it does not', function (?string $error, HealthResultStatus $expected) {
+        $this->fakeSmtp($error);
+
+        expect(($this->run)(HealthCheckType::Smtp, ['host' => 'mail.example.com', 'port' => 587])->status)->toBe($expected);
+    })->with([
+        'it answers' => [null, HealthResultStatus::Ok],
+        'it refuses' => ['Connection refused', HealthResultStatus::Failed],
+    ]);
+
+    it('is kept off private addresses', function () {
+        $this->fakeDns(['10.0.0.5']);
+        $this->fakeSmtp();
+
+        expect(($this->run)(HealthCheckType::Smtp, ['host' => 'mail.internal', 'port' => 25])->status)->toBe(HealthResultStatus::Failed);
+    });
+});

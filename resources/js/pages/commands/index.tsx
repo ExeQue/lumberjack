@@ -3,7 +3,6 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
-    Button,
     Card,
     CardHeader,
     EmptyState,
@@ -14,6 +13,12 @@ import {
     thClass,
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { formatDateTime, formatDuration, formatNumber } from '@/lib/format';
 import { useT } from '@/lib/i18n';
@@ -110,6 +115,153 @@ export default function CommandsIndex({
             { preserveState: true, preserveScroll: true, replace: true },
         );
     };
+
+    const runsTable =
+        runs.length === 0 ? (
+            <EmptyState title={t('commands.runs.empty')} />
+        ) : (
+            <div className="relative overflow-x-auto">
+                <table className={tableClass}>
+                    <thead>
+                        <tr>
+                            <th className={thClass}>
+                                {t('commands.columns.status')}
+                            </th>
+                            <th className={thClass}>
+                                {t('commands.columns.command')}
+                            </th>
+                            <th className={thClass}>
+                                {t('commands.columns.input')}
+                            </th>
+                            <th className={thClass}>
+                                {t('commands.columns.started')}
+                            </th>
+                            <th className={cn(thClass, 'text-right')}>
+                                {t('commands.columns.duration')}
+                            </th>
+                            <th className={cn(thClass, 'text-right')}>
+                                {t('commands.columns.exit_code')}
+                            </th>
+                            <th className={cn(thClass, 'hidden lg:table-cell')}>
+                                {t('commands.columns.host')}
+                            </th>
+                            <th className={thClass}>
+                                <span className="sr-only">
+                                    {t('commands.runs.view_issue')}
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {runs.map((run) => {
+                            const line = commandLine(run);
+
+                            return (
+                                <tr
+                                    key={run.id}
+                                    className="hover:bg-panel-2/60"
+                                >
+                                    <td className={tdClass}>
+                                        <Badge tone={tone[run.status]}>
+                                            {t(
+                                                `commands.statuses.${run.status}`,
+                                            )}
+                                        </Badge>
+                                    </td>
+                                    <td
+                                        className={cn(
+                                            tdClass,
+                                            'font-mono text-xs whitespace-nowrap',
+                                        )}
+                                    >
+                                        {run.name}
+                                    </td>
+                                    <td
+                                        className={cn(
+                                            tdClass,
+                                            'max-w-[48ch] min-w-48 font-mono text-xs wrap-anywhere text-ink-2',
+                                        )}
+                                    >
+                                        {line !== '' ? (
+                                            line
+                                        ) : (
+                                            <span className="text-ink-3">
+                                                {t('commands.runs.no_input')}
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td
+                                        className={cn(
+                                            tdClass,
+                                            'text-xs whitespace-nowrap text-ink-2',
+                                        )}
+                                    >
+                                        {run.started_at && (
+                                            <time
+                                                dateTime={run.started_at}
+                                                title={formatDateTime(
+                                                    run.started_at,
+                                                )}
+                                            >
+                                                <Relative
+                                                    iso={run.started_at}
+                                                />
+                                            </time>
+                                        )}
+                                    </td>
+                                    <td className={cn(tdClass, numClass)}>
+                                        {formatDuration(run.duration_us)}
+                                    </td>
+                                    <td className={cn(tdClass, numClass)}>
+                                        {run.exit_code ?? '-'}
+                                    </td>
+                                    <td
+                                        className={cn(
+                                            tdClass,
+                                            'hidden font-mono text-xs lg:table-cell',
+                                        )}
+                                    >
+                                        {run.host ?? '-'}
+                                    </td>
+                                    <td className={cn(tdClass, 'text-right')}>
+                                        <span className="inline-flex gap-3 whitespace-nowrap">
+                                            {run.trace_id && (
+                                                <Link
+                                                    href={
+                                                        traceShow([
+                                                            project.uuid,
+                                                            run.trace_id,
+                                                        ]).url
+                                                    }
+                                                    className="inline-block py-1 text-xs text-ink-2 hover:text-amber hover:underline"
+                                                >
+                                                    {t('traces.open')}
+                                                </Link>
+                                            )}
+                                            {run.issue && (
+                                                <Link
+                                                    href={
+                                                        issueShow([
+                                                            project.uuid,
+                                                            run.issue,
+                                                        ]).url
+                                                    }
+                                                    className="inline-block py-1 text-xs text-amber hover:underline"
+                                                >
+                                                    {t(
+                                                        'commands.runs.view_issue',
+                                                    )}
+                                                </Link>
+                                            )}
+                                        </span>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        );
 
     return (
         <>
@@ -308,205 +460,30 @@ export default function CommandsIndex({
                                   })
                                 : t('commands.runs.title')
                         }
-                        aside={
-                            filters.command && (
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => apply({ command: '' })}
-                                >
-                                    {t('commands.runs.clear')}
-                                </Button>
-                            )
-                        }
                     />
-                    {runs.length === 0 ? (
-                        <EmptyState title={t('commands.runs.empty')} />
-                    ) : (
-                        <div className="relative overflow-x-auto">
-                            <table className={tableClass}>
-                                <thead>
-                                    <tr>
-                                        <th className={thClass}>
-                                            {t('commands.columns.status')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('commands.columns.command')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('commands.columns.input')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('commands.columns.started')}
-                                        </th>
-                                        <th
-                                            className={cn(
-                                                thClass,
-                                                'text-right',
-                                            )}
-                                        >
-                                            {t('commands.columns.duration')}
-                                        </th>
-                                        <th
-                                            className={cn(
-                                                thClass,
-                                                'text-right',
-                                            )}
-                                        >
-                                            {t('commands.columns.exit_code')}
-                                        </th>
-                                        <th
-                                            className={cn(
-                                                thClass,
-                                                'hidden lg:table-cell',
-                                            )}
-                                        >
-                                            {t('commands.columns.host')}
-                                        </th>
-                                        <th className={thClass}>
-                                            <span className="sr-only">
-                                                {t('commands.runs.view_issue')}
-                                            </span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {runs.map((run) => {
-                                        const line = commandLine(run);
-
-                                        return (
-                                            <tr
-                                                key={run.id}
-                                                className="hover:bg-panel-2/60"
-                                            >
-                                                <td className={tdClass}>
-                                                    <Badge
-                                                        tone={tone[run.status]}
-                                                    >
-                                                        {t(
-                                                            `commands.statuses.${run.status}`,
-                                                        )}
-                                                    </Badge>
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
-                                                        'font-mono text-xs whitespace-nowrap',
-                                                    )}
-                                                >
-                                                    {run.name}
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
-                                                        'max-w-[48ch] min-w-48 font-mono text-xs wrap-anywhere text-ink-2',
-                                                    )}
-                                                >
-                                                    {line !== '' ? (
-                                                        line
-                                                    ) : (
-                                                        <span className="text-ink-3">
-                                                            {t(
-                                                                'commands.runs.no_input',
-                                                            )}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
-                                                        'text-xs whitespace-nowrap text-ink-2',
-                                                    )}
-                                                >
-                                                    {run.started_at && (
-                                                        <time
-                                                            dateTime={
-                                                                run.started_at
-                                                            }
-                                                            title={formatDateTime(
-                                                                run.started_at,
-                                                            )}
-                                                        >
-                                                            <Relative
-                                                                iso={
-                                                                    run.started_at
-                                                                }
-                                                            />
-                                                        </time>
-                                                    )}
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
-                                                        numClass,
-                                                    )}
-                                                >
-                                                    {formatDuration(
-                                                        run.duration_us,
-                                                    )}
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
-                                                        numClass,
-                                                    )}
-                                                >
-                                                    {run.exit_code ?? '-'}
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
-                                                        'hidden font-mono text-xs lg:table-cell',
-                                                    )}
-                                                >
-                                                    {run.host ?? '-'}
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        tdClass,
-                                                        'text-right',
-                                                    )}
-                                                >
-                                                    <span className="inline-flex gap-3 whitespace-nowrap">
-                                                        {run.trace_id && (
-                                                            <Link
-                                                                href={
-                                                                    traceShow([
-                                                                        project.uuid,
-                                                                        run.trace_id,
-                                                                    ]).url
-                                                                }
-                                                                className="inline-block py-1 text-xs text-ink-2 hover:text-amber hover:underline"
-                                                            >
-                                                                {t(
-                                                                    'traces.open',
-                                                                )}
-                                                            </Link>
-                                                        )}
-                                                        {run.issue && (
-                                                            <Link
-                                                                href={
-                                                                    issueShow([
-                                                                        project.uuid,
-                                                                        run.issue,
-                                                                    ]).url
-                                                                }
-                                                                className="inline-block py-1 text-xs text-amber hover:underline"
-                                                            >
-                                                                {t(
-                                                                    'commands.runs.view_issue',
-                                                                )}
-                                                            </Link>
-                                                        )}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                    {runsTable}
                 </Card>
+
+                <Dialog
+                    open={!!filters.command}
+                    onOpenChange={(open) => !open && apply({ command: '' })}
+                >
+                    {filters.command && (
+                        <DialogContent
+                            aria-describedby={undefined}
+                            className="max-h-[90vh] overflow-y-auto sm:max-w-5xl"
+                        >
+                            <DialogHeader>
+                                <DialogTitle className="pr-6 font-mono text-sm break-words">
+                                    {t('commands.runs.title_command', {
+                                        command: filters.command,
+                                    })}
+                                </DialogTitle>
+                            </DialogHeader>
+                            {runsTable}
+                        </DialogContent>
+                    )}
+                </Dialog>
             </PageBody>
         </>
     );

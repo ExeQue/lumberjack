@@ -39,12 +39,28 @@ class AboutController
                 'php' => PHP_VERSION,
                 'laravel' => Application::VERSION,
                 'database' => self::databaseVersion(),
+                'database_size' => self::databaseSize(),
                 'queue' => (string) config('queue.default'),
                 'cache' => (string) config('cache.default'),
                 'session' => (string) config('session.driver'),
                 'environment' => app()->environment(),
             ] : null,
         ]);
+    }
+
+    private static function databaseSize(): ?string
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return null;
+        }
+
+        try {
+            $size = DB::scalar('select pg_size_pretty(pg_database_size(current_database()))');
+        } catch (Throwable) {
+            return null;
+        }
+
+        return is_string($size) ? $size : null;
     }
 
     private static function databaseVersion(): ?string

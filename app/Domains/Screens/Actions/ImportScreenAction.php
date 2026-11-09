@@ -119,7 +119,7 @@ class ImportScreenAction
             foreach ((array) $given as $key) {
                 $key = is_array($key) ? $key : [];
                 $matches = $checks->filter(fn (HealthCheck $c): bool => ($slugs[$c->project_id] ?? null) === ($key['project'] ?? null)
-                    && (isset($key['slug']) ? $c->slug === $key['slug'] : (isset($key['name']) && $c->slug === null && $c->name === $key['name'])));
+                    && (isset($key['slug']) ? $c->slug === $key['slug'] : (isset($key['name']) && $c->slug === null && $c->displayName() === $key['name'])));
                 $check = $matches->firstWhere('environment', $key['environment'] ?? null) ?? $matches->first();
 
                 if ($check !== null) {

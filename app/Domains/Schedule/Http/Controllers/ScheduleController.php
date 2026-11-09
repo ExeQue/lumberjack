@@ -29,9 +29,11 @@ class ScheduleController
 
         $environment = $this->environment($request);
         $selected = $request->integer('task') ?: null;
+        $sort = $request->query('sort') === 'next' ? 'next' : 'name';
 
         $tasks = $project->scheduledTasks()
             ->when($environment !== null)->where('environment', $environment)
+            ->when($sort === 'next')->orderByRaw('next_run_at ASC NULLS LAST')
             ->orderBy('name')
             // The latest runs of every task in one query.
             ->with(['runs' => fn (HasMany $runs) => $runs->select(['id', 'scheduled_task_id', 'status', 'started_at'])->latest('started_at')->limit(self::RECENT_RUNS)])
@@ -41,7 +43,7 @@ class ScheduleController
 
         return Inertia::render('schedule/index', [
             'project' => $presenter->header($project, $request->user()),
-            'filters' => [...$this->filters($request), 'task' => $selectedTask?->id],
+            'filters' => [...$this->filters($request), 'task' => $selectedTask?->id, 'sort' => $sort],
             'tasks' => $tasks->map(fn (ScheduledTask $task): array => [
                 ...$this->task($task),
                 'recent' => $task->runs->pluck('status')->map->value->reverse()->values()->all(),

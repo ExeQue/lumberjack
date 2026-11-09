@@ -22,6 +22,13 @@ import {
     thClass,
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import {
     formatBytes,
@@ -288,10 +295,9 @@ function ChecksTable({
                                     {check.name}
                                 </button>
                                 <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-3">
-                                    {check.source === 'reported' &&
-                                        check.custom_name && (
-                                            <Mono>{check.slug}</Mono>
-                                        )}
+                                    {check.source === 'reported' && (
+                                        <Mono>{check.slug}</Mono>
+                                    )}
                                     {check.type && (
                                         <span>
                                             {t(`health.types.${check.type}`)}
@@ -593,443 +599,452 @@ function CheckDetail({
     const curl = detail.ping_url ? `curl -fsS -m 10 ${detail.ping_url}` : null;
 
     return (
-        <Card aria-labelledby="health-detail-title">
-            <CardHeader
-                id="health-detail-title"
-                title={check.name}
-                description={
-                    <>
-                        {check.description && (
-                            <span className="block">{check.description}</span>
-                        )}
-                        {t(
-                            'health.detail.thresholds',
-                            {
-                                recover: check.recover_after,
-                                down: check.down_after,
-                            },
-                            check.degrade_after,
-                        )}{' '}
-                        {check.source === 'reported'
-                            ? t(
-                                  check.thresholds_overridden
-                                      ? 'health.detail.thresholds_own'
-                                      : 'health.detail.thresholds_app',
-                              )
-                            : t(
-                                  'health.detail.every',
-                                  {},
-                                  check.interval_minutes ?? 1,
-                              )}
-                    </>
-                }
-                aside={
-                    <span className="flex flex-wrap gap-2">
-                        {project.can_administer && (
-                            <>
-                                <Button onClick={onEdit}>
-                                    {t('health.detail.edit')}
-                                </Button>
-                                {check.archived ? (
-                                    <Button
-                                        onClick={() =>
-                                            router.put(
-                                                healthArchive([
-                                                    project.uuid,
-                                                    check.uuid,
-                                                ]).url,
-                                                { archived: false },
-                                                { preserveScroll: true },
-                                            )
-                                        }
-                                    >
-                                        {t('health.detail.unarchive')}
-                                    </Button>
-                                ) : (
-                                    <ConfirmButton
-                                        variant="default"
-                                        question={t(
-                                            'health.detail.archive_question',
-                                            { check: check.name },
-                                        )}
-                                        confirmLabel={t(
-                                            'health.detail.archive',
-                                        )}
-                                        onConfirm={() =>
-                                            router.put(
-                                                healthArchive([
-                                                    project.uuid,
-                                                    check.uuid,
-                                                ]).url,
-                                                { archived: true },
-                                                { preserveScroll: true },
-                                            )
-                                        }
-                                    >
-                                        {t('health.detail.archive')}
-                                    </ConfirmButton>
-                                )}
-                                <ConfirmButton
-                                    question={t(
-                                        'health.detail.delete_question',
-                                        { check: check.name },
-                                    )}
-                                    confirmLabel={t('health.detail.delete')}
-                                    onConfirm={() =>
-                                        router.delete(
-                                            healthDestroy([
+        <Dialog open onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle className="pr-6 text-sm break-words">
+                        {check.name}
+                    </DialogTitle>
+                    <DialogDescription>
+                        <>
+                            {check.description && (
+                                <span className="block">
+                                    {check.description}
+                                </span>
+                            )}
+                            {t(
+                                'health.detail.thresholds',
+                                {
+                                    recover: check.recover_after,
+                                    down: check.down_after,
+                                },
+                                check.degrade_after,
+                            )}{' '}
+                            {check.source === 'reported'
+                                ? t(
+                                      check.thresholds_overridden
+                                          ? 'health.detail.thresholds_own'
+                                          : 'health.detail.thresholds_app',
+                                  )
+                                : t(
+                                      'health.detail.every',
+                                      {},
+                                      check.interval_minutes ?? 1,
+                                  )}
+                        </>
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-wrap gap-2">
+                    {project.can_administer && (
+                        <>
+                            <Button onClick={onEdit}>
+                                {t('health.detail.edit')}
+                            </Button>
+                            {check.archived ? (
+                                <Button
+                                    onClick={() =>
+                                        router.put(
+                                            healthArchive([
                                                 project.uuid,
                                                 check.uuid,
                                             ]).url,
+                                            { archived: false },
                                             { preserveScroll: true },
                                         )
                                     }
                                 >
-                                    {t('health.detail.delete')}
+                                    {t('health.detail.unarchive')}
+                                </Button>
+                            ) : (
+                                <ConfirmButton
+                                    variant="default"
+                                    question={t(
+                                        'health.detail.archive_question',
+                                        { check: check.name },
+                                    )}
+                                    confirmLabel={t('health.detail.archive')}
+                                    onConfirm={() =>
+                                        router.put(
+                                            healthArchive([
+                                                project.uuid,
+                                                check.uuid,
+                                            ]).url,
+                                            { archived: true },
+                                            { preserveScroll: true },
+                                        )
+                                    }
+                                >
+                                    {t('health.detail.archive')}
                                 </ConfirmButton>
-                            </>
-                        )}
-                        <Button variant="ghost" onClick={onClose}>
-                            {t('health.detail.close')}
-                        </Button>
-                    </span>
-                }
-            />
-
-            <div className="flex flex-col gap-6 p-4">
-                {detail.ping_url && curl && (
-                    <section className="flex flex-col gap-2">
-                        <h3 className="text-xs font-medium text-ink-3 uppercase">
-                            {t('health.detail.ping.title')}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <code className="min-w-0 flex-1 truncate rounded-md border border-line bg-rail px-2.5 py-1.5 font-mono text-xs">
-                                {detail.ping_url}
-                            </code>
-                            <CopyButton text={detail.ping_url} />
-                        </div>
-                        <p className="text-xs text-ink-3">
-                            {t('health.detail.ping.hint')}{' '}
-                            {t('health.detail.ping.example')}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-line bg-rail px-2.5 py-1.5 font-mono text-xs whitespace-nowrap">
-                                {curl}
-                            </code>
-                            <CopyButton text={curl} />
-                        </div>
-                    </section>
-                )}
-
-                <section className="flex flex-col gap-2">
-                    <h3 className="text-xs font-medium text-ink-3 uppercase">
-                        {t('health.detail.latency')}
-                    </h3>
-                    <TimeBars
-                        series={detail.latency_series}
-                        period={period}
-                        label={t('health.detail.latency')}
-                        height={90}
-                        formatValue={(v) => formatDuration(v)}
-                    />
-                </section>
-
-                {check.hosts.length > 1 && (
-                    <section className="flex flex-col gap-2">
-                        <h3 className="text-xs font-medium text-ink-3 uppercase">
-                            {t('health.detail.hosts')}
-                        </h3>
-                        <div className="overflow-x-auto">
-                            <table className={tableClass}>
-                                <thead>
-                                    <tr>
-                                        <th className={thClass}>
-                                            {t('health.columns.host')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('health.columns.status')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('health.columns.last_result')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('health.columns.message')}
-                                        </th>
-                                        <th
-                                            className={cn(
-                                                thClass,
-                                                'text-right',
-                                            )}
-                                        >
-                                            {t('health.columns.latency')}
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {check.hosts.map((host) => (
-                                        <tr key={host.host ?? ''}>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    'font-mono text-xs',
-                                                )}
-                                            >
-                                                {host.host ?? '-'}
-                                            </td>
-                                            <td className={tdClass}>
-                                                <StateBadge
-                                                    state={host.state}
-                                                />
-                                            </td>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    'text-xs text-ink-2',
-                                                )}
-                                            >
-                                                <When
-                                                    iso={host.last_result_at}
-                                                />
-                                            </td>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    'text-xs text-ink-2',
-                                                )}
-                                            >
-                                                {host.last_message ?? '-'}
-                                            </td>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    numClass,
-                                                )}
-                                            >
-                                                {latency(
-                                                    host.metrics,
-                                                    host.duration_us,
-                                                )}
-                                                <DatabaseFigures
-                                                    metrics={host.metrics}
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                )}
-
-                <section className="flex flex-col gap-2">
-                    <h3 className="text-xs font-medium text-ink-3 uppercase">
-                        {t('health.detail.outages')}
-                    </h3>
-                    {detail.outages.length === 0 ? (
-                        <p className="text-[13px] text-ink-3">
-                            {t('health.detail.no_outages')}
-                        </p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className={tableClass}>
-                                <thead>
-                                    <tr>
-                                        <th className={thClass}>
-                                            {t('health.columns.started')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('health.columns.ended')}
-                                        </th>
-                                        <th
-                                            className={cn(
-                                                thClass,
-                                                'text-right',
-                                            )}
-                                        >
-                                            {t('health.columns.duration')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('health.columns.worst')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('health.columns.message')}
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {detail.outages.map((outage) => (
-                                        <tr key={outage.id}>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    'text-xs whitespace-nowrap text-ink-2',
-                                                )}
-                                            >
-                                                {formatDateTime(
-                                                    outage.started_at,
-                                                )}
-                                            </td>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    'text-xs whitespace-nowrap text-ink-2',
-                                                )}
-                                            >
-                                                {outage.ended_at ? (
-                                                    formatDateTime(
-                                                        outage.ended_at,
-                                                    )
-                                                ) : (
-                                                    <Badge tone="err">
-                                                        {t('health.ongoing')}
-                                                    </Badge>
-                                                )}
-                                            </td>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    numClass,
-                                                )}
-                                            >
-                                                {formatDuration(
-                                                    outage.duration_s *
-                                                        1_000_000,
-                                                )}
-                                            </td>
-                                            <td className={tdClass}>
-                                                <StateBadge
-                                                    state={outage.status}
-                                                />
-                                            </td>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    'text-xs text-ink-2',
-                                                )}
-                                            >
-                                                {outage.first_message ?? '-'}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                            )}
+                            <ConfirmButton
+                                question={t('health.detail.delete_question', {
+                                    check: check.name,
+                                })}
+                                confirmLabel={t('health.detail.delete')}
+                                onConfirm={() =>
+                                    router.delete(
+                                        healthDestroy([
+                                            project.uuid,
+                                            check.uuid,
+                                        ]).url,
+                                        { preserveScroll: true },
+                                    )
+                                }
+                            >
+                                {t('health.detail.delete')}
+                            </ConfirmButton>
+                        </>
                     )}
-                </section>
+                </div>
 
-                <section className="flex flex-col gap-2">
-                    <h3 className="text-xs font-medium text-ink-3 uppercase">
-                        {t('health.detail.results')}
-                    </h3>
-                    {detail.results.length === 0 ? (
-                        <p className="text-[13px] text-ink-3">
-                            {t('health.detail.no_results')}
-                        </p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className={tableClass}>
-                                <thead>
-                                    <tr>
-                                        <th className={thClass}>
-                                            {t('health.columns.checked_at')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('health.columns.status')}
-                                        </th>
-                                        {check.source === 'reported' && (
+                <div className="flex min-w-0 flex-col gap-6">
+                    {detail.ping_url && curl && (
+                        <section className="flex flex-col gap-2">
+                            <h3 className="text-xs font-medium text-ink-3 uppercase">
+                                {t('health.detail.ping.title')}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <code className="min-w-0 flex-1 truncate rounded-md border border-line bg-rail px-2.5 py-1.5 font-mono text-xs">
+                                    {detail.ping_url}
+                                </code>
+                                <CopyButton text={detail.ping_url} />
+                            </div>
+                            <p className="text-xs text-ink-3">
+                                {t('health.detail.ping.hint')}{' '}
+                                {t('health.detail.ping.example')}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-line bg-rail px-2.5 py-1.5 font-mono text-xs whitespace-nowrap">
+                                    {curl}
+                                </code>
+                                <CopyButton text={curl} />
+                            </div>
+                        </section>
+                    )}
+
+                    <section className="flex flex-col gap-2">
+                        <h3 className="text-xs font-medium text-ink-3 uppercase">
+                            {t('health.detail.latency')}
+                        </h3>
+                        <TimeBars
+                            series={detail.latency_series}
+                            period={period}
+                            label={t('health.detail.latency')}
+                            height={90}
+                            formatValue={(v) => formatDuration(v)}
+                        />
+                    </section>
+
+                    {check.hosts.length > 1 && (
+                        <section className="flex flex-col gap-2">
+                            <h3 className="text-xs font-medium text-ink-3 uppercase">
+                                {t('health.detail.hosts')}
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className={tableClass}>
+                                    <thead>
+                                        <tr>
                                             <th className={thClass}>
                                                 {t('health.columns.host')}
                                             </th>
-                                        )}
-                                        <th className={thClass}>
-                                            {t('health.columns.message')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('health.columns.metrics')}
-                                        </th>
-                                        <th
-                                            className={cn(
-                                                thClass,
-                                                'text-right',
-                                            )}
-                                        >
-                                            {t('health.columns.duration')}
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {detail.results.map((result) => (
-                                        <tr key={result.id}>
-                                            <td
+                                            <th className={thClass}>
+                                                {t('health.columns.status')}
+                                            </th>
+                                            <th className={thClass}>
+                                                {t(
+                                                    'health.columns.last_result',
+                                                )}
+                                            </th>
+                                            <th className={thClass}>
+                                                {t('health.columns.message')}
+                                            </th>
+                                            <th
                                                 className={cn(
-                                                    tdClass,
-                                                    'text-xs whitespace-nowrap text-ink-2',
+                                                    thClass,
+                                                    'text-right',
                                                 )}
                                             >
-                                                <When iso={result.checked_at} />
-                                            </td>
-                                            <td className={tdClass}>
-                                                <Badge
-                                                    tone={
-                                                        resultTone[
-                                                            result.status
-                                                        ]
-                                                    }
-                                                >
-                                                    {t(
-                                                        `health.result_statuses.${result.status}`,
-                                                    )}
-                                                </Badge>
-                                            </td>
-                                            {check.source === 'reported' && (
+                                                {t('health.columns.latency')}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {check.hosts.map((host) => (
+                                            <tr key={host.host ?? ''}>
                                                 <td
                                                     className={cn(
                                                         tdClass,
                                                         'font-mono text-xs',
                                                     )}
                                                 >
-                                                    {result.host ?? '-'}
+                                                    {host.host ?? '-'}
                                                 </td>
-                                            )}
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    'text-xs text-ink-2',
-                                                )}
-                                            >
-                                                {result.message ?? '-'}
-                                            </td>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    'font-mono text-xs text-ink-3',
-                                                )}
-                                            >
-                                                {Object.entries(result.metrics)
-                                                    .map(
-                                                        ([name, value]) =>
-                                                            `${name} ${formatMetric(name, value)}`,
-                                                    )
-                                                    .join(', ') || '-'}
-                                            </td>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    numClass,
-                                                )}
-                                            >
-                                                {formatDuration(
-                                                    result.duration_us,
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                                <td className={tdClass}>
+                                                    <StateBadge
+                                                        state={host.state}
+                                                    />
+                                                </td>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'text-xs text-ink-2',
+                                                    )}
+                                                >
+                                                    <When
+                                                        iso={
+                                                            host.last_result_at
+                                                        }
+                                                    />
+                                                </td>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'text-xs text-ink-2',
+                                                    )}
+                                                >
+                                                    {host.last_message ?? '-'}
+                                                </td>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        numClass,
+                                                    )}
+                                                >
+                                                    {latency(
+                                                        host.metrics,
+                                                        host.duration_us,
+                                                    )}
+                                                    <DatabaseFigures
+                                                        metrics={host.metrics}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
                     )}
-                </section>
-            </div>
-        </Card>
+
+                    <section className="flex flex-col gap-2">
+                        <h3 className="text-xs font-medium text-ink-3 uppercase">
+                            {t('health.detail.outages')}
+                        </h3>
+                        {detail.outages.length === 0 ? (
+                            <p className="text-[13px] text-ink-3">
+                                {t('health.detail.no_outages')}
+                            </p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className={tableClass}>
+                                    <thead>
+                                        <tr>
+                                            <th className={thClass}>
+                                                {t('health.columns.started')}
+                                            </th>
+                                            <th className={thClass}>
+                                                {t('health.columns.ended')}
+                                            </th>
+                                            <th
+                                                className={cn(
+                                                    thClass,
+                                                    'text-right',
+                                                )}
+                                            >
+                                                {t('health.columns.duration')}
+                                            </th>
+                                            <th className={thClass}>
+                                                {t('health.columns.worst')}
+                                            </th>
+                                            <th className={thClass}>
+                                                {t('health.columns.message')}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {detail.outages.map((outage) => (
+                                            <tr key={outage.id}>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'text-xs whitespace-nowrap text-ink-2',
+                                                    )}
+                                                >
+                                                    {formatDateTime(
+                                                        outage.started_at,
+                                                    )}
+                                                </td>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'text-xs whitespace-nowrap text-ink-2',
+                                                    )}
+                                                >
+                                                    {outage.ended_at ? (
+                                                        formatDateTime(
+                                                            outage.ended_at,
+                                                        )
+                                                    ) : (
+                                                        <Badge tone="err">
+                                                            {t(
+                                                                'health.ongoing',
+                                                            )}
+                                                        </Badge>
+                                                    )}
+                                                </td>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        numClass,
+                                                    )}
+                                                >
+                                                    {formatDuration(
+                                                        outage.duration_s *
+                                                            1_000_000,
+                                                    )}
+                                                </td>
+                                                <td className={tdClass}>
+                                                    <StateBadge
+                                                        state={outage.status}
+                                                    />
+                                                </td>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'text-xs text-ink-2',
+                                                    )}
+                                                >
+                                                    {outage.first_message ??
+                                                        '-'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </section>
+
+                    <section className="flex flex-col gap-2">
+                        <h3 className="text-xs font-medium text-ink-3 uppercase">
+                            {t('health.detail.results')}
+                        </h3>
+                        {detail.results.length === 0 ? (
+                            <p className="text-[13px] text-ink-3">
+                                {t('health.detail.no_results')}
+                            </p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className={tableClass}>
+                                    <thead>
+                                        <tr>
+                                            <th className={thClass}>
+                                                {t('health.columns.checked_at')}
+                                            </th>
+                                            <th className={thClass}>
+                                                {t('health.columns.status')}
+                                            </th>
+                                            {check.source === 'reported' && (
+                                                <th className={thClass}>
+                                                    {t('health.columns.host')}
+                                                </th>
+                                            )}
+                                            <th className={thClass}>
+                                                {t('health.columns.message')}
+                                            </th>
+                                            <th className={thClass}>
+                                                {t('health.columns.metrics')}
+                                            </th>
+                                            <th
+                                                className={cn(
+                                                    thClass,
+                                                    'text-right',
+                                                )}
+                                            >
+                                                {t('health.columns.duration')}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {detail.results.map((result) => (
+                                            <tr key={result.id}>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'text-xs whitespace-nowrap text-ink-2',
+                                                    )}
+                                                >
+                                                    <When
+                                                        iso={result.checked_at}
+                                                    />
+                                                </td>
+                                                <td className={tdClass}>
+                                                    <Badge
+                                                        tone={
+                                                            resultTone[
+                                                                result.status
+                                                            ]
+                                                        }
+                                                    >
+                                                        {t(
+                                                            `health.result_statuses.${result.status}`,
+                                                        )}
+                                                    </Badge>
+                                                </td>
+                                                {check.source ===
+                                                    'reported' && (
+                                                    <td
+                                                        className={cn(
+                                                            tdClass,
+                                                            'font-mono text-xs',
+                                                        )}
+                                                    >
+                                                        {result.host ?? '-'}
+                                                    </td>
+                                                )}
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'text-xs text-ink-2',
+                                                    )}
+                                                >
+                                                    {result.message ?? '-'}
+                                                </td>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'font-mono text-xs text-ink-3',
+                                                    )}
+                                                >
+                                                    {Object.entries(
+                                                        result.metrics,
+                                                    )
+                                                        .map(
+                                                            ([name, value]) =>
+                                                                `${name} ${formatMetric(name, value)}`,
+                                                        )
+                                                        .join(', ') || '-'}
+                                                </td>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        numClass,
+                                                    )}
+                                                >
+                                                    {formatDuration(
+                                                        result.duration_us,
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </section>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }

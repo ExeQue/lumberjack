@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domains\Health\Http\Requests;
 
+use App\Domains\DataSources\Support\JsonPath;
 use App\Domains\Health\Actions\RunHealthCheckAction;
 use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Models\HealthCheck;
+use App\Domains\Health\Support\SmtpProbe;
 use App\Domains\Projects\Models\Project;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -22,11 +24,13 @@ class SaveHealthCheckRequest extends FormRequest
 {
     /** @var array<string, list<string>> the settings each type keeps */
     public const array CONFIG_KEYS = [
-        'http' => ['url', 'method', 'expected_status', 'body_contains', 'max_latency_ms', 'timeout_s'],
+        'http' => ['url', 'method', 'expected_status', 'body_contains', 'json_path', 'json_expected', 'max_latency_ms', 'timeout_s'],
         'ssl' => ['host', 'port', 'warn_days', 'fail_days'],
         'tcp' => ['host', 'port', 'timeout_s'],
         'dns' => ['name', 'record_type', 'expected'],
         'heartbeat' => ['grace_minutes'],
+        'domain' => ['domain', 'warn_days', 'fail_days'],
+        'smtp' => ['host', 'port', 'encryption', 'timeout_s'],
     ];
 
     private const string HOST = 'regex:/^[A-Za-z0-9.-]{1,253}$|^\[?[0-9A-Fa-f:.]+\]?$/';
@@ -51,7 +55,8 @@ class SaveHealthCheckRequest extends FormRequest
         $reported = $this->check()?->isReported() ?? false;
         $thresholds = [$reported ? 'nullable' : 'required', 'integer', 'min:1', 'max:100'];
         $common = [
-            'name' => [$reported ? 'nullable' : 'required', 'string', 'max:150'],
+            // A heartbeat has no settings to take a name from.
+            'name' => [$this->type() === HealthCheckType::Heartbeat ? 'required' : 'nullable', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:1000'],
             'degrade_after' => $thresholds,
             'recover_after' => $thresholds,
@@ -109,6 +114,8 @@ class SaveHealthCheckRequest extends FormRequest
                 'config.method' => ['nullable', Rule::in(['GET', 'HEAD', 'POST'])],
                 'config.expected_status' => ['nullable', 'integer', 'min:100', 'max:599'],
                 'config.body_contains' => ['nullable', 'string', 'max:200'],
+                'config.json_path' => ['nullable', 'string', 'max:'.JsonPath::MAX_PATH],
+                'config.json_expected' => ['nullable', 'string', 'max:200'],
                 'config.max_latency_ms' => ['nullable', 'integer', 'min:1', 'max:60000'],
                 'config.timeout_s' => ['nullable', 'integer', 'min:1', 'max:'.RunHealthCheckAction::MAX_TIMEOUT_S],
             ],
@@ -121,6 +128,17 @@ class SaveHealthCheckRequest extends FormRequest
             HealthCheckType::Tcp => [
                 'config.host' => ['required', 'string', self::HOST],
                 'config.port' => ['required', 'integer', 'min:1', 'max:65535'],
+                'config.timeout_s' => ['nullable', 'integer', 'min:1', 'max:'.RunHealthCheckAction::MAX_TIMEOUT_S],
+            ],
+            HealthCheckType::Domain => [
+                'config.domain' => ['required', 'string', 'max:253', 'regex:/^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/'],
+                'config.warn_days' => ['nullable', 'integer', 'min:1', 'max:365'],
+                'config.fail_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            ],
+            HealthCheckType::Smtp => [
+                'config.host' => ['required', 'string', self::HOST],
+                'config.port' => ['required', 'integer', 'min:1', 'max:65535'],
+                'config.encryption' => ['nullable', Rule::in([SmtpProbe::ENCRYPTION_STARTTLS, SmtpProbe::ENCRYPTION_TLS, SmtpProbe::ENCRYPTION_NONE])],
                 'config.timeout_s' => ['nullable', 'integer', 'min:1', 'max:'.RunHealthCheckAction::MAX_TIMEOUT_S],
             ],
             HealthCheckType::Dns => [

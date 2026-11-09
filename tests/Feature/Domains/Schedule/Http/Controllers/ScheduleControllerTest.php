@@ -35,6 +35,21 @@ describe('the schedule page', function () {
                 ->where('tasks.0.recent', ['finished', 'finished', 'finished'])
                 ->has('runs', 3));
     });
+
+    it('sorts by the next run on request, with tasks without one last', function () {
+        $this->task->update(['name' => 'a-later', 'next_run_at' => now()->addHours(2)]);
+        ScheduledTask::factory()->for($this->project)->create(['name' => 'b-sooner', 'next_run_at' => now()->addMinute()]);
+        ScheduledTask::factory()->for($this->project)->create(['name' => 'c-unknown', 'next_run_at' => null]);
+        $user = User::factory()->inTeam($this->project->team)->create();
+
+        $this->actingAs($user)
+            ->get(route('schedule.index', ['project' => $this->project, 'sort' => 'next']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.sort', 'next')
+                ->where('tasks.0.name', 'b-sooner')
+                ->where('tasks.1.name', 'a-later')
+                ->where('tasks.2.name', 'c-unknown'));
+    });
 });
 
 describe('the queries of the schedule page', function () {

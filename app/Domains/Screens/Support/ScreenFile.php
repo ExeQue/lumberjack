@@ -30,7 +30,7 @@ final class ScreenFile
         return [
             'project' => $project,
             'environment' => $check->environment,
-            ...($check->slug !== null ? ['slug' => $check->slug] : ['name' => (string) $check->name]),
+            ...($check->slug !== null ? ['slug' => $check->slug] : ['name' => $check->displayName()]),
         ];
     }
 

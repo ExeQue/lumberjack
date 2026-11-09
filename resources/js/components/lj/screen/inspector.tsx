@@ -7,7 +7,14 @@ import {
     useSyncExternalStore,
 } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Input, inputClass, Label, Select } from '@/components/lj/ui';
+import {
+    Button,
+    Input,
+    inputClass,
+    Label,
+    Select,
+    Switch,
+} from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { PATH_FIELDS, PathConfig, useJsonPreview } from './json-path-help';
@@ -639,8 +646,8 @@ export function WidgetInspector({
                             span || 'self-end pb-2',
                         )}
                     >
-                        <input
-                            type="checkbox"
+                        <Switch
+                            small
                             checked={effective}
                             onChange={() =>
                                 setOption(
@@ -651,6 +658,7 @@ export function WidgetInspector({
                                         : null,
                                 )
                             }
+                            label={fieldLabel(field.key)}
                         />
                         {fieldLabel(field.key)}
                     </label>
@@ -1856,23 +1864,21 @@ export function ScreenSettings({
                 </span>
             </div>
             <label className="flex items-center gap-2 text-[13px]">
-                <input
-                    type="checkbox"
+                <Switch
+                    small
                     checked={screen.show_header}
-                    onChange={(e) =>
-                        onChange({ show_header: e.target.checked })
-                    }
+                    onChange={(on) => onChange({ show_header: on })}
+                    label={t('screens.designer.show_header')}
                 />
                 {t('screens.designer.show_header')}
             </label>
             {screen.show_header && (
                 <label className="flex items-center gap-2 text-[13px]">
-                    <input
-                        type="checkbox"
+                    <Switch
+                        small
                         checked={screen.show_clock}
-                        onChange={(e) =>
-                            onChange({ show_clock: e.target.checked })
-                        }
+                        onChange={(on) => onChange({ show_clock: on })}
+                        label={t('screens.settings.show_clock')}
                     />
                     {t('screens.settings.show_clock')}
                 </label>

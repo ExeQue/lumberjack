@@ -42,7 +42,7 @@ the release has server errors and the one before had none.
 
 ### The issues a release brought
 
-Click a release to list its new issues with their error counts. **Issues last seen in
+Click a release to open a dialog with its new issues with their error counts. **Issues last seen in
 this release** opens the issues list filtered by that release.
 
 A new issue belongs to the release of its earliest occurrence, in the picked

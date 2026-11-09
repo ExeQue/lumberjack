@@ -14,12 +14,14 @@ enum HealthCheckType: string
     case Tcp = 'tcp';
     case Dns = 'dns';
     case Heartbeat = 'heartbeat';
+    case Domain = 'domain';
+    case Smtp = 'smtp';
 
     /**
      * Types that open a connection to the host, so they go through the private address guard.
      */
     public function connects(): bool
     {
-        return in_array($this, [self::Http, self::Ssl, self::Tcp], true);
+        return in_array($this, [self::Http, self::Ssl, self::Tcp, self::Smtp], true);
     }
 }

@@ -5,7 +5,6 @@ import {
     bucketLabel,
     Badge,
     Card,
-    CardHeader,
     EmptyState,
     Eyebrow,
     Input,
@@ -19,6 +18,12 @@ import {
     spreadTips,
 } from '@/components/lj/ui';
 import { SampleNote } from '@/components/lj/sample-note';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import {
     formatDuration,
@@ -456,30 +461,41 @@ export default function RoutesIndex({
                     )}
                 </Card>
 
-                {detail && (
-                    <Card aria-labelledby="route-detail">
-                        <CardHeader
-                            id="route-detail"
-                            title={
-                                <span className="font-mono">
-                                    <span className="text-ink-3">
-                                        {detail.method}
-                                    </span>{' '}
-                                    {detail.route}
-                                    {detail.route_name && (
-                                        <span className="ml-2 text-sm text-ink-3">
-                                            {detail.route_name}
-                                        </span>
-                                    )}
-                                    {detail.domain && (
-                                        <span className="ml-2 text-sm text-ink-3">
-                                            {detail.domain}
-                                        </span>
-                                    )}
-                                </span>
-                            }
-                            aside={
-                                selected && (
+                <Dialog
+                    open={detail !== null}
+                    onOpenChange={(open) =>
+                        !open &&
+                        apply({ route: '', method: '', route_domain: null }, [
+                            'detail',
+                            'filters',
+                        ])
+                    }
+                >
+                    {detail && (
+                        <DialogContent
+                            aria-describedby={undefined}
+                            className="max-h-[90vh] overflow-y-auto sm:max-w-5xl"
+                        >
+                            <DialogHeader>
+                                <DialogTitle className="pr-6 font-mono text-sm break-words">
+                                    <span className="font-mono">
+                                        <span className="text-ink-3">
+                                            {detail.method}
+                                        </span>{' '}
+                                        {detail.route}
+                                        {detail.route_name && (
+                                            <span className="ml-2 text-sm text-ink-3">
+                                                {detail.route_name}
+                                            </span>
+                                        )}
+                                        {detail.domain && (
+                                            <span className="ml-2 text-sm text-ink-3">
+                                                {detail.domain}
+                                            </span>
+                                        )}
+                                    </span>
+                                </DialogTitle>
+                                {selected && (
                                     <span className="text-xs text-ink-3">
                                         {t('routes.detail.summary', {
                                             requests: formatNumber(
@@ -492,92 +508,100 @@ export default function RoutesIndex({
                                             ),
                                         })}
                                     </span>
-                                )
-                            }
-                        />
-                        <div className="flex flex-wrap">
-                            <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-2 p-4">
-                                <Eyebrow>{t('routes.detail.hourly')}</Eyebrow>
-                                <HourlyChart
-                                    hourly={detail.hourly}
-                                    period={filters.period}
-                                />
-                                {selected && (
-                                    <StatusBar statuses={selected.statuses} />
                                 )}
-                            </div>
-                            <div className="flex min-w-0 flex-[1_1_420px] flex-col border-line md:border-l">
-                                <Eyebrow className="px-4 pt-4 pb-2">
-                                    {t('routes.detail.slowest')}
-                                </Eyebrow>
-                                {detail.slowest.length === 0 ? (
-                                    <p className="px-4 pb-4 text-ink-3">
-                                        {t('routes.detail.no_requests')}
-                                    </p>
-                                ) : (
-                                    <ul>
-                                        {detail.slowest.map((s, i) => (
-                                            <li
-                                                key={i}
-                                                className="flex flex-wrap justify-between gap-3 border-t border-line/60 px-4 py-2 font-mono text-xs"
-                                            >
-                                                <span className="text-ink-2">
-                                                    <time dateTime={s.at}>
-                                                        {formatTime(s.at)}
-                                                    </time>
-                                                    {s.domain &&
-                                                        !detail.domain &&
-                                                        ` · ${s.domain}`}
-                                                    {s.host && ` · ${s.host}`}
-                                                    {s.queries !== null &&
-                                                        ` · ${t('routes.detail.queries', {}, s.queries)}`}
-                                                    {s.trace_id && (
-                                                        <>
-                                                            {' · '}
-                                                            <Link
-                                                                href={
-                                                                    traceShow([
-                                                                        project.uuid,
-                                                                        s.trace_id,
-                                                                    ]).url
+                            </DialogHeader>
+                            <div className="flex flex-wrap">
+                                <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-2 p-4">
+                                    <Eyebrow>
+                                        {t('routes.detail.hourly')}
+                                    </Eyebrow>
+                                    <HourlyChart
+                                        hourly={detail.hourly}
+                                        period={filters.period}
+                                    />
+                                    {selected && (
+                                        <StatusBar
+                                            statuses={selected.statuses}
+                                        />
+                                    )}
+                                </div>
+                                <div className="flex min-w-0 flex-[1_1_420px] flex-col border-line md:border-l">
+                                    <Eyebrow className="px-4 pt-4 pb-2">
+                                        {t('routes.detail.slowest')}
+                                    </Eyebrow>
+                                    {detail.slowest.length === 0 ? (
+                                        <p className="px-4 pb-4 text-ink-3">
+                                            {t('routes.detail.no_requests')}
+                                        </p>
+                                    ) : (
+                                        <ul>
+                                            {detail.slowest.map((s, i) => (
+                                                <li
+                                                    key={i}
+                                                    className="flex flex-wrap justify-between gap-3 border-t border-line/60 px-4 py-2 font-mono text-xs"
+                                                >
+                                                    <span className="text-ink-2">
+                                                        <time dateTime={s.at}>
+                                                            {formatTime(s.at)}
+                                                        </time>
+                                                        {s.domain &&
+                                                            !detail.domain &&
+                                                            ` · ${s.domain}`}
+                                                        {s.host &&
+                                                            ` · ${s.host}`}
+                                                        {s.queries !== null &&
+                                                            ` · ${t('routes.detail.queries', {}, s.queries)}`}
+                                                        {s.trace_id && (
+                                                            <>
+                                                                {' · '}
+                                                                <Link
+                                                                    href={
+                                                                        traceShow(
+                                                                            [
+                                                                                project.uuid,
+                                                                                s.trace_id,
+                                                                            ],
+                                                                        ).url
+                                                                    }
+                                                                    title={t(
+                                                                        'traces.open',
+                                                                    )}
+                                                                    className="hover:text-amber hover:underline"
+                                                                >
+                                                                    {s.trace_id}
+                                                                </Link>
+                                                            </>
+                                                        )}
+                                                    </span>
+                                                    <span className="flex items-center gap-2">
+                                                        {formatDuration(
+                                                            s.duration_us,
+                                                        )}
+                                                        {s.status !== null && (
+                                                            <Badge
+                                                                tone={
+                                                                    s.status >=
+                                                                    500
+                                                                        ? 'err'
+                                                                        : s.status >=
+                                                                            400
+                                                                          ? 'warn'
+                                                                          : 'neutral'
                                                                 }
-                                                                title={t(
-                                                                    'traces.open',
-                                                                )}
-                                                                className="hover:text-amber hover:underline"
                                                             >
-                                                                {s.trace_id}
-                                                            </Link>
-                                                        </>
-                                                    )}
-                                                </span>
-                                                <span className="flex items-center gap-2">
-                                                    {formatDuration(
-                                                        s.duration_us,
-                                                    )}
-                                                    {s.status !== null && (
-                                                        <Badge
-                                                            tone={
-                                                                s.status >= 500
-                                                                    ? 'err'
-                                                                    : s.status >=
-                                                                        400
-                                                                      ? 'warn'
-                                                                      : 'neutral'
-                                                            }
-                                                        >
-                                                            {s.status}
-                                                        </Badge>
-                                                    )}
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
+                                                                {s.status}
+                                                            </Badge>
+                                                        )}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </Card>
-                )}
+                        </DialogContent>
+                    )}
+                </Dialog>
             </PageBody>
         </>
     );

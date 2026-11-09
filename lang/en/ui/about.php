@@ -25,6 +25,7 @@ return [
         'php' => 'PHP',
         'laravel' => 'Laravel',
         'database' => 'Database',
+        'database_size' => 'Database size',
         'queue' => 'Queue',
         'cache' => 'Cache',
         'session' => 'Sessions',

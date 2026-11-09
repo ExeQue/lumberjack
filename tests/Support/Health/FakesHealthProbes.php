@@ -6,8 +6,10 @@ namespace Tests\Support\Health;
 
 use App\Domains\Health\Exceptions\ProbeFailedException;
 use App\Domains\Health\Support\DnsResolver;
+use App\Domains\Health\Support\SmtpProbe;
 use App\Domains\Health\Support\TcpProbe;
 use App\Domains\Health\Support\TlsCertificateReader;
+use App\Domains\Health\Support\WhoisClient;
 use Carbon\CarbonImmutable;
 
 trait FakesHealthProbes
@@ -53,6 +55,37 @@ trait FakesHealthProbes
                 if ($this->error !== null) {
                     throw new ProbeFailedException($this->error);
                 }
+            }
+        });
+    }
+
+    /**
+     * The whois root names $server for every top-level domain, and $server gives $answer.
+     */
+    public function fakeWhois(string $server, string $answer): void
+    {
+        $this->app->instance(WhoisClient::class, new class ($server, $answer) extends WhoisClient {
+            public function __construct(private readonly string $server, private readonly string $answer)
+            {
+            }
+
+            public function query(string $address, string $query, float $timeout): string
+            {
+                return str_contains($query, '.') ? $this->answer : "whois:        {$this->server}\n";
+            }
+        });
+    }
+
+    public function fakeSmtp(?string $error = null): void
+    {
+        $this->app->instance(SmtpProbe::class, new class ($error) extends SmtpProbe {
+            public function __construct(private readonly ?string $error)
+            {
+            }
+
+            public function check(string $address, string $host, int $port, string $encryption, float $timeout): string
+            {
+                return $this->error === null ? 'mail.example.com ESMTP' : throw new ProbeFailedException($this->error);
             }
         });
     }

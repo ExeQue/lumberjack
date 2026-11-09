@@ -26,7 +26,6 @@ return [
         'title' => 'Latest runs',
         'title_command' => 'Runs of :command',
         // Button
-        'clear' => 'Show all commands',
         'empty' => 'No runs in the period',
         'view_issue' => 'View issue',
         'no_input' => 'None',

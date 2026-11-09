@@ -177,8 +177,8 @@ choose a new one.
 Click the version at the bottom of the sidebar to open **About**. It shows the version,
 the commit it was built from, and links to the release notes, the changelog and the
 documentation.
-System administrators also see PHP, Laravel, the database, and the queue, cache and
-session drivers.
+System administrators also see PHP, Laravel, the database and its size, and the queue,
+cache and session drivers.
 
 The Docker image shows its release version. A git checkout shows its tag, or "dev"
 without git.

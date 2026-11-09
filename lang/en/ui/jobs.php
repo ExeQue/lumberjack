@@ -68,7 +68,6 @@ return [
         'title_job' => 'Runs of :job',
         'parameters' => 'Parameters',
         // Button
-        'clear' => 'Show all jobs',
         'empty' => 'No runs to show',
         'view_issue' => 'Issue',
         'columns' => [

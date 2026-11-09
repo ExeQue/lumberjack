@@ -148,7 +148,41 @@ class HealthCheck extends Model
 
     public function displayName(): string
     {
-        return $this->name ?? $this->slug ?? (string) $this->type?->value;
+        if ($this->name !== null) {
+            return $this->name;
+        }
+
+        return $this->slug !== null ? self::readableSlug($this->slug) : $this->nameFromSettings();
+    }
+
+    /** What a check Lumberjack runs looks at, as "SSL: example.com". A heartbeat looks at nothing, so it has a name. */
+    private function nameFromSettings(): string
+    {
+        $host = (string) $this->setting('host');
+        $port = (int) $this->setting('port');
+
+        return match ($this->type) {
+            HealthCheckType::Http => 'HTTP: '.rtrim((string) preg_replace('#^https?://#i', '', (string) $this->setting('url')), '/'),
+            HealthCheckType::Ssl => 'SSL: '.$host.(in_array($port, [0, 443], true) ? '' : ':'.$port),
+            HealthCheckType::Tcp => 'TCP: '.$host.':'.$port,
+            HealthCheckType::Domain => 'Domain: '.$this->setting('domain'),
+            HealthCheckType::Smtp => 'SMTP: '.$host.':'.$port,
+            HealthCheckType::Dns => 'DNS: '.$this->setting('name').' ('.$this->setting('record_type', 'A').')',
+            default => (string) $this->type?->value,
+        };
+    }
+
+    /** "database:event-processing" reads as "Database: Event Processing", "disk:s3" as "Disk: S3". */
+    private static function readableSlug(string $slug): string
+    {
+        /** @var array<string, string> $spelled */
+        $spelled = config('health.spelled_words');
+
+        return (string) preg_replace_callback(
+            '/(?<![^ ])[^ :]+/',
+            fn (array $word): string => $spelled[$word[0]] ?? ucfirst($word[0]),
+            str_replace(':', ': ', strtr($slug, '-_', '  ')),
+        );
     }
 
     public function setting(string $key, mixed $default = null): mixed

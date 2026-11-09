@@ -7,6 +7,7 @@ return [
     'description' => '{0} No scheduled tasks yet.|{1} 1 scheduled task.|[2,*] :count scheduled tasks.',
     'attention' => '{1} 1 task failed or was missed.|[2,*] :count tasks failed or were missed.',
     'statuses' => ['running' => 'Running', 'finished' => 'Finished', 'failed' => 'Failed', 'skipped' => 'Skipped', 'missed' => 'Missed'],
+    'sort' => ['label' => 'Sort', 'name' => 'Name', 'next' => 'Next run first'],
     'late' => 'Late',
     'never' => 'Never',
     'columns' => [

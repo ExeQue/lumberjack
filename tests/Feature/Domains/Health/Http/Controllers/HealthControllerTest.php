@@ -81,6 +81,24 @@ describe('the health page', function () {
 });
 
 describe('adding and editing checks', function () {
+    it('adds a check without a name, named from its settings', function () {
+        $this->actingAs($this->admin)->post(route('health.store', $this->project), [
+            'type' => 'ssl', 'name' => '', 'interval_minutes' => 60, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 4,
+            'config' => ['host' => 'eazy.photo'],
+        ])->assertSessionHasNoErrors();
+
+        $check = HealthCheck::query()->where('type', 'ssl')->sole();
+        expect($check->name)->toBeNull()
+            ->and($check->displayName())->toBe('SSL: eazy.photo');
+    });
+
+    it('requires a name for a heartbeat, which has no settings to take one from', function () {
+        $this->actingAs($this->admin)->post(route('health.store', $this->project), [
+            'type' => 'heartbeat', 'name' => '', 'interval_minutes' => 5, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 4,
+            'config' => ['grace_minutes' => 5],
+        ])->assertSessionHasErrors('name');
+    });
+
     it('adds an http check that runs on the next minute', function () {
         $this->actingAs($this->admin)->post(route('health.store', $this->project), [
             'type' => 'http', 'name' => 'Website', 'interval_minutes' => 5, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 4,

@@ -20,6 +20,7 @@ import {
     tableClass,
     tdClass,
     thClass,
+    Switch,
 } from '@/components/lj/ui';
 import {
     Dialog,
@@ -754,11 +755,11 @@ function Playlist({
                     />
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                    <input
-                        type="checkbox"
-                        className="size-4 accent-amber"
+                    <Switch
+                        small
                         checked={hold}
-                        onChange={(e) => setHold(e.target.checked)}
+                        onChange={setHold}
+                        label={t('screens.displays.hold')}
                     />
                     {t('screens.displays.hold')}
                 </label>

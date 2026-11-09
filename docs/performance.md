@@ -57,7 +57,7 @@ highest p95 (the default), most requests, highest error rate, most total time or
 Apdex. **Search routes or names** uses the [search syntax](./finding-things#search-syntax)
 and matches a route's URI or its route name, such as `orders.show`.
 
-A route's details show its p50 and p95 over the period, its status codes and its 10
+Click a route to open its details in a dialog. They show its p50 and p95 over the period, its status codes and its 10
 slowest requests with their query counts.
 
 When requests came in on more than one domain in the period, a **Domain** picker appears
@@ -116,7 +116,8 @@ worker is dead.
 
 Each task shows the command it runs, cut to one line, with its description under it (the one given in the schedule, else the artisan command's own), its cron, its latest status (**Running**, **Finished**, **Failed**,
 **Skipped** or **Missed**), the last and next run and a strip of its last 20 runs. A
-task's details list its runs with their exit code and host.
+task's details list its runs with their exit code and host. Sort by name, or by next run
+to see what is due first; tasks without a next run come last.
 
 A run is late after a minute, and **missed** when it has not started 5 minutes after
 its time. A missed run becomes an issue. A task that has not been reported for 24 hours
@@ -129,6 +130,7 @@ gone from the app, with its runs.
 
 Each command shows its runs, failures, average and longest duration, last run and
 status. The latest runs below show their arguments and options, exit code and host.
+Click a command to open its runs in a dialog.
 Queue workers are not listed.
 
 ## Logs

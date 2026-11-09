@@ -16,7 +16,9 @@ See the SDK's documentation for registering and scheduling checks.
 
 A check is known by its **slug** (`database:pgsql`, `disk:s3`, `queue:redis:default`)
 within an environment. A new slug becomes a new check on its first result, with nothing
-to set up in Lumberjack. A slug uses lowercase letters, digits and `: . _ -`, at most
+to set up in Lumberjack, shown under a name made from the slug (`queue:event-processing`
+reads as **Queue: Event Processing**, `database:mysql` as **Database: MySQL**) until you give
+it one. A slug uses lowercase letters, digits and `: . _ -`, at most
 100 characters. A result with another slug or an unknown status is ignored.
 
 Each result has a status (`ok`, `warning` or `failed`), a message, up to 20 numeric
@@ -74,24 +76,30 @@ away a check that will not report again, for example after you renamed its slug.
 **Add check** offers five types. Each runs every 1, 5, 15 or 60 minutes and can have an
 environment label. Only team owners and admins add, edit, archive and delete checks.
 
-| Type      | Checks                                                                                                                                               |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| HTTP      | A URL answers with the expected status, optionally with a text in the body. Warns when slower than a limit you set.                                  |
-| SSL       | A host's certificate: warns a number of days before it expires and fails close to it.                                                                |
-| TCP       | A port accepts a connection.                                                                                                                         |
-| DNS       | A name has records of a type, optionally one with the value you expect.                                                                              |
-| Heartbeat | A dead man's switch: your cron job or backup calls a secret URL when it is done; the check fails when no call came within its interval plus a grace. |
+| Type          | Checks                                                                                                                                                                                                                                                                                         |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP          | A URL answers with the expected status, optionally with a text in the body. A JSON path can require a value in the response, so `status` must be `ok`. Warns when slower than a limit you set.                                                                                                 |
+| SSL           | A host's certificate: warns a number of days before it expires and fails close to it.                                                                                                                                                                                                          |
+| TCP           | A port accepts a connection.                                                                                                                                                                                                                                                                   |
+| DNS           | A name has records of a type, optionally one with the value you expect.                                                                                                                                                                                                                        |
+| Heartbeat     | A dead man's switch: your cron job or backup calls a secret URL when it is done; the check fails when no call came within its interval plus a grace.                                                                                                                                           |
+| Domain expiry | When a domain's registration runs out: warns a number of days before and fails close to it. Read from RDAP, or whois where the registry has no RDAP (`.dk`, `.io`, `.se`). Some registries publish no date (`.de`, `.eu`), and then the check fails and says so. Answers are kept for 6 hours. |
+| SMTP server   | Greets a mail server, checks that it answers and offers the encryption you chose, and verifies its certificate. Sends no mail. Many hosts block outgoing port 25, so prefer 587 or 465.                                                                                                        |
 
-| Type      | Fields (default)                                                                                                                            |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| HTTP      | URL, method (GET, HEAD or POST; GET), expected status (200), body contains, warn when slower than (1 to 60,000 ms), timeout (1 to 30 s; 10) |
-| SSL       | Host, port (443), warn days before expiry (14), fail days before expiry (3)                                                                 |
-| TCP       | Host, port, timeout (1 to 30 s; 5)                                                                                                          |
-| DNS       | Name, record type (A, AAAA, CNAME, MX, TXT; A), expected value                                                                              |
-| Heartbeat | Grace (0 to 1,440 minutes; 5)                                                                                                               |
+| Type          | Fields (default)                                                                                                                                                      |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP          | URL, method (GET, HEAD or POST; GET), expected status (200), body contains, JSON path and JSON value, warn when slower than (1 to 60,000 ms), timeout (1 to 30 s; 10) |
+| SSL           | Host, port (443), warn days before expiry (14), fail days before expiry (3)                                                                                           |
+| TCP           | Host, port, timeout (1 to 30 s; 5)                                                                                                                                    |
+| DNS           | Name, record type (A, AAAA, CNAME, MX, TXT; A), expected value                                                                                                        |
+| Heartbeat     | Grace (0 to 1,440 minutes; 5)                                                                                                                                         |
+| Domain expiry | Domain, warn days before expiry (30), fail days before expiry (7)                                                                                                     |
+| SMTP server   | Host, port, encryption (STARTTLS, TLS or None; STARTTLS), timeout (1 to 15 s; 10)                                                                                     |
 
-Every check also has a name, a description and the thresholds described under
-[Status](#status), each from 1 to 100.
+Every check also has a description and the thresholds described under
+[Status](#status), each from 1 to 100. The name is optional: without one, a check is named
+from its settings, like **SSL: example.com** or **DNS: example.com (MX)**. A heartbeat has
+nothing to be named from, so it needs one.
 
 A heartbeat check shows its ping URL and a `curl` line to copy. The URL takes `GET`
 or `POST` without a body, at most 60 times a minute:

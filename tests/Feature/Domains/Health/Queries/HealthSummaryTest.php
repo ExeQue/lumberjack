@@ -25,7 +25,7 @@ describe('the health summary', function () {
         $summary = app(HealthChecksQuery::class)->summary($project);
 
         expect(array_column($summary['checks'], 'state'))->toBe(['down', 'degraded', 'ok', 'ok'])
-            ->and(array_column($summary['checks'], 'name'))->toBe(['disk:s3', 'queue:default', 'cache:redis', 'database:pgsql'])
+            ->and(array_column($summary['checks'], 'name'))->toBe(['Disk: S3', 'Queue: Default', 'Cache: Redis', 'Database: PostgreSQL'])
             ->and($summary['checks'][0]['message'])->toBe('disk:s3 says hi')
             ->and($summary['down'])->toBe(1);
     });

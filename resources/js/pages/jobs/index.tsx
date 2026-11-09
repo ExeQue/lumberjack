@@ -13,6 +13,7 @@ import {
     Input,
     PageTitle,
     Select,
+    Switch,
     Sparkline,
     numClass,
     spreadTips,
@@ -177,6 +178,165 @@ export default function JobsIndex({
     };
 
     const totalRuns = jobs.reduce((sum, j) => sum + j.runs, 0);
+
+    const runsTable =
+        runs.length === 0 ? (
+            <EmptyState title={t('jobs.runs.empty')} />
+        ) : (
+            <div className="relative overflow-x-auto">
+                <table className={tableClass}>
+                    <thead>
+                        <tr>
+                            <th className={thClass}>
+                                {t('jobs.runs.columns.status')}
+                            </th>
+                            <th className={thClass}>
+                                {t('jobs.runs.columns.job')}
+                            </th>
+                            <th className={thClass}>
+                                {t('jobs.runs.columns.attempt')}
+                            </th>
+                            <th className={thClass}>
+                                {t('jobs.runs.columns.queued')}
+                            </th>
+                            <th
+                                className={`${thClass} hidden text-right md:table-cell`}
+                            >
+                                {t('jobs.runs.columns.wait')}
+                            </th>
+                            <th className={`${thClass} text-right`}>
+                                {t('jobs.runs.columns.duration')}
+                            </th>
+                            <th className={`${thClass} hidden lg:table-cell`}>
+                                {t('jobs.runs.columns.host')}
+                            </th>
+                            <th className={thClass}>
+                                <span className="sr-only">
+                                    {t('jobs.runs.columns.issue')}
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {runs.map((r) => (
+                            <tr key={r.id} className="hover:bg-panel-2/60">
+                                <td className={tdClass}>
+                                    <Badge tone={statusTone[r.status]}>
+                                        {t(`common.job_statuses.${r.status}`)}
+                                    </Badge>
+                                </td>
+                                <td className={`${tdClass} font-mono text-xs`}>
+                                    <ClassName name={r.name} />
+                                    {r.parameters && (
+                                        <details className="group mt-0.5 max-w-[60ch] text-[11px] text-ink-3">
+                                            <summary className="cursor-pointer list-none truncate group-open:hidden hover:text-ink-2">
+                                                {formatParameters(r.parameters)}
+                                            </summary>
+                                            <summary className="hidden cursor-pointer list-none group-open:block hover:text-ink-2">
+                                                {t('jobs.runs.parameters')}
+                                            </summary>
+                                            <dl className="mt-1 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-0.5">
+                                                {Object.entries(
+                                                    r.parameters,
+                                                ).map(([key, value]) => (
+                                                    <div
+                                                        key={key}
+                                                        className="contents"
+                                                    >
+                                                        <dt>{key}</dt>
+                                                        <dd className="break-all whitespace-pre-wrap text-ink-2">
+                                                            {typeof value ===
+                                                                'object' &&
+                                                            value !== null
+                                                                ? JSON.stringify(
+                                                                      value,
+                                                                      null,
+                                                                      2,
+                                                                  )
+                                                                : String(
+                                                                      value as
+                                                                          | string
+                                                                          | number
+                                                                          | boolean
+                                                                          | null,
+                                                                  )}
+                                                        </dd>
+                                                    </div>
+                                                ))}
+                                            </dl>
+                                        </details>
+                                    )}
+                                </td>
+                                <td
+                                    className={`${tdClass} font-mono text-xs whitespace-nowrap`}
+                                >
+                                    {r.max_tries
+                                        ? `${r.attempt}/${r.max_tries}`
+                                        : r.attempt}
+                                </td>
+                                <td
+                                    className={`${tdClass} font-mono text-xs whitespace-nowrap text-ink-2`}
+                                >
+                                    {r.queued_at ? (
+                                        <time
+                                            dateTime={r.queued_at}
+                                            title={formatDateTime(r.queued_at)}
+                                        >
+                                            <Relative iso={r.queued_at} />
+                                        </time>
+                                    ) : (
+                                        '-'
+                                    )}
+                                </td>
+                                <td
+                                    className={`${tdClass} ${numClass} hidden md:table-cell`}
+                                >
+                                    {formatDuration(r.wait_us)}
+                                </td>
+                                <td className={`${tdClass} ${numClass}`}>
+                                    {formatDuration(r.duration_us)}
+                                </td>
+                                <td
+                                    className={`${tdClass} hidden font-mono text-xs lg:table-cell`}
+                                >
+                                    {r.host ?? '-'}
+                                </td>
+                                <td className={`${tdClass} text-right`}>
+                                    <span className="inline-flex gap-3 whitespace-nowrap">
+                                        {r.trace_id && (
+                                            <Link
+                                                href={
+                                                    traceShow([
+                                                        project.uuid,
+                                                        r.trace_id,
+                                                    ]).url
+                                                }
+                                                className="inline-block py-1 text-xs text-ink-2 hover:text-amber hover:underline"
+                                            >
+                                                {t('traces.open')}
+                                            </Link>
+                                        )}
+                                        {r.issue && (
+                                            <Link
+                                                href={
+                                                    issueShow([
+                                                        project.uuid,
+                                                        r.issue,
+                                                    ]).url
+                                                }
+                                                className="inline-block py-1 text-xs text-amber hover:underline"
+                                            >
+                                                {t('jobs.runs.view_issue')}
+                                            </Link>
+                                        )}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
 
     return (
         <>
@@ -473,209 +633,30 @@ export default function JobsIndex({
                                 ? t('jobs.runs.title_job', { job: filters.job })
                                 : t('jobs.runs.title')
                         }
-                        aside={
-                            filters.job && (
-                                <Button onClick={() => apply({ job: '' })}>
-                                    {t('jobs.runs.clear')}
-                                </Button>
-                            )
-                        }
                     />
-                    {runs.length === 0 ? (
-                        <EmptyState title={t('jobs.runs.empty')} />
-                    ) : (
-                        <div className="relative overflow-x-auto">
-                            <table className={tableClass}>
-                                <thead>
-                                    <tr>
-                                        <th className={thClass}>
-                                            {t('jobs.runs.columns.status')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('jobs.runs.columns.job')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('jobs.runs.columns.attempt')}
-                                        </th>
-                                        <th className={thClass}>
-                                            {t('jobs.runs.columns.queued')}
-                                        </th>
-                                        <th
-                                            className={`${thClass} hidden text-right md:table-cell`}
-                                        >
-                                            {t('jobs.runs.columns.wait')}
-                                        </th>
-                                        <th className={`${thClass} text-right`}>
-                                            {t('jobs.runs.columns.duration')}
-                                        </th>
-                                        <th
-                                            className={`${thClass} hidden lg:table-cell`}
-                                        >
-                                            {t('jobs.runs.columns.host')}
-                                        </th>
-                                        <th className={thClass}>
-                                            <span className="sr-only">
-                                                {t('jobs.runs.columns.issue')}
-                                            </span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {runs.map((r) => (
-                                        <tr
-                                            key={r.id}
-                                            className="hover:bg-panel-2/60"
-                                        >
-                                            <td className={tdClass}>
-                                                <Badge
-                                                    tone={statusTone[r.status]}
-                                                >
-                                                    {t(
-                                                        `common.job_statuses.${r.status}`,
-                                                    )}
-                                                </Badge>
-                                            </td>
-                                            <td
-                                                className={`${tdClass} font-mono text-xs`}
-                                            >
-                                                <ClassName name={r.name} />
-                                                {r.parameters && (
-                                                    <details className="group mt-0.5 max-w-[60ch] text-[11px] text-ink-3">
-                                                        <summary className="cursor-pointer list-none truncate group-open:hidden hover:text-ink-2">
-                                                            {formatParameters(
-                                                                r.parameters,
-                                                            )}
-                                                        </summary>
-                                                        <summary className="hidden cursor-pointer list-none group-open:block hover:text-ink-2">
-                                                            {t(
-                                                                'jobs.runs.parameters',
-                                                            )}
-                                                        </summary>
-                                                        <dl className="mt-1 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-0.5">
-                                                            {Object.entries(
-                                                                r.parameters,
-                                                            ).map(
-                                                                ([
-                                                                    key,
-                                                                    value,
-                                                                ]) => (
-                                                                    <div
-                                                                        key={
-                                                                            key
-                                                                        }
-                                                                        className="contents"
-                                                                    >
-                                                                        <dt>
-                                                                            {
-                                                                                key
-                                                                            }
-                                                                        </dt>
-                                                                        <dd className="break-all whitespace-pre-wrap text-ink-2">
-                                                                            {typeof value ===
-                                                                                'object' &&
-                                                                            value !==
-                                                                                null
-                                                                                ? JSON.stringify(
-                                                                                      value,
-                                                                                      null,
-                                                                                      2,
-                                                                                  )
-                                                                                : String(
-                                                                                      value as
-                                                                                          | string
-                                                                                          | number
-                                                                                          | boolean
-                                                                                          | null,
-                                                                                  )}
-                                                                        </dd>
-                                                                    </div>
-                                                                ),
-                                                            )}
-                                                        </dl>
-                                                    </details>
-                                                )}
-                                            </td>
-                                            <td
-                                                className={`${tdClass} font-mono text-xs whitespace-nowrap`}
-                                            >
-                                                {r.max_tries
-                                                    ? `${r.attempt}/${r.max_tries}`
-                                                    : r.attempt}
-                                            </td>
-                                            <td
-                                                className={`${tdClass} font-mono text-xs whitespace-nowrap text-ink-2`}
-                                            >
-                                                {r.queued_at ? (
-                                                    <time
-                                                        dateTime={r.queued_at}
-                                                        title={formatDateTime(
-                                                            r.queued_at,
-                                                        )}
-                                                    >
-                                                        <Relative
-                                                            iso={r.queued_at}
-                                                        />
-                                                    </time>
-                                                ) : (
-                                                    '-'
-                                                )}
-                                            </td>
-                                            <td
-                                                className={`${tdClass} ${numClass} hidden md:table-cell`}
-                                            >
-                                                {formatDuration(r.wait_us)}
-                                            </td>
-                                            <td
-                                                className={`${tdClass} ${numClass}`}
-                                            >
-                                                {formatDuration(r.duration_us)}
-                                            </td>
-                                            <td
-                                                className={`${tdClass} hidden font-mono text-xs lg:table-cell`}
-                                            >
-                                                {r.host ?? '-'}
-                                            </td>
-                                            <td
-                                                className={`${tdClass} text-right`}
-                                            >
-                                                <span className="inline-flex gap-3 whitespace-nowrap">
-                                                    {r.trace_id && (
-                                                        <Link
-                                                            href={
-                                                                traceShow([
-                                                                    project.uuid,
-                                                                    r.trace_id,
-                                                                ]).url
-                                                            }
-                                                            className="inline-block py-1 text-xs text-ink-2 hover:text-amber hover:underline"
-                                                        >
-                                                            {t('traces.open')}
-                                                        </Link>
-                                                    )}
-                                                    {r.issue && (
-                                                        <Link
-                                                            href={
-                                                                issueShow([
-                                                                    project.uuid,
-                                                                    r.issue,
-                                                                ]).url
-                                                            }
-                                                            className="inline-block py-1 text-xs text-amber hover:underline"
-                                                        >
-                                                            {t(
-                                                                'jobs.runs.view_issue',
-                                                            )}
-                                                        </Link>
-                                                    )}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                    {runsTable}
                 </Card>
+
+                <Dialog
+                    open={!!filters.job}
+                    onOpenChange={(open) => !open && apply({ job: '' })}
+                >
+                    {filters.job && (
+                        <DialogContent
+                            aria-describedby={undefined}
+                            className="max-h-[90vh] overflow-y-auto sm:max-w-5xl"
+                        >
+                            <DialogHeader>
+                                <DialogTitle className="pr-6 font-mono text-sm break-words">
+                                    {t('jobs.runs.title_job', {
+                                        job: filters.job,
+                                    })}
+                                </DialogTitle>
+                            </DialogHeader>
+                            {runsTable}
+                        </DialogContent>
+                    )}
+                </Dialog>
             </PageBody>
         </>
     );
@@ -801,12 +782,11 @@ function QueueAlertDialog({
                         />
                     </Field>
                     <label className="flex items-center gap-2 text-sm">
-                        <input
-                            type="checkbox"
+                        <Switch
+                            small
                             checked={form.data.muted}
-                            onChange={(e) =>
-                                form.setData('muted', e.target.checked)
-                            }
+                            onChange={(muted) => form.setData('muted', muted)}
+                            label={t('jobs.queues.alert.muted')}
                         />
                         {t('jobs.queues.alert.muted')}
                     </label>

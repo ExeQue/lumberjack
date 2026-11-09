@@ -371,10 +371,10 @@ describe('health', function () {
         $problems = ($this->resolve)(WidgetType::Health, 'checks', ['only_problems' => true]);
 
         expect($all['summary'])->toMatchArray(['total' => 2, 'ok' => 1, 'down' => 1])
-            ->and(array_column($all['checks'], 'name'))->toBe(['disk:s3', 'cache:redis'])
+            ->and(array_column($all['checks'], 'name'))->toBe(['Disk: S3', 'Cache: Redis'])
             ->and($all['checks'][0]['since'])->toBe(now()->subMinutes(6)->toIso8601String())
             ->and($all['check'])->toBeNull()
-            ->and(array_column($problems['checks'], 'name'))->toBe(['disk:s3'])
+            ->and(array_column($problems['checks'], 'name'))->toBe(['Disk: S3'])
             ->and($problems['summary']['total'])->toBe(2);
     });
 
@@ -385,12 +385,12 @@ describe('health', function () {
         $data = ($this->resolve)(WidgetType::Health, 'checks', ['checks' => [$picked->uuid]]);
 
         expect($data['summary']['total'])->toBe(1)
-            ->and($data['check'])->toMatchArray(['uuid' => $picked->uuid, 'name' => 'disk:s3', 'state' => 'down', 'last_message' => 'disk:s3 says hi'])
+            ->and($data['check'])->toMatchArray(['uuid' => $picked->uuid, 'name' => 'Disk: S3', 'state' => 'down', 'last_message' => 'disk:s3 says hi'])
             ->and($data['check'])->toHaveKeys(['uptime', 'strip', 'since']);
     });
 
     it('names the checks of a shared screen and leaves their messages out', function () {
-        ($this->check)('https://admin.internal/up', HealthStatus::Down);
+        ($this->check)('admin.internal:443', HealthStatus::Down);
         $picked = ($this->check)('db.internal:5432', HealthStatus::Ok);
         $resolve = fn (array $options = []): array => app(ResolveWidgetDataAction::class)
             ->execute($this->project->team, WidgetType::Health, 'checks', new WidgetScope(), $options, aggregatesOnly: true);
@@ -398,10 +398,10 @@ describe('health', function () {
         $all = $resolve();
         $one = $resolve(['checks' => [$picked->uuid]]);
 
-        expect(array_column($all['checks'], 'name'))->toBe(['https://admin.internal/up', 'db.internal:5432'])
+        expect(array_column($all['checks'], 'name'))->toBe(['Admin.internal: 443', 'Db.internal: 5432'])
             ->and(array_column($all['checks'], 'message'))->toBe([null, null])
             ->and(array_column($all['checks'], 'state'))->toBe(['down', 'ok'])
-            ->and($one['check'])->toMatchArray(['name' => 'db.internal:5432', 'last_message' => null, 'state' => 'ok']);
+            ->and($one['check'])->toMatchArray(['name' => 'Db.internal: 5432', 'last_message' => null, 'state' => 'ok']);
     });
 
     it('asks for the checks of a project once however many values show them', function () {

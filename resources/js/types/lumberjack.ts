@@ -251,7 +251,14 @@ export type HealthState =
 
 export type HealthResultStatus = 'ok' | 'warning' | 'failed';
 
-export type HealthCheckType = 'http' | 'ssl' | 'tcp' | 'dns' | 'heartbeat';
+export type HealthCheckType =
+    | 'http'
+    | 'ssl'
+    | 'tcp'
+    | 'dns'
+    | 'heartbeat'
+    | 'domain'
+    | 'smtp';
 
 export type HealthHost = {
     host: string | null;

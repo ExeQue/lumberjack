@@ -1,6 +1,6 @@
 import { Form } from '@inertiajs/react';
 import { useState } from 'react';
-import { Button, Field, Input, Select } from '@/components/lj/ui';
+import { Button, Field, Input, Select, Switch } from '@/components/lj/ui';
 import {
     Dialog,
     DialogContent,
@@ -34,6 +34,8 @@ const configFields: Record<HealthCheckType, ConfigField[]> = {
         { key: 'method', type: 'select', options: ['GET', 'HEAD', 'POST'] },
         { key: 'expected_status', type: 'number', placeholder: '200' },
         { key: 'body_contains', type: 'text', hint: true },
+        { key: 'json_path', type: 'text', hint: true, placeholder: 'status' },
+        { key: 'json_expected', type: 'text', hint: true, placeholder: 'ok' },
         { key: 'max_latency_ms', type: 'number', placeholder: '1000' },
         { key: 'timeout_s', type: 'number', placeholder: '10' },
     ],
@@ -74,6 +76,32 @@ const configFields: Record<HealthCheckType, ConfigField[]> = {
     ],
     heartbeat: [
         { key: 'grace_minutes', type: 'number', placeholder: '5', hint: true },
+    ],
+    domain: [
+        {
+            key: 'domain',
+            type: 'text',
+            required: true,
+            hint: true,
+            placeholder: 'example.com',
+        },
+        { key: 'warn_days', type: 'number', placeholder: '30' },
+        { key: 'fail_days', type: 'number', placeholder: '7' },
+    ],
+    smtp: [
+        {
+            key: 'host',
+            type: 'text',
+            required: true,
+            placeholder: 'mail.example.com',
+        },
+        { key: 'port', type: 'number', required: true, placeholder: '587' },
+        {
+            key: 'encryption',
+            type: 'select',
+            options: ['STARTTLS', 'TLS', 'None'],
+        },
+        { key: 'timeout_s', type: 'number', placeholder: '10' },
     ],
 };
 
@@ -166,16 +194,18 @@ export function HealthCheckDialog({
                                         <Input
                                             id="health-name"
                                             name="name"
-                                            required={!reported}
+                                            required={type === 'heartbeat'}
                                             autoFocus
                                             maxLength={150}
                                             defaultValue={
                                                 check?.custom_name ?? ''
                                             }
                                             placeholder={
-                                                check?.slug ??
+                                                check?.name ??
                                                 t(
-                                                    'health.form.name_placeholder',
+                                                    type === 'heartbeat'
+                                                        ? 'health.form.name_placeholder'
+                                                        : 'health.form.name_from_settings',
                                                 )
                                             }
                                             autoComplete="off"
@@ -359,13 +389,11 @@ export function HealthCheckDialog({
                                 )}
 
                                 <label className="inline-flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        className="size-4 accent-amber"
+                                    <Switch
+                                        small
                                         checked={muted}
-                                        onChange={(e) =>
-                                            setMuted(e.target.checked)
-                                        }
+                                        onChange={setMuted}
+                                        label={t('health.form.muted')}
                                     />
                                     {t('health.form.muted')}
                                 </label>

@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { CopyButton } from '@/components/lj/copy-text';
-import { Button, Input, Label } from '@/components/lj/ui';
+import { Button, Input, Label, Switch } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { share } from '@/routes/screens';
 import { rotate } from '@/routes/screens/share';
@@ -90,13 +90,13 @@ export function SharePanel({
                         )}
                     </div>
                     <div className="flex items-center gap-2">
-                        <input
+                        <Switch
                             id="screen-share-titles"
-                            type="checkbox"
-                            className="size-4 accent-amber"
+                            small
                             checked={sharing.include_titles}
                             disabled={!sharing.can_manage}
-                            onChange={(e) => save(true, e.target.checked)}
+                            onChange={(on) => save(true, on)}
+                            label={t('screens.share.titles')}
                         />
                         <Label htmlFor="screen-share-titles">
                             {t('screens.share.titles')}

@@ -38,7 +38,7 @@ class HealthChecksQuery
             ->when($environment !== null)->whereIn('environment', [$environment ?? '', ''])
             ->when(! $archived)->whereNotArchived()
             ->with('hosts')
-            ->orderBy('source')->orderByRaw('COALESCE(name, slug)')
+            ->orderBy('source')->orderByRaw("COALESCE(name, slug, config->>'host', config->>'url', config->>'name', config->>'domain')")
             ->get();
     }
 
@@ -82,7 +82,7 @@ class HealthChecksQuery
             ->when($environment !== null)->whereIn('environment', [$environment ?? '', ''])
             ->whereNotArchived()
             ->with('hosts')
-            ->orderBy('source')->orderByRaw('COALESCE(name, slug)')
+            ->orderBy('source')->orderByRaw("COALESCE(name, slug, config->>'host', config->>'url', config->>'name', config->>'domain')")
             ->get()
             ->groupBy('project_id');
 
