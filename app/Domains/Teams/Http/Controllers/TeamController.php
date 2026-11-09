@@ -50,6 +50,7 @@ class TeamController
                 'id' => $t->id,
                 'name' => $t->name,
                 'scope' => $t->scope->value,
+                'can_design_screens' => $t->can_design_screens,
                 'projects' => $t->projects->pluck('name')->all(),
                 'created_by' => $t->user?->name,
                 'usable' => $t->isUsable(),

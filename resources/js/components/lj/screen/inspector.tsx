@@ -54,6 +54,8 @@ export type Catalog = {
         shape?: 'number' | 'series' | 'list' | 'table' | null;
         environment?: string | null;
         project: string | null;
+        /** The group its app files it under, such as "Events > Storage". */
+        group?: string | null;
     }[];
     /** The screen's uuid, for the External JSON preview; without it there is none. */
     screen?: string;
@@ -774,10 +776,24 @@ export function WidgetInspector({
                                 s.shape ?? '',
                             )),
                 );
-                // By project, like the checks.
+                // By project, like the checks, then by the app's own group: a
+                // project's ungrouped sources come right before its groups.
                 const groups = Object.entries(
-                    Object.groupBy(all, (s) => s.project ?? ''),
-                ).sort(([a], [b]) => a.localeCompare(b));
+                    Object.groupBy(
+                        all,
+                        (s) => `${s.project ?? ''}\0${s.group ?? ''}`,
+                    ),
+                )
+                    .map(([key, sources]) => ({
+                        key,
+                        sources,
+                        path: key.split('\0'),
+                    }))
+                    .sort(
+                        (a, b) =>
+                            a.path[0].localeCompare(b.path[0]) ||
+                            a.path[1].localeCompare(b.path[1]),
+                    );
 
                 return (
                     <div
@@ -800,9 +816,12 @@ export function WidgetInspector({
                             <option value="">
                                 {t('screens.fields.data_source.none')}
                             </option>
-                            {groups.map(([project, group]) => (
-                                <optgroup key={project} label={project}>
-                                    {group?.map((s) => (
+                            {groups.map(({ key, path, sources }) => (
+                                <optgroup
+                                    key={key}
+                                    label={path.filter(Boolean).join(' > ')}
+                                >
+                                    {sources?.map((s) => (
                                         <option key={s.uuid} value={s.uuid}>
                                             {s.environment
                                                 ? `${s.name} (${s.environment})`

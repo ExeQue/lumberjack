@@ -761,6 +761,10 @@ export function swapGroup(
  * never overshoots the data (so a smooth line stays above zero and below the peak).
  */
 export function curve(pts: [number, number][], smooth: boolean): string {
+    if (pts.length === 0) {
+        return '';
+    }
+
     if (!smooth || pts.length < 3) {
         return 'M' + pts.map((p) => p.join(',')).join(' L');
     }

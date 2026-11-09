@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'conflict' => 'This screen was changed somewhere else. Reload the page to continue.',
+    'restored' => 'Screen restored.',
     // Flash messages on the list of screens.
     'duplicated' => 'Screen duplicated.',
     'deleted' => 'Screen deleted.',

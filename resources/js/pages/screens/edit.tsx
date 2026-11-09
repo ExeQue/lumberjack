@@ -9,7 +9,7 @@ import type {
 } from 'react';
 import { RectangleHorizontal, RectangleVertical } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNow } from '@/components/lj/relative';
+import { Relative, useNow } from '@/components/lj/relative';
 import {
     KioskFrame,
     KioskStatus,
@@ -77,6 +77,10 @@ import {
     viewers as viewersRoute,
     widget as widgetRoute,
 } from '@/routes/screens';
+import {
+    preview as previewVersionRoute,
+    restore as restoreVersionRoute,
+} from '@/routes/screens/versions';
 
 type Props = {
     screen: Screen;
@@ -85,6 +89,15 @@ type Props = {
     displays: { name: string; w: number; h: number }[];
     /** Where a TV of the team says it reported a new size. */
     displays_channel: string;
+    /** Where this screen says it changed. */
+    channel: string;
+    /** What the screen can go back to, newest first. */
+    versions: {
+        uuid: string;
+        revision: number;
+        author: string | null;
+        created_at: string;
+    }[];
     projects: { uuid: string; name: string }[];
     data_url: string;
     schema: Schema;
@@ -309,7 +322,7 @@ const SETTINGS: (keyof Settings)[] = [
     'scope',
 ];
 
-async function put(url: string, body: unknown): Promise<void> {
+async function put(url: string, body: unknown): Promise<{ revision?: number }> {
     const response = await fetch(url, {
         method: 'PUT',
         credentials: 'same-origin',
@@ -326,8 +339,13 @@ async function put(url: string, body: unknown): Promise<void> {
             message?: string;
         } | null;
 
-        throw new Error(json?.message ?? `HTTP ${response.status}`);
+        throw Object.assign(
+            new Error(json?.message ?? `HTTP ${response.status}`),
+            { status: response.status },
+        );
     }
+
+    return (await response.json().catch(() => ({}))) as { revision?: number };
 }
 
 /**
@@ -377,6 +395,19 @@ export default function EditScreen(props: Props) {
     useEcho(props.displays_channel, '.display.updated', () =>
         router.reload({ only: ['displays'] }),
     );
+    const revision = useRef(props.screen.revision);
+    const [stale, setStale] = useState(false);
+    const [shownVersion, setShownVersion] = useState<string>();
+    // Saved elsewhere (a person, an agent): saving on top of it would be refused.
+    useEcho<{ revision?: number }>(
+        props.channel,
+        '.screen.changed',
+        (event) => {
+            if ((event.revision ?? 0) > revision.current && !inFlight.current) {
+                setStale(true);
+            }
+        },
+    );
     const now = useNow();
     const [screen, setScreen] = useState<Screen>(props.screen);
     const [saved, setSaved] = useState<Screen>(props.screen);
@@ -407,7 +438,9 @@ export default function EditScreen(props: Props) {
     const [closed, setClosed] = useState<string[]>([]);
     // Narrow screens stack the panes, the grid first: the palette waits behind its title.
     const [palette, setPalette] = useState(false);
-    const [dialog, setDialog] = useState<'tv' | 'share' | null>(null);
+    const [dialog, setDialog] = useState<'tv' | 'share' | 'history' | null>(
+        null,
+    );
     // What is dragged: a palette kind or a widget, its size, and which of its cells is held.
     const drag = useRef<{
         kind?: WidgetKind;
@@ -478,10 +511,17 @@ export default function EditScreen(props: Props) {
             (key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]),
         );
         const one = onlyWidget(before, after);
+        const send = async (url: string, body: object) => {
+            const answer = await put(url, {
+                ...body,
+                revision: revision.current,
+            });
+            revision.current = answer.revision ?? revision.current;
+        };
 
         try {
             if (settings.length > 0) {
-                await put(
+                await send(
                     updateRoute(after.uuid).url,
                     Object.fromEntries(
                         settings.map((key) => [key, after[key]]),
@@ -490,14 +530,14 @@ export default function EditScreen(props: Props) {
             }
 
             if (one) {
-                await put(
+                await send(
                     widgetRoute({ screen: after.uuid, widget: one.id }).url,
                     {
                         widget: one,
                     },
                 );
             } else if (one === undefined) {
-                await put(layoutRoute(after.uuid).url, {
+                await send(layoutRoute(after.uuid).url, {
                     cols: after.cols,
                     rows: after.rows,
                     widgets: after.widgets,
@@ -517,6 +557,11 @@ export default function EditScreen(props: Props) {
         } catch (error) {
             inFlight.current = false;
             setStatus('error');
+
+            if ((error as { status?: number }).status === 409) {
+                setStale(true);
+            }
+
             toast.error(
                 t('screens.designer.not_saved', {
                     reason: (error as Error).message,
@@ -1290,6 +1335,14 @@ export default function EditScreen(props: Props) {
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
+                    <Button
+                        onClick={() => {
+                            router.reload({ only: ['versions'] });
+                            setDialog('history');
+                        }}
+                    >
+                        {t('screens.versions.button')}
+                    </Button>
                     <Button onClick={() => setDialog('tv')}>
                         {t('screens.open_tv.button')}
                     </Button>
@@ -1312,22 +1365,121 @@ export default function EditScreen(props: Props) {
                     </a>
                 </div>
             </header>
+            {stale && (
+                <div
+                    role="status"
+                    className="flex items-center justify-between gap-3 border-b border-line bg-panel px-4 py-2 text-sm"
+                >
+                    {t('screens.versions.stale')}
+                    <Button onClick={() => window.location.reload()}>
+                        {t('screens.versions.reload')}
+                    </Button>
+                </div>
+            )}
             <Dialog
                 open={dialog !== null}
-                onOpenChange={(open) => !open && setDialog(null)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDialog(null);
+                        setShownVersion(undefined);
+                    }
+                }}
             >
-                <DialogContent className="border-line bg-panel sm:max-w-xl">
+                <DialogContent
+                    className={cn(
+                        'border-line bg-panel',
+                        dialog === 'history' ? 'sm:max-w-5xl' : 'sm:max-w-xl',
+                    )}
+                >
                     <DialogTitle>
-                        {dialog === 'share'
-                            ? t('screens.share.title')
-                            : t('screens.open_tv.title')}
+                        {dialog === 'history'
+                            ? t('screens.versions.title')
+                            : dialog === 'share'
+                              ? t('screens.share.title')
+                              : t('screens.open_tv.title')}
                     </DialogTitle>
                     <DialogDescription className="sr-only">
-                        {dialog === 'share'
-                            ? t('screens.share.hint')
-                            : t('screens.open_tv.step_pick')}
+                        {dialog === 'history'
+                            ? t('screens.versions.title')
+                            : dialog === 'share'
+                              ? t('screens.share.hint')
+                              : t('screens.open_tv.step_pick')}
                     </DialogDescription>
-                    {dialog === 'share' ? (
+                    {dialog === 'history' ? (
+                        props.versions.length === 0 ? (
+                            <p className="text-sm text-ink-2">
+                                {t('screens.versions.empty')}
+                            </p>
+                        ) : (
+                            <div className="flex flex-col gap-4">
+                                {shownVersion !== undefined && (
+                                    <iframe
+                                        key={shownVersion}
+                                        title={t('screens.versions.preview')}
+                                        src={
+                                            previewVersionRoute({
+                                                screen: screen.uuid,
+                                                version: shownVersion,
+                                            }).url
+                                        }
+                                        className="aspect-video w-full rounded border border-line"
+                                    />
+                                )}
+                                <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto">
+                                    {props.versions.map((version) => (
+                                        <li
+                                            key={version.uuid}
+                                            className="flex items-center justify-between gap-3 text-sm"
+                                        >
+                                            <span className="flex-1">
+                                                <Relative
+                                                    iso={version.created_at}
+                                                />
+                                                {version.author !== null &&
+                                                    ` · ${version.author}`}
+                                            </span>
+                                            <Button
+                                                aria-pressed={
+                                                    version.uuid ===
+                                                    shownVersion
+                                                }
+                                                onClick={() =>
+                                                    setShownVersion(
+                                                        version.uuid ===
+                                                            shownVersion
+                                                            ? undefined
+                                                            : version.uuid,
+                                                    )
+                                                }
+                                            >
+                                                {t(
+                                                    'screens.versions.show_preview',
+                                                )}
+                                            </Button>
+                                            <Button
+                                                onClick={() =>
+                                                    router.post(
+                                                        restoreVersionRoute({
+                                                            screen: screen.uuid,
+                                                            version:
+                                                                version.uuid,
+                                                        }).url,
+                                                        {},
+                                                        {
+                                                            onSuccess: () =>
+                                                                window.location.reload(),
+                                                        },
+                                                    )
+                                                }
+                                            >
+                                                {t('screens.versions.restore')}
+                                            </Button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )
+                    ) : dialog === 'share' ? (
                         <SharePanel
                             screen={screen.uuid}
                             sharing={props.sharing}

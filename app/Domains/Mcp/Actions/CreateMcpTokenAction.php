@@ -18,16 +18,17 @@ class CreateMcpTokenAction
      * @param  list<int>  $projectIds  projects of the same team
      * @return array{token: McpToken, plain: string}
      */
-    public function execute(Team $team, User $creator, string $name, McpScope $scope, array $projectIds, ?CarbonInterface $expiresAt): array
+    public function execute(Team $team, User $creator, string $name, McpScope $scope, array $projectIds, ?CarbonInterface $expiresAt, bool $canDesignScreens = false): array
     {
         $plain = 'lj_mcp_'.Str::random(40);
 
-        $token = DB::transaction(function () use ($team, $creator, $name, $scope, $projectIds, $expiresAt, $plain): McpToken {
+        $token = DB::transaction(function () use ($team, $creator, $name, $scope, $projectIds, $expiresAt, $plain, $canDesignScreens): McpToken {
             $token = $team->mcpTokens()->create([
                 'user_id' => $creator->id,
                 'name' => $name,
                 'token_hash' => McpToken::hash($plain),
                 'scope' => $scope,
+                'can_design_screens' => $canDesignScreens,
                 'expires_at' => $expiresAt,
                 // A new token's inbox starts now, not at the beginning of time.
             ]);

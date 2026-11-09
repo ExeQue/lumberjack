@@ -27,11 +27,12 @@ use Illuminate\Support\Facades\Gate;
  * @property string $name
  * @property string $token_hash
  * @property McpScope $scope
+ * @property bool $can_design_screens
  * @property CarbonImmutable|null $expires_at
  * @property CarbonImmutable|null $last_used_at
  * @property CarbonImmutable|null $created_at
  */
-#[Fillable(['team_id', 'user_id', 'name', 'token_hash', 'scope', 'expires_at', 'last_used_at'])]
+#[Fillable(['team_id', 'user_id', 'name', 'token_hash', 'scope', 'can_design_screens', 'expires_at', 'last_used_at'])]
 #[Hidden(['token_hash'])]
 #[UseFactory(McpTokenFactory::class)]
 class McpToken extends Model
@@ -43,6 +44,7 @@ class McpToken extends Model
     {
         return [
             'scope' => McpScope::class,
+            'can_design_screens' => 'boolean',
             'expires_at' => 'datetime',
             'last_used_at' => 'datetime',
         ];

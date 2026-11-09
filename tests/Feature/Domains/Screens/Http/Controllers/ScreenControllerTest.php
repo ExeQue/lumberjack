@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Performance\Models\RequestRun;
@@ -29,11 +30,13 @@ use App\Domains\Screens\Http\Requests\UpdateScreenWidgetRequest;
 use App\Domains\Screens\Models\Device;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Screens\Models\ScreenVersion;
 use App\Domains\Screens\Policies\ScreenPolicy;
 use App\Domains\Screens\Presenters\ScreenPresenter;
 use App\Domains\Screens\Support\ScreenLayout;
 use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Teams\Enums\TeamRole;
+use App\Domains\Teams\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -204,6 +207,16 @@ describe('the pages', function () {
             ->has('environments')
             ->has('checks')
             ->where('limits.max_cols', Screen::MAX_COLS));
+    });
+
+    it('tells the designer the group of a data source, and none for one without', function () {
+        DataSource::factory()->for($this->project)->connected()->inGroup()->create(['name' => 'A grouped source']);
+        DataSource::factory()->for($this->project)->connected('orders:other')->create(['name' => 'B ungrouped source']);
+
+        $this->actingAs($this->user)->get(route('screens.edit', $this->screen))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('data_sources.0.group', 'Events > Storage')
+                ->where('data_sources.1.group', null));
     });
 
     it('names a check without a name of its own by what it looks at', function () {
@@ -527,5 +540,38 @@ describe('placing widgets on cells', function () {
         app(DuplicateScreenAction::class)->execute($this->screen);
 
         expect(Screen::query()->where('name', 'Ops (copy)')->sole()->widgets)->toBe($this->screen->widgets);
+    });
+});
+
+describe('looking at an earlier version', function () {
+    beforeEach(function () {
+        $team = Team::factory()->create();
+        $this->owner = User::factory()->inTeam($team)->create();
+        $this->versioned = Screen::factory()->for($team)->create(['name' => 'Now']);
+        $this->version = ScreenVersion::factory()->for($this->versioned)->create(['snapshot' => ['name' => 'Then']]);
+    });
+
+    it('shows the version without changing the screen', function () {
+        $this->actingAs($this->owner)->get(route('screens.versions.preview', [$this->versioned, $this->version]))->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('screens/kiosk')->where('screen.name', 'Then'));
+
+        expect($this->versioned->refresh()->name)->toBe('Now');
+    });
+
+    it('is not for another team', function () {
+        $this->actingAs(User::factory()->create())->get(route('screens.versions.preview', [$this->versioned, $this->version]))->assertForbidden();
+        $this->actingAs(User::factory()->create())->getJson(route('screens.versions.data', [$this->versioned, $this->version]))->assertForbidden();
+    });
+
+    it('goes back to the version', function () {
+        $this->actingAs($this->owner)->post(route('screens.versions.restore', [$this->versioned, $this->version]))->assertRedirect();
+
+        expect($this->versioned->refresh()->name)->toBe('Then');
+    });
+
+    it('does not mix up screens', function () {
+        $other = Screen::factory()->for($this->versioned->team)->create();
+
+        $this->actingAs($this->owner)->get(route('screens.versions.preview', [$other, $this->version]))->assertNotFound();
     });
 });

@@ -82,6 +82,8 @@ export type Screen = {
     scope: { projects: string[]; environment: string | null; period: string };
     widgets: Widget[];
     updated_at: string | null;
+    /** Goes up with every change; saves name the one they were made on. */
+    revision: number;
 };
 
 export type SchemaField = {

@@ -918,7 +918,7 @@ class ResolveWidgetDataAction
             default => [],
         };
 
-        return ['as_of' => $window?->fetched_at?->toIso8601String(), ...$data];
+        return ['as_of' => $window?->fetched_at?->toIso8601String(), 'pending' => $window !== null && ! $window->has_data, ...$data];
     }
 
     /**

@@ -118,6 +118,14 @@ numbers.
 
 ![The designer previewing an incident](./screenshots/screen-designer-incident.png)
 
+### History
+
+**History** in the designer lists the last 20 versions of the screen and who replaced each.
+**Preview** shows one as a TV would, with current data.
+**Restore** puts one back; what the screen is now becomes a version in turn. Edits by one
+person or token within 5 minutes count as one version. If someone else or an [agent](./mcp) saves
+the screen while you have it open, the designer asks you to reload.
+
 ## Widgets
 
 Data widgets pick what they show under **Shows**, grouped by topic. [Widgets](./widgets)

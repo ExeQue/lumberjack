@@ -45,6 +45,11 @@ class McpTokenFactory extends Factory
         return $this->state(fn () => ['token_hash' => McpToken::hash($plain)]);
     }
 
+    public function designsScreens(): static
+    {
+        return $this->state(fn () => ['can_design_screens' => true]);
+    }
+
     public function readOnly(): static
     {
         return $this->state(fn () => ['scope' => McpScope::Read]);

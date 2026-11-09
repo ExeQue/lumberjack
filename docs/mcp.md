@@ -8,12 +8,13 @@ can read issues and telemetry through it and help triage them.
 Team owners and admins create tokens under **API and MCP tokens** on the team page.
 Members see the list. The same tokens read the [metrics API](./metrics-api).
 
-| Field        | Values                                                                                                          |
-| ------------ | --------------------------------------------------------------------------------------------------------------- |
-| **Name**     | Up to 100 characters. Shown on everything the token does.                                                       |
-| **Projects** | The projects the token can see. At least one.                                                                   |
-| **Scope**    | `read` only reads. `write` can also change issues: status, assignee, labels, notes, watching and GitHub issues. |
-| **Expiry**   | 30, 90 or 365 days, or never.                                                                                   |
+| Field                  | Values                                                                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Name**               | Up to 100 characters. Shown on everything the token does.                                                                            |
+| **Projects**           | The projects the token can see. At least one.                                                                                        |
+| **Scope**              | `read` only reads issues and telemetry. `write` can also change issues: status, assignee, labels, notes, watching and GitHub issues. |
+| **Can design screens** | Lets the token create and change status screens, live, whatever its **Scope**. Off by default.                                       |
+| **Expiry**             | 30, 90 or 365 days, or never.                                                                                                        |
 
 The token, `lj_mcp_...`, is shown once. The list shows who created each token and when
 it was last used, and **Revoke**s it.
@@ -81,6 +82,32 @@ are in microseconds. Tools marked **write** need the `write` scope.
 | `list_health_checks`                                                                | Health checks with their state, latest result, metrics, per-host status and uptime.                                               |
 | `get_trace`                                                                         | Everything recorded under one trace id, in time order.                                                                            |
 | `search_logs`                                                                       | Log lines by channel, level, text, period and trace id, newest first.                                                             |
+
+### Screens
+
+An agent reads `get_screen_design_guide` first. Reading works with any token, on screens
+that show only projects the token covers. Changing needs **Can design screens**, and a
+change may not make a screen show projects outside the token. A screen with a Wi-Fi
+password or a media widget needs a token covering every project of the team. Agents cannot delete
+screens or manage share links and TVs.
+
+| Tool                         | What it does                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `get_screen_design_guide`    | How the grid, widgets, data sources, revisions and previews work.                             |
+| `list_screens`, `get_screen` | Screens and one screen's settings, widgets and `revision`.                                    |
+| `list_widget_types`          | Widget types and sources; with `type`, its option fields.                                     |
+| `list_data_sources`          | Data sources and where they come from: project, connected app or endpoint, host, last answer. |
+| `get_screen_data`            | What the screen shows now. `pending: true` while a connected source has not answered yet.     |
+| `preview_screen`             | A link showing the screen as on a TV, without signing in. It expires after 5 minutes.         |
+| `list_screen_versions`       | The versions the screen can go back to.                                                       |
+| `create_screen`              | A new screen, blank or from a template. **Design.**                                           |
+| `update_screen`              | The screen's settings. **Design.**                                                            |
+| `update_screen_layout`       | The grid and all widgets. **Design.**                                                         |
+| `update_screen_widget`       | One widget. **Design.**                                                                       |
+| `restore_screen_version`     | Back to a version. **Design.**                                                                |
+
+Changes need the `revision` they were based on, and are refused if the screen changed in
+the meantime. A preview stops working when its token does, or no longer covers the screen.
 
 ### Arguments
 

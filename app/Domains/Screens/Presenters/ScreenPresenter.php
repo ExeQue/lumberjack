@@ -14,6 +14,7 @@ use App\Domains\Projects\Queries\ProjectEnvironmentsQuery;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Screens\Models\ScreenVersion;
 use App\Domains\Screens\Support\ScreenLayout;
 use App\Domains\Screens\Support\ScreenQr;
 use App\Domains\Screens\Support\WidgetSchema;
@@ -64,7 +65,19 @@ class ScreenPresenter
                 'scope' => (object) ($w['scope'] ?? []),
             ], ScreenLayout::positioned($screen->widgets, $screen->cols, $screen->rows)),
             'updated_at' => $screen->updated_at?->toIso8601String(),
+            'revision' => $screen->revision,
         ];
+    }
+
+    /**
+     * What the screen can go back to, newest first.
+     *
+     * @return list<array{uuid: string, revision: int, author: string|null, created_at: string}>
+     */
+    public function versions(Screen $screen): array
+    {
+        return array_values(ScreenVersion::query()->whereBelongsTo($screen)->latest('id')->get(['uuid', 'revision', 'author', 'created_at'])
+            ->map(fn (ScreenVersion $v): array => ['uuid' => $v->uuid, 'revision' => $v->revision, 'author' => $v->author, 'created_at' => $v->created_at->toIso8601String()])->all());
     }
 
     /**
@@ -200,8 +213,8 @@ class ScreenPresenter
             'checks' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->get(['uuid', 'project_id', 'name', 'slug', 'type', 'config'])
                 ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name])->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all(),
             // External values pick one; names and formats only, never a URL or header.
-            'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->orderBy('name')->get(['uuid', 'project_id', 'name', 'format', 'shape', 'environment'])
-                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name])->values()->all(),
+            'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->orderBy('name')->get(['uuid', 'project_id', 'name', 'group_path', 'format', 'shape', 'environment'])
+                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'group' => $s->group_path, 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name])->values()->all(),
             // Names a filter can pick from, so a queue, host, domain or database check is chosen, not typed.
             'filters' => [
                 'queue' => QueueSample::query()->whereIn('project_id', $projects->modelKeys())->where('sampled_at', '>=', now()->subDays(7))

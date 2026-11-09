@@ -48,6 +48,6 @@ class ScreenChanged implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         // No uuid: the share channel is public.
-        return ['updated_at' => $this->screen->updated_at?->toIso8601String()];
+        return ['updated_at' => $this->screen->updated_at?->toIso8601String(), 'revision' => $this->screen->revision];
     }
 }

@@ -1199,21 +1199,55 @@ function Chart({ widget, schema, data, t, twelveHour }: BodyProps) {
     );
     const showY = opt<boolean>('y_axis') !== false;
     const showGrid = opt<boolean>('grid') !== false;
-    // A round top for the value axis, so its labels read 0, 1.5k, 3k rather than 0, 1472, 2944.
-    const top = niceCeil(Math.max(1e-9, ...values, red ?? 0) * 1.05);
-    const bottom =
-        opt<boolean>('y_zero') !== false ? 0 : Math.min(...values, top) * 0.95;
+    // Four bands on a tile two rows or taller, two on a one row tile.
+    const bands = widget.h >= 2 ? 4 : 2;
+    // Round ends for the value axis, so its labels read 0, 1.5k, 3k rather than 0, 1472, 2944.
+    // Not from zero: the axis fits what is drawn, gaps and the limit left out.
+    const drawn = [...series, ...(previous ? [previous] : [])]
+        .flatMap((s) => s.points.map((p) => p.v))
+        .filter((v): v is number => v !== null);
+    const fromZero = opt<boolean>('y_zero') !== false || drawn.length === 0;
+    const low = Math.min(...drawn);
+    const high = Math.max(...drawn);
+    const span = high - low || Math.abs(high) * 0.1 || 1;
+    const floorAt = (size: number) => {
+        const fitted = Math.floor((low - span * 0.05) / size) * size;
+
+        return low >= 0 ? Math.max(0, fitted) : fitted;
+    };
+    // Ticks land on whole steps, so the step grows until the bands reach the highest value.
+    let step = niceCeil((span * 1.1) / bands);
+
+    while (!fromZero && floorAt(step) + bands * step < high + span * 0.05) {
+        step = niceCeil(step * 1.01);
+    }
+
+    const bottom = fromZero ? 0 : floorAt(step);
+    const top = fromZero
+        ? niceCeil(Math.max(1e-9, ...values, red ?? 0) * 1.05)
+        : bottom + bands * step;
     const points = series[0]?.points ?? [];
     const n = Math.max(1, points.length);
     const y = (v: number | null) =>
-        40 - ((Math.max(bottom, v ?? 0) - bottom) / (top - bottom || 1)) * 40;
+        40 -
+        ((Math.max(bottom, v ?? bottom) - bottom) / (top - bottom || 1)) * 40;
     const x = (i: number) => ((i + 0.5) / n) * 100;
     const smooth = opt<boolean>('smooth') === true;
     const line = (s: Series) =>
         curve(
-            s.points.map((p, i): [number, number] => [x(i), y(p.v)]),
+            s.points.flatMap((p, i): [number, number][] =>
+                // On a fitted axis a gap is bridged: at the floor it would read as a crash.
+                p.v === null && !fromZero ? [] : [[x(i), y(p.v)]],
+            ),
             smooth,
         );
+    // Closed under what is drawn: on a fitted axis gaps at the ends are left out.
+    const ends = points.flatMap((p, i) =>
+        p.v === null && !fromZero ? [] : [i],
+    );
+    const area = ends.length
+        ? `${line(series[0])} L${x(ends[ends.length - 1])},40 L${x(ends[0])},40 Z`
+        : '';
     // The date only where it changes along the axis; the time on every tick.
     const day = (iso: string | undefined) =>
         iso ? new Date(iso).toDateString() : '';
@@ -1238,12 +1272,21 @@ function Chart({ widget, schema, data, t, twelveHour }: BodyProps) {
                     twelveHour,
                 )
               : '';
-    // Four bands on a tile two rows or taller, two on a one row tile.
-    const bands = widget.h >= 2 ? 4 : 2;
     const yTicks = Array.from(
         { length: bands + 1 },
         (_, k) => top - ((top - bottom) * k) / bands,
     );
+    // A unit rescales its values, so what reads apart is decided on the labels themselves.
+    const tickDecimals = fromZero
+        ? 'auto'
+        : (['auto', '1', '2', '3'].find(
+              (decimals) =>
+                  new Set(
+                      yTicks.map((v) =>
+                          formatValue(v, String(data.unit), decimals),
+                      ),
+                  ).size === yTicks.length,
+          ) ?? 'auto');
     // Room for a label every column or so: three ticks on a narrow chart, five on a wide one.
     const xTicks = Math.min(widget.w >= 3 ? 5 : 3, points.length);
     const xAt = Array.from({ length: xTicks }, (_, k) =>
@@ -1269,7 +1312,11 @@ function Chart({ widget, schema, data, t, twelveHour }: BodyProps) {
                                     top: `calc(${(i * 100) / bands}% + 0.2em)`,
                                 }}
                             >
-                                {formatValue(v, String(data.unit))}
+                                {formatValue(
+                                    v,
+                                    String(data.unit),
+                                    tickDecimals,
+                                )}
                             </span>
                         ))}
                     <svg
@@ -1336,7 +1383,7 @@ function Chart({ widget, schema, data, t, twelveHour }: BodyProps) {
                             })}
                         {style === 'area' && series[0] && (
                             <path
-                                d={`${line(series[0])} L${x(n - 1)},40 L${x(0)},40 Z`}
+                                d={area}
                                 fill={seriesColor(
                                     String(data.source),
                                     0,
@@ -1379,7 +1426,7 @@ function Chart({ widget, schema, data, t, twelveHour }: BodyProps) {
                                 vectorEffect="non-scaling-stroke"
                             />
                         )}
-                        {red !== null && red <= top && (
+                        {red !== null && red <= top && red >= bottom && (
                             <line
                                 x1="0"
                                 x2="100"

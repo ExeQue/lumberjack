@@ -27,16 +27,25 @@ class UpdateScreenLayoutRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        $cols = max(Screen::MIN_COLS, min(Screen::MAX_COLS, $this->integer('cols')));
-        $rows = max(Screen::MIN_ROWS, min(Screen::MAX_ROWS, $this->integer('rows')));
-        $projects = array_values($this->screen()->team->projects()->pluck('uuid')->map(fn (mixed $uuid): string => (string) $uuid)->all());
+        return [...self::rulesFor($this->screen(), $this->all()), 'revision' => ['nullable', 'integer', 'min:0']];
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public static function rulesFor(Screen $screen, array $input): array
+    {
+        $cols = max(Screen::MIN_COLS, min(Screen::MAX_COLS, (int) ($input['cols'] ?? 0)));
+        $rows = max(Screen::MIN_ROWS, min(Screen::MAX_ROWS, (int) ($input['rows'] ?? 0)));
+        $projects = array_values($screen->team->projects()->pluck('uuid')->map(fn (mixed $uuid): string => (string) $uuid)->all());
         $rules = [
             'cols' => ['required', 'integer', 'min:'.Screen::MIN_COLS, 'max:'.Screen::MAX_COLS],
             'rows' => ['required', 'integer', 'min:'.Screen::MIN_ROWS, 'max:'.Screen::MAX_ROWS],
             'widgets' => ['present', 'array', 'max:'.WidgetSchema::MAX_WIDGETS],
         ];
 
-        foreach (array_slice((array) $this->input('widgets', []), 0, WidgetSchema::MAX_WIDGETS, true) as $i => $widget) {
+        foreach (array_slice((array) ($input['widgets'] ?? []), 0, WidgetSchema::MAX_WIDGETS, true) as $i => $widget) {
             $rules = [...$rules, ...WidgetSchema::rules("widgets.{$i}", $widget, $cols, $rows, $projects)];
         }
 

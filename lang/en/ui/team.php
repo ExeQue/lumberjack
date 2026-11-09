@@ -61,6 +61,9 @@ return [
             'read' => 'read only (MCP and the metrics API)',
             'write' => 'read, notes, status, assignment and repository issues',
         ],
+        'can_design_screens' => 'Can design screens',
+        'can_design_screens_hint' => 'Create and change status screens, live, within its projects, even with the read scope.',
+        'designs_screens' => 'screens',
         'no_projects' => 'The team has no projects yet.',
         'new' => 'New token',
         // Button

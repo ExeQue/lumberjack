@@ -233,7 +233,8 @@ size**, **Database connections** and **Data source**.
   the top 5, 10 or 20. A split chart always draws lines.
 - **Red at**, and **Draw the red limit** as a dashed line.
 - **Overlay the previous period**, faint behind the current one.
-- **Y axis starts at zero**, **Legend**, **Time axis**, **Value axis** and **Grid lines**.
+- **Y axis starts at zero**. Off, the axis starts and ends around the values drawn, so small changes show; a limit outside that range is not drawn.
+- **Legend**, **Time axis**, **Value axis** and **Grid lines**.
 
 The time axis uses 24 or 12 hours, like the screen's clock.
 

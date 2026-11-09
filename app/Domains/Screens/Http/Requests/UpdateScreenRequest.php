@@ -29,6 +29,12 @@ class UpdateScreenRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
+        return [...self::rulesFor($this->screen()), 'revision' => ['nullable', 'integer', 'min:0']];
+    }
+
+    /** @return array<string, mixed> */
+    public static function rulesFor(Screen $screen): array
+    {
         $time = ['string', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'];
 
         return [
@@ -46,52 +52,48 @@ class UpdateScreenRequest extends FormRequest
             'timezone' => ['sometimes', 'nullable', 'timezone:all'],
             'scope' => ['sometimes', 'required', 'array'],
             'scope.projects' => ['present_with:scope', 'array'],
-            'scope.projects.*' => ['string', Rule::in($this->screen()->team->projects()->pluck('uuid')->all())],
+            'scope.projects.*' => ['string', Rule::in($screen->team->projects()->pluck('uuid')->all())],
             'scope.environment' => ['nullable', 'string', 'max:64'],
             'scope.period' => ['required_with:scope', Rule::enum(Period::class)],
         ];
     }
 
     /**
-     * @return array{name?: string, theme?: ScreenTheme, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, show_header?: bool, show_clock?: bool, clock_format?: string, light_from?: string, light_to?: string, timezone?: string|null, scope?: array{projects: list<string>, environment: string|null, period: string}}
+     * @return array<string, mixed>
      */
     public function settings(): array
     {
-        $settings = $this->safe()->only(['name', 'light_from', 'light_to', 'timezone']);
+        return self::settingsFrom($this->validated());
+    }
 
-        if ($this->has('theme')) {
-            $settings['theme'] = ScreenTheme::from($this->string('theme')->toString());
+    /**
+     * Validated input as the settings UpdateScreenAction takes.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public static function settingsFrom(array $input): array
+    {
+        $settings = array_intersect_key($input, array_flip(['name', 'light_from', 'light_to', 'timezone', 'clock_format']));
+
+        foreach (['theme' => ScreenTheme::class, 'aspect' => ScreenAspect::class, 'orientation' => ScreenOrientation::class, 'fit' => ScreenFit::class] as $key => $enum) {
+            if (array_key_exists($key, $input)) {
+                $settings[$key] = $enum::from((string) $input[$key]);
+            }
         }
 
-        if ($this->has('aspect')) {
-            $settings['aspect'] = ScreenAspect::from($this->string('aspect')->toString());
+        foreach (['show_header', 'show_clock'] as $key) {
+            if (array_key_exists($key, $input)) {
+                $settings[$key] = filter_var($input[$key], FILTER_VALIDATE_BOOLEAN);
+            }
         }
 
-        if ($this->has('orientation')) {
-            $settings['orientation'] = ScreenOrientation::from($this->string('orientation')->toString());
-        }
-
-        if ($this->has('show_header')) {
-            $settings['show_header'] = $this->boolean('show_header');
-        }
-
-        if ($this->has('show_clock')) {
-            $settings['show_clock'] = $this->boolean('show_clock');
-        }
-
-        if ($this->has('clock_format')) {
-            $settings['clock_format'] = $this->string('clock_format')->toString();
-        }
-
-        if ($this->has('fit')) {
-            $settings['fit'] = ScreenFit::from($this->string('fit')->toString());
-        }
-
-        if ($this->has('scope')) {
+        if (array_key_exists('scope', $input)) {
+            $environment = $input['scope']['environment'] ?? null;
             $settings['scope'] = [
-                'projects' => array_values(array_map('strval', (array) $this->input('scope.projects', []))),
-                'environment' => $this->filled('scope.environment') ? $this->string('scope.environment')->toString() : null,
-                'period' => $this->string('scope.period')->toString(),
+                'projects' => array_values(array_map('strval', (array) ($input['scope']['projects'] ?? []))),
+                'environment' => $environment !== null && $environment !== '' ? (string) $environment : null,
+                'period' => (string) $input['scope']['period'],
             ];
         }
 

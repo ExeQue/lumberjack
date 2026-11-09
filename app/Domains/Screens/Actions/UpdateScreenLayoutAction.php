@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Actions;
 
-use App\Domains\Screens\Events\ScreenChanged;
+use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Screens\Exceptions\OverlappingWidgetsException;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Support\ScreenLayout;
 use App\Domains\Screens\Support\WidgetSchema;
+use App\Models\User;
 
 class UpdateScreenLayoutAction
 {
+    public function __construct(
+        private readonly SaveScreenAction $save,
+    ) {
+    }
+
     /**
      * The grid and every widget in its cells. Widgets larger than the grid shrink to fit,
      * widgets without a position flow like before (ScreenLayout), widgets outside the grid
@@ -21,7 +27,7 @@ class UpdateScreenLayoutAction
      *
      * @throws OverlappingWidgetsException
      */
-    public function execute(Screen $screen, int $cols, int $rows, array $widgets): Screen
+    public function execute(Screen $screen, int $cols, int $rows, array $widgets, User|McpToken|null $by = null, ?int $revision = null): Screen
     {
         $cols = max(Screen::MIN_COLS, min(Screen::MAX_COLS, $cols));
         $rows = max(Screen::MIN_ROWS, min(Screen::MAX_ROWS, $rows));
@@ -37,11 +43,6 @@ class UpdateScreenLayoutAction
 
         $screen->fill(['cols' => $cols, 'rows' => $rows, 'widgets' => $widgets]);
 
-        if ($screen->isDirty()) {
-            $screen->save();
-            ScreenChanged::dispatch($screen);
-        }
-
-        return $screen;
+        return $this->save->execute($screen, $by, $revision);
     }
 }

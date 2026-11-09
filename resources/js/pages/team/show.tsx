@@ -66,6 +66,7 @@ type Token = {
     id: number;
     name: string;
     scope: string;
+    can_design_screens: boolean;
     projects: string[];
     created_by: string | null;
     usable: boolean;
@@ -564,6 +565,13 @@ export default function TeamShow({
                                                             `team.tokens.scopes.${token.scope}`,
                                                         )}
                                                     </Badge>
+                                                    {token.can_design_screens && (
+                                                        <Badge>
+                                                            {t(
+                                                                'team.tokens.designs_screens',
+                                                            )}
+                                                        </Badge>
+                                                    )}
                                                 </td>
                                                 <td
                                                     className={cn(
@@ -811,6 +819,25 @@ export default function TeamShow({
                                                 </p>
                                             )}
                                         </fieldset>
+                                        <label className="inline-flex items-center gap-2 pointer-coarse:min-h-10">
+                                            <input
+                                                type="checkbox"
+                                                name="can_design_screens"
+                                                value="1"
+                                                className="size-4 accent-amber"
+                                            />
+                                            <span>
+                                                <span className="font-medium">
+                                                    {t(
+                                                        'team.tokens.can_design_screens',
+                                                    )}
+                                                </span>
+                                                :{' '}
+                                                {t(
+                                                    'team.tokens.can_design_screens_hint',
+                                                )}
+                                            </span>
+                                        </label>
                                         <div>
                                             <Button
                                                 type="submit"

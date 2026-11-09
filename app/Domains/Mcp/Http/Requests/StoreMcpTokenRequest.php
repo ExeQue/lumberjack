@@ -25,6 +25,7 @@ class StoreMcpTokenRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100'],
             'scope' => ['required', Rule::enum(McpScope::class)],
+            'can_design_screens' => ['sometimes', 'boolean'],
             'projects' => ['required', 'array', 'min:1'],
             'projects.*' => ['uuid'],
             'expires_in_days' => ['nullable', 'integer', Rule::in(self::EXPIRY_DAYS)],

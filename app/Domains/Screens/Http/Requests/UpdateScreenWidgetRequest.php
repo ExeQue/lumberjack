@@ -34,6 +34,9 @@ class UpdateScreenWidgetRequest extends FormRequest
     {
         $screen = $this->screen();
 
-        return WidgetSchema::rules('widget', $this->input('widget'), $screen->cols, $screen->rows, array_values($screen->team->projects()->pluck('uuid')->map(fn (mixed $uuid): string => (string) $uuid)->all()));
+        return [
+            ...WidgetSchema::rules('widget', $this->input('widget'), $screen->cols, $screen->rows, array_values($screen->team->projects()->pluck('uuid')->map(fn (mixed $uuid): string => (string) $uuid)->all())),
+            'revision' => ['nullable', 'integer', 'min:0'],
+        ];
     }
 }

@@ -44,6 +44,14 @@ class DataSourceFactory extends Factory
         ]);
     }
 
+    /**
+     * Filed under a group by its app, as the catalog stores it.
+     */
+    public function inGroup(string $path = 'Events > Storage'): static
+    {
+        return $this->state(fn (): array => ['group_path' => $path]);
+    }
+
     public function archived(): static
     {
         return $this->state(fn (): array => ['archived_at' => now()]);

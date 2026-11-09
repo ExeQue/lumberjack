@@ -45,6 +45,7 @@ use App\Domains\Screens\Http\Controllers\PairController;
 use App\Domains\Screens\Http\Controllers\SavedScreenTemplateController;
 use App\Domains\Screens\Http\Controllers\ScreenController;
 use App\Domains\Screens\Http\Controllers\ScreenFileController;
+use App\Domains\Screens\Http\Controllers\ScreenPreviewController;
 use App\Domains\Screens\Http\Controllers\ScreenShareController;
 use App\Domains\Screens\Http\Controllers\SharedScreenController;
 use App\Domains\Screens\Http\Controllers\TvController;
@@ -80,6 +81,9 @@ Route::prefix('tv/{slot}')->whereIn('slot', range(1, 9))->middleware('throttle:s
     Route::get('data', [TvController::class, 'data'])->name('tv.data');
     Route::get('heartbeat', [TvController::class, 'heartbeat'])->name('tv.heartbeat');
 });
+// A short-lived signed look at a screen, handed out to an agent over MCP.
+Route::get('preview/screens/{screen:uuid}', [ScreenPreviewController::class, 'show'])->middleware('throttle:screen-viewer')->name('screens.preview');
+Route::get('preview/screens/{screen:uuid}/data', [ScreenPreviewController::class, 'data'])->middleware('throttle:screen-viewer')->name('screens.preview.data');
 Route::get('s/{key}', [SharedScreenController::class, 'show'])->where('key', 'ls_[a-z0-9]{40}')->middleware('throttle:screen-viewer')->name('screens.shared');
 Route::get('s/{key}/data', [SharedScreenController::class, 'data'])->where('key', 'ls_[a-z0-9]{40}')->middleware('throttle:screen-viewer')->name('screens.shared.data');
 
@@ -222,6 +226,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('present/screens/{screen:uuid}', [ScreenController::class, 'update'])->name('screens.update');
     Route::put('present/screens/{screen:uuid}/layout', [ScreenController::class, 'layout'])->name('screens.layout');
     Route::put('present/screens/{screen:uuid}/widgets/{widget}', [ScreenController::class, 'widget'])->where('widget', '[A-Za-z0-9_-]{1,40}')->name('screens.widget');
+    Route::get('present/screens/{screen:uuid}/versions/{version:uuid}', [ScreenController::class, 'version'])->name('screens.versions.preview');
+    Route::get('present/screens/{screen:uuid}/versions/{version:uuid}/data', [ScreenController::class, 'versionData'])->name('screens.versions.data');
+    Route::post('present/screens/{screen:uuid}/versions/{version:uuid}/restore', [ScreenController::class, 'restore'])->name('screens.versions.restore');
     Route::post('present/screens/{screen:uuid}/reload', [ScreenController::class, 'reload'])->name('screens.reload');
     Route::post('present/screens/{screen:uuid}/duplicate', [ScreenController::class, 'duplicate'])->name('screens.duplicate');
     Route::delete('present/screens/{screen:uuid}', [ScreenController::class, 'destroy'])->name('screens.destroy');

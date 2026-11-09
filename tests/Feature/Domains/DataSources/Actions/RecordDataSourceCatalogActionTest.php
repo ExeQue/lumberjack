@@ -39,6 +39,29 @@ describe('a list of sources', function () {
         expect(DataSource::query()->sole()->cache_seconds)->toBe($kept);
     })->with(['seconds' => [300, 300], 'none' => [null, null], 'too long' => [9_999_999, 86_400], 'not a number' => ['soon', null]]);
 
+    it('keeps the group an app files a source under', function (mixed $group, ?string $kept) {
+        ($this->record)([[...$this->source, 'group' => $group]]);
+
+        expect(DataSource::query()->sole()->group_path)->toBe($kept);
+    })->with([
+        'a nested path' => [['Events', 'Storage'], 'Events > Storage'],
+        'one level' => [['Events'], 'Events'],
+        'no group' => [[], null],
+        'blank names' => [['  ', "\0", "\u{00A0}", "\u{200B}"], null],
+        'a separator in a name' => [['Events > Storage'], 'Events Storage'],
+        'too deep' => [['A', 'B', 'C', 'D'], 'A > B > C'],
+        'a long name' => [[str_repeat('a', 60)], str_repeat('a', 40)],
+        'not a list' => ['Events', null],
+        'a name that is not text' => [['Events', 5, 'Storage'], 'Events > Storage'],
+    ]);
+
+    it('syncs an older app that sends no group, and clears one that is gone', function () {
+        ($this->record)([[...$this->source, 'group' => ['Events']]]);
+        ($this->record)([$this->source]);
+
+        expect(DataSource::query()->sole()->group_path)->toBeNull();
+    });
+
     it('updates a source it lists again, without a second row', function () {
         ($this->record)([$this->source]);
         ($this->record)([[...$this->source, 'label' => 'All orders']]);

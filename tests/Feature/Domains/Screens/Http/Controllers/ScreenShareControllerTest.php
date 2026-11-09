@@ -82,7 +82,7 @@ describe('turning a share link on and off', function () {
         Event::assertDispatchedTimes(ScreenChanged::class, 1);
         Event::assertDispatched(ScreenChanged::class, fn (ScreenChanged $e): bool => $e->broadcastOn()[1]->name === 'screen-share.'.$screen->share_key_hash
             // The share channel is public: no uuid in the payload.
-            && array_keys($e->broadcastWith()) === ['updated_at']);
+            && array_keys($e->broadcastWith()) === ['updated_at', 'revision']);
     });
 
     it('turns it off: the link stops working and its viewers are told', function () {

@@ -28,6 +28,10 @@ class RecordDataSourceCatalogAction
     /** How long a source no longer offered waits to come back. */
     public const int KEEP_ARCHIVED_DAYS = 30;
 
+    private const int MAX_GROUP_DEPTH = 3;
+
+    private const int MAX_GROUP_NAME = 40;
+
     private const string KEY_PATTERN = '/^[a-z0-9][a-z0-9:._-]{0,99}$/D';
 
     /**
@@ -69,6 +73,7 @@ class RecordDataSourceCatalogAction
             $row ??= new DataSource(['project_id' => $project->id, 'data_source_connection_id' => $connection->id, 'environment' => $connection->environment, 'key' => $key, 'format' => DataSourceFormat::Connected, 'interval_minutes' => FetchDataSourceWindowAction::EVERY_MINUTES, 'timeout_s' => SendSignedPullAction::TIMEOUT_S]);
             $row->fill([
                 'name' => mb_substr(str_replace("\0", '', is_string($source['label'] ?? null) && $source['label'] !== '' ? $source['label'] : $key), 0, 150),
+                'group_path' => $this->groupPath($source['group'] ?? null),
                 'url' => $connection->url,
                 'shape' => $shape,
                 'cache_seconds' => is_int($source['cache'] ?? null) && $source['cache'] > 0 ? min($source['cache'], FetchDataSourceWindowAction::MAX_STEP_SECONDS) : null,
@@ -102,5 +107,22 @@ class RecordDataSourceCatalogAction
         if ($overLimit) {
             throw new ProbeFailedException(__('data_sources.errors.too_many_sources', ['listed' => self::MAX_SOURCES, 'held' => self::MAX_PER_PROJECT]));
         }
+    }
+
+    /** The path an app files a source under, as one label; older apps send none. */
+    private function groupPath(mixed $group): ?string
+    {
+        $names = array_filter(
+            array_map($this->groupName(...), is_array($group) ? array_values($group) : []),
+            fn (string $name): bool => $name !== '',
+        );
+
+        return $names === [] ? null : implode(' > ', array_slice($names, 0, self::MAX_GROUP_DEPTH));
+    }
+
+    /** One level of a path: visible text only, and no separator of its own. */
+    private function groupName(mixed $name): string
+    {
+        return is_string($name) ? mb_substr(trim((string) preg_replace('/[\p{C}\p{Z}>]+/u', ' ', $name)), 0, self::MAX_GROUP_NAME) : '';
     }
 }

@@ -740,6 +740,16 @@ return [
     ],
 
     // The share link panel of the designer.
+    'versions' => [
+        'button' => 'History',
+        'title' => 'Earlier versions',
+        'empty' => 'Nothing to go back to yet.',
+        'restore' => 'Restore',
+        'preview' => 'The screen as this version had it',
+        'show_preview' => 'Preview',
+        'stale' => 'This screen was changed somewhere else.',
+        'reload' => 'Reload',
+    ],
     'share' => [
         // Button in the designer's top bar.
         'button' => 'Share',

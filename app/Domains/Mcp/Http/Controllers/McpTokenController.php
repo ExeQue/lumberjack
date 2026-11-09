@@ -26,6 +26,7 @@ class McpTokenController
             McpScope::from($request->string('scope')->toString()),
             array_values($team->projects()->whereIn('uuid', (array) $request->input('projects'))->pluck('id')->map(fn ($id): int => (int) $id)->all()),
             $days !== null ? now()->addDays((int) $days) : null,
+            $request->boolean('can_design_screens'),
         );
 
         return back()->with('secret', ['label' => __('mcp.token_created', ['name' => $request->string('name')->toString()]), 'value' => $plain]);

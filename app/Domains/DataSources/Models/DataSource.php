@@ -32,6 +32,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $uuid
  * @property int $project_id
  * @property string $name
+ * @property string|null $group_path
  * @property string $url
  * @property DataSourceFormat $format
  * @property list<array{name: string, value: string}>|null $headers
@@ -54,7 +55,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $updated_at
  */
 #[Fillable([
-    'project_id', 'name', 'url', 'format', 'headers', 'interval_minutes', 'timeout_s', 'next_fetch_at',
+    'project_id', 'name', 'group_path', 'url', 'format', 'headers', 'interval_minutes', 'timeout_s', 'next_fetch_at',
     'last_fetched_at', 'last_ok_at', 'last_status_code', 'last_error', 'last_body',
     'key', 'environment', 'shape', 'cache_seconds', 'data_source_connection_id', 'archived_at',
 ])]

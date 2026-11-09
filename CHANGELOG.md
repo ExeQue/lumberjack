@@ -4,6 +4,17 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- Agents can design status screens over MCP: read screens, widgets and data sources, change them live, and open a preview link that expires after 5 minutes. Changing needs a token with **Can design screens**, and only within the token's projects.
+- **History** in the screen designer: look at one of the last 20 versions and go back to it.
+- The designer notices when a screen was changed somewhere else, and saving on top of it is refused.
+- The **Data source** picker in the designer groups connected sources by what their app files them under with `#[Group]`, within each project.
+
+### Changed
+
+- A chart with **Y axis starts at zero** off now fits its axis to the values drawn, at both ends.
+
 ## [0.3.1] - 2026-11-09
 
 ### Fixed

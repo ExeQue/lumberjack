@@ -11,6 +11,7 @@ use App\Domains\Screens\Actions\DuplicateScreenAction;
 use App\Domains\Screens\Actions\ImportScreenAction;
 use App\Domains\Screens\Actions\RequestReloadAction;
 use App\Domains\Screens\Actions\ResolveScreenDataAction;
+use App\Domains\Screens\Actions\RestoreScreenVersionAction;
 use App\Domains\Screens\Actions\UpdateScreenAction;
 use App\Domains\Screens\Actions\UpdateScreenLayoutAction;
 use App\Domains\Screens\Actions\UpdateScreenWidgetAction;
@@ -19,6 +20,7 @@ use App\Domains\Screens\Broadcasting\TeamDisplaysChannel;
 use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenTemplate;
 use App\Domains\Screens\Exceptions\ReloadTooSoonException;
+use App\Domains\Screens\Exceptions\ScreenConflictException;
 use App\Domains\Screens\Exceptions\WidgetNotFoundException;
 use App\Domains\Screens\Http\Requests\ScreenDataRequest;
 use App\Domains\Screens\Http\Requests\StoreScreenRequest;
@@ -28,11 +30,13 @@ use App\Domains\Screens\Http\Requests\UpdateScreenWidgetRequest;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\SavedScreenTemplate;
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Screens\Models\ScreenVersion;
 use App\Domains\Screens\Presenters\ScreenPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -112,6 +116,8 @@ class ScreenController
             'sharing' => $presenter->sharing($screen, $request->user()),
             'tv' => $presenter->tvInstructions(),
             'screen' => $presenter->present($screen),
+            'channel' => ScreenChannel::name($screen),
+            'versions' => $presenter->versions($screen),
             'team' => ['name' => $screen->team->name],
             'displays' => $presenter->previewDisplays($screen),
             'paired' => $presenter->pairedDisplays($screen, $request->user()),
@@ -127,14 +133,22 @@ class ScreenController
 
     public function update(UpdateScreenRequest $request, Screen $screen, UpdateScreenAction $action): RedirectResponse|JsonResponse
     {
-        $action->execute($screen, $request->settings());
+        try {
+            $action->execute($screen, $request->settings(), $request->user(), $this->revision($request));
+        } catch (ScreenConflictException) {
+            return $this->conflict();
+        }
 
         return $request->wantsJson() ? $this->saved($screen) : back();
     }
 
     public function layout(UpdateScreenLayoutRequest $request, Screen $screen, UpdateScreenLayoutAction $action): JsonResponse
     {
-        $action->execute($screen, $request->integer('cols'), $request->integer('rows'), array_values((array) $request->input('widgets', [])));
+        try {
+            $action->execute($screen, $request->integer('cols'), $request->integer('rows'), array_values((array) $request->input('widgets', [])), $request->user(), $this->revision($request));
+        } catch (ScreenConflictException) {
+            return $this->conflict();
+        }
 
         return $this->saved($screen);
     }
@@ -142,7 +156,9 @@ class ScreenController
     public function widget(UpdateScreenWidgetRequest $request, Screen $screen, string $widget, UpdateScreenWidgetAction $action): JsonResponse
     {
         try {
-            $action->execute($screen, $widget, (array) $request->input('widget'));
+            $action->execute($screen, $widget, (array) $request->input('widget'), $request->user(), $this->revision($request));
+        } catch (ScreenConflictException) {
+            return $this->conflict();
         } catch (WidgetNotFoundException) {
             abort(404);
         }
@@ -200,8 +216,49 @@ class ScreenController
         return response()->json(['count' => $action->execute($screen)]);
     }
 
+    /** A version as a TV would show it, to look at before going back to it. */
+    public function version(Screen $screen, ScreenVersion $version, ScreenPresenter $presenter): Response
+    {
+        Gate::authorize('view', $screen);
+
+        return Inertia::render('screens/kiosk', $presenter->kiosk($version->applied(), [
+            'data_url' => route('screens.versions.data', [$screen, $version], absolute: false),
+            // Nothing broadcasts to the past.
+            'channel' => 'screen-version.'.Str::random(32),
+            'share' => true,
+        ]));
+    }
+
+    public function versionData(ScreenDataRequest $request, Screen $screen, ScreenVersion $version, ResolveScreenDataAction $action): JsonResponse
+    {
+
+        return response()->json([
+            'data' => (object) $action->execute($version->applied(), $request->filled('widget') ? $request->string('widget')->toString() : null),
+            'at' => now()->toIso8601String(),
+        ]);
+    }
+
+    /** Back to how the screen was; what it is now becomes a version in turn. */
+    public function restore(Request $request, Screen $screen, ScreenVersion $version, RestoreScreenVersionAction $action): RedirectResponse
+    {
+        Gate::authorize('update', $screen);
+        $action->execute($screen, $version, $request->user());
+
+        return back()->with('status', __('screens.restored'));
+    }
+
     private function saved(Screen $screen): JsonResponse
     {
-        return response()->json(['updated_at' => $screen->updated_at?->toIso8601String()]);
+        return response()->json(['updated_at' => $screen->updated_at?->toIso8601String(), 'revision' => $screen->revision]);
+    }
+
+    private function revision(Request $request): ?int
+    {
+        return $request->filled('revision') ? $request->integer('revision') : null;
+    }
+
+    private function conflict(): JsonResponse
+    {
+        return response()->json(['message' => __('screens.conflict')], 409);
     }
 }

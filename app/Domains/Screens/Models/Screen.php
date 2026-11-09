@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A status screen of a team: a grid of cols x rows cells that a TV shows exactly, each
@@ -44,6 +45,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $timezone null: the viewer's own (the browser's) time zone
  * @property array{projects?: list<string>, environment?: string|null, period?: string} $scope
  * @property list<array<string, mixed>> $widgets
+ * @property int $revision goes up with every change
  * @property string|null $share_key encrypted at rest; found by share_key_hash
  * @property string|null $share_key_hash
  * @property bool $share_titles whether the share link shows issue titles and names, not only counts
@@ -60,6 +62,9 @@ class Screen extends Model
     use HasFactory;
     use HasUuids;
 
+    /** What a version of a screen holds; not its identity or share link. */
+    public const array DESIGN = ['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'clock_format', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets'];
+
     public const int MIN_COLS = 2;
 
     public const int MAX_COLS = 12;
@@ -72,6 +77,7 @@ class Screen extends Model
     protected $attributes = [
         'scope' => '{"projects":[],"environment":null,"period":"24h"}',
         'widgets' => '[]',
+        'revision' => 0,
     ];
 
     /** @return list<string> */
@@ -104,6 +110,12 @@ class Screen extends Model
             'share_key' => 'encrypted',
             'share_titles' => 'boolean',
         ];
+    }
+
+    /** @return HasMany<ScreenVersion, $this> */
+    public function versions(): HasMany
+    {
+        return $this->hasMany(ScreenVersion::class);
     }
 
     /** @return BelongsTo<Team, $this> */
