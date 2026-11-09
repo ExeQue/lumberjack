@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitepress';
 
+const base = process.env.DOCS_BASE ?? '/lumberjack/';
+
 // The markdown in this repository is the source: the site is a view of it, not a copy.
 // Everything links the same way on GitHub and on the site, so srcDir is the repository root.
 export default defineConfig({
@@ -7,21 +9,18 @@ export default defineConfig({
     description:
         'Self-hosted error tracking, logs and performance monitoring for any app, whatever it is built with.',
     // GitHub Pages serves the docs under /lumberjack/; the lerd docs worker serves them at the root of its subdomain.
-    base: process.env.DOCS_BASE ?? '/lumberjack/',
+    base,
     lastUpdated: true,
     cleanUrls: true,
 
     // The app's own icons, from public/; head links do not get the base added.
     head: [
-        [
-            'link',
-            { rel: 'icon', href: '/lumberjack/favicon.ico', sizes: 'any' },
-        ],
+        ['link', { rel: 'icon', href: `${base}favicon.ico`, sizes: 'any' }],
         [
             'link',
             {
                 rel: 'icon',
-                href: '/lumberjack/favicon.svg',
+                href: `${base}favicon.svg`,
                 type: 'image/svg+xml',
             },
         ],
@@ -29,7 +28,7 @@ export default defineConfig({
             'link',
             {
                 rel: 'apple-touch-icon',
-                href: '/lumberjack/apple-touch-icon.png',
+                href: `${base}apple-touch-icon.png`,
             },
         ],
     ],
