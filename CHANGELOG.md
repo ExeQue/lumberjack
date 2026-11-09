@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-11-09
+
 ### Added
 
 - **Copy as Markdown** on an issue copies its details, latest stacktrace, context, notes and history, ready to hand to an agent.
@@ -79,7 +81,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/ExeQue/lumberjack/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/ExeQue/lumberjack/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/ExeQue/lumberjack/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/ExeQue/lumberjack/compare/v0.1.4...v0.1.5
