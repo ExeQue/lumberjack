@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-11-09
+
 ### Added
 
 - System administrators are told when a newer release is out, checked every six hours or right away with **Check now** on About. `LUMBERJACK_UPDATE_CHECK=false` turns it off.
@@ -86,7 +88,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/ExeQue/lumberjack/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/ExeQue/lumberjack/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/ExeQue/lumberjack/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/ExeQue/lumberjack/compare/v0.1.5...v0.1.6
