@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Actions;
 
-use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Exceptions\WebhookNeedsProjectException;
-use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Models\Team;
@@ -50,21 +48,6 @@ class SaveNotificationChannelAction
         }
 
         $channel->fill(['type' => $type, 'name' => $name, 'config' => $config, 'project_id' => $project?->id])->save();
-
-        // A new channel goes straight into the rules for the kinds that page: a shared one
-        // into the team's, a project's own into the rules that count for the project, as
-        // an add-on where that is the team's (a team rule cannot hold one project's channel).
-        if ($channel->wasRecentlyCreated) {
-            $types = array_map(fn (AlertRuleType $type): string => $type->value, array_filter(AlertRuleType::cases(), fn (AlertRuleType $type): bool => $type->enabledByDefault()));
-
-            if ($project === null) {
-                $team->alertRules()->whereIn('type', $types)->get()->each(fn (AlertRule $rule) => $rule->channels()->syncWithoutDetaching([$channel->id]));
-            } else {
-                AlertRule::query()->whereEffectiveFor($project)->whereIn('type', $types)->get()->each(fn (AlertRule $rule) => $rule->project_id !== null
-                    ? $rule->channels()->syncWithoutDetaching([$channel->id])
-                    : $rule->addOnsFor($project)->syncWithoutDetaching([$channel->id]));
-            }
-        }
 
         return $channel;
     }

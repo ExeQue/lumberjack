@@ -2,6 +2,7 @@ import { Relative } from '@/components/lj/relative';
 import { Form, router } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import { ChannelPicker } from '@/components/lj/channel-picker';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import {
     Badge,
@@ -11,6 +12,7 @@ import {
     EmptyState,
     Field,
     Input,
+    Switch,
 } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -611,15 +613,11 @@ function TeamRuleSummary({
     const extra = channels.filter(
         (channel) => !rule?.channels.includes(channel.id),
     );
-    const toggle = (id: number, on: boolean) =>
+    const saveAddOns = (ids: number[]) =>
         rule &&
         router.put(
             ruleAddOns({ project, rule: rule.id }).url,
-            {
-                channels: on
-                    ? [...row.add_ons, id]
-                    : row.add_ons.filter((a) => a !== id),
-            },
+            { channels: ids },
             { preserveScroll: true },
         );
 
@@ -638,10 +636,14 @@ function TeamRuleSummary({
                 <span className="text-ink-2">{row.description}</span>
             </div>
             <div className="flex flex-[1_1_180px] flex-col gap-1 text-xs text-ink-3">
-                <span>
+                <span title={names.join(', ') || undefined}>
                     {names.length > 0
                         ? t('alerts.rules.sends_to', {
-                              channels: names.join(', '),
+                              channels: t(
+                                  'alerts.rules.channel_count',
+                                  {},
+                                  names.length,
+                              ),
                           })
                         : t('alerts.rules.nowhere')}
                 </span>
@@ -653,34 +655,20 @@ function TeamRuleSummary({
                     </span>
                 )}
                 {rule && extra.length > 0 && (
-                    <fieldset
-                        className="mt-1.5 flex flex-col gap-1"
-                        disabled={!canAdminister}
-                    >
-                        <legend className="mb-1">
+                    <div className="mt-1.5 flex flex-col gap-1">
+                        <span>
                             {rule.enabled
                                 ? t('alerts.rules.add_ons')
                                 : t('alerts.rules.add_ons_off')}
-                        </legend>
-                        {extra.map((channel) => (
-                            <label
-                                key={channel.id}
-                                className="inline-flex items-center gap-2 text-ink-2"
-                            >
-                                <input
-                                    type="checkbox"
-                                    className="size-4 accent-amber"
-                                    checked={row.add_ons.includes(channel.id)}
-                                    onChange={(e) =>
-                                        toggle(channel.id, e.target.checked)
-                                    }
-                                />
-                                {t('alerts.rules.add_on', {
-                                    channel: channel.name,
-                                })}
-                            </label>
-                        ))}
-                    </fieldset>
+                        </span>
+                        <ChannelPicker
+                            title={row.label}
+                            channels={extra}
+                            selected={row.add_ons}
+                            onChange={saveAddOns}
+                            disabled={!canAdminister}
+                        />
+                    </div>
                 )}
             </div>
             {canAdminister && (
@@ -809,28 +797,12 @@ function RuleRow({
                 save();
             }}
         >
-            <button
-                type="button"
-                role="switch"
-                aria-checked={enabled}
-                aria-label={t('alerts.rules.enable', { rule: rule.label })}
+            <Switch
+                checked={enabled}
+                onChange={setEnabled}
+                label={t('alerts.rules.enable', { rule: rule.label })}
                 disabled={disabled}
-                onClick={() => setEnabled(!enabled)}
-                className={cn(
-                    'relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-not-allowed disabled:opacity-50',
-                    enabled
-                        ? 'border-amber bg-amber'
-                        : 'border-line-strong bg-ink-3/40',
-                )}
-            >
-                <span
-                    aria-hidden="true"
-                    className={cn(
-                        'absolute top-0.5 size-[18px] rounded-full bg-white shadow-sm transition-all',
-                        enabled ? 'left-[22px]' : 'left-0.5',
-                    )}
-                />
-            </button>
+            />
             <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-1">
                 <span className="flex flex-wrap items-center gap-2 font-semibold">
                     {rule.label}
@@ -853,31 +825,13 @@ function RuleRow({
                         {t('alerts.rules.no_channels')}
                     </span>
                 ) : (
-                    channels.map((channel) => (
-                        <label
-                            key={channel.id}
-                            className="inline-flex items-center gap-2 pointer-coarse:min-h-10"
-                        >
-                            <input
-                                type="checkbox"
-                                className="size-4 accent-amber"
-                                checked={selected.includes(channel.id)}
-                                onChange={(e) =>
-                                    setSelected(
-                                        e.target.checked
-                                            ? [...selected, channel.id]
-                                            : selected.filter(
-                                                  (id) => id !== channel.id,
-                                              ),
-                                    )
-                                }
-                            />
-                            <span className="text-ink-3">
-                                {t(`alerts.types.${channel.type}`)}:
-                            </span>
-                            {channel.name}
-                        </label>
-                    ))
+                    <ChannelPicker
+                        title={rule.label}
+                        channels={channels}
+                        selected={selected}
+                        onChange={setSelected}
+                        disabled={disabled}
+                    />
                 )}
                 {!teamLevel &&
                     enabled &&

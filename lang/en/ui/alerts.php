@@ -52,10 +52,16 @@ return [
         'off' => 'Off',
         'channels' => 'Channels',
         'no_channels' => 'Add a channel first.',
+        // Button on a rule, opening the channel dialog.
+        'channel_count' => '{0} No channels|{1} 1 channel|[2,*] :count channels',
+        'pick_channels' => 'Channels for :rule',
+        'channels_picked' => '{0} None selected|{1} 1 selected|[2,*] :count selected',
+        // Button
+        'use_channels' => 'Use these channels',
         'environments' => 'Environments',
         'environments_hint' => 'Comma separated. Empty means all.',
         'environments_placeholder' => 'e.g. production',
-        'on_without_channel' => 'On, but no channel is ticked: this rule sends nowhere.',
+        'on_without_channel' => 'On, but no channel is selected: this rule sends nowhere.',
         'without_team_channel' => '{1} :count rule is on without a team channel; projects can still add their own.|[2,*] :count rules are on without a team channel; projects can still add their own.',
         'thresholds' => [
             'title' => 'Alert when',

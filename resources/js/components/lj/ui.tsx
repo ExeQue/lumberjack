@@ -2,6 +2,51 @@ import { Link } from '@inertiajs/react';
 import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
+/**
+ * An on/off control. The label names what it turns on for assistive technology.
+ */
+export function Switch({
+    checked,
+    onChange,
+    label,
+    disabled = false,
+    small = false,
+}: {
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+    label: string;
+    disabled?: boolean;
+    /** For lists of toggles, where the full size crowds the text. */
+    small?: boolean;
+}) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            aria-label={label}
+            disabled={disabled}
+            onClick={() => onChange(!checked)}
+            className={cn(
+                'relative shrink-0 cursor-pointer rounded-full border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-not-allowed disabled:opacity-50',
+                small ? 'h-[18px] w-8' : 'h-6 w-11',
+                checked
+                    ? 'border-amber bg-amber'
+                    : 'border-line-strong bg-ink-3/40',
+            )}
+        >
+            <span
+                aria-hidden="true"
+                className={cn(
+                    'absolute top-0.5 rounded-full bg-white shadow-sm transition-all',
+                    small ? 'size-3' : 'size-[18px]',
+                    checked ? (small ? 'left-4' : 'left-[22px]') : 'left-0.5',
+                )}
+            />
+        </button>
+    );
+}
+
 export type Tone = 'neutral' | 'err' | 'warn' | 'ok' | 'info' | 'amber';
 
 const toneClasses: Record<Tone, string> = {

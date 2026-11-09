@@ -29,7 +29,7 @@ describe('channels of one project', function () {
         ($this->save)(ChannelType::Webhook, ['url' => 'https://93.184.215.14/hook']);
     })->throws(WebhookNeedsProjectException::class);
 
-    it('lets only that project\'s rules use it, and puts it in the rules that page', function () {
+    it('lets only that project\'s rules use it, and adds it to no rule until it is picked', function () {
         $rule = AlertRule::factory()->for($this->shop)->create(['type' => AlertRuleType::Escalation]);
         $note = AlertRule::factory()->for($this->shop)->create(['type' => AlertRuleType::Note, 'enabled' => false]);
         $blogRule = AlertRule::factory()->for($this->blog)->create();
@@ -37,8 +37,9 @@ describe('channels of one project', function () {
         $webhook = ($this->save)(ChannelType::Webhook, ['url' => 'https://93.184.215.14/hook'], $this->shop);
         $shared = ($this->save)(ChannelType::Mail, ['address' => 'ops@example.com']);
 
-        expect($rule->channels()->pluck('notification_channels.id')->all())->toBe([$webhook->id])
-            ->and($note->channels()->count())->toBe(0);
+        expect($rule->channels()->count())->toBe(0)
+            ->and($note->channels()->count())->toBe(0)
+            ->and(AlertRule::query()->whereForTeam($this->team)->whereType(AlertRuleType::NewIssue)->sole()->channels()->count())->toBe(0);
 
         app(UpdateAlertRuleAction::class)->execute($blogRule, true, [$webhook->id, $shared->id], null);
 
@@ -48,6 +49,7 @@ describe('channels of one project', function () {
     it('keeps a project\'s channels out of other projects created later', function () {
         ($this->save)(ChannelType::Webhook, ['url' => 'https://93.184.215.14/hook'], $this->shop);
         $shared = ($this->save)(ChannelType::Mail, ['address' => 'ops@example.com']);
+        AlertRule::query()->whereForTeam($this->team)->whereType(AlertRuleType::NewIssue)->sole()->channels()->attach($shared);
 
         $new = app(CreateProjectAction::class)->execute($this->team, 'Docs')['project'];
         $rule = AlertRule::query()->whereEffectiveFor($new)->whereType(AlertRuleType::NewIssue)->sole();
@@ -65,12 +67,11 @@ describe('channels of one project', function () {
             ->has('channels', 1)->where('channels.0.type', 'mail')->where('types', ['mail', 'discord', 'slack', 'teams', 'telegram', 'ntfy', 'pushover'])
             ->has('rules', count(AlertRuleType::cases())));
 
-        // The webhook is an add-on to the team rules that page, not an override of them.
         $this->actingAs($admin)->get(route('projects.settings', $this->shop))->assertInertia(fn (Assert $page) => $page
             ->has('alerts.channels', 1)->where('alerts.channels.0.type', 'webhook')
             ->has('alerts.available', 2)
             ->has('alerts.rules', count(AlertRuleType::cases()))
-            ->where('alerts.rules.0.type', 'new_issue')->where('alerts.rules.0.project', null)->has('alerts.rules.0.add_ons', 1)
+            ->where('alerts.rules.0.type', 'new_issue')->where('alerts.rules.0.project', null)->has('alerts.rules.0.add_ons', 0)
             ->where('alerts.rules.2.type', 'note')->where('alerts.rules.2.project', null)->has('alerts.rules.2.add_ons', 0));
     });
 

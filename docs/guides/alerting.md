@@ -32,7 +32,7 @@ side refused the message: check the URL or keys.
 ## 2. Turn on the rules you want
 
 Under **Rules** on the same page, each rule is on or off and sends to the channels you
-tick. A new channel is added to the rules that are on.
+pick. A new channel is added to no rule until you pick it.
 
 | Rule                   | Tells you about                                          | Default |
 | ---------------------- | -------------------------------------------------------- | ------- |

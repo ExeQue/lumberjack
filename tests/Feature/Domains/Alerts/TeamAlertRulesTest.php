@@ -239,16 +239,14 @@ describe('project add-ons on a team rule', function () {
             ->and($team->addOnsFor($this->shop)->pluck('notification_channels.id')->all())->toBe([$this->addOn->id]);
     });
 
-    it('adds a new project channel to the team rules it uses without customizing them', function () {
+    it('adds a new project channel to no rule, customized or not', function () {
         $own = app(CustomizeAlertRuleAction::class)->execute($this->shop, AlertRuleType::Escalation);
 
         $webhook = app(SaveNotificationChannelAction::class)->execute($this->team, ChannelType::Webhook, 'Shop app', ['url' => 'https://93.184.215.14/hook'], project: $this->shop);
 
         expect($this->shop->alertRules()->count())->toBe(1)
-            ->and($own->channels()->pluck('notification_channels.id')->all())->toContain($webhook->id)
-            ->and(($this->teamRule)(AlertRuleType::NewIssue)->addOnsFor($this->shop)->pluck('notification_channels.id')->all())->toBe([$webhook->id])
-            ->and(($this->teamRule)(AlertRuleType::Note)->addOnsFor($this->shop)->count())->toBe(0)
-            ->and(($this->teamRule)(AlertRuleType::NewIssue)->addOnsFor($this->blog)->count())->toBe(0);
+            ->and($own->channels()->pluck('notification_channels.id')->all())->not->toContain($webhook->id)
+            ->and(($this->teamRule)(AlertRuleType::NewIssue)->addOnsFor($this->shop)->count())->toBe(0);
     });
 
     it('lets an admin set add-ons to channels the project may use only', function () {

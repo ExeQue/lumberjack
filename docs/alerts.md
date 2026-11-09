@@ -34,6 +34,8 @@ Discord, Slack, Teams and Telegram messages carry the headline, the issue number
 title, the message, the location, release and occurrence count, and a link to the
 issue.
 
+A new channel is not used by any rule until you pick it on the rules below.
+
 **Send test** delivers a test message. Each channel shows **Not used yet**,
 **Delivered** or **Failed**, with when.
 
@@ -63,6 +65,9 @@ environments (comma separated, empty for all). There is one rule per type:
 | Health check degraded  | A [health check](./health#alerts) that keeps warning or starts failing. | On      |
 | Health check down      | A health check that keeps failing.                                      | On      |
 | Health check recovered | A health check that is ok again.                                        | On      |
+
+A rule shows how many channels it sends to. Click the number to pick them, grouped by
+type.
 
 New issue and Escalation are throttled, see [Limits](#limits). Every regression, note
 and status change is sent. Ignored issues and browser errors never send an alert.

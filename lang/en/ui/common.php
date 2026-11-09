@@ -85,6 +85,7 @@ return [
     'done' => 'Done',
     'save' => 'Save',
     'cancel' => 'Cancel',
+    'close' => 'Close',
     'delete' => 'Delete',
     'search' => 'Search',
     'sort' => 'Sort',
