@@ -585,6 +585,7 @@ return [
             'hosts' => ['default' => ''],
             'agents' => ['default' => ''],
             'calendar' => ['default' => ''],
+            'external_json' => ['default' => ''],
         ],
         'issue_status' => [
             'open' => 'Open',

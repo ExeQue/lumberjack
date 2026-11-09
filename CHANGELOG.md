@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Fixed
+
+- A list showing a data source read a raw translation key in its corner.
+
 ## [0.3.0] - 2026-11-09
 
 ### Added
