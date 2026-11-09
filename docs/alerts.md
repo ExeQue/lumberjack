@@ -58,6 +58,7 @@ environments (comma separated, empty for all). There is one rule per type:
 | Escalation             | An issue that suddenly happens far more often than usual.               | On      |
 | Note                   | Every note written on an issue, by a person or an agent.                | Off     |
 | Resolved or ignored    | Every issue someone resolves or ignores.                                | Off     |
+| New release            | An environment reports a release for the first time.                    | On      |
 | Queue backlog          | A queue with too many jobs waiting, or one waiting too long.            | On      |
 | Health check degraded  | A [health check](./health#alerts) that keeps warning or starts failing. | On      |
 | Health check down      | A health check that keeps failing.                                      | On      |

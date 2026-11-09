@@ -21,6 +21,7 @@ use App\Domains\Performance\Enums\SpanKind;
 use App\Domains\Performance\Support\SqlNormalizer;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Releases\Actions\RecordReleaseAction;
+use App\Domains\Releases\Actions\RecordReleaseEnvironmentAction;
 use App\Domains\Schedule\Actions\RecordScheduleEventAction;
 use App\Domains\Shared\Support\Scrubber;
 use Illuminate\Support\Facades\DB;
@@ -53,6 +54,7 @@ class ProcessIngestBatchAction
         private readonly BroadcastProjectChangeAction $broadcast,
         private readonly Scrubber $scrubber,
         private readonly RecordReleaseAction $recordReleaseAction,
+        private readonly RecordReleaseEnvironmentAction $recordReleaseEnvironmentAction,
     ) {
     }
 
@@ -132,6 +134,7 @@ class ProcessIngestBatchAction
         // A browser may be running yesterday's script; only the server says what is deployed.
         if (! $fromBrowser && $envelope->release !== null && $touched !== []) {
             $this->recordReleaseAction->execute($project, $envelope->release);
+            $this->recordReleaseEnvironmentAction->execute($project, $envelope->release, $envelope->environment, $envelope->host);
         }
 
         $this->broadcastChanges($project, $touched);

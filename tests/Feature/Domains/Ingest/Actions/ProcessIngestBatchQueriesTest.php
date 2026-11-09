@@ -38,8 +38,9 @@ describe('ingest batch cost', function () {
         // 60 until the batch's release was written down (two, once per release) and the
         // new issue's alert job, run inline here, looked for members to push to. 68 until a
         // result read its check's hosts once, not twice, and skipped the outage lookup while
-        // the check stays ok.
-        expect($stored)->toBeLessThanOrEqual(57)
+        // the check stays ok. 57 until the release was also written down per environment
+        // (two, once per release and environment).
+        expect($stored)->toBeLessThanOrEqual(59)
             ->and(LogEntry::query()->where('project_id', $project->id)->orderBy('id')->pluck('message')->all())
             ->toBe([...array_map(fn (int $i): string => "Line {$i}", range(1, 100)), 'It broke'])
             ->and(HealthCheck::query()->where('project_id', $project->id)->count())->toBe(1);

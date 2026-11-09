@@ -11,6 +11,7 @@ enum AlertRuleType: string
     case Note = 'note';
     case Escalation = 'escalation';
     case StatusChange = 'status_change';
+    case NewRelease = 'new_release';
     case QueueBacklog = 'queue_backlog';
     case HealthDegraded = 'health_degraded';
     case HealthDown = 'health_down';

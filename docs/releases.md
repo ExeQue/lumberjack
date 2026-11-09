@@ -66,6 +66,15 @@ When a project's server reports a release for the first time, members can get a
 default; change it under [Notifications](./teams.md#notifications). The first release a
 project ever reports sends nothing, nor do releases reported only by the browser script.
 
+## The new release alert
+
+The **New release** [alert rule](./alerts.md#rules) sends to your channels when an
+environment reports a release for the first time, with the version, environment and host.
+A release that reaches staging and later production sends one alert for each; limit the
+rule to `production` with its environments to hear only about that. The first release an
+environment ever reports sends nothing. Several hosts reporting the same release send one
+alert.
+
 ## Limits
 
 | What                               | Limit         |

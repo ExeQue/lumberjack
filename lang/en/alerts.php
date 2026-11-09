@@ -16,6 +16,7 @@ return [
         'health_degraded' => ['label' => 'Health check degraded', 'description' => 'A health check that keeps warning past its threshold, reported by the app or run by Lumberjack. Muted checks send nothing.'],
         'health_down' => ['label' => 'Health check down', 'description' => 'A health check that keeps failing past its threshold, including one that was degraded first. Muted checks send nothing.'],
         'health_recovered' => ['label' => 'Health check recovered', 'description' => 'A health check that was degraded or down and passes again past its recovery threshold.'],
+        'new_release' => ['label' => 'New release', 'description' => 'An environment reports a release for the first time, with the version, environment and host. Once per release and environment; an environment\'s very first release sends nothing.'],
         'queue_backlog' => ['label' => 'Queue backlog', 'description' => 'A queue with too many jobs waiting, or one waiting too long, for a while, from the sizes the agents report. Catches dead workers, which start no job to measure. Tells again when it is back under.'],
     ],
     'messages' => [
@@ -38,11 +39,16 @@ return [
         ],
         'via_mcp' => ':token (MCP)',
         'unknown_author' => 'Someone',
+        'new_release' => 'New release in :project',
         'queue_backlog' => 'Queue backlog in :project',
         'queue_backlog_recovered' => 'Queue backlog cleared in :project',
         'health_check_down' => 'Health check down in :project',
         'health_check_degraded' => 'Health check degraded in :project',
         'health_check_recovered' => 'Health check recovered in :project',
+    ],
+    'new_release' => [
+        'first_seen' => 'First seen just now.',
+        'facts' => ['environment' => 'Environment', 'host' => 'Host'],
     ],
     'health_check' => [
         'recovered' => '{1} Recovered after 1 minute.|[2,*] Recovered after :count minutes.',
