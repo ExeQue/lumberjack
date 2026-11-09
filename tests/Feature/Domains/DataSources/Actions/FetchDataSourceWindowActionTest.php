@@ -124,6 +124,19 @@ describe('the range', function () {
         });
     });
 
+    it('tells the app the resolution of the period and the time zone of the connection', function () {
+        $this->source->connection->update(['timezone' => 'Europe/Copenhagen']);
+        Http::fake(['*' => Http::response(['version' => 1, 'sources' => ['orders:total' => ['shape' => 'number', 'data' => 1]]])]);
+
+        app(FetchDataSourceWindowAction::class)->execute(DataSourceWindow::factory()->for($this->source, 'source')->create(['period' => '30d', 'bucket' => 86400])->id);
+
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return $query['bucket'] === '86400' && $query['timezone'] === 'Europe/Copenhagen';
+        });
+    });
+
     it('asks the app again when it has moved on from the old token', function () {
         $this->source->connection->update(['pull_token' => 'lj_pull_new', 'pull_token_previous' => 'lj_pull_test', 'uses_previous' => true, 'next_check_at' => now()->addMinutes(4)]);
         Http::fake([$this->url => Http::response('', 404)]);

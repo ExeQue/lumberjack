@@ -77,7 +77,7 @@ return [
             'lcp_p75' => 'LCP p75',
             'db_size' => 'Database size',
             'db_connections' => 'Database connections',
-            'external_json' => 'External JSON',
+            'external_json' => 'Data source',
         ],
         'gauge' => [
             'requests_per_minute' => 'Requests per minute',
@@ -90,7 +90,7 @@ return [
             'queue_size' => 'Queue size',
             'db_connections' => 'Database connections in use',
             'health_uptime' => 'Health uptime',
-            'external_json' => 'External JSON',
+            'external_json' => 'Data source',
         ],
         'chart' => [
             'requests_errors' => 'Requests and errors',
@@ -110,7 +110,7 @@ return [
             'lcp_p75' => 'LCP p75',
             'db_size' => 'Database size',
             'db_connections' => 'Database connections',
-            'external_json' => 'External JSON',
+            'external_json' => 'Data source',
         ],
         'list' => [
             'latest_issues' => 'Latest issues',
@@ -121,7 +121,7 @@ return [
             'queues' => 'Queues',
             'hosts' => 'Hosts',
             'agents' => 'Agents',
-            'external_json' => 'External JSON',
+            'external_json' => 'Data source',
             'calendar' => 'Calendar events',
         ],
         'health' => [

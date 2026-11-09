@@ -617,6 +617,33 @@ describe('external JSON', function () {
             ->and(array_values(array_filter(array_column($data['sparkline'], 'v'), fn ($v) => $v !== null)))->toBe([20.0]);
     });
 
+    it('answers in the unit the widget picks, a plain number by default', function () {
+        expect(($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)(['unit' => 'bytes_decimal']))['unit'])->toBe('bytes_decimal')
+            ->and(($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)())['unit'])->toBe('number')
+            ->and(($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)(['unit' => 'custom', 'unit_prefix' => '€', 'unit_text' => ' orders ']))['unit'])->toBe("custom:€\torders");
+    });
+
+    it('divides what a custom unit shows, its limits going by the number shown', function () {
+        $custom = ['unit' => 'custom', 'unit_divisor' => 10];
+        $stat = ($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)([...$custom, 'amber' => 2.5, 'red' => 5]));
+        $list = ($this->resolve)(WidgetType::List, 'external_json', ($this->external)([...$custom, 'json_path' => "$.services[?(@.ms > 100)]", 'label_path' => 'name', 'value_path' => '$.ms', 'red' => 50]));
+        $chart = ($this->resolve)(WidgetType::Chart, 'external_json', ($this->external)($custom), new WidgetScope(period: Period::Day));
+
+        expect($stat)->toMatchArray(['value' => 3.0, 'previous' => 1.0, 'change' => 2.0, 'state' => 'amber'])
+            ->and($stat['limits'])->toMatchArray(['amber' => 2.5, 'red' => 5.0])
+            ->and(array_column($list['rows'], 'value'))->toBe([12.0, 90.0])
+            ->and(array_column($list['rows'], 'state'))->toBe(['ok', 'red'])
+            ->and(collect($chart['series'][0]['points'])->whereNotNull('v')->pluck('v')->all())->toBe([2.0]);
+    });
+
+    it('fills a gauge of a share at the whole of it, not at the value', function () {
+        expect(($this->resolve)(WidgetType::Gauge, 'external_json', ($this->external)(['unit' => 'percent']))['max'])->toBe(100.0);
+    });
+
+    it('does not divide a value in another unit', function () {
+        expect(($this->resolve)(WidgetType::Stat, 'external_json', ($this->external)(['unit' => 'percent', 'unit_divisor' => 10]))['value'])->toBe(30.0);
+    });
+
     it('shows a gauge from a filter expression', function () {
         $data = ($this->resolve)(WidgetType::Gauge, 'external_json', ($this->external)(['json_path' => "$.services[?(@.status=='down')].ms", 'max' => 1000, 'red' => 500]));
 
@@ -794,6 +821,22 @@ describe('connected data sources', function () {
             return ['data_source' => $source->uuid];
         };
     });
+
+    it('asks for the resolution a chart sets, keeping it apart, and names the interval by it', function () {
+        $options = [...($this->connected)(DataSourceShape::Series, []), 'resolution' => '86400'];
+
+        $data = ($this->resolve)(WidgetType::Chart, 'external_json', $options, new WidgetScope(period: Period::Week));
+
+        expect($data['interval'])->toBe('1d')
+            ->and(DataSourceWindow::query()->where('period', '7d')->value('bucket'))->toBe(86400);
+    });
+
+    it('falls back to the resolution of the period when one does not fit it', function (string $resolution) {
+        $options = [...($this->connected)(DataSourceShape::Series, []), 'resolution' => $resolution];
+
+        expect(($this->resolve)(WidgetType::Chart, 'external_json', $options, new WidgetScope(period: Period::Hour))['interval'])->toBe('2m')
+            ->and(DataSourceWindow::query()->where('period', '1h')->value('bucket'))->toBe(120);
+    })->with(['too coarse' => '86400', 'automatic' => 'auto']);
 
     it('shows a number', function () {
         $data = ($this->resolve)(WidgetType::Stat, 'external_json', ($this->connected)(DataSourceShape::Number, 42), new WidgetScope(period: Period::Day));

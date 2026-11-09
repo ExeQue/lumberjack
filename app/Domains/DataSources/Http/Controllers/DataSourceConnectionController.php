@@ -23,13 +23,13 @@ class DataSourceConnectionController
     {
         Gate::authorize('update', $project);
 
-        return back()->with('secret', ['label' => __('data_sources.pull_token'), 'value' => $action->execute($project, $request->string('environment')->toString(), $request->string('url')->toString())]);
+        return back()->with('secret', ['label' => __('data_sources.pull_token'), 'value' => $action->execute($project, $request->string('environment')->toString(), $request->string('url')->toString(), $request->string('timezone', 'UTC')->toString())]);
     }
 
     public function update(UpdateDataSourceConnectionRequest $request, Project $project, DataSourceConnection $dataSourceConnection, ChangeDataSourceConnectionUrlAction $action): RedirectResponse
     {
         $this->authorizeFor($project, $dataSourceConnection);
-        $action->execute($dataSourceConnection, $request->string('url')->toString());
+        $action->execute($dataSourceConnection, $request->string('url')->toString(), $request->input('timezone'));
 
         return back()->with('status', __('data_sources.connection_updated', ['environment' => $dataSourceConnection->environment]));
     }

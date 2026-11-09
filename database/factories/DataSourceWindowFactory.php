@@ -18,6 +18,7 @@ class DataSourceWindowFactory extends Factory
         return [
             'data_source_id' => DataSource::factory()->connected(),
             'period' => '24h',
+            'bucket' => 3600,
             'requested_at' => now(),
         ];
     }

@@ -296,7 +296,37 @@ export function rotationAt(
     return { index: 0, elapsed: 0, seconds: spans[0] };
 }
 
-/** A value in its unit: counts compact, shares as percent, durations in ms or s, sizes in B to TB. */
+/** A number in the largest of the units (1000 each) it reaches. */
+function formatScaled(n: number, units: string[], fixed?: number): string {
+    const i = Math.max(
+        0,
+        Math.min(
+            units.length - 1,
+            Math.floor(Math.log10(Math.max(1, Math.abs(n))) / 3),
+        ),
+    );
+
+    return `${formatNumber(n / 1000 ** i, fixed ?? (i > 0 ? 1 : Number.isInteger(n) ? 0 : 2))} ${units[i]}`;
+}
+
+/** Seconds in s, min, h, or d from two days. */
+function formatSpan(seconds: number, fixed?: number): string {
+    const abs = Math.abs(seconds);
+    const [value, unit] =
+        abs < 60
+            ? [seconds, 's']
+            : abs < 3600
+              ? [seconds / 60, 'min']
+              : abs < 172_800
+                ? [seconds / 3600, 'h']
+                : [seconds / 86_400, 'd'];
+
+    return `${formatNumber(value, fixed ?? 1)} ${unit}`;
+}
+
+const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+
+/** A value in its unit: counts compact, shares as percent, durations from ms to days, sizes in B to TB. */
 export function formatValue(
     value: unknown,
     unit: string,
@@ -313,13 +343,44 @@ export function formatValue(
     const n = Number(value);
     const fixed = decimals === 'auto' ? undefined : Number(decimals);
 
+    if (unit.startsWith('custom:')) {
+        const [prefix, text = ''] = unit.slice(7).split('	');
+        const number = prefix + formatValue(n, 'number', decimals);
+
+        return !text || /^[/%]/.test(text)
+            ? number + text
+            : `${number} ${text}`;
+    }
+
+    if (unit === 'percent') {
+        return `${formatNumber(n, fixed ?? (Number.isInteger(n) ? 0 : 2))}%`;
+    }
+
     switch (unit) {
         case 'ratio':
             return formatPercent(n, fixed ?? 1);
         case 'ms':
-            return n >= 1000
-                ? `${formatNumber(n / 1000, fixed ?? 1)} s`
+            return Math.abs(n) >= 1000
+                ? formatSpan(n / 1000, fixed)
                 : `${formatNumber(n, fixed ?? 0)} ms`;
+        case 'seconds':
+            return formatSpan(n, fixed);
+        case 'minutes':
+            return formatSpan(n * 60, fixed);
+        case 'hours':
+            return formatSpan(n * 3600, fixed);
+        case 'bytes_decimal':
+            return formatScaled(n, BYTE_UNITS, fixed);
+        case 'megabytes':
+            return formatScaled(n * 1e6, BYTE_UNITS, fixed);
+        case 'gigabytes':
+            return formatScaled(n * 1e9, BYTE_UNITS, fixed);
+        case 'bits_per_second':
+            return formatScaled(
+                n,
+                ['bit/s', 'kbit/s', 'Mbit/s', 'Gbit/s', 'Tbit/s'],
+                fixed,
+            );
         case 'score':
             return formatNumber(n, fixed ?? 2);
         case 'bytes':
@@ -746,4 +807,14 @@ export function curve(pts: [number, number][], smooth: boolean): string {
     }
 
     return path;
+}
+
+/** UTC, every time zone the browser knows, and the one already set. */
+export function timezones(current?: string): string[] {
+    const zones = [
+        'UTC',
+        ...Intl.supportedValuesOf('timeZone').filter((zone) => zone !== 'UTC'),
+    ];
+
+    return current && !zones.includes(current) ? [current, ...zones] : zones;
 }

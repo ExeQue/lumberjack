@@ -4,6 +4,16 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- **Unit** on a data source value: percent, durations, bytes, bits per second, or your own with a prefix, a word and **Divide by**.
+- **Resolution** on a chart of a connected data source.
+- Each connected app has a **Time zone**, and Lumberjack tells it the resolution and time zone a series is grouped by.
+
+### Changed
+
+- **External JSON** is called **Data source** in the designer.
+
 ## [0.2.0] - 2026-11-09
 
 ### Added

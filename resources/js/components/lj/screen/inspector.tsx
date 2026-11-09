@@ -26,7 +26,7 @@ import {
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { PATH_FIELDS, PathConfig, useJsonPreview } from './json-path-help';
-import { fieldsOf, option, rotationOf } from './lib';
+import { fieldsOf, option, rotationOf, timezones } from './lib';
 import type {
     RotateItem,
     Schema,
@@ -63,13 +63,6 @@ export type Catalog = {
 };
 
 const ALL = '*';
-
-/** Every time zone the browser knows, plus the one already set. */
-function timezones(current?: string): string[] {
-    const zones = Intl.supportedValuesOf('timeZone');
-
-    return current && !zones.includes(current) ? [current, ...zones] : zones;
-}
 
 /**
  * A searchable time zone: type part of a name ("copen", "new_y") and pick it from the
@@ -474,7 +467,13 @@ export function WidgetInspector({
         if (
             field.when &&
             !Object.entries(field.when).every(([key, values]) =>
-                values.includes(String(option(catalog.schema, widget, key))),
+                values.includes(
+                    String(
+                        target.values[key] ??
+                            target.inherited?.[key] ??
+                            option(catalog.schema, widget, key),
+                    ),
+                ),
             )
         ) {
             return null;
@@ -543,6 +542,11 @@ export function WidgetInspector({
         // An External JSON value's paths are set in a dialog, summed up here.
         // A connected source's answer has no history to compare with or to draw.
         if (connected && ['compare', 'sparkline'].includes(field.key)) {
+            return null;
+        }
+
+        // Only an app can answer at another resolution; a fetched source has its history.
+        if (!connected && field.key === 'resolution') {
             return null;
         }
 
@@ -637,15 +641,35 @@ export function WidgetInspector({
                                     {t('screens.inspector.screen_default')}
                                 </option>
                             )}
-                            {(field.options ?? []).map((value) => (
-                                <option key={value} value={value}>
-                                    {field.key === 'period'
-                                        ? t(`screens.periods.${value}`)
-                                        : t(
-                                              `screens.fields.${field.key}.options.${value}`,
-                                          )}
-                                </option>
-                            ))}
+                            {Object.entries(field.groups ?? {}).map(
+                                ([group, values]) => (
+                                    <optgroup
+                                        key={group}
+                                        label={t(
+                                            `screens.fields.${field.key}.groups.${group}`,
+                                        )}
+                                    >
+                                        {values.map((value) => (
+                                            <option key={value} value={value}>
+                                                {t(
+                                                    `screens.fields.${field.key}.options.${value}`,
+                                                )}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                ),
+                            )}
+                            {(field.groups ? [] : (field.options ?? [])).map(
+                                (value) => (
+                                    <option key={value} value={value}>
+                                        {field.key === 'period'
+                                            ? t(`screens.periods.${value}`)
+                                            : t(
+                                                  `screens.fields.${field.key}.options.${value}`,
+                                              )}
+                                    </option>
+                                ),
+                            )}
                         </Select>
                     </div>
                 );

@@ -13,10 +13,10 @@ class CreateDataSourceConnectionAction
     /**
      * @return string the pull token, shown once
      */
-    public function execute(Project $project, string $environment, string $url): string
+    public function execute(Project $project, string $environment, string $url, string $timezone = 'UTC'): string
     {
         $token = ProjectKeys::newPullToken();
-        DataSourceConnection::query()->create(['project_id' => $project->id, 'environment' => $environment, 'url' => $url, 'pull_token' => $token]);
+        DataSourceConnection::query()->create(['project_id' => $project->id, 'environment' => $environment, 'url' => $url, 'timezone' => $timezone, 'pull_token' => $token]);
 
         return $token;
     }

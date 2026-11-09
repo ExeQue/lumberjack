@@ -25,10 +25,12 @@ return [
         'url' => 'Address',
         'url_hint' => 'The APP_URL of the app followed by the path of the endpoint, by default /lumberjack/datasources.',
         // Button
-        'change_url' => 'Change address',
-        'change_url_body' => 'For an app that moved. Its token and sources stay, and so do the widgets that show them.',
+        'timezone' => 'Time zone',
+        'timezone_hint' => 'Where a day begins, for sources that come in days.',
+        'change_url' => 'Edit connection',
+        'change_url_body' => 'For an app that moved or works in another time zone. Its token and sources stay, and so do the widgets that show them.',
         // Button
-        'save_url' => 'Save address',
+        'save_url' => 'Save',
         // Button
         'rotate' => 'Rotate token',
         'rotate_question' => 'Make a new pull token? Pulls go on with the current one until the app has the new one.',

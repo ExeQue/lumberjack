@@ -38,6 +38,7 @@ class DataSourceController
                 'uuid' => $c->uuid,
                 'environment' => $c->environment,
                 'url' => $c->url,
+                'timezone' => $c->timezone,
                 'status' => match (true) {
                     $c->last_ok_at === null => 'waiting',
                     $c->last_error !== null => 'failing',

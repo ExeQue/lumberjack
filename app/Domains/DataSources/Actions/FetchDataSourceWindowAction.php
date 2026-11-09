@@ -75,7 +75,7 @@ class FetchDataSourceWindowAction
         $step = self::stepSeconds($source, $period);
         $to = (int) (floor(now()->getTimestamp() / $step) * $step);
 
-        $response = $this->send->execute($source->url, $token, ['from' => $to - self::periodSeconds($period), 'only' => (string) $source->key, 'to' => $to]);
+        $response = $this->send->execute($source->url, $token, ['bucket' => $window->bucket, 'from' => $to - self::periodSeconds($period), 'only' => (string) $source->key, 'timezone' => $source->connection->timezone, 'to' => $to]);
 
         // During a rotation that is the app having moved on: find out which token it holds now.
         if ($response->status() === 404 && $source->connection->uses_previous) {

@@ -1,6 +1,7 @@
 import { Form, Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
+import { timezones } from '@/components/lj/screen/lib';
 import { Relative } from '@/components/lj/relative';
 import { TopBar } from '@/components/lj/top-bar';
 import {
@@ -80,6 +81,7 @@ type ConnectionRow = {
     uuid: string;
     environment: string;
     url: string;
+    timezone: string;
     status: 'connected' | 'waiting' | 'failing';
     last_ok_at: string | null;
     last_error: string | null;
@@ -103,6 +105,10 @@ function When({ iso }: { iso: string | null }) {
         <span className="text-ink-3">{t('data_sources.never')}</span>
     );
 }
+
+const reportedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const browserTimezone =
+    reportedTimezone === 'Etc/Unknown' ? 'UTC' : reportedTimezone;
 
 export default function DataSourcesIndex({
     project,
@@ -409,6 +415,30 @@ function ConnectedSources({
                                             autoComplete="off"
                                         />
                                     </Field>
+                                    <Field
+                                        label={t(
+                                            'data_sources.connected.timezone',
+                                        )}
+                                        htmlFor="connection-new-timezone"
+                                        hint={t(
+                                            'data_sources.connected.timezone_hint',
+                                        )}
+                                        error={errors.timezone}
+                                    >
+                                        <Select
+                                            id="connection-new-timezone"
+                                            name="timezone"
+                                            defaultValue={changingUrl.timezone}
+                                        >
+                                            {timezones(
+                                                changingUrl.timezone,
+                                            ).map((zone) => (
+                                                <option key={zone} value={zone}>
+                                                    {zone}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </Field>
                                     <DialogFooter>
                                         <Button
                                             onClick={() => setChangingUrl(null)}
@@ -488,6 +518,33 @@ function ConnectedSources({
                                             placeholder="https://your-app.example/lumberjack/datasources"
                                             autoComplete="off"
                                         />
+                                    </Field>
+                                    <Field
+                                        label={t(
+                                            'data_sources.connected.timezone',
+                                        )}
+                                        htmlFor="connection-timezone"
+                                        hint={t(
+                                            'data_sources.connected.timezone_hint',
+                                        )}
+                                        error={errors.timezone}
+                                    >
+                                        <Select
+                                            id="connection-timezone"
+                                            name="timezone"
+                                            defaultValue={browserTimezone}
+                                        >
+                                            {timezones(browserTimezone).map(
+                                                (zone) => (
+                                                    <option
+                                                        key={zone}
+                                                        value={zone}
+                                                    >
+                                                        {zone}
+                                                    </option>
+                                                ),
+                                            )}
+                                        </Select>
                                     </Field>
                                     <DialogFooter>
                                         <Button

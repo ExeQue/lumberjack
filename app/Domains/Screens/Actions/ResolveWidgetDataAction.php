@@ -112,6 +112,15 @@ class ResolveWidgetDataAction
         $projects = $team->projects
             ->when($scope->projects !== [])->whereIn('uuid', $scope->projects)
             ->sortBy('name')->values();
+        $divisor = $this->dataSourceDivisor($options, $source);
+
+        // Limits and a gauge's scale are written as the number is shown; the source's is undivided.
+        foreach (['amber', 'red', 'min', 'max'] as $key) {
+            if ($divisor !== 1.0 && ($limit = $this->number($options[$key] ?? null)) !== null) {
+                $options[$key] = (float) sprintf('%.12g', $limit * $divisor);
+            }
+        }
+
         $limits = [
             'amber' => $this->number($options['amber'] ?? null) ?? $source->amber,
             'red' => $this->number($options['red'] ?? null) ?? $source->red,
@@ -130,10 +139,93 @@ class ResolveWidgetDataAction
             $type === WidgetType::Slo => $this->slo($source, $projects, $scope, $options),
         };
 
+        if ($divisor !== 1.0) {
+            $data = $this->divided($data, $divisor);
+        }
+
         // The period it covers, for the tile's corner label; health and the latest report are now.
         $period = $type === WidgetType::Health || $source->snapshot ? 'now' : $scope->period->value;
 
-        return ['type' => $type->value, 'source' => $source->id, 'unit' => $source->unit, 'period' => $period, 'as_of' => $period === 'now' ? $this->asOf($source, $projects) : null, ...$data];
+        return ['type' => $type->value, 'source' => $source->id, 'unit' => $source->id === 'external_json' ? $this->dataSourceUnit($options, $source) : $source->unit, 'period' => $period, 'as_of' => $period === 'now' ? $this->asOf($source, $projects) : null, ...$data];
+    }
+
+    /**
+     * The unit an External JSON value is written in: custom:<prefix>, a tab, <text> for one of the user's own.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    private function dataSourceUnit(array $options, WidgetSource $source): string
+    {
+        $unit = (string) ($options['unit'] ?? $source->unit);
+        $part = fn (string $key): string => mb_substr(trim(str_replace("\t", ' ', (string) ($options[$key] ?? ''))), 0, 20);
+
+        return $unit === 'custom' ? 'custom:'.$part('unit_prefix')."	".$part('unit_text') : $unit;
+    }
+
+    /**
+     * Where a gauge of a share ends when nobody said.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    private function fullScale(array $options): ?float
+    {
+        return match ($options['unit'] ?? null) {
+            'percent' => 100.0,
+            'ratio' => 1.0,
+            default => null,
+        };
+    }
+
+    /**
+     * What a custom unit divides an External JSON value by; 1 for every other value.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    private function dataSourceDivisor(array $options, WidgetSource $source): float
+    {
+        $divisor = $this->number($options['unit_divisor'] ?? null);
+
+        return $source->id === 'external_json' && ($options['unit'] ?? null) === 'custom' && $divisor !== null && $divisor > 0 ? $divisor : 1.0;
+    }
+
+    /**
+     * A widget's answer with every figure in it divided: value and scale, limits, and the
+     * points and rows. A change between two values is a ratio, the same either way.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function divided(array $data, float $divisor): array
+    {
+        $scale = fn (mixed $value): mixed => is_int($value) || is_float($value) ? $value / $divisor : $value;
+
+        foreach (['value', 'previous', 'min', 'max', 'red'] as $key) {
+            if (isset($data[$key])) {
+                $data[$key] = $scale($data[$key]);
+            }
+        }
+
+        foreach (['amber', 'red'] as $key) {
+            if (isset($data['limits'][$key])) {
+                $data['limits'][$key] = $scale($data['limits'][$key]);
+            }
+        }
+
+        $points = fn (array $points): array => array_map(fn (array $point): array => ['t' => $point['t'], 'v' => $scale($point['v'])], $points);
+
+        if (isset($data['sparkline'])) {
+            $data['sparkline'] = $points($data['sparkline']);
+        }
+
+        if (isset($data['series'])) {
+            $data['series'] = array_map(fn (array $series): array => ['points' => $points($series['points'])] + $series, $data['series']);
+        }
+
+        if (isset($data['rows'])) {
+            $data['rows'] = array_map(fn (array $row): array => ['value' => $scale($row['value'] ?? null)] + $row, $data['rows']);
+        }
+
+        return $data;
     }
 
     /**
@@ -760,7 +852,7 @@ class ResolveWidgetDataAction
             WidgetType::Gauge => [
                 'value' => $value,
                 'min' => $this->number($options['min'] ?? null) ?? 0.0,
-                'max' => $this->number($options['max'] ?? null) ?? max(1.0, ($limits['red'] ?? 0) * 1.5, $value ?? 0),
+                'max' => $this->number($options['max'] ?? null) ?? $this->fullScale($options) ?? max(1.0, ($limits['red'] ?? 0) * 1.5, $value ?? 0),
                 'state' => $value !== null ? $this->state($value, $limits) : null,
                 'limits' => $limits,
             ],
@@ -796,7 +888,7 @@ class ResolveWidgetDataAction
      */
     private function connected(Team $team, DataSource $source, WidgetType $type, WidgetScope $scope, array $options, array $limits, bool $aggregatesOnly): array
     {
-        $window = $source->archived_at === null ? $this->connectedSources->window($source, $scope->period) : null;
+        $window = $source->archived_at === null ? $this->connectedSources->window($source, $scope->period, is_numeric($options['resolution'] ?? null) ? (int) $options['resolution'] : null) : null;
         $value = $window !== null && $source->shape === DataSourceShape::Number && is_numeric($window->data) ? (float) $window->data : null;
 
         $data = match ($type) {
@@ -804,12 +896,14 @@ class ResolveWidgetDataAction
             WidgetType::Gauge => [
                 'value' => $value,
                 'min' => $this->number($options['min'] ?? null) ?? 0.0,
-                'max' => $this->number($options['max'] ?? null) ?? max(1.0, ($limits['red'] ?? 0) * 1.5, $value ?? 0),
+                'max' => $this->number($options['max'] ?? null) ?? $this->fullScale($options) ?? max(1.0, ($limits['red'] ?? 0) * 1.5, $value ?? 0),
                 'state' => $value !== null ? $this->state($value, $limits) : null,
                 'limits' => $limits,
             ],
             WidgetType::Chart => [
-                'interval' => MetricWindow::forPeriod($scope->period)->interval(),
+                'interval' => (new MetricWindow($scope->period->since(), now(), $window->bucket ?? $scope->period->bucketSeconds()))->interval(),
+                // A day's bar begins at midnight there, and is named by that day.
+                'timezone' => $source->connection?->timezone,
                 'red' => $this->number($options['red'] ?? null),
                 'series' => $window !== null && $source->shape === DataSourceShape::Series ? [['name' => $aggregatesOnly ? 'source 1' : $source->name, 'points' => $this->connectedSources->series($window)]] : [],
             ],

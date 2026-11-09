@@ -102,6 +102,8 @@ export type SchemaField = {
         | 'projects'
         | 'environment';
     options?: string[];
+    /** The options under headings: group id to its values. */
+    groups?: Record<string, string[]>;
     default: string | boolean | null;
     data: boolean;
     span: number;

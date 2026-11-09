@@ -170,8 +170,8 @@ One number, with its trend against an earlier period and a sparkline.
 - **Database size**, **Database connections**: the latest values from
   [database health checks](./health#database-metrics), added up over the databases in
   scope.
-- **External JSON**: a number from a project's data source. See
-  [External JSON](#external-json).
+- **Data source**: a number from a project's data source. See
+  [Data source](#data-source).
 
 **Value**:
 
@@ -193,7 +193,7 @@ One value on a half circle, the arc colored by its limits.
 
 **Shows**: **Requests per minute**, **Error rate**, **p95 response time**, **Apdex**,
 **Host CPU**, **Host memory**, **Host disk** (the busiest host), **Queue size**,
-**Database connections in use**, **Health uptime** and **External JSON**. The defaults
+**Database connections in use**, **Health uptime** and **Data source**. The defaults
 match the stat's, plus:
 
 - **Database connections in use**: the database using the largest share of its maximum.
@@ -223,7 +223,7 @@ host or project.
 minute**, **Error rate**, **p95 response time**, **Apdex**, **Users affected**, **Queue
 size**, **Queue workers**, **Queue wait** (how long jobs waited before they ran),
 **Failed jobs**, **Host CPU**, **Host memory**, **Host disk**, **LCP p75**, **Database
-size**, **Database connections** and **External JSON**.
+size**, **Database connections** and **Data source**.
 
 **Chart**:
 
@@ -264,7 +264,7 @@ down and back up.
   widget replace these and apply to the queue size.
 - **Hosts**: each host with CPU, memory and disk meters colored by their limits.
 - **Agents**: each agent, and **Offline** for one that stopped reporting.
-- **External JSON**: one row per item of an array in a data source.
+- **Data source**: one row per item of an array in a data source.
 - **Calendar events**: a calendar's events. See [Calendars](#calendars).
 
 **Rows**:
@@ -303,11 +303,15 @@ says **Now** in amber. A list over more than one day shows the weekday before th
 ### Connected data sources
 
 A source your app offers (see [Connected sources](data-sources.md#connected-sources)) is
-picked under **External JSON** like any other, with no paths to set. Its shape decides
+picked under **Data source** like any other, with no paths to set. Its shape decides
 where it is offered: a number on a stat or gauge, a series on a chart, a list or table on a
 list, where a table's first column is the label and its second the value.
 
-### External JSON
+On a chart, **Resolution** sets how much time one point covers, from 1 minute to 1 day.
+**Automatic** follows the period. A resolution that is as long as the period, or gives
+more than 999 points, is treated as **Automatic**.
+
+### Data source
 
 A stat, gauge, chart or list can read a project's data source (**Data sources** on the
 project):
@@ -317,6 +321,12 @@ project):
 - For a list, **JSONPath** points at an array, and **Label path in each item** and
   **Value path in each item** read each row.
 - **Configure** shows the latest answer, so you can click the value you want.
+- **Unit** says what the number is, and how it is written: percent, durations, bytes (1 KB
+  as 1000 or 1024), or bits per second.
+  **Custom** writes your own word after the number, up to 20 characters, such as `orders`, `kg` or `/min`,
+  **Custom prefix** goes before it, such as `€`, and **Divide by** makes the number smaller: `1000` turns `12300` into `12.3`.
+  Sizes and durations scale themselves, so `577838689711` in **Bytes (1 KB = 1000)** reads `577.8 GB`.
+  **Amber at** and **Red at** use the number in the chosen unit, after **Divide by** for a custom one.
 - A Prometheus data source takes a **Selector** instead.
 
 ## Health

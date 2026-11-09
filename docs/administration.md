@@ -73,21 +73,21 @@ New VAPID keys make every browser turn notifications on again.
 
 The scheduler runs these by itself.
 
-| Command                                   | Runs            | What it does                                                               |
-| ----------------------------------------- | --------------- | -------------------------------------------------------------------------- |
-| `lumberjack:mark-stuck-jobs`              | Every minute    | Marks job runs that outlived their timeout as stuck.                       |
-| `lumberjack:mark-missed-tasks`            | Every minute    | Marks scheduled tasks whose run is overdue as missed.                      |
-| `lumberjack:return-ignored-issues`        | Every minute    | Re-opens issues whose ignore period is over.                               |
-| `lumberjack:send-watch-digests`           | Every minute    | Mails watchers the grouped updates on their issues.                        |
-| `lumberjack:check-queue-backlogs`         | Every minute    | Alerts on queues over their backlog threshold, and when they recover.      |
-| `lumberjack:run-health-checks`            | Every minute    | Runs the health checks that are due.                                       |
-| `lumberjack:fetch-data-sources`           | Every minute    | Fetches the [external JSON](./widgets#external-json) sources that are due. |
-| `lumberjack:notify-offline-agents`        | Every minute    | Tells members who want it when an agent goes offline.                      |
-| `horizon:snapshot`                        | Every 5 minutes | Records queue metrics for the Horizon dashboard.                           |
-| `lumberjack:check-for-update`             | Every 6 hours   | Asks GitHub whether a newer release is out.                                |
-| `model:prune`                             | Every hour      | Deletes agents and health check hosts not seen for 24 hours.               |
-| `lumberjack:archive-silent-health-checks` | Every day       | Archives reported health checks that sent nothing for a week.              |
-| `lumberjack:prune`                        | Every day       | Deletes data older than its retention.                                     |
+| Command                                   | Runs            | What it does                                                           |
+| ----------------------------------------- | --------------- | ---------------------------------------------------------------------- |
+| `lumberjack:mark-stuck-jobs`              | Every minute    | Marks job runs that outlived their timeout as stuck.                   |
+| `lumberjack:mark-missed-tasks`            | Every minute    | Marks scheduled tasks whose run is overdue as missed.                  |
+| `lumberjack:return-ignored-issues`        | Every minute    | Re-opens issues whose ignore period is over.                           |
+| `lumberjack:send-watch-digests`           | Every minute    | Mails watchers the grouped updates on their issues.                    |
+| `lumberjack:check-queue-backlogs`         | Every minute    | Alerts on queues over their backlog threshold, and when they recover.  |
+| `lumberjack:run-health-checks`            | Every minute    | Runs the health checks that are due.                                   |
+| `lumberjack:fetch-data-sources`           | Every minute    | Fetches the [data source](./widgets#data-source) sources that are due. |
+| `lumberjack:notify-offline-agents`        | Every minute    | Tells members who want it when an agent goes offline.                  |
+| `horizon:snapshot`                        | Every 5 minutes | Records queue metrics for the Horizon dashboard.                       |
+| `lumberjack:check-for-update`             | Every 6 hours   | Asks GitHub whether a newer release is out.                            |
+| `model:prune`                             | Every hour      | Deletes agents and health check hosts not seen for 24 hours.           |
+| `lumberjack:archive-silent-health-checks` | Every day       | Archives reported health checks that sent nothing for a week.          |
+| `lumberjack:prune`                        | Every day       | Deletes data older than its retention.                                 |
 
 ## Mail
 

@@ -17,10 +17,16 @@ class ConnectedDataSourceQuery
     /** How often asking again is written down; a screen asks every few seconds. */
     private const int TOUCH_MINUTES = 4;
 
-    public function window(DataSource $source, Period $period): DataSourceWindow
+    /** The most points a chart asks an app for; the package refuses more. */
+    private const int MOST_POINTS = 999;
+
+    /**
+     * @param  int|null  $resolution  seconds per point; null, or one that does not fit the period, is the period's own
+     */
+    public function window(DataSource $source, Period $period, ?int $resolution = null): DataSourceWindow
     {
         $window = DataSourceWindow::query()->firstOrCreate(
-            ['data_source_id' => $source->id, 'period' => $period->value],
+            ['data_source_id' => $source->id, 'period' => $period->value, 'bucket' => $this->bucket($period, $resolution)],
             ['requested_at' => now()],
         );
 
@@ -29,6 +35,15 @@ class ConnectedDataSourceQuery
         }
 
         return $window;
+    }
+
+    private function bucket(Period $period, ?int $resolution): int
+    {
+        $seconds = $period->bucketSeconds() * $period->buckets();
+
+        return $resolution !== null && $resolution > 0 && $resolution < $seconds && $seconds / $resolution <= self::MOST_POINTS
+            ? $resolution
+            : $period->bucketSeconds();
     }
 
     /**

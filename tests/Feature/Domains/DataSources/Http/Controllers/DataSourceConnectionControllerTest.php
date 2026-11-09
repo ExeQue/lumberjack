@@ -129,6 +129,15 @@ describe('changing the address', function () {
             ->and($this->source->fresh()->url)->toBe('https://new.example.com/lumberjack/datasources');
     });
 
+    it('changes its time zone, also to a name the browser uses, and refuses an unknown one', function () {
+        $patch = fn (string $timezone) => $this->actingAs($this->admin)->patch(route('data-source-connections.update', [$this->project, $this->connection]), ['url' => $this->connection->url, 'timezone' => $timezone]);
+
+        $patch('Asia/Calcutta')->assertSessionHasNoErrors();
+        expect($this->connection->refresh()->timezone)->toBe('Asia/Calcutta');
+
+        $patch('Mars/Olympus')->assertSessionHasErrors('timezone');
+    });
+
     it('refuses an address that holds a query, and a member', function () {
         ($this->change)($this->admin, 'https://new.example.com/x?a=1')->assertSessionHasErrors('url');
         ($this->change)($this->member, 'https://new.example.com/x')->assertForbidden();

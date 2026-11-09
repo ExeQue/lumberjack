@@ -39,6 +39,13 @@ use Illuminate\Validation\Rule;
  */
 final class WidgetSchema
 {
+    /** What a data source's number can be, for how it is written (formatValue on the client). */
+    private const array DATA_SOURCE_UNITS = [
+        'general' => ['number', 'percent', 'ratio', 'custom'],
+        'time' => ['ms', 'seconds', 'minutes', 'hours'],
+        'data' => ['bytes_decimal', 'bytes', 'megabytes', 'gigabytes', 'bits_per_second'],
+    ];
+
     /** Widgets drawn by the client alone, without a source. */
     public const array LAYOUT_TYPES = ['clock', 'countdown', 'message', 'qr', 'media', 'empty'];
 
@@ -453,6 +460,10 @@ final class WidgetSchema
             ['key' => 'data_source', 'type' => 'data_source', 'default' => null],
             $text('json_path'),
             ...($rows ? [$text('label_path'), $text('value_path')] : []),
+            [...$select('unit', array_merge(...array_values(self::DATA_SOURCE_UNITS)), 'number'), 'groups' => self::DATA_SOURCE_UNITS],
+            [...$text('unit_prefix'), 'when' => ['unit' => ['custom']]],
+            [...$text('unit_text'), 'when' => ['unit' => ['custom']]],
+            [...$number('unit_divisor'), 'min' => 0.000001, 'max' => 1000000000000000, 'when' => ['unit' => ['custom']]],
         ]);
 
         return [
@@ -477,6 +488,7 @@ final class WidgetSchema
                     ...$external(),
                     $select('style', ['bars', 'area', 'line'], 'bars'),
                     $toggle('smooth', false),
+                    [...$select('resolution', ['auto', '60', '120', '300', '900', '1800', '3600', '21600', '86400'], 'auto', true), 'sources' => ['external_json']],
                     $select('split_by', ['none', 'route', 'queue', 'host', 'check', 'environment', 'release', 'project'], 'none', true),
                     $select('top', ['5', '10', '20'], '5', true),
                     $number('red'),

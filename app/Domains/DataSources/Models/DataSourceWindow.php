@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $data_source_id
  * @property string $period
+ * @property int $bucket the seconds one point of a series covers
  * @property mixed $data
  * @property bool $has_data
  * @property string|null $error
@@ -27,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $failures
  * @property CarbonImmutable|null $next_fetch_at
  */
-#[Fillable(['data_source_id', 'period', 'data', 'has_data', 'error', 'failures', 'requested_at', 'fetched_at', 'next_fetch_at'])]
+#[Fillable(['data_source_id', 'period', 'bucket', 'data', 'has_data', 'error', 'failures', 'requested_at', 'fetched_at', 'next_fetch_at'])]
 #[WithoutTimestamps]
 #[UseFactory(DataSourceWindowFactory::class)]
 class DataSourceWindow extends Model

@@ -291,6 +291,23 @@ function niceCeil(n: number): number {
     );
 }
 
+/** A day of a connected app: its date there, wherever the screen is. */
+function dayOf(iso: string, timeZone: string): string {
+    const format = (zone?: string) =>
+        new Intl.DateTimeFormat(document.documentElement.lang || 'en', {
+            day: 'numeric',
+            month: 'short',
+            timeZone: zone,
+        }).format(new Date(iso));
+
+    try {
+        return format(timeZone);
+    } catch {
+        // A zone this display's browser does not know.
+        return format();
+    }
+}
+
 function timeOf(iso: string, withDate: boolean, twelveHour: boolean): string {
     return new Intl.DateTimeFormat(document.documentElement.lang || 'en', {
         ...(withDate ? { day: 'numeric', month: 'short' } : {}),
@@ -1197,24 +1214,30 @@ function Chart({ widget, schema, data, t, twelveHour }: BodyProps) {
             s.points.map((p, i): [number, number] => [x(i), y(p.v)]),
             smooth,
         );
-    const withDate = !String(data.interval).match(/[ms]$/);
-    const spansDays =
-        points.length > 1 &&
-        new Date(points[points.length - 1].t).getDate() !==
-            new Date(points[0].t).getDate();
     // The date only where it changes along the axis; the time on every tick.
     const day = (iso: string | undefined) =>
         iso ? new Date(iso).toDateString() : '';
+    const first = points[0]?.t;
+    const last = points[points.length - 1]?.t;
+    const spansDays =
+        points.length > 1 &&
+        (new Date(last).getTime() - new Date(first).getTime() > 86_400_000 ||
+            day(first) !== day(last));
+    const dayZone =
+        data.interval === '1d' && typeof data.timezone === 'string'
+            ? data.timezone
+            : undefined;
     const label = (iso: string | undefined, previous?: string) =>
-        iso
-            ? timeOf(
-                  iso,
-                  withDate &&
-                      spansDays &&
-                      (previous === undefined || day(previous) !== day(iso)),
-                  twelveHour,
-              )
-            : '';
+        iso && dayZone
+            ? dayOf(iso, dayZone)
+            : iso
+              ? timeOf(
+                    iso,
+                    spansDays &&
+                        (previous === undefined || day(previous) !== day(iso)),
+                    twelveHour,
+                )
+              : '';
     // Four bands on a tile two rows or taller, two on a one row tile.
     const bands = widget.h >= 2 ? 4 : 2;
     const yTicks = Array.from(
@@ -1456,6 +1479,7 @@ function rowText(
     t: Translate,
     narrow = false,
     multiDay = false,
+    unit = 'number',
 ): RowText {
     const percent = (v: unknown) =>
         v === null || v === undefined ? '-' : formatPercent(Number(v), 0);
@@ -1636,7 +1660,7 @@ function rowText(
                 main: String(row.label ?? ''),
                 tag:
                     row.value !== null && row.value !== undefined
-                        ? { text: formatValue(row.value, 'number'), tone }
+                        ? { text: formatValue(row.value, unit), tone }
                         : undefined,
             };
         default:
@@ -1671,7 +1695,14 @@ function List({ widget, schema, data, now, t }: BodyProps) {
     // A calendar over several days names the day of each event.
     const multiDay = new Set(rows.map((row) => row.day)).size > 1;
     const texts = rows.map((row) =>
-        rowText(String(data.source), row, t, narrow, multiDay),
+        rowText(
+            String(data.source),
+            row,
+            t,
+            narrow,
+            multiDay,
+            String(data.unit),
+        ),
     );
     const showCount = !narrow && opt<boolean>('show_count') !== false;
     const showAge = !narrow && opt<boolean>('show_age') !== false;

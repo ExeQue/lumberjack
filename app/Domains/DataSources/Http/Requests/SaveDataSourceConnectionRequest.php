@@ -43,6 +43,7 @@ class SaveDataSourceConnectionRequest extends FormRequest
         return [
             'environment' => ['required', 'string', 'max:64', Rule::unique('data_source_connections')->where('project_id', $project->id)],
             'url' => $this->urlRules(),
+            'timezone' => ['sometimes', 'required', 'string', 'timezone:all_with_bc'],
         ];
     }
 

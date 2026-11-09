@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $project_id
  * @property string $environment
  * @property string $url
+ * @property string $timezone where its days begin, for the buckets of a series
  * @property string|null $pull_token
  * @property string|null $pull_token_previous
  * @property bool $uses_previous
@@ -35,7 +36,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $next_check_at
  * @property-read Project $project
  */
-#[Fillable(['project_id', 'environment', 'url', 'pull_token', 'pull_token_previous', 'uses_previous', 'last_checked_at', 'last_ok_at', 'last_error', 'next_check_at'])]
+#[Fillable(['project_id', 'environment', 'url', 'timezone', 'pull_token', 'pull_token_previous', 'uses_previous', 'last_checked_at', 'last_ok_at', 'last_error', 'next_check_at'])]
 #[Hidden(['pull_token', 'pull_token_previous'])]
 #[UseFactory(DataSourceConnectionFactory::class)]
 class DataSourceConnection extends Model
