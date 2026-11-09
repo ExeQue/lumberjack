@@ -403,7 +403,7 @@ return [
         'auto_scroll' => ['label' => 'Scroll slowly through rows that do not fit'],
         'view' => ['label' => 'Show as', 'options' => ['auto' => 'Automatic', 'summary' => 'Summary', 'list' => 'List', 'cards' => 'Cards']],
         'checks' => ['label' => 'Checks'],
-        'data_source' => ['label' => 'Data source', 'none' => 'Pick a data source', 'empty' => 'No data sources yet; add one on a project\'s Data sources page.'],
+        'data_source' => ['label' => 'Data source', 'none' => 'Pick a data source', 'search' => 'Search name or group', 'clear' => 'No data source', 'no_matches' => 'No data source matches.', 'empty' => 'No data sources yet; add one on a project\'s Data sources page.'],
         'json_path' => ['label' => 'JSONPath', 'placeholder' => '$.data.total', 'selector' => 'Selector', 'selector_placeholder' => 'sum by (status) (http_requests_total{method="GET"})', 'help' => [
             'matches' => 'Matches: :value',
             'per_min' => 'counter, per min',
@@ -740,6 +740,7 @@ return [
     ],
 
     // The share link panel of the designer.
+    'picker' => ['selected' => 'Selected:', 'search' => 'Search', 'no_matches' => 'Nothing matches.', 'timezone' => 'Time zone'],
     'versions' => [
         'button' => 'History',
         'title' => 'Earlier versions',

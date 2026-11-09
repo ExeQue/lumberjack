@@ -49,7 +49,7 @@ class UpdateScreenRequest extends FormRequest
             'light_from' => ['sometimes', 'required', ...$time],
             'light_to' => ['sometimes', 'required', ...$time],
             // Empty: the viewer's own time zone.
-            'timezone' => ['sometimes', 'nullable', 'timezone:all'],
+            'timezone' => ['sometimes', 'nullable', 'timezone:all_with_bc', 'not_in:Factory'],
             'scope' => ['sometimes', 'required', 'array'],
             'scope.projects' => ['present_with:scope', 'array'],
             'scope.projects.*' => ['string', Rule::in($screen->team->projects()->pluck('uuid')->all())],

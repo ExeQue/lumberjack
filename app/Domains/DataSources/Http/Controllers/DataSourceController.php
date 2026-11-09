@@ -51,6 +51,7 @@ class DataSourceController
                 'uuid' => $s->uuid,
                 'name' => $s->name,
                 'key' => $s->key,
+                'group' => $s->group_path,
                 'environment' => $s->environment !== '' ? $s->environment : null,
                 'shape' => $s->shape?->value,
                 'status' => match (true) {

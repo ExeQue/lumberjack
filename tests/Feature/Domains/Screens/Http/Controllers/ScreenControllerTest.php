@@ -216,6 +216,7 @@ describe('the pages', function () {
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('data_sources.0.group', 'Events > Storage')
+                ->where('data_sources.0.host', 'app.example.com')
                 ->where('data_sources.1.group', null));
     });
 

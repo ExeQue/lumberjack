@@ -1,7 +1,7 @@
 import { Form, Head, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
-import { timezones } from '@/components/lj/screen/lib';
+import { TimezoneSelect } from '@/components/lj/screen/timezone-select';
 import { Relative } from '@/components/lj/relative';
 import { TopBar } from '@/components/lj/top-bar';
 import {
@@ -70,6 +70,8 @@ type ConnectedRow = {
     uuid: string;
     name: string;
     key: string;
+    /** Where the app files it, such as Events > Storage. */
+    group: string | null;
     environment: string | null;
     shape: 'number' | 'series' | 'list' | 'table';
     status: 'connected' | 'failing' | 'archived';
@@ -425,19 +427,11 @@ function ConnectedSources({
                                         )}
                                         error={errors.timezone}
                                     >
-                                        <Select
+                                        <TimezoneSelect
                                             id="connection-new-timezone"
                                             name="timezone"
                                             defaultValue={changingUrl.timezone}
-                                        >
-                                            {timezones(
-                                                changingUrl.timezone,
-                                            ).map((zone) => (
-                                                <option key={zone} value={zone}>
-                                                    {zone}
-                                                </option>
-                                            ))}
-                                        </Select>
+                                        />
                                     </Field>
                                     <DialogFooter>
                                         <Button
@@ -529,22 +523,11 @@ function ConnectedSources({
                                         )}
                                         error={errors.timezone}
                                     >
-                                        <Select
+                                        <TimezoneSelect
                                             id="connection-timezone"
                                             name="timezone"
                                             defaultValue={browserTimezone}
-                                        >
-                                            {timezones(browserTimezone).map(
-                                                (zone) => (
-                                                    <option
-                                                        key={zone}
-                                                        value={zone}
-                                                    >
-                                                        {zone}
-                                                    </option>
-                                                ),
-                                            )}
-                                        </Select>
+                                        />
                                     </Field>
                                     <DialogFooter>
                                         <Button
@@ -603,90 +586,140 @@ function ConnectedSources({
                             </tr>
                         </thead>
                         <tbody>
-                            {sources.map((source) => (
-                                <tr key={source.uuid} className="align-top">
-                                    <td className={cn(tdClass, 'max-w-96')}>
-                                        <span className="block font-medium">
-                                            {source.name}
-                                        </span>
-                                        <Mono>{source.key}</Mono>
-                                    </td>
-                                    <td className={tdClass}>
-                                        <Badge>
-                                            {t(
-                                                `data_sources.connected.shapes.${source.shape}`,
-                                            )}
-                                        </Badge>
-                                    </td>
-                                    <td className={cn(tdClass, 'text-xs')}>
-                                        {source.environment ?? ''}
-                                    </td>
-                                    <td
-                                        className={cn(
-                                            tdClass,
-                                            'max-w-72 min-w-40 text-xs text-ink-2',
-                                        )}
-                                    >
-                                        <Badge
-                                            tone={
-                                                CONNECTED_TONES[source.status]
-                                            }
-                                        >
-                                            {t(
-                                                `data_sources.connected.statuses.${source.status}`,
-                                            )}
-                                        </Badge>
-                                        {source.last_error && (
-                                            <span className="mt-1 block wrap-break-word text-err">
-                                                {source.last_error}
-                                            </span>
-                                        )}
-                                        {source.last_ok_at && (
-                                            <span className="block text-ink-3">
-                                                {t('data_sources.last_ok')}{' '}
-                                                <When iso={source.last_ok_at} />
-                                            </span>
-                                        )}
-                                    </td>
-                                    {project.can_administer && (
-                                        <td
-                                            className={cn(
-                                                tdClass,
-                                                'text-right whitespace-nowrap',
-                                            )}
-                                        >
-                                            {source.status === 'archived' && (
-                                                <ConfirmButton
-                                                    question={t(
-                                                        'data_sources.connected.remove_question',
-                                                        {
-                                                            source: source.name,
-                                                        },
-                                                    )}
-                                                    confirmLabel={t(
-                                                        'data_sources.connected.remove',
-                                                    )}
-                                                    onConfirm={() =>
-                                                        router.delete(
-                                                            sourceDestroy([
-                                                                project.uuid,
-                                                                source.uuid,
-                                                            ]).url,
-                                                            {
-                                                                preserveScroll: true,
-                                                            },
-                                                        )
+                            {Object.entries(
+                                Object.groupBy(sources, (s) => s.group ?? ''),
+                            )
+                                .sort(([a], [b]) => a.localeCompare(b))
+                                .map(([group, rows]) => (
+                                    <Fragment key={group}>
+                                        {group !== '' && (
+                                            <tr>
+                                                <th
+                                                    scope="colgroup"
+                                                    colSpan={
+                                                        project.can_administer
+                                                            ? 5
+                                                            : 4
                                                     }
-                                                >
-                                                    {t(
-                                                        'data_sources.connected.remove',
+                                                    className={cn(
+                                                        tdClass,
+                                                        'text-left text-xs font-semibold text-ink-2',
                                                     )}
-                                                </ConfirmButton>
-                                            )}
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
+                                                >
+                                                    {group}
+                                                </th>
+                                            </tr>
+                                        )}
+                                        {rows?.map((source) => (
+                                            <tr
+                                                key={source.uuid}
+                                                className="align-top"
+                                            >
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'max-w-96',
+                                                    )}
+                                                >
+                                                    <span className="block font-medium">
+                                                        {source.name}
+                                                    </span>
+                                                    <Mono>{source.key}</Mono>
+                                                </td>
+                                                <td className={tdClass}>
+                                                    <Badge>
+                                                        {t(
+                                                            `data_sources.connected.shapes.${source.shape}`,
+                                                        )}
+                                                    </Badge>
+                                                </td>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'text-xs',
+                                                    )}
+                                                >
+                                                    {source.environment ?? ''}
+                                                </td>
+                                                <td
+                                                    className={cn(
+                                                        tdClass,
+                                                        'max-w-72 min-w-40 text-xs text-ink-2',
+                                                    )}
+                                                >
+                                                    <Badge
+                                                        tone={
+                                                            CONNECTED_TONES[
+                                                                source.status
+                                                            ]
+                                                        }
+                                                    >
+                                                        {t(
+                                                            `data_sources.connected.statuses.${source.status}`,
+                                                        )}
+                                                    </Badge>
+                                                    {source.last_error && (
+                                                        <span className="mt-1 block wrap-break-word text-err">
+                                                            {source.last_error}
+                                                        </span>
+                                                    )}
+                                                    {source.last_ok_at && (
+                                                        <span className="block text-ink-3">
+                                                            {t(
+                                                                'data_sources.last_ok',
+                                                            )}{' '}
+                                                            <When
+                                                                iso={
+                                                                    source.last_ok_at
+                                                                }
+                                                            />
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                {project.can_administer && (
+                                                    <td
+                                                        className={cn(
+                                                            tdClass,
+                                                            'text-right whitespace-nowrap',
+                                                        )}
+                                                    >
+                                                        {source.status ===
+                                                            'archived' && (
+                                                            <ConfirmButton
+                                                                question={t(
+                                                                    'data_sources.connected.remove_question',
+                                                                    {
+                                                                        source: source.name,
+                                                                    },
+                                                                )}
+                                                                confirmLabel={t(
+                                                                    'data_sources.connected.remove',
+                                                                )}
+                                                                onConfirm={() =>
+                                                                    router.delete(
+                                                                        sourceDestroy(
+                                                                            [
+                                                                                project.uuid,
+                                                                                source.uuid,
+                                                                            ],
+                                                                        ).url,
+                                                                        {
+                                                                            preserveScroll: true,
+                                                                        },
+                                                                    )
+                                                                }
+                                                            >
+                                                                {t(
+                                                                    'data_sources.connected.remove',
+                                                                )}
+                                                            </ConfirmButton>
+                                                        )}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </Fragment>
+                                ))}
                         </tbody>
                     </table>
                 </div>

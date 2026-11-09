@@ -126,7 +126,7 @@ least once per the length of the period.
 One app gets at most four pulls queued per minute, so with many sources on screens they refresh less often.
 An app that moved or works in another time zone is changed with **Edit connection**; its token, sources and widgets stay.
 
-An app can file a source under a group with `#[Group('Events', 'Storage')]`, from version 0.6.0 of the package (up to 3 levels of 40 characters). **Data source** in the designer then lists it under its project and group, such as **Shop > Events > Storage**. A source without a group is listed under its project alone.
+An app can file a source under a group with `#[Group('Events', 'Storage')]`, from version 0.6.0 of the package (up to 3 levels of 40 characters). The data sources page groups it the same way, and **Data source** in the designer, a tree you can search, lists it under its project and group, such as **Shop > Events > Storage**. A source without a group is listed under its project alone.
 
 Lumberjack decides how fine a series is, unless a chart sets its own **Resolution**: one point per 2 minutes over an hour, an hour over 24 hours, 6 hours over 7 days and a day over 30 days. Each connection has a **Time zone**, where those days begin. The app groups its points by what it is asked, from version 0.3.0 of the package. A day's bar on a chart is named by its date in that time zone, so a source has to begin its days at that zone's midnight.
 A failed pull is tried again after five minutes, then 10, 20, 40 and every 80 minutes until it answers.

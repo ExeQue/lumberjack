@@ -6,14 +6,9 @@ const CONNECTED_SHAPES: Record<string, string[]> = {
     list: ['list', 'table'],
 };
 
+import { TreeSelect } from '@/components/lj/tree-select';
 import { Plus, Settings, X } from 'lucide-react';
-import {
-    useEffect,
-    useId,
-    useRef,
-    useState,
-    useSyncExternalStore,
-} from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import {
     Button,
@@ -26,7 +21,8 @@ import {
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { PATH_FIELDS, PathConfig, useJsonPreview } from './json-path-help';
-import { fieldsOf, option, rotationOf, timezones } from './lib';
+import { fieldsOf, option, rotationOf } from './lib';
+import { TimezoneSelect } from './timezone-select';
 import type {
     RotateItem,
     Schema,
@@ -56,6 +52,8 @@ export type Catalog = {
         project: string | null;
         /** The group its app files it under, such as "Events > Storage". */
         group?: string | null;
+        /** The connected app it comes from, which roots it in the tree. */
+        host: string | null;
     }[];
     /** The screen's uuid, for the External JSON preview; without it there is none. */
     screen?: string;
@@ -65,59 +63,6 @@ export type Catalog = {
 };
 
 const ALL = '*';
-
-/**
- * A searchable time zone: type part of a name ("copen", "new_y") and pick it from the
- * suggestions. Only a known zone is kept; leaving the field with anything else puts the
- * last one back. An empty field means `emptyLabel`, when one is given.
- */
-function TimezoneInput({
-    id,
-    value,
-    onChange,
-    emptyLabel,
-}: {
-    id: string;
-    value: string;
-    onChange: (zone: string) => void;
-    emptyLabel?: string;
-}) {
-    const list = useId();
-    const zones = timezones(value || undefined);
-    const [text, setText] = useState(value);
-
-    useEffect(() => setText(value), [value]);
-
-    return (
-        <>
-            <Input
-                id={id}
-                list={list}
-                value={text}
-                placeholder={emptyLabel}
-                autoComplete="off"
-                onChange={(e) => {
-                    const next = e.target.value;
-                    setText(next);
-
-                    if (zones.includes(next) || (emptyLabel && next === '')) {
-                        onChange(next);
-                    }
-                }}
-                onBlur={() => {
-                    if (!zones.includes(text) && !(emptyLabel && text === '')) {
-                        setText(value);
-                    }
-                }}
-            />
-            <datalist id={list}>
-                {zones.map((zone) => (
-                    <option key={zone} value={zone} />
-                ))}
-            </datalist>
-        </>
-    );
-}
 
 const chip = (on: boolean) =>
     cn(
@@ -776,24 +721,8 @@ export function WidgetInspector({
                                 s.shape ?? '',
                             )),
                 );
-                // By project, like the checks, then by the app's own group: a
-                // project's ungrouped sources come right before its groups.
-                const groups = Object.entries(
-                    Object.groupBy(
-                        all,
-                        (s) => `${s.project ?? ''}\0${s.group ?? ''}`,
-                    ),
-                )
-                    .map(([key, sources]) => ({
-                        key,
-                        sources,
-                        path: key.split('\0'),
-                    }))
-                    .sort(
-                        (a, b) =>
-                            a.path[0].localeCompare(b.path[0]) ||
-                            a.path[1].localeCompare(b.path[1]),
-                    );
+                const oneEnvironment =
+                    new Set(all.map((s) => s.environment)).size === 1;
 
                 return (
                     <div
@@ -806,31 +735,34 @@ export function WidgetInspector({
                         >
                             {fieldLabel(field.key)}
                         </Label>
-                        <Select
+                        <TreeSelect
                             id={id(field.key)}
+                            label={fieldLabel(field.key)}
+                            options={all.map((s) => ({
+                                value: s.uuid,
+                                keywords: s.project ?? '',
+                                label:
+                                    s.environment && !oneEnvironment
+                                        ? `${s.name} (${s.environment})`
+                                        : s.name,
+                                path: [
+                                    ...(s.host || s.project
+                                        ? [s.host ?? s.project ?? '']
+                                        : []),
+                                    ...(s.group ? s.group.split(' > ') : []),
+                                ],
+                            }))}
                             value={String(raw ?? '')}
-                            onChange={(e) =>
-                                target.set(field.key, e.target.value || null)
-                            }
-                        >
-                            <option value="">
-                                {t('screens.fields.data_source.none')}
-                            </option>
-                            {groups.map(({ key, path, sources }) => (
-                                <optgroup
-                                    key={key}
-                                    label={path.filter(Boolean).join(' > ')}
-                                >
-                                    {sources?.map((s) => (
-                                        <option key={s.uuid} value={s.uuid}>
-                                            {s.environment
-                                                ? `${s.name} (${s.environment})`
-                                                : s.name}
-                                        </option>
-                                    ))}
-                                </optgroup>
-                            ))}
-                        </Select>
+                            onChange={(uuid) => target.set(field.key, uuid)}
+                            placeholder={t('screens.fields.data_source.none')}
+                            searchPlaceholder={t(
+                                'screens.fields.data_source.search',
+                            )}
+                            noMatches={t(
+                                'screens.fields.data_source.no_matches',
+                            )}
+                            clearLabel={t('screens.fields.data_source.clear')}
+                        />
                         {all.length === 0 && (
                             <span className="text-xs text-ink-3">
                                 {t('screens.fields.data_source.empty')}
@@ -1043,7 +975,7 @@ export function WidgetInspector({
                             <div key={i} className="flex gap-1">
                                 {zones ? (
                                     <div className="min-w-0 flex-1">
-                                        <TimezoneInput
+                                        <TimezoneSelect
                                             id={id(`${field.key}-${i}`)}
                                             value={url}
                                             onChange={(zone) =>
@@ -1129,7 +1061,7 @@ export function WidgetInspector({
                         >
                             {fieldLabel(field.key)}
                         </Label>
-                        <TimezoneInput
+                        <TimezoneSelect
                             id={id(field.key)}
                             value={String(raw ?? '')}
                             onChange={(zone) => setOption(field.key, zone)}
@@ -1384,33 +1316,27 @@ export function WidgetInspector({
                     <Label htmlFor={vid('source')}>
                         {t('screens.inspector.shows')}
                     </Label>
-                    <Select
+                    <TreeSelect
                         id={vid('source')}
+                        label={t('screens.inspector.shows')}
+                        options={pool
+                            .filter(
+                                (s) =>
+                                    s.id === valueSource?.id ||
+                                    !items.some((i) => i.source === s.id),
+                            )
+                            .map((s) => ({
+                                value: s.id,
+                                label: s.label,
+                                path: [t(`screens.topics.${s.topic}`)],
+                            }))}
                         value={(first ? widget.source : item.source) ?? ''}
-                        onChange={(e) => pickSource(e.target.value)}
-                    >
-                        {Object.entries(
-                            Object.groupBy(
-                                pool.filter(
-                                    (s) =>
-                                        s.id === valueSource?.id ||
-                                        !items.some((i) => i.source === s.id),
-                                ),
-                                (s) => s.topic,
-                            ),
-                        ).map(([topic, group]) => (
-                            <optgroup
-                                key={topic}
-                                label={t(`screens.topics.${topic}`)}
-                            >
-                                {group?.map((s) => (
-                                    <option key={s.id} value={s.id}>
-                                        {s.label}
-                                    </option>
-                                ))}
-                            </optgroup>
-                        ))}
-                    </Select>
+                        onChange={(id) => id !== null && pickSource(id)}
+                        placeholder={t('screens.inspector.shows')}
+                        searchPlaceholder={t('screens.picker.search')}
+                        noMatches={t('screens.picker.no_matches')}
+                        startOpen
+                    />
                 </div>
             )}
 
@@ -1928,7 +1854,7 @@ export function ScreenSettings({
                 <Label htmlFor="screen-tz">
                     {t('screens.settings.timezone')}
                 </Label>
-                <TimezoneInput
+                <TimezoneSelect
                     id="screen-tz"
                     value={screen.timezone ?? ''}
                     emptyLabel={t('screens.settings.browser_timezone')}

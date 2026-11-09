@@ -40,7 +40,7 @@ final readonly class ReleaseAlert implements Alert
         return [
             'title' => $this->headline(),
             'subject' => $this->release,
-            'body' => [(string) __('alerts.new_release.first_seen')],
+            'body' => [],
         ];
     }
 

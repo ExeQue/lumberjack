@@ -38,6 +38,13 @@ beforeEach(function () {
 });
 
 describe('the page', function () {
+    it('tells the page what group a connected source is in', function () {
+        DataSource::factory()->for($this->project)->connected()->inGroup('Events > Storage')->create();
+
+        $this->actingAs($this->admin)->get(route('data-sources.index', $this->project))
+            ->assertInertia(fn (Assert $page) => $page->where('connected.0.group', 'Events > Storage'));
+    });
+
     it('lists the sources with their header names, never a header value', function () {
         $response = $this->actingAs($this->member)->get(route('data-sources.index', $this->project))
             ->assertOk()
@@ -81,7 +88,7 @@ describe('the page', function () {
         $screen = Screen::factory()->for($this->project->team)->create();
 
         $response = $this->actingAs($this->member)->get(route('screens.edit', $screen))
-            ->assertInertia(fn (Assert $page) => $page->where('data_sources', [['uuid' => $this->source->uuid, 'name' => 'Orders API', 'format' => 'json', 'group' => null, 'shape' => null, 'environment' => null, 'project' => $this->project->name]]));
+            ->assertInertia(fn (Assert $page) => $page->where('data_sources', [['uuid' => $this->source->uuid, 'name' => 'Orders API', 'format' => 'json', 'group' => null, 'host' => null, 'shape' => null, 'environment' => null, 'project' => $this->project->name]]));
 
         expect($response->getContent())->not->toContain('t0p-s3cret')
             ->and($response->getContent())->not->toContain('example.com/stats.json');

@@ -77,7 +77,7 @@ class ImportScreenAction
             'screen.theme' => ['required', Rule::enum(ScreenTheme::class)],
             'screen.light_from' => $time,
             'screen.light_to' => $time,
-            'screen.timezone' => ['present', 'nullable', 'timezone:all'],
+            'screen.timezone' => ['present', 'nullable', 'timezone:all_with_bc', 'not_in:Factory'],
             'screen.scope' => ['required', 'array'],
             'screen.scope.projects' => ['present', 'array'],
             'screen.scope.projects.*' => ['string'],
@@ -219,7 +219,7 @@ class ImportScreenAction
                 'theme' => ScreenTheme::from((string) $file['theme']),
                 'light_from' => (string) $file['light_from'],
                 'light_to' => (string) $file['light_to'],
-                'timezone' => is_string($file['timezone']) ? $file['timezone'] : null,
+                'timezone' => is_string($file['timezone']) && $file['timezone'] !== '' ? $file['timezone'] : null,
                 'scope' => [
                     'projects' => $scopeProjects,
                     'environment' => is_string($file['scope']['environment'] ?? null) && $file['scope']['environment'] !== '' ? $file['scope']['environment'] : null,

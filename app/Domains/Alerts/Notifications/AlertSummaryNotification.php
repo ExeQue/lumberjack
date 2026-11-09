@@ -175,10 +175,10 @@ class AlertSummaryNotification extends Notification
 
         return new MailCard(
             subject: $title.': '.$subject,
-            preheader: implode(' ', $body),
+            preheader: $body !== [] ? implode(' ', $body) : $subject,
             title: $subject,
             kind: $title,
-            lead: implode(' ', $body),
+            lead: $body !== [] ? implode(' ', $body) : null,
             facts: $this->alert->facts(),
             button: ['label' => (string) __('alerts.open_issue'), 'url' => $this->alert->url()],
             reasons: $this->reasons,

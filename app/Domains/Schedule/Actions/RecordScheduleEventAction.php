@@ -14,6 +14,7 @@ use App\Domains\Schedule\Enums\ScheduledRunStatus;
 use App\Domains\Schedule\Models\ScheduledTask;
 use App\Domains\Schedule\Models\ScheduledTaskRun;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 
 /**
  * One event from the app's scheduler: a task started, finished, failed or was skipped.
@@ -54,15 +55,20 @@ class RecordScheduleEventAction
             $status = ScheduledRunStatus::Failed;
         }
 
-        $task = ScheduledTask::query()->firstOrNew(['project_id' => $project->id, 'environment' => $envelope->environment ?? '', 'name' => $name]);
-        $task->fill([
-            'command' => Envelope::short($event['command'] ?? null, 1000) ?? $task->command,
-            'description' => Envelope::short($event['description'] ?? null, 1000) ?? $task->description,
-            'expression' => Envelope::short($event['expression'] ?? null) ?? ($task->expression ?? '* * * * *'),
-            'timezone' => Envelope::short($event['timezone'] ?? null) ?? $task->timezone,
-            'next_run_at' => isset($event['next_run_at']) ? Envelope::time($event['next_run_at']) : $task->next_run_at,
-            'last_seen_at' => $at,
-        ])->save();
+        $task = $this->task($project, $envelope->environment ?? '', $name, $event, $at);
+        // An event from before what the task already heard says nothing about it now.
+        $late = $this->isLate($at, $task->last_seen_at);
+
+        if (! $late) {
+            $task->fill([
+                'command' => Envelope::short($event['command'] ?? null, 1000) ?? $task->command,
+                'description' => Envelope::short($event['description'] ?? null, 1000) ?? $task->description,
+                'expression' => Envelope::short($event['expression'] ?? null) ?? ($task->expression ?? '* * * * *'),
+                'timezone' => Envelope::short($event['timezone'] ?? null) ?? $task->timezone,
+                'next_run_at' => isset($event['next_run_at']) ? Envelope::time($event['next_run_at']) : $task->next_run_at,
+                'last_seen_at' => $at->min(now()),
+            ])->save();
+        }
 
         $run = ScheduledTaskRun::query()->firstOrNew(['project_id' => $project->id, 'run_uuid' => $uuid]);
         $run->fill([
@@ -101,7 +107,7 @@ class RecordScheduleEventAction
 
         $run->save();
 
-        if ($run->status !== ScheduledRunStatus::Running) {
+        if ($run->status !== ScheduledRunStatus::Running && (! $late || $task->last_status === null)) {
             $task->update(['last_status' => $run->status, 'last_run_at' => $run->started_at, 'last_duration_us' => $run->duration_us]);
         }
 
@@ -139,5 +145,41 @@ class RecordScheduleEventAction
             host: $envelope->host,
             customFingerprint: 'schedule-failed:'.$task->environment.':'.$task->name,
         );
+    }
+
+    /**
+     * The task the event belongs to. An app names a task after its description, so a
+     * new description is the same task when the command and its schedule are the same.
+     * Tasks differing only by a filter, such as between(), cannot be told apart from that.
+     *
+     * @param  array<string, mixed>  $event
+     */
+    private function task(Project $project, string $environment, string $name, array $event, CarbonInterface $at): ScheduledTask
+    {
+        $identity = ['project_id' => $project->id, 'environment' => $environment];
+        $task = ScheduledTask::query()->where([...$identity, 'name' => $name])->first();
+
+        if ($task !== null) {
+            return $task;
+        }
+
+        $command = Envelope::short($event['command'] ?? null, 1000);
+        $expression = Envelope::short($event['expression'] ?? null);
+        $renamed = $command === null || $expression === null
+            ? null
+            : ScheduledTask::query()->where([...$identity, 'command' => $command, 'expression' => $expression, 'timezone' => Envelope::short($event['timezone'] ?? null)])->latest('last_seen_at')->first();
+
+        // A late event under the old name does not take the name back.
+        if ($renamed !== null && $this->isLate($at, $renamed->last_seen_at)) {
+            return $renamed;
+        }
+
+        return $renamed?->setAttribute('name', $name) ?? new ScheduledTask([...$identity, 'name' => $name]);
+    }
+
+    /** Older than what was last heard; a time still to come is a wrong clock and says nothing. */
+    private function isLate(CarbonInterface $at, ?CarbonInterface $seen): bool
+    {
+        return $seen !== null && $seen->lte(now()) && $at->lt($seen);
     }
 }

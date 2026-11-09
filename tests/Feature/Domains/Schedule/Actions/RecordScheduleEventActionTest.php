@@ -23,6 +23,65 @@ beforeEach(function () {
 });
 
 describe('a run', function () {
+    it('keeps the task when only its description changes', function () {
+        $first = ['name' => 'Old words', 'command' => 'artisan cache:prune'];
+        ($this->record)(($this->event)('finished', $first));
+        ($this->record)(($this->event)('finished', [...$first, 'name' => 'New words', 'uuid' => '5c1e9b8a-0000-4000-8000-000000000002']));
+
+        expect(ScheduledTask::sole()->name)->toBe('New words')
+            ->and(ScheduledTaskRun::count())->toBe(2);
+    });
+
+    it('makes a new task for the same command on another schedule', function () {
+        ($this->record)(($this->event)('finished', ['name' => 'Hourly', 'command' => 'artisan cache:prune']));
+        ($this->record)(($this->event)('finished', ['name' => 'Daily', 'command' => 'artisan cache:prune', 'expression' => '0 0 * * *', 'uuid' => '5c1e9b8a-0000-4000-8000-000000000002']));
+
+        expect(ScheduledTask::count())->toBe(2);
+    });
+
+    it('makes a new task for the same command in another time zone', function () {
+        ($this->record)(($this->event)('finished', ['name' => 'EU', 'command' => 'artisan cache:prune']));
+        ($this->record)(($this->event)('finished', ['name' => 'US', 'command' => 'artisan cache:prune', 'timezone' => 'America/New_York', 'uuid' => '5c1e9b8a-0000-4000-8000-000000000002']));
+
+        expect(ScheduledTask::count())->toBe(2);
+    });
+
+    it('does not give a task its old name back on a late event', function () {
+        $command = ['command' => 'artisan cache:prune'];
+        ($this->record)(($this->event)('finished', [...$command, 'name' => 'Old words', 'timestamp' => '2026-11-02T16:00:00Z']));
+        ($this->record)(($this->event)('finished', [...$command, 'name' => 'New words', 'timestamp' => '2026-11-02T17:00:00Z', 'uuid' => '5c1e9b8a-0000-4000-8000-000000000002']));
+        ($this->record)(($this->event)('finished', [...$command, 'name' => 'Old words', 'timestamp' => '2026-11-02T16:30:00Z', 'uuid' => '5c1e9b8a-0000-4000-8000-000000000003']));
+
+        expect(ScheduledTask::sole()->name)->toBe('New words');
+    });
+
+    it('keeps the name and the last run through a late pair of events', function () {
+        $command = ['command' => 'artisan cache:prune'];
+        ($this->record)(($this->event)('finished', [...$command, 'name' => 'New words', 'timestamp' => '2026-11-02T17:00:00Z', 'next_run_at' => '2026-11-02T18:00:00Z']));
+        $late = [...$command, 'name' => 'Old words', 'uuid' => '5c1e9b8a-0000-4000-8000-000000000002'];
+        ($this->record)(($this->event)('started', [...$late, 'timestamp' => '2026-11-02T16:59:58Z', 'next_run_at' => '2026-11-02T17:00:00Z']));
+        ($this->record)(($this->event)('failed', [...$late, 'timestamp' => '2026-11-02T16:59:59Z', 'next_run_at' => '2026-11-02T17:00:00Z']));
+
+        $task = ScheduledTask::sole();
+        expect($task->name)->toBe('New words')
+            ->and($task->next_run_at?->toIso8601String())->toBe('2026-11-02T18:00:00+00:00')
+            ->and($task->last_status)->toBe(ScheduledRunStatus::Finished);
+    });
+
+    it('is not frozen by a timestamp from the future', function () {
+        ($this->record)(($this->event)('finished', ['timestamp' => now()->addYear()->toIso8601String()]));
+        ($this->record)(($this->event)('failed', ['timestamp' => now()->addSecond()->toIso8601String(), 'uuid' => '5c1e9b8a-0000-4000-8000-000000000002', 'name' => 'artisan reports:send', 'command' => 'artisan reports:send']));
+
+        expect(ScheduledTask::sole()->last_status)->toBe(ScheduledRunStatus::Failed);
+    });
+
+    it('makes a new task for a closure, which has no command', function () {
+        ($this->record)(($this->event)('finished', ['name' => 'One']));
+        ($this->record)(($this->event)('finished', ['name' => 'Two', 'uuid' => '5c1e9b8a-0000-4000-8000-000000000002']));
+
+        expect(ScheduledTask::count())->toBe(2);
+    });
+
     it('goes from running to finished, and the task remembers its last and next run', function () {
         ($this->record)(($this->event)('started'));
         $run = ($this->record)(($this->event)('finished', ['duration_ms' => 1500, 'exit_code' => 0, 'next_run_at' => '2026-11-02T18:00:00+01:00']));

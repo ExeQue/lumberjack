@@ -4,6 +4,17 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- A searchable tree select for data sources, widget sources and time zones, as deep as the groups go.
+- The data sources page groups connected sources by what their app files them under with `#[Group]`.
+
+### Fixed
+
+- Release and other summary alerts on Discord link back with a button, like custom alerts.
+- A release alert no longer says "First seen just now".
+- Changing a scheduled command's description no longer makes a new task and a false "missed" alert. The task keeps its runs under the new name; its issues start fresh.
+
 ## [0.4.0] - 2026-11-09
 
 ### Added

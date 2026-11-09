@@ -58,6 +58,21 @@ describe('queue backlog messages', function () {
             ->and($telegram)->toBe($discord);
     });
 
+    it('links back with a button on Discord', function () {
+        app(DiscordDriver::class)->send(($this->channel)(ChannelType::Discord, ['webhook_url' => 'https://discord.com/api/webhooks/1/x']), ($this->alert)());
+
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'with_components=true')
+            && $request['components'][0]['components'][0]['style'] === 5
+            && $request['components'][0]['components'][0]['url'] !== ''
+            && ! str_contains($request['embeds'][0]['description'], 'Open in Lumberjack'));
+    });
+
+    it('keeps a thread in the Discord webhook address', function () {
+        app(DiscordDriver::class)->send(($this->channel)(ChannelType::Discord, ['webhook_url' => 'https://discord.com/api/webhooks/1/x?thread_id=123']), ($this->alert)());
+
+        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '?thread_id=123&with_components=true'));
+    });
+
     it('posts the backlog and its recovery to a webhook', function () {
         $channel = ($this->channel)(ChannelType::Webhook, ['url' => 'https://93.184.215.14/hook', 'secret' => 'whsec_x']);
 

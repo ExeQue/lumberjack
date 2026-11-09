@@ -55,7 +55,6 @@ return [
         'rows_omitted' => '{1} 1 more row left out|[2,*] :count more rows left out',
     ],
     'new_release' => [
-        'first_seen' => 'First seen just now.',
         'facts' => ['environment' => 'Environment', 'host' => 'Host'],
     ],
     'health_check' => [

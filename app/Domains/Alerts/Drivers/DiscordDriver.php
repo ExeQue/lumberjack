@@ -156,7 +156,7 @@ class DiscordDriver implements ChannelDriver
                     'low' => self::COLOR_RESOLVED,
                     default => self::COLOR_NEW,
                 },
-                'description' => mb_substr(implode("\n", [self::code($subject), ...array_map(self::escape(...), $body)]), 0, 3900)."\n\n[".__('alerts.open_issue').']('.$alert->url().')',
+                'description' => mb_substr(implode("\n", [self::code($subject), ...array_map(self::escape(...), $body)]), 0, 4000),
                 'fields' => array_map(
                     fn (string $name, string $value): array => ['name' => $name, 'value' => self::escape($value), 'inline' => true],
                     array_keys($alert->facts()),
@@ -164,7 +164,8 @@ class DiscordDriver implements ChannelDriver
                 ),
                 'timestamp' => now()->toIso8601String(),
             ]],
-        ]);
+            'components' => [['type' => 1, 'components' => [['type' => 2, 'style' => 5, 'label' => __('alerts.open_issue'), 'url' => $alert->url()]]]],
+        ], withComponents: true);
     }
 
     /**
@@ -212,7 +213,8 @@ class DiscordDriver implements ChannelDriver
     private function post(NotificationChannel $channel, array $payload, bool $withComponents = false): void
     {
         // Without this, Discord drops the link buttons of a webhook no application owns.
-        $url = (string) ($channel->config['webhook_url'] ?? '').($withComponents ? '?with_components=true' : '');
+        $webhook = (string) ($channel->config['webhook_url'] ?? '');
+        $url = $webhook.($withComponents ? (str_contains($webhook, '?') ? '&' : '?').'with_components=true' : '');
 
         // An @everyone in an issue's title pings nobody.
         $this->deliver($channel, fn (PendingRequest $http) => $http->post($url, ['allowed_mentions' => ['parse' => []], ...$payload]));

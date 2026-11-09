@@ -210,7 +210,7 @@ describe('project add-ons on a team rule', function () {
             app(CheckQueueBacklogsAction::class)->execute();
         }
 
-        expect(($this->hits)())->toBe(['https://discord.com/api/webhooks/2/shop']);
+        expect(($this->hits)())->toBe(['https://discord.com/api/webhooks/2/shop?with_components=true']);
     });
 
     it('sends health alerts to the add-on', function () {
@@ -221,7 +221,7 @@ describe('project add-ons on a team rule', function () {
         $this->travel(1)->minutes();
         app(RecordHealthResultAction::class)->execute($check, new HealthResultData(HealthResultStatus::Failed, 'msg', host: 'web-1', at: now()->toImmutable()));
 
-        expect(($this->hits)())->toBe(['https://discord.com/api/webhooks/2/shop']);
+        expect(($this->hits)())->toBe(['https://discord.com/api/webhooks/2/shop?with_components=true']);
     });
 
     it('carries add-ons into a customized rule and turns project channels back into add-ons on reset', function () {

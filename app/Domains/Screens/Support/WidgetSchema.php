@@ -261,9 +261,9 @@ final class WidgetSchema
                 'number' => ['nullable', 'numeric', ...(isset($field['min']) ? ['min:'.$field['min'], 'max:'.$field['max']] : [])],
                 'checks' => ['nullable', 'array', 'max:50'],
                 'data_source' => ['nullable', 'string', 'uuid'],
-                'timezone' => ['nullable', 'timezone:all'],
+                'timezone' => ['nullable', 'timezone:all_with_bc', 'not_in:Factory'],
                 // Media addresses, one a line: long ones (signed links) too, only ever http(s).
-                'urls' => ['nullable', 'string', 'max:20000', function (string $attribute, mixed $value, Closure $fail): void {
+                'urls' => ['bail', 'nullable', 'string', 'max:20000', function (string $attribute, mixed $value, Closure $fail): void {
                     $lines = self::lines((string) $value);
 
                     if (count($lines) > self::MAX_SLIDES) {
@@ -278,10 +278,10 @@ final class WidgetSchema
                         }
                     }
                 }],
-                'timezones' => ['nullable', 'string', 'max:2000', function (string $attribute, mixed $value, Closure $fail): void {
+                'timezones' => ['bail', 'nullable', 'string', 'max:2000', function (string $attribute, mixed $value, Closure $fail): void {
                     $zones = self::lines((string) $value);
 
-                    if (count($zones) > self::MAX_ZONES || array_diff($zones, timezone_identifiers_list(DateTimeZone::ALL_WITH_BC)) !== []) {
+                    if (count($zones) > self::MAX_ZONES || array_diff($zones, timezone_identifiers_list(DateTimeZone::ALL_WITH_BC)) !== [] || in_array('Factory', $zones, true)) {
                         $fail(__('validation.timezone', ['attribute' => $attribute]));
                     }
                 }],
