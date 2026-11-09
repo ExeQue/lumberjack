@@ -57,6 +57,7 @@ class RecordScheduleEventAction
         $task = ScheduledTask::query()->firstOrNew(['project_id' => $project->id, 'environment' => $envelope->environment ?? '', 'name' => $name]);
         $task->fill([
             'command' => Envelope::short($event['command'] ?? null, 1000) ?? $task->command,
+            'description' => Envelope::short($event['description'] ?? null, 1000) ?? $task->description,
             'expression' => Envelope::short($event['expression'] ?? null) ?? ($task->expression ?? '* * * * *'),
             'timezone' => Envelope::short($event['timezone'] ?? null) ?? $task->timezone,
             'next_run_at' => isset($event['next_run_at']) ? Envelope::time($event['next_run_at']) : $task->next_run_at,

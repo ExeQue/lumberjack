@@ -76,6 +76,13 @@ describe('the command of a task', function () {
         expect(ScheduledTask::sole())->name->toBe('Send the reports')->command->toBe('artisan reports:send');
     });
 
+    it('keeps the description of the command', function () {
+        ($this->record)(($this->event)('finished', ['command' => 'artisan reports:send', 'description' => 'Send the reports']));
+        ($this->record)(($this->event)('finished', ['command' => 'artisan reports:send']));
+
+        expect(ScheduledTask::sole())->name->toBe('artisan reports:send')->description->toBe('Send the reports');
+    });
+
     it('keeps the command when a later event from an older SDK has none', function () {
         ($this->record)(($this->event)('finished', ['name' => 'Send the reports', 'command' => 'artisan reports:send']));
         ($this->record)(($this->event)('finished', ['name' => 'Send the reports']));

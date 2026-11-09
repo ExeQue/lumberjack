@@ -80,6 +80,7 @@ class ScheduleController
             'id' => $task->id,
             'name' => $task->name,
             'command' => $task->command,
+            'description' => $task->description,
             'environment' => $task->environment !== '' ? $task->environment : null,
             'expression' => $task->expression,
             'timezone' => $task->timezone,

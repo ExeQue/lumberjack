@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $environment
  * @property string $name
  * @property string|null $command
+ * @property string|null $description
  * @property string $expression
  * @property string|null $timezone
  * @property ScheduledRunStatus|null $last_status
@@ -36,7 +37,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $updated_at
  */
 #[Fillable([
-    'project_id', 'environment', 'name', 'command', 'expression', 'timezone', 'last_status', 'last_run_at',
+    'project_id', 'environment', 'name', 'command', 'description', 'expression', 'timezone', 'last_status', 'last_run_at',
     'last_duration_us', 'next_run_at', 'missed_at', 'last_seen_at',
 ])]
 #[DateFormat('Y-m-d H:i:s.v')]

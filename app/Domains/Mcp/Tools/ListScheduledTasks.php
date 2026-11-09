@@ -50,6 +50,7 @@ class ListScheduledTasks extends Tool
         return Response::json(['tasks' => $tasks->map(fn (ScheduledTask $task): array => [
             'name' => $task->name,
             'command' => $task->command,
+            'description' => $task->description,
             'environment' => $task->environment !== '' ? $task->environment : null,
             'expression' => $task->expression,
             'timezone' => $task->timezone,

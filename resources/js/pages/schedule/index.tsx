@@ -47,6 +47,7 @@ type Task = {
     id: number;
     name: string;
     command: string | null;
+    description: string | null;
     environment: string | null;
     expression: string;
     timezone: string | null;
@@ -98,7 +99,8 @@ const GRACE_MINUTES = 5;
 
 /** The scheduler's description of a task, when it has one beside its command. */
 const description = (task: Task): string | null =>
-    task.command !== null && task.command !== task.name ? task.name : null;
+    task.description ??
+    (task.command !== null && task.command !== task.name ? task.name : null);
 
 function When({ iso }: { iso: string | null }) {
     const t = useT();
@@ -246,27 +248,34 @@ export default function ScheduleIndex({
                                                     'font-mono text-xs',
                                                 )}
                                             >
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        select(
-                                                            task.id ===
-                                                                filters.task
-                                                                ? null
-                                                                : task.id,
-                                                        )
-                                                    }
-                                                    className="lj-row-link text-left hover:text-amber"
-                                                >
-                                                    {task.command ?? task.name}
-                                                </button>
-                                                {task.environment && (
-                                                    <span className="ml-2 text-ink-3">
-                                                        {task.environment}
-                                                    </span>
-                                                )}
+                                                <span className="flex max-w-xl items-baseline gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            select(
+                                                                task.id ===
+                                                                    filters.task
+                                                                    ? null
+                                                                    : task.id,
+                                                            )
+                                                        }
+                                                        title={
+                                                            task.command ??
+                                                            task.name
+                                                        }
+                                                        className="lj-row-link min-w-0 truncate text-left hover:text-amber"
+                                                    >
+                                                        {task.command ??
+                                                            task.name}
+                                                    </button>
+                                                    {task.environment && (
+                                                        <span className="shrink-0 text-ink-3">
+                                                            {task.environment}
+                                                        </span>
+                                                    )}
+                                                </span>
                                                 {description(task) && (
-                                                    <span className="mt-0.5 block font-sans text-ink-3">
+                                                    <span className="mt-0.5 block max-w-xl font-sans whitespace-normal text-ink-3">
                                                         {description(task)}
                                                     </span>
                                                 )}
