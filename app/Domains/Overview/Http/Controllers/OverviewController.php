@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Overview\Http\Controllers;
 
+use App\Domains\Overview\Queries\HostChartsQuery;
 use App\Domains\Overview\Queries\ProjectOverviewQuery;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
@@ -17,7 +18,7 @@ class OverviewController
 {
     use ReadsDashboardFilters;
 
-    public function __invoke(Request $request, Project $project, ProjectOverviewQuery $overview, ProjectPresenter $presenter): Response
+    public function __invoke(Request $request, Project $project, ProjectOverviewQuery $overview, ProjectPresenter $presenter, HostChartsQuery $hostCharts): Response
     {
         Gate::authorize('view', $project);
 
@@ -26,6 +27,7 @@ class OverviewController
             'filters' => $this->filters($request),
             // Deferred: the page shell paints at once on a cold statistics cache.
             'overview' => Inertia::defer(fn (): array => $overview->get($project, $this->period($request), $this->environment($request))),
+            'host_charts' => Inertia::defer(fn (): array => $hostCharts->get($project, $this->period($request), $this->environment($request))),
         ]);
     }
 }

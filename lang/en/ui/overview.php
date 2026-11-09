@@ -28,6 +28,20 @@ return [
         'open' => 'Open Health',
         'check_label' => ':name: :state',
     ],
+    'hosts' => [
+        'title' => 'Hosts',
+        'cpu' => 'CPU load per core',
+        'memory' => 'Memory',
+        'disk' => 'Disk',
+        'p95' => 'p95 response time',
+        'exceptions' => 'Exceptions',
+        'failed_jobs' => 'Failed jobs',
+        'focus' => 'Show',
+        'all' => 'All hosts',
+        // Legend of the shaded buckets in the host charts.
+        'no_data' => 'No data',
+        'summary' => ':title peaked at :peak in the period.',
+    ],
     'charts' => [
         'requests' => 'Requests over time',
         'requests_unit' => 'requests',

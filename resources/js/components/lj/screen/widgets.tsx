@@ -4,6 +4,7 @@ import { formatBytes, formatNumber, formatPercent } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
+    curve,
     formatValue,
     incident as incidentPreview,
     option,
@@ -779,8 +780,7 @@ function trendColor(
     colored: boolean,
 ): string | undefined {
     const limits = data.limits as
-        | { amber?: unknown; red?: unknown; low_is_bad?: boolean }
-        | undefined;
+        { amber?: unknown; red?: unknown; low_is_bad?: boolean } | undefined;
 
     if (
         !colored ||
@@ -920,59 +920,6 @@ function Stat({
             )}
         </>
     );
-}
-
-/**
- * An SVG path through the points: straight segments, or a monotone cubic curve that
- * never overshoots the data (so a smooth line stays above zero and below the peak).
- */
-function curve(pts: [number, number][], smooth: boolean): string {
-    if (!smooth || pts.length < 3) {
-        return 'M' + pts.map((p) => p.join(',')).join(' L');
-    }
-
-    const n = pts.length;
-    const d = pts
-        .slice(1)
-        .map((p, i) => (p[1] - pts[i][1]) / (p[0] - pts[i][0] || 1));
-    const m = pts.map((_, i) =>
-        i === 0
-            ? d[0]
-            : i === n - 1
-              ? d[n - 2]
-              : d[i - 1] * d[i] <= 0
-                ? 0
-                : (d[i - 1] + d[i]) / 2,
-    );
-
-    // Fritsch-Carlson: limit the tangents so each segment stays monotone.
-    for (let i = 0; i < n - 1; i++) {
-        if (d[i] === 0) {
-            m[i] = m[i + 1] = 0;
-            continue;
-        }
-
-        const a = m[i] / d[i];
-        const b = m[i + 1] / d[i];
-        const len = a * a + b * b;
-
-        if (len > 9) {
-            const t = 3 / Math.sqrt(len);
-            m[i] = t * a * d[i];
-            m[i + 1] = t * b * d[i];
-        }
-    }
-
-    let path = `M${pts[0][0]},${pts[0][1]}`;
-
-    for (let i = 0; i < n - 1; i++) {
-        const [x0, y0] = pts[i];
-        const [x1, y1] = pts[i + 1];
-        const h = (x1 - x0) / 3;
-        path += ` C${x0 + h},${y0 + m[i] * h} ${x1 - h},${y1 - m[i + 1] * h} ${x1},${y1}`;
-    }
-
-    return path;
 }
 
 /** How long a rotating tile's value takes to leave, and then to come in. */

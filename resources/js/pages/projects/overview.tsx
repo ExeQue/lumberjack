@@ -1,3 +1,5 @@
+import { HostChartsCard } from '@/components/lj/host-charts';
+import type { HostCharts } from '@/components/lj/host-charts';
 import { Relative } from '@/components/lj/relative';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
@@ -83,6 +85,8 @@ type Props = {
     filters: DashboardFilters;
     /** Deferred: computed after the page shows. */
     overview?: Overview;
+    /** Deferred: the overview's figures per host. */
+    host_charts?: HostCharts;
 };
 
 const jobTone: Record<FailedJobRun['status'], Tone> = {
@@ -491,7 +495,12 @@ function HealthStrip({
     );
 }
 
-export default function ProjectOverview({ project, filters, overview }: Props) {
+export default function ProjectOverview({
+    project,
+    filters,
+    overview,
+    host_charts: hostCharts,
+}: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
 
@@ -505,6 +514,16 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
             'health.changed',
         ],
         ['overview'],
+    );
+    useProjectLive(
+        project.uuid,
+        [
+            'agents.changed',
+            'issues.changed',
+            'jobs.changed',
+            'performance.changed',
+        ],
+        ['host_charts'],
     );
 
     const trend = useTrend();
@@ -635,6 +654,13 @@ export default function ProjectOverview({ project, filters, overview }: Props) {
                     <HealthStrip
                         summary={overview.health}
                         projectUuid={project.uuid}
+                    />
+                )}
+
+                {hostCharts !== undefined && (
+                    <HostChartsCard
+                        charts={hostCharts}
+                        period={filters.period}
                     />
                 )}
 

@@ -103,6 +103,12 @@ under Supervisor. It sends the app's data to Lumberjack and checks in every minu
 Memory and disk turn amber above 90%, load above the number of cores. In a container,
 the container's own limits count.
 
+The project's **Overview** charts these per host over the chosen period, one line per
+host: CPU load per core, memory and disk in use, the p95 response time, exceptions and
+failed jobs. **Show**, or a click on a host in the legend, focuses every chart on that
+host. Host metrics are kept for 7 days, so longer periods stop there, and they are not
+tied to an environment.
+
 ![The Agents section of a project's settings, with the load, memory and disk of each server](./screenshots/settings-agents.png)
 
 ### Offline agents
