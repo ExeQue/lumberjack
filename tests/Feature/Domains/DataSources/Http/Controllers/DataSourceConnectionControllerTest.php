@@ -132,8 +132,11 @@ describe('changing the address', function () {
     it('changes its time zone, also to a name the browser uses, and refuses an unknown one', function () {
         $patch = fn (string $timezone) => $this->actingAs($this->admin)->patch(route('data-source-connections.update', [$this->project, $this->connection]), ['url' => $this->connection->url, 'timezone' => $timezone]);
 
-        $patch('Asia/Calcutta')->assertSessionHasNoErrors();
-        expect($this->connection->refresh()->timezone)->toBe('Asia/Calcutta');
+        // The old names a browser may use; which ones PHP knows follows the machine's time zone data.
+        $legacy = array_values(array_diff(DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), DateTimeZone::listIdentifiers()))[0] ?? 'Europe/Copenhagen';
+
+        $patch($legacy)->assertSessionHasNoErrors();
+        expect($this->connection->refresh()->timezone)->toBe($legacy);
 
         $patch('Mars/Olympus')->assertSessionHasErrors('timezone');
     });
