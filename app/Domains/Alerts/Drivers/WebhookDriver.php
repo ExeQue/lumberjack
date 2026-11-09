@@ -7,6 +7,7 @@ namespace App\Domains\Alerts\Drivers;
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
 use App\Domains\Alerts\Data\BulkStatusChangeAlert;
+use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
@@ -40,6 +41,28 @@ class WebhookDriver implements ChannelDriver
     #[Override]
     public function send(NotificationChannel $channel, Alert $alert): void
     {
+        if ($alert instanceof CustomAlertMessage) {
+            $custom = $alert->alert;
+
+            $this->post($channel, [
+                'event' => 'custom_alert',
+                'project' => ['id' => $custom->project->uuid, 'slug' => $custom->project->slug, 'name' => $custom->project->name],
+                'environment' => $custom->environment,
+                'alert' => [
+                    'topic' => $custom->topic,
+                    'level' => $custom->level->value,
+                    'title' => $custom->title,
+                    'message' => $custom->message,
+                    'host' => $custom->host,
+                    'release' => $custom->release,
+                    'occurred_at' => $custom->occurred_at->toIso8601String(),
+                    ...$custom->content,
+                ],
+            ]);
+
+            return;
+        }
+
         if ($alert instanceof QueueBacklogAlert) {
             $this->post($channel, [
                 'event' => 'queue_backlog',

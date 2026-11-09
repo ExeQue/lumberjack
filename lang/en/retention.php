@@ -17,6 +17,7 @@ return [
         'health_outages' => ['label' => 'Health outages', 'description' => 'Periods a check was down or degraded; uptime is counted from them.'],
         'data_source_fetches' => ['label' => 'Data source history', 'description' => 'The JSON each data source answered, which screen charts read.'],
         'queue_samples' => ['label' => 'Queue size samples', 'description' => 'Queue length and oldest job age, sampled by the agent.'],
+        'custom_alerts' => ['label' => 'Custom alerts', 'description' => 'The alerts your apps sent, with where they were delivered.'],
         'host_samples' => ['label' => 'Host metrics', 'description' => 'CPU, memory and disk samples from the agent.'],
         'alert_sends' => ['label' => 'Alert history', 'description' => 'Every alert sent, to which channel, and whether it got through.'],
         'audit_log' => ['label' => 'Audit log', 'description' => 'What administrators did on this Lumberjack.'],

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Ingest\Actions;
 
+use App\Domains\Alerts\Actions\RecordCustomAlertAction;
 use App\Domains\Commands\Actions\RecordCommandEventAction;
 use App\Domains\Health\Actions\RecordReportedHealthAction;
 use App\Domains\Health\Queries\HealthChecksQuery;
@@ -54,6 +55,7 @@ class ProcessIngestBatchAction
         private readonly BroadcastProjectChangeAction $broadcast,
         private readonly Scrubber $scrubber,
         private readonly RecordReleaseAction $recordReleaseAction,
+        private readonly RecordCustomAlertAction $recordCustomAlertAction,
         private readonly RecordReleaseEnvironmentAction $recordReleaseEnvironmentAction,
     ) {
     }
@@ -98,6 +100,7 @@ class ProcessIngestBatchAction
                     'schedule' => $this->recordScheduleEventAction->execute($project, $event, $envelope),
                     'command' => $this->recordCommandEventAction->execute($project, $event, $envelope),
                     'health' => $this->recordReportedHealthAction->execute($project, $event, $envelope),
+                    'alert' => $this->recordCustomAlertAction->execute($project, $event, $envelope),
                     default => null,
                 };
             } catch (Throwable $e) {

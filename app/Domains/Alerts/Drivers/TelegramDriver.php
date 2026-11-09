@@ -6,6 +6,7 @@ namespace App\Domains\Alerts\Drivers;
 
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Models\NotificationChannel;
 use Illuminate\Http\Client\PendingRequest;
@@ -34,6 +35,12 @@ class TelegramDriver implements ChannelDriver
     #[Override]
     public function send(NotificationChannel $channel, Alert $alert): void
     {
+        if ($alert instanceof CustomAlertMessage) {
+            $this->sendCustom($channel, $alert);
+
+            return;
+        }
+
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
         $this->post($channel, mb_substr(implode("\n", array_filter([
@@ -43,6 +50,20 @@ class TelegramDriver implements ChannelDriver
             $alert->facts() !== [] ? implode("\n", array_map(fn (string $label, string $value): string => '<b>'.self::escape($label).':</b> '.self::escape($value), array_keys($alert->facts()), $alert->facts())) : null,
             '<a href="'.self::escape($alert->url()).'">'.self::escape((string) __('alerts.open_issue')).'</a>',
         ])), 0, 4000), $alert->urgency() === 'low');
+    }
+
+    private function sendCustom(NotificationChannel $channel, CustomAlertMessage $message): void
+    {
+        $alert = $message->alert;
+        $buttons = array_map(fn (array $link): array => ['text' => $link['label'], 'url' => $link['url']], $message->links());
+
+        $this->post($channel, mb_substr(implode("\n", array_filter([
+            $message->level()->emoji().' <b>'.self::escape($alert->title).'</b>',
+            $alert->message !== null ? self::escape($alert->message) : null,
+            ...array_map(fn (array $field): string => '<b>'.self::escape($field['name']).':</b> '.self::escape($field['value']), $message->fields()),
+            ...array_map(fn (array $table): string => ($table['title'] !== null ? '<b>'.self::escape($table['title'])."</b>\n" : '').'<pre>'.self::escape(CustomAlertMessage::tableText($table)).'</pre>', $message->tables()),
+            '<i>'.self::escape($message->context()).'</i>',
+        ])), 0, 4000), $alert->level->urgency() === 'low', $buttons !== [] ? ['inline_keyboard' => array_chunk($buttons, 2)] : null);
     }
 
     #[Override]
@@ -57,16 +78,20 @@ class TelegramDriver implements ChannelDriver
         return htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
-    private function post(NotificationChannel $channel, string $html, bool $quiet = false): void
+    /**
+     * @param  array<string, mixed>|null  $replyMarkup
+     */
+    private function post(NotificationChannel $channel, string $html, bool $quiet = false, ?array $replyMarkup = null): void
     {
         $token = (string) ($channel->config['bot_token'] ?? '');
 
-        $this->deliver($channel, fn (PendingRequest $http) => $http->post(self::API.'/bot'.$token.'/sendMessage', [
+        $this->deliver($channel, fn (PendingRequest $http) => $http->post(self::API.'/bot'.$token.'/sendMessage', array_filter([
             'chat_id' => (string) ($channel->config['chat_id'] ?? ''),
             'text' => $html,
             'parse_mode' => 'HTML',
             'disable_web_page_preview' => true,
             'disable_notification' => $quiet,
-        ]));
+            'reply_markup' => $replyMarkup,
+        ], fn (mixed $value): bool => $value !== null)));
     }
 }

@@ -6,6 +6,7 @@ namespace App\Domains\Alerts\Drivers;
 
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Shared\Rules\PublicUrl;
@@ -31,6 +32,12 @@ class TeamsDriver implements ChannelDriver
     #[Override]
     public function send(NotificationChannel $channel, Alert $alert): void
     {
+        if ($alert instanceof CustomAlertMessage) {
+            $this->sendCustom($channel, $alert);
+
+            return;
+        }
+
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
         $this->post($channel, $this->card([
@@ -43,6 +50,29 @@ class TeamsDriver implements ChannelDriver
                 $alert->facts(),
             )]] : []),
         ], $alert->url()));
+    }
+
+    private function sendCustom(NotificationChannel $channel, CustomAlertMessage $message): void
+    {
+        $alert = $message->alert;
+        $text = fn (string $value, array $style = []): array => ['type' => 'TextBlock', 'text' => self::escape($value), 'wrap' => true, ...$style];
+        $row = fn (array $cells): array => ['type' => 'TableRow', 'cells' => array_map(fn (string $cell): array => ['type' => 'TableCell', 'items' => [$text($cell)]], $cells)];
+
+        $this->post($channel, $this->card([
+            $text($alert->title, ['weight' => 'Bolder', 'size' => 'Medium', 'color' => $message->level()->teamsColor()]),
+            ...($alert->message !== null ? [$text($alert->message, ['isSubtle' => true])] : []),
+            ...($message->fields() !== [] ? [['type' => 'FactSet', 'facts' => array_map(fn (array $field): array => ['title' => $field['name'], 'value' => self::escape($field['value'])], $message->fields())]] : []),
+            ...collect($message->tables())->flatMap(fn (array $table): array => [
+                ...($table['title'] !== null ? [$text($table['title'], ['weight' => 'Bolder'])] : []),
+                ['type' => 'Table', 'firstRowAsHeader' => true, 'columns' => array_fill(0, count($table['headers']), ['width' => 1]), 'rows' => [$row($table['headers']), ...array_map(fn (array $cells): array => $row(array_pad($cells, count($table['headers']), '')), $table['rows'])]],
+            ])->all(),
+            $text($message->context(), ['isSubtle' => true, 'size' => 'Small']),
+        ], actions: array_map(fn (array $link): array => array_filter([
+            'type' => 'Action.OpenUrl',
+            'title' => $link['label'],
+            'url' => $link['url'],
+            'style' => ['primary' => 'positive', 'danger' => 'destructive'][$link['style']] ?? null,
+        ]), $message->links()), version: '1.5'));
     }
 
     #[Override]
@@ -64,9 +94,10 @@ class TeamsDriver implements ChannelDriver
 
     /**
      * @param  list<array<string, mixed>>  $body
+     * @param  list<array<string, mixed>>|null  $actions  in place of the one link to $url
      * @return array<string, mixed>
      */
-    private function card(array $body, ?string $url = null): array
+    private function card(array $body, ?string $url = null, ?array $actions = null, string $version = '1.4'): array
     {
         return [
             'type' => 'message',
@@ -75,9 +106,9 @@ class TeamsDriver implements ChannelDriver
                 'content' => array_filter([
                     '$schema' => 'http://adaptivecards.io/schemas/adaptive-card.json',
                     'type' => 'AdaptiveCard',
-                    'version' => '1.4',
+                    'version' => $version,
                     'body' => $body,
-                    'actions' => $url !== null ? [['type' => 'Action.OpenUrl', 'title' => __('alerts.open_issue'), 'url' => $url]] : null,
+                    'actions' => $actions ?? ($url !== null ? [['type' => 'Action.OpenUrl', 'title' => __('alerts.open_issue'), 'url' => $url]] : null),
                 ]),
             ]],
         ];

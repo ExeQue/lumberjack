@@ -6,6 +6,7 @@ namespace App\Domains\Alerts\Drivers;
 
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Shared\Rules\PublicUrl;
@@ -33,6 +34,20 @@ class NtfyDriver implements ChannelDriver
     #[Override]
     public function send(NotificationChannel $channel, Alert $alert): void
     {
+        if ($alert instanceof CustomAlertMessage) {
+            $this->post($channel, array_filter([
+                'title' => mb_substr($alert->alert->title, 0, 250),
+                'message' => mb_substr(implode("\n", $alert->plainLines()), 0, 4000),
+                'click' => $alert->titleUrl(),
+                'priority' => ['high' => 4, 'normal' => 3, 'low' => 2][$alert->urgency()],
+                'tags' => [$alert->level()->ntfyTag()],
+                // ntfy takes three buttons.
+                'actions' => array_map(fn (array $link): array => ['action' => 'view', 'label' => $link['label'], 'url' => $link['url']], array_slice($alert->links(), 0, 3)),
+            ]));
+
+            return;
+        }
+
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
         $this->post($channel, [

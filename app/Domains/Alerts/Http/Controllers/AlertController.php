@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Http\Controllers;
 
+use App\Domains\Alerts\Actions\CreateAlertTopicAction;
 use App\Domains\Alerts\Actions\CustomizeAlertRuleAction;
+use App\Domains\Alerts\Actions\DeleteAlertTopicAction;
 use App\Domains\Alerts\Actions\ResetAlertRuleAction;
 use App\Domains\Alerts\Actions\SaveNotificationChannelAction;
 use App\Domains\Alerts\Actions\SendTestAlertAction;
@@ -14,11 +16,13 @@ use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Exceptions\AlertExceptionInterface;
 use App\Domains\Alerts\Http\Requests\SaveNotificationChannelRequest;
+use App\Domains\Alerts\Http\Requests\StoreAlertTopicRequest;
 use App\Domains\Alerts\Http\Requests\UpdateAlertRuleAddOnsRequest;
 use App\Domains\Alerts\Http\Requests\UpdateAlertRuleRequest;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Alerts\Presenters\AlertRulePresenter;
+use App\Domains\Alerts\Presenters\CustomAlertPresenter;
 use App\Domains\Alerts\Presenters\NotificationChannelPresenter;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Http\RedirectResponse;
@@ -29,7 +33,7 @@ use Inertia\Response;
 
 class AlertController
 {
-    public function index(Request $request, NotificationChannelPresenter $presenter, AlertRulePresenter $rules): Response
+    public function index(Request $request, NotificationChannelPresenter $presenter, AlertRulePresenter $rules, CustomAlertPresenter $customAlerts): Response
     {
         $team = $request->user()->currentTeam;
         abort_if($team === null, 404);
@@ -42,8 +46,31 @@ class AlertController
             'types' => collect(ChannelType::cases())->reject(fn (ChannelType $t): bool => $t === ChannelType::Webhook)->map(fn (ChannelType $t): string => $t->value)->values()->all(),
             'projects' => $team->projects()->orderBy('name')->get()->map(fn (Project $p): array => ['uuid' => $p->uuid, 'name' => $p->name])->all(),
             'rules' => $rules->forTeam($team),
+            'topics' => $customAlerts->topics($team),
+            'sent_alerts' => $customAlerts->sent($team),
             'can_administer' => $admin,
         ]);
+    }
+
+    public function storeTopic(StoreAlertTopicRequest $request, CreateAlertTopicAction $action): RedirectResponse
+    {
+        if ($action->execute($request->user()->currentTeam, $request->string('name')->toString()) === null) {
+            return back()->withErrors(['name' => $action->reasons[0] ?? '']);
+        }
+
+        return back();
+    }
+
+    public function destroyTopic(AlertRule $rule, DeleteAlertTopicAction $action): RedirectResponse
+    {
+        abort_if($rule->team === null, 404);
+        Gate::authorize('administer', $rule->team);
+
+        if (! $action->execute($rule)) {
+            return back()->withErrors(['topic' => $action->reasons[0] ?? '']);
+        }
+
+        return back();
     }
 
     public function storeChannel(SaveNotificationChannelRequest $request, SaveNotificationChannelAction $action): RedirectResponse
@@ -97,10 +124,10 @@ class AlertController
     }
 
     /** The project gets a rule of its own for the type, starting as the team's. */
-    public function customizeRule(Project $project, AlertRuleType $type, CustomizeAlertRuleAction $action): RedirectResponse
+    public function customizeRule(Project $project, AlertRuleType $type, CustomizeAlertRuleAction $action, string $topic = ''): RedirectResponse
     {
         Gate::authorize('update', $project);
-        $action->execute($project, $type);
+        $action->execute($project, $type, $topic);
 
         return back()->with('status', __('alerts.rule_customized'));
     }

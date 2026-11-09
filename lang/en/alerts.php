@@ -16,6 +16,7 @@ return [
         'health_degraded' => ['label' => 'Health check degraded', 'description' => 'A health check that keeps warning past its threshold, reported by the app or run by Lumberjack. Muted checks send nothing.'],
         'health_down' => ['label' => 'Health check down', 'description' => 'A health check that keeps failing past its threshold, including one that was degraded first. Muted checks send nothing.'],
         'health_recovered' => ['label' => 'Health check recovered', 'description' => 'A health check that was degraded or down and passes again past its recovery threshold.'],
+        'custom_alert' => ['label' => 'Custom alert', 'description' => 'An alert your app sent.'],
         'new_release' => ['label' => 'New release', 'description' => 'An environment reports a release for the first time, with the version, environment and host. Once per release and environment; an environment\'s very first release sends nothing.'],
         'queue_backlog' => ['label' => 'Queue backlog', 'description' => 'A queue with too many jobs waiting, or one waiting too long, for a while, from the sizes the agents report. Catches dead workers, which start no job to measure. Tells again when it is back under.'],
     ],
@@ -45,6 +46,13 @@ return [
         'health_check_down' => 'Health check down in :project',
         'health_check_degraded' => 'Health check degraded in :project',
         'health_check_recovered' => 'Health check recovered in :project',
+    ],
+    'custom' => [
+        'topic_description' => 'Custom alerts your apps send to this topic.',
+        'topic_exists' => 'The topic :topic already exists.',
+        'topic_invalid' => 'Use letters or numbers in the topic name.',
+        'topic_protected' => 'The default topic cannot be deleted.',
+        'rows_omitted' => '{1} 1 more row left out|[2,*] :count more rows left out',
     ],
     'new_release' => [
         'first_seen' => 'First seen just now.',

@@ -16,7 +16,7 @@ class IngestBatchRequest extends FormRequest
 
     public const int MAX_EVENTS = 5000;
 
-    public const array TYPES = ['request', 'query', 'exception', 'job', 'log', 'schedule', 'command', 'span', 'health', 'request_counts'];
+    public const array TYPES = ['request', 'query', 'exception', 'job', 'log', 'schedule', 'command', 'span', 'health', 'request_counts', 'alert'];
 
     public function authorize(): bool
     {
@@ -34,10 +34,15 @@ class IngestBatchRequest extends FormRequest
             // One pass over the events: a wildcard rule expands into thousands of rules for a full batch.
             'events' => ['required', 'array', 'max:'.self::MAX_EVENTS, function (string $attribute, mixed $events, Closure $fail): void {
                 foreach (is_array($events) ? $events : [] as $i => $event) {
-                    if (! is_array($event) || ! in_array($event['type'] ?? null, self::TYPES, true)) {
+                    if (! is_array($event) || ! is_string($event['type'] ?? null)) {
                         $fail(__('validation.in', ['attribute' => "{$attribute}.{$i}.type"]));
 
                         return;
+                    }
+
+                    // A newer agent's event is skipped, so it cannot cost the rest of its batch.
+                    if (! in_array($event['type'], self::TYPES, true)) {
+                        continue;
                     }
 
                     $counts = $event['type'] === 'request_counts' ? ($event['counts'] ?? null) : [];

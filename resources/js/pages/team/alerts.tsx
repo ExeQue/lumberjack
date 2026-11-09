@@ -1,6 +1,8 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ChannelsCard, RulesCard } from '@/components/lj/alerts';
 import type { Channel } from '@/components/lj/alerts';
+import { SentAlertsCard, TopicsCard } from '@/components/lj/custom-alerts';
+import type { AlertTopic, SentAlert } from '@/components/lj/custom-alerts';
 import { LiveNotice } from '@/components/lj/live-notice';
 import { TopBar } from '@/components/lj/top-bar';
 import { Card, CardHeader, PageTitle } from '@/components/lj/ui';
@@ -15,6 +17,8 @@ type Props = {
     types: string[];
     projects: { uuid: string; name: string }[];
     rules: AlertRule[];
+    topics: AlertTopic[];
+    sent_alerts: SentAlert[];
     can_administer: boolean;
 };
 
@@ -27,13 +31,15 @@ export default function Alerts({
     types,
     projects,
     rules,
+    topics,
+    sent_alerts,
     can_administer,
 }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const live = useTeamLive(
         ['alerts.changed', 'projects.changed'],
-        ['channels', 'rules', 'projects'],
+        ['channels', 'rules', 'projects', 'topics', 'sent_alerts'],
         { guard: true },
     );
 
@@ -58,6 +64,14 @@ export default function Alerts({
                     channels={channels}
                     canAdminister={can_administer}
                 />
+
+                <TopicsCard
+                    topics={topics}
+                    channels={channels}
+                    canAdminister={can_administer}
+                />
+
+                <SentAlertsCard alerts={sent_alerts} />
 
                 <Card aria-labelledby="h-per-project">
                     <CardHeader

@@ -506,6 +506,50 @@ export function RulesCard(
                   .length
             : 0;
 
+    const projectRows = props.scope === 'project' ? props.rules : [];
+    const projectUuid = props.scope === 'project' ? props.project : '';
+    const standard = projectRows.filter((row) => row.topic === undefined);
+    const topics = projectRows.filter((row) => row.topic !== undefined);
+    const renderRow = ({ project: own, ...row }: ProjectAlertRule) =>
+        own ? (
+            <RuleRow
+                key={ruleKey(own)}
+                rule={own}
+                channels={channels}
+                disabled={!canAdminister}
+                badge={
+                    <Badge tone="amber">{t('alerts.rules.customized')}</Badge>
+                }
+                actions={
+                    canAdminister && (
+                        <ConfirmButton
+                            variant="default"
+                            question={t('alerts.rules.use_team_question', {
+                                rule: row.label,
+                            })}
+                            confirmLabel={t('alerts.rules.use_team')}
+                            onConfirm={() =>
+                                router.delete(ruleReset(own.id).url, {
+                                    preserveScroll: true,
+                                })
+                            }
+                        >
+                            {t('alerts.rules.use_team')}
+                            <span className="sr-only"> {row.label}</span>
+                        </ConfirmButton>
+                    )
+                }
+            />
+        ) : (
+            <TeamRuleSummary
+                key={row.topic ?? row.type}
+                row={row}
+                project={projectUuid}
+                channels={channels}
+                canAdminister={canAdminister}
+            />
+        );
+
     return (
         <Card aria-labelledby="h-rules">
             <CardHeader
@@ -536,55 +580,26 @@ export function RulesCard(
                         />
                     ))
                 ) : (
-                    props.rules.map(({ project: own, ...row }) =>
-                        own ? (
-                            <RuleRow
-                                key={ruleKey(own)}
-                                rule={own}
-                                channels={channels}
-                                disabled={!canAdminister}
-                                badge={
-                                    <Badge tone="amber">
-                                        {t('alerts.rules.customized')}
-                                    </Badge>
-                                }
-                                actions={
-                                    canAdminister && (
-                                        <ConfirmButton
-                                            variant="default"
-                                            question={t(
-                                                'alerts.rules.use_team_question',
-                                                { rule: row.label },
-                                            )}
-                                            confirmLabel={t(
-                                                'alerts.rules.use_team',
-                                            )}
-                                            onConfirm={() =>
-                                                router.delete(
-                                                    ruleReset(own.id).url,
-                                                    { preserveScroll: true },
-                                                )
-                                            }
-                                        >
-                                            {t('alerts.rules.use_team')}
-                                            <span className="sr-only">
-                                                {' '}
-                                                {row.label}
-                                            </span>
-                                        </ConfirmButton>
-                                    )
-                                }
-                            />
-                        ) : (
-                            <TeamRuleSummary
-                                key={row.type}
-                                row={row}
-                                project={props.project}
-                                channels={channels}
-                                canAdminister={canAdminister}
-                            />
-                        ),
-                    )
+                    <>
+                        {standard.map(renderRow)}
+                        {topics.length > 0 && (
+                            <details className="rounded-lg border border-line">
+                                <summary className="cursor-pointer p-3.5 font-semibold">
+                                    {t('alerts.topics.title')}{' '}
+                                    <span className="text-xs font-normal text-ink-3">
+                                        {t(
+                                            'alerts.topics.count_label',
+                                            {},
+                                            topics.length,
+                                        )}
+                                    </span>
+                                </summary>
+                                <div className="flex flex-col gap-3 p-3.5 pt-0">
+                                    {topics.map(renderRow)}
+                                </div>
+                            </details>
+                        )}
+                    </>
                 )}
                 <p className="text-xs text-ink-3">{t('alerts.rules.hint')}</p>
             </div>
@@ -675,7 +690,11 @@ function TeamRuleSummary({
                 <Button
                     onClick={() =>
                         router.post(
-                            ruleCustomize({ project, type: row.type }).url,
+                            ruleCustomize({
+                                project,
+                                type: row.type,
+                                topic: row.topic,
+                            }).url,
                             {},
                             { preserveScroll: true },
                         )
@@ -715,7 +734,7 @@ function ruleKey(rule: Rule): string {
     return `${rule.id}:${JSON.stringify([rule.enabled, rule.channels, rule.environments, rule.settings])}`;
 }
 
-function RuleRow({
+export function RuleRow({
     rule,
     channels,
     disabled,

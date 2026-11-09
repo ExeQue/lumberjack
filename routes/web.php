@@ -150,7 +150,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('settings/labels/{label}', [LabelController::class, 'update'])->name('labels.update');
         Route::delete('settings/labels/{label}', [LabelController::class, 'destroy'])->name('labels.destroy');
         Route::put('settings/retention', [RetentionController::class, 'project'])->name('projects.retention');
-        Route::post('settings/alert-rules/{type}', [AlertController::class, 'customizeRule'])->name('alerts.rules.customize');
+        Route::post('settings/alert-rules/{type}/{topic?}', [AlertController::class, 'customizeRule'])->name('alerts.rules.customize');
         Route::put('settings/alert-rules/{rule}/add-ons', [AlertController::class, 'updateAddOns'])->withoutScopedBindings()->name('alerts.rules.add-ons');
         Route::put('settings/repository', [RepositoryController::class, 'update'])->name('repository.update');
         Route::post('settings/repository/test', [RepositoryController::class, 'test'])->name('repository.test');
@@ -232,6 +232,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('team/alerts/channels/{channel}', [AlertController::class, 'destroyChannel'])->name('alerts.channels.destroy');
     Route::post('team/alerts/channels/{channel}/test', [AlertController::class, 'testChannel'])->middleware('throttle:6,1')->name('alerts.channels.test');
     Route::put('team/alerts/rules/{rule}', [AlertController::class, 'updateRule'])->name('alerts.rules.update');
+    Route::post('team/alerts/topics', [AlertController::class, 'storeTopic'])->name('alerts.topics.store');
+    Route::delete('team/alerts/topics/{rule}', [AlertController::class, 'destroyTopic'])->name('alerts.topics.destroy');
     Route::delete('team/alerts/rules/{rule}', [AlertController::class, 'resetRule'])->name('alerts.rules.reset');
 });
 

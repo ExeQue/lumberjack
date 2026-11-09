@@ -780,7 +780,8 @@ function trendColor(
     colored: boolean,
 ): string | undefined {
     const limits = data.limits as
-        { amber?: unknown; red?: unknown; low_is_bad?: boolean } | undefined;
+        | { amber?: unknown; red?: unknown; low_is_bad?: boolean }
+        | undefined;
 
     if (
         !colored ||

@@ -6,6 +6,7 @@ namespace App\Domains\Alerts\Notifications;
 
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Data\BulkStatusChangeAlert;
+use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
 use App\Domains\Issues\Enums\IssueStatus;
@@ -15,6 +16,7 @@ use App\Domains\Shared\Mail\MailReason;
 use App\Domains\Shared\Mail\SendsMailCards;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\HtmlString;
 
 /**
  * An alert that is not about one issue (a health check, a queue backlog, a bulk resolve)
@@ -50,6 +52,7 @@ class AlertSummaryNotification extends Notification
             $this->alert instanceof HealthCheckAlert => $this->healthCard($this->alert),
             $this->alert instanceof QueueBacklogAlert => $this->queueCard($this->alert),
             $this->alert instanceof BulkStatusChangeAlert => $this->bulkCard($this->alert),
+            $this->alert instanceof CustomAlertMessage => $this->customCard($this->alert),
             default => $this->genericCard(),
         };
     }
@@ -135,6 +138,33 @@ class AlertSummaryNotification extends Notification
             ], $listed),
             more: $more > 0 ? (string) __('mail.bulk.more', ['count' => $more]) : null,
             button: ['label' => (string) __('mail.bulk.'.$alert->status->value.'.see'), 'url' => $alert->url],
+            reasons: $this->reasons,
+        );
+    }
+
+    private function customCard(CustomAlertMessage $message): MailCard
+    {
+        $alert = $message->alert;
+        $links = $message->links();
+        $cell = 'padding:4px 12px 4px 0;text-align:left;border-bottom:1px solid #e2e5e9;';
+        $tables = array_map(fn (array $table): string => ($table['title'] !== null ? '<p><strong>'.e($table['title']).'</strong></p>' : '')
+            .'<table cellpadding="0" cellspacing="0"><tr>'.implode('', array_map(fn (string $header): string => '<th style="'.$cell.'">'.e($header).'</th>', $table['headers'])).'</tr>'
+            .implode('', array_map(fn (array $row): string => '<tr>'.implode('', array_map(fn (string $value): string => '<td style="'.$cell.'">'.e($value).'</td>', $row)).'</tr>', $table['rows'])).'</table>'
+            .($table['omitted'] > 0 ? '<p>'.e(trans_choice('alerts.custom.rows_omitted', $table['omitted'])).'</p>' : ''), $message->tables());
+        $moreLinks = array_map(fn (array $link): string => '<p><a href="'.e($link['url']).'">'.e($link['label']).'</a></p>', array_slice($links, 2));
+
+        return new MailCard(
+            subject: $alert->title,
+            preheader: (string) $alert->message,
+            title: $alert->title,
+            titleUrl: $message->titleUrl(),
+            kind: $message->context(),
+            tone: $alert->level->tone(),
+            lead: $alert->message,
+            facts: $message->facts(),
+            after: [...$tables, ...$moreLinks] !== [] ? new HtmlString(implode('', [...$tables, ...$moreLinks])) : null,
+            button: isset($links[0]) ? ['label' => $links[0]['label'], 'url' => $links[0]['url']] : null,
+            link: isset($links[1]) ? ['label' => $links[1]['label'], 'url' => $links[1]['url']] : null,
             reasons: $this->reasons,
         );
     }

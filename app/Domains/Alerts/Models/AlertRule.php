@@ -31,8 +31,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property bool $enabled
  * @property list<string>|null $environments
  * @property array<string, mixed>|null $settings
+ * @property string $topic  a custom alert rule's topic; empty on every other rule
  */
-#[Fillable(['team_id', 'project_id', 'type', 'enabled', 'environments', 'settings'])]
+#[Fillable(['team_id', 'project_id', 'type', 'topic', 'enabled', 'environments', 'settings'])]
 #[UseFactory(AlertRuleFactory::class)]
 #[UseEloquentBuilder(AlertRuleBuilder::class)]
 class AlertRule extends Model
@@ -44,6 +45,9 @@ class AlertRule extends Model
      * At most one message per issue per rule within this window.
      */
     public const int THROTTLE_MINUTES = 30;
+
+    /** Where a custom alert goes when its code names no topic. Cannot be deleted. */
+    public const string DEFAULT_TOPIC = 'default';
 
     protected function casts(): array
     {

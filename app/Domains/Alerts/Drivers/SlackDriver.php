@@ -6,6 +6,7 @@ namespace App\Domains\Alerts\Drivers;
 
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Models\NotificationChannel;
 use Illuminate\Http\Client\PendingRequest;
@@ -29,6 +30,12 @@ class SlackDriver implements ChannelDriver
     #[Override]
     public function send(NotificationChannel $channel, Alert $alert): void
     {
+        if ($alert instanceof CustomAlertMessage) {
+            $this->sendCustom($channel, $alert);
+
+            return;
+        }
+
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
         $this->post($channel, [
@@ -43,6 +50,34 @@ class SlackDriver implements ChannelDriver
                 )]] : []),
                 ['type' => 'actions', 'elements' => [['type' => 'button', 'text' => ['type' => 'plain_text', 'text' => (string) __('alerts.open_issue')], 'url' => $alert->url()]]],
             ],
+        ]);
+    }
+
+    private function sendCustom(NotificationChannel $channel, CustomAlertMessage $message): void
+    {
+        $alert = $message->alert;
+        $title = self::escape($alert->title);
+        $section = fn (string $text): array => ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_substr($text, 0, 3000)]];
+
+        $this->post($channel, [
+            'text' => $alert->title,
+            'attachments' => [[
+                'color' => $message->level()->hexColor(),
+                'blocks' => [
+                    $section($message->titleUrl() !== null ? '*<'.$message->titleUrl().'|'.$title.'>*' : '*'.$title.'*'),
+                    ...($alert->message !== null ? [$section(self::escape($alert->message))] : []),
+                    // Slack takes ten fields per section.
+                    ...array_map(fn (array $fields): array => ['type' => 'section', 'fields' => array_map(fn (array $field): array => ['type' => 'mrkdwn', 'text' => '*'.self::escape($field['name'])."*\n".self::escape($field['value'])], $fields)], array_chunk($message->fields(), 10)),
+                    ...array_map(fn (array $table): array => $section(($table['title'] !== null ? '*'.self::escape($table['title'])."*\n" : '')."```\n".self::escape(CustomAlertMessage::tableText($table))."\n```"), $message->tables()),
+                    ...($message->links() !== [] ? [['type' => 'actions', 'elements' => array_map(fn (array $link): array => array_filter([
+                        'type' => 'button',
+                        'text' => ['type' => 'plain_text', 'text' => $link['label']],
+                        'url' => $link['url'],
+                        'style' => $link['style'],
+                    ]), $message->links())]] : []),
+                    ['type' => 'context', 'elements' => [['type' => 'mrkdwn', 'text' => self::escape($message->context())]]],
+                ],
+            ]],
         ]);
     }
 

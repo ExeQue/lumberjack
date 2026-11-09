@@ -7,6 +7,7 @@ use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Ingest\Http\Controllers\IngestController;
 use App\Domains\Ingest\Http\Middleware\AuthenticateProjectToken;
+use App\Domains\Ingest\Http\Requests\IngestBatchRequest;
 use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
@@ -69,10 +70,11 @@ describe('server ingest', function () {
             ->and(Issue::sole()->source)->toBe(IssueSource::Server);
     });
 
-    it('turns down a batch with an event of no known type, in one pass over the events', function () {
-        $this->postJson('/api/ingest', $this->batch([['type' => 'log', 'message' => 'ok'], ['type' => 'bogus']]), ['Authorization' => 'Bearer lj_srv_test-token'])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('events');
+    it('skips an event of a type it does not know and keeps the rest of the batch', function () {
+        $this->postJson('/api/ingest', $this->batch([['type' => 'log', 'message' => 'ok', 'level' => 'info'], ['type' => 'bogus']]), ['Authorization' => 'Bearer lj_srv_test-token'])
+            ->assertStatus(202);
+
+        expect(LogEntry::sole()->message)->toBe('ok');
     });
 
     it('stores spans on their trace, and skips a span of a kind it does not know', function () {
@@ -131,8 +133,14 @@ describe('server ingest', function () {
         expect(Issue::count())->toBe(1);
     });
 
-    it('rejects a batch with an unknown event type', function () {
-        $this->postJson('/api/ingest', $this->batch([['type' => 'telepathy']]), $this->auth)->assertUnprocessable();
+    it('rejects a batch with an event that has no type', function () {
+        $this->postJson('/api/ingest', $this->batch([['message' => 'no type']]), $this->auth)->assertUnprocessable();
+    });
+
+    it('tells an agent which event types it knows in the heartbeat', function () {
+        $this->postJson('/api/ingest/heartbeat', ['host' => 'web-2'], $this->auth)
+            ->assertOk()
+            ->assertJsonPath('features', IngestBatchRequest::TYPES);
     });
 
     it('records an agent heartbeat with what the agent is', function () {

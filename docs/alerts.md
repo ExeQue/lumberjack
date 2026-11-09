@@ -66,6 +66,8 @@ environments (comma separated, empty for all). There is one rule per type:
 | Health check down      | A health check that keeps failing.                                      | On      |
 | Health check recovered | A health check that is ok again.                                        | On      |
 
+Alerts your own code sends have their own topics, see [Custom alerts](#custom-alerts).
+
 A rule shows how many channels it sends to. Click the number to pick them, grouped by
 type.
 
@@ -134,6 +136,32 @@ apply whether the project uses the team's rule or its own, and the project's Ale
 settings list them under the rules. The alert names the thresholds it used, with
 "(this queue)" when they are the queue's own. Setting them needs the right to change
 the project.
+
+## Custom alerts
+
+Your app can send its own alerts, with the
+[Laravel library](./libraries) or as an [`alert` event](./api#alert-events). The code
+names a **topic**; which channels a topic reaches is picked under **Custom alert
+topics** on the Alerts page, so moving an alert to another channel needs no deploy.
+
+- A topic appears the first time an app sends to it, without channels. **Create topic**
+  makes one ahead of time. An alert with no topic goes to `default`.
+- A topic can be turned off and limited to some environments, like a rule.
+- Deleting a topic keeps its sent alerts. If an app sends to it again, it comes back
+  without channels. `default` cannot be deleted.
+- A project takes its topics from the team. In the project's settings you can add
+  channels to a topic, or customize it to turn it off or send elsewhere for that project
+  only. Deleting the team's topic deletes the projects' versions too.
+- Every message names the project and the environment.
+
+The level sets the color and the urgency: `info`, `success`, `warning` or `critical`.
+What a link looks like depends on the channel: Slack and Teams color a primary or danger
+button, Discord shows gray link buttons, and Telegram, ntfy and Pushover ignore the
+style. Pushover shows one link and lists the rest in the text, ntfy shows three. A
+webhook gets everything as JSON, with `event` set to `custom_alert`.
+
+**Sent alerts** lists the latest 25 and how each channel went, including the alerts that
+were not sent because they were duplicates or over the limit.
 
 ## Webhooks
 
@@ -261,4 +289,5 @@ An SDK may verify these for you; see its docs.
 | New issue and Escalation messages      | 1 per issue, rule and channel every 30 minutes |
 | Queue backlog messages                 | 1 new backlog per queue every 30 minutes       |
 | Issues named in a bulk summary message | 10                                             |
+| Custom alerts sent                     | 60 a minute per project, the rest only listed  |
 | Discord sender name                    | 80 characters                                  |

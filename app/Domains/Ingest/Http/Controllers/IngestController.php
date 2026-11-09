@@ -57,7 +57,7 @@ class IngestController
         $broadcast->execute($project->id, ChangeKind::Agents);
 
         // The app reads its health check states back from this answer, through the agent.
-        return response()->json(['ok' => true, 'health' => $health->states($project, $request->environment())]);
+        return response()->json(['ok' => true, 'features' => IngestBatchRequest::TYPES, 'health' => $health->states($project, $request->environment())]);
     }
 
     /**

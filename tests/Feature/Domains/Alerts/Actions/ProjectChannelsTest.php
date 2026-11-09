@@ -65,12 +65,12 @@ describe('channels of one project', function () {
 
         $this->actingAs($admin)->get(route('alerts.index'))->assertInertia(fn (Assert $page) => $page
             ->has('channels', 1)->where('channels.0.type', 'mail')->where('types', ['mail', 'discord', 'slack', 'teams', 'telegram', 'ntfy', 'pushover'])
-            ->has('rules', count(AlertRuleType::cases())));
+            ->has('rules', count(AlertRuleType::standard())));
 
         $this->actingAs($admin)->get(route('projects.settings', $this->shop))->assertInertia(fn (Assert $page) => $page
             ->has('alerts.channels', 1)->where('alerts.channels.0.type', 'webhook')
             ->has('alerts.available', 2)
-            ->has('alerts.rules', count(AlertRuleType::cases()))
+            ->has('alerts.rules', count(AlertRuleType::standard()) + 1)
             ->where('alerts.rules.0.type', 'new_issue')->where('alerts.rules.0.project', null)->has('alerts.rules.0.add_ons', 0)
             ->where('alerts.rules.2.type', 'note')->where('alerts.rules.2.project', null)->has('alerts.rules.2.add_ons', 0));
     });

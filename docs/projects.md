@@ -216,6 +216,7 @@ a day.
 | Queue size samples   | 30 days  | Queue length and oldest job age, reported by the agents                               |
 | Host metrics         | 7 days   | CPU, memory and disk, reported by the agents                                          |
 | Alert history        | 90 days  | Every alert sent, to which channel, and whether it got through                        |
+| Custom alerts        | 30 days  | Alerts your apps sent, and how they were delivered                                    |
 | Audit log            | 365 days | What administrators did. Application level only                                       |
 | Notification history | 90 days  | Everyone's [notification center](./teams#notification-center). Application level only |
 

@@ -343,6 +343,8 @@ export type AlertRule = {
 /** One type on a project: the team's rule, and the project's own when it customized it. */
 export type ProjectAlertRule = {
     type: string;
+    /** Set on custom alert topics. */
+    topic?: string;
     label: string;
     description: string;
     team: AlertRule | null;

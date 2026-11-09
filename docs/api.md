@@ -43,13 +43,13 @@ See the [metrics API](./metrics-api) and [MCP](./mcp) pages for those endpoints.
 }
 ```
 
-| Field         | Required | Notes                                                                                                                                          |
-| ------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `v`           | yes      | Always `1`.                                                                                                                                    |
-| `environment` | no       | At most 64 characters.                                                                                                                         |
-| `release`     | no       | At most 64 characters.                                                                                                                         |
-| `host`        | no       | At most 255 characters.                                                                                                                        |
-| `events`      | yes      | At most 5,000 events, each of type `request`, `request_counts`, `query`, `exception`, `job`, `log`, `schedule`, `command`, `span` or `health`. |
+| Field         | Required | Notes                                                                                                                                                   |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `v`           | yes      | Always `1`.                                                                                                                                             |
+| `environment` | no       | At most 64 characters.                                                                                                                                  |
+| `release`     | no       | At most 64 characters.                                                                                                                                  |
+| `host`        | no       | At most 255 characters.                                                                                                                                 |
+| `events`      | yes      | At most 5,000 events, each of type `request`, `request_counts`, `query`, `exception`, `job`, `log`, `schedule`, `command`, `span`, `health` or `alert`. |
 
 ### Requests
 
@@ -124,7 +124,54 @@ The agent sends `POST /api/ingest/heartbeat` once a minute. It fills the project
 | `metrics`     | `cpu_load_1m`, `cpu_cores`, `memory_used_bytes`, `memory_total_bytes`, `disk_used_bytes`, `disk_total_bytes` and `php_memory_peak_bytes`. |
 
 The answer holds the project's health check states under `health`, the same as
-[`GET /api/health`](./health#reading-states-from-the-app).
+[`GET /api/health`](./health#reading-states-from-the-app), and the event types this
+server knows under `features`. An event of a type the server does not know is skipped,
+and the rest of its batch is kept, so a newer agent can talk to an older server.
+
+## Alert events
+
+An event of type `alert` sends a [custom alert](./alerts#custom-alerts):
+
+```json
+{
+    "type": "alert",
+    "title": "Payment failed",
+    "topic": "payments",
+    "level": "critical",
+    "message": "Order 1042 was declined.",
+    "url": "https://shop.example/orders/1042",
+    "fields": [{ "name": "Amount", "value": "499 kr", "inline": true }],
+    "tables": [
+        {
+            "title": "Items",
+            "headers": ["Item", "Qty"],
+            "rows": [["Print", "2"]]
+        }
+    ],
+    "links": [
+        {
+            "label": "Refund",
+            "url": "https://shop.example/r/1",
+            "style": "danger"
+        }
+    ],
+    "dedupe_key": "order-1042",
+    "dedupe_minutes": 10
+}
+```
+
+| Field                         | Notes                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| `title`                       | Required. An event without it is skipped.                                   |
+| `topic`                       | Which topic to send to. Made into a slug. Without it, `default`.            |
+| `level`                       | `info`, `success`, `warning` or `critical`. Sets the color and the urgency. |
+| `message`                     | The text under the title.                                                   |
+| `url`                         | Where the title links to. `http` or `https` only.                           |
+| `fields`                      | At most 20, each with `name`, `value` and `inline`.                         |
+| `tables`                      | At most 3, with `title`, `headers` (at most 8) and `rows` (at most 20).     |
+| `links`                       | At most 5, with `label`, `url` and a `style` of `primary` or `danger`.      |
+| `dedupe_key`,`dedupe_minutes` | A repeat of the key within the minutes is listed, but not sent.             |
+| `timestamp`                   | When it happened.                                                           |
 
 ## Browser
 

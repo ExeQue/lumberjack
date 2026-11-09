@@ -12,6 +12,7 @@ enum AlertRuleType: string
     case Escalation = 'escalation';
     case StatusChange = 'status_change';
     case NewRelease = 'new_release';
+    case CustomAlert = 'custom_alert';
     case QueueBacklog = 'queue_backlog';
     case HealthDegraded = 'health_degraded';
     case HealthDown = 'health_down';
@@ -23,6 +24,16 @@ enum AlertRuleType: string
     public function enabledByDefault(): bool
     {
         return $this !== self::Note && $this !== self::StatusChange;
+    }
+
+    /**
+     * The types with one rule per team. Custom alerts have one rule per topic instead.
+     *
+     * @return list<self>
+     */
+    public static function standard(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $type): bool => $type !== self::CustomAlert));
     }
 
     public function label(): string

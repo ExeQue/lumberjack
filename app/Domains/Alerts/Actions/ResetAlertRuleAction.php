@@ -23,7 +23,7 @@ class ResetAlertRuleAction
         }
 
         DB::transaction(function () use ($rule, $project): void {
-            $team = AlertRule::query()->whereForTeam($project->team)->whereType($rule->type)->with('channels:id')->first();
+            $team = AlertRule::query()->whereForTeam($project->team)->whereType($rule->type)->where('topic', $rule->topic)->with('channels:id')->first();
             $team?->addOnsFor($project)->syncWithoutDetaching(array_values(array_diff($rule->channels()->pluck('notification_channels.id')->all(), $team->channels->modelKeys())));
 
             $rule->delete();

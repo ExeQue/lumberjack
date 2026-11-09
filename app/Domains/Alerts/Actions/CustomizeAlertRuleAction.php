@@ -16,19 +16,20 @@ use Illuminate\Support\Facades\DB;
  */
 class CustomizeAlertRuleAction
 {
-    public function execute(Project $project, AlertRuleType $type): AlertRule
+    public function execute(Project $project, AlertRuleType $type, string $topic = ''): AlertRule
     {
-        $own = $project->alertRules()->where('type', $type->value)->first();
+        $own = $project->alertRules()->where('type', $type->value)->where('topic', $topic)->first();
 
         if ($own !== null) {
             return $own;
         }
 
-        $team = AlertRule::query()->whereForTeam($project->team)->whereType($type)->with('channels:id')->first();
+        $team = AlertRule::query()->whereForTeam($project->team)->whereType($type)->where('topic', $topic)->with('channels:id')->first();
 
-        return DB::transaction(function () use ($project, $type, $team): AlertRule {
+        return DB::transaction(function () use ($project, $type, $topic, $team): AlertRule {
             $rule = $project->alertRules()->create([
                 'type' => $type,
+                'topic' => $topic,
                 'enabled' => $team->enabled ?? $type->enabledByDefault(),
                 'environments' => $team?->environments,
                 'settings' => $team?->settings,

@@ -46,7 +46,7 @@ class AlertRuleBuilder extends Builder
     {
         return $this->where(fn (self $q) => $q->whereForProject($project)->orWhere(fn (self $q) => $q
             ->where('alert_rules.team_id', $project->team_id)
-            ->whereNotExists(fn (QueryBuilder $own) => $own->from('alert_rules', 'own')->whereColumn('own.type', 'alert_rules.type')->where('own.project_id', $project->id))));
+            ->whereNotExists(fn (QueryBuilder $own) => $own->from('alert_rules', 'own')->whereColumn('own.type', 'alert_rules.type')->whereColumn('own.topic', 'alert_rules.topic')->where('own.project_id', $project->id))));
     }
 
     public function orWhereEffectiveFor(Project $project): self

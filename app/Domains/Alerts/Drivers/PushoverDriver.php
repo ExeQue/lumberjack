@@ -6,6 +6,7 @@ namespace App\Domains\Alerts\Drivers;
 
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Models\NotificationChannel;
 use Illuminate\Http\Client\PendingRequest;
@@ -33,6 +34,19 @@ class PushoverDriver implements ChannelDriver
     #[Override]
     public function send(NotificationChannel $channel, Alert $alert): void
     {
+        if ($alert instanceof CustomAlertMessage) {
+            // Pushover takes one link; the others go in the text.
+            $this->post($channel, array_filter([
+                'title' => mb_substr($alert->alert->title, 0, 250),
+                'message' => mb_substr(implode("\n", [...$alert->plainLines(), ...array_map(fn (array $link): string => $link['label'].': '.$link['url'], array_slice($alert->links(), 1))]), 0, 1024),
+                'url' => $alert->links()[0]['url'] ?? $alert->titleUrl(),
+                'url_title' => $alert->links()[0]['label'] ?? null,
+                'priority' => ['high' => 1, 'normal' => 0, 'low' => -1][$alert->urgency()],
+            ], fn (mixed $value): bool => $value !== null));
+
+            return;
+        }
+
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
 
         $this->post($channel, [

@@ -6,6 +6,7 @@ namespace App\Domains\Alerts\Drivers;
 
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Enums\AlertRuleType;
@@ -47,6 +48,12 @@ class DiscordDriver implements ChannelDriver
     #[Override]
     public function send(NotificationChannel $channel, Alert $alert): void
     {
+        if ($alert instanceof CustomAlertMessage) {
+            $this->sendCustom($channel, $alert);
+
+            return;
+        }
+
         if (! $alert instanceof IssueAlert) {
             $this->sendSummary($channel, $alert);
 
@@ -115,6 +122,26 @@ class DiscordDriver implements ChannelDriver
     /**
      * An alert that is not about an issue, e.g. a queue backlog: the same embed, from its parts.
      */
+    private function sendCustom(NotificationChannel $channel, CustomAlertMessage $message): void
+    {
+        $tables = array_map(fn (array $table): string => ($table['title'] !== null ? '**'.self::escape($table['title'])."**\n" : '')."```\n".str_replace('```', "'''", CustomAlertMessage::tableText($table))."\n```", $message->tables());
+        $links = array_map(fn (array $link): array => ['type' => 2, 'style' => 5, 'label' => $link['label'], 'url' => $link['url']], $message->links());
+
+        $this->post($channel, array_filter([
+            ...$this->sender($channel),
+            'embeds' => [array_filter([
+                'title' => mb_substr($message->alert->title, 0, 256),
+                'url' => $message->titleUrl(),
+                'color' => $message->level()->color(),
+                'description' => mb_substr(implode("\n\n", array_filter([$message->alert->message !== null ? self::escape($message->alert->message) : null, ...$tables])), 0, 4000),
+                'fields' => array_map(fn (array $field): array => ['name' => $field['name'], 'value' => self::escape($field['value']), 'inline' => $field['inline']], array_slice($message->fields(), 0, 25)),
+                'footer' => ['text' => $message->context()],
+                'timestamp' => $message->alert->occurred_at->toIso8601String(),
+            ])],
+            'components' => $links !== [] ? [['type' => 1, 'components' => $links]] : null,
+        ]), withComponents: $links !== []);
+    }
+
     private function sendSummary(NotificationChannel $channel, Alert $alert): void
     {
         ['title' => $title, 'subject' => $subject, 'body' => $body] = $alert->summary();
@@ -182,9 +209,12 @@ class DiscordDriver implements ChannelDriver
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function post(NotificationChannel $channel, array $payload): void
+    private function post(NotificationChannel $channel, array $payload, bool $withComponents = false): void
     {
+        // Without this, Discord drops the link buttons of a webhook no application owns.
+        $url = (string) ($channel->config['webhook_url'] ?? '').($withComponents ? '?with_components=true' : '');
+
         // An @everyone in an issue's title pings nobody.
-        $this->deliver($channel, fn (PendingRequest $http) => $http->post((string) ($channel->config['webhook_url'] ?? ''), ['allowed_mentions' => ['parse' => []], ...$payload]));
+        $this->deliver($channel, fn (PendingRequest $http) => $http->post($url, ['allowed_mentions' => ['parse' => []], ...$payload]));
     }
 }

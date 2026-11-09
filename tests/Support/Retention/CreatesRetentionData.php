@@ -6,6 +6,7 @@ namespace Tests\Support\Retention;
 
 use App\Domains\Administration\Models\AdminAuditEntry;
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\Alerts\Models\CustomAlert;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Commands\Models\CommandRun;
 use App\Domains\DataSources\Models\DataSource;
@@ -61,6 +62,7 @@ trait CreatesRetentionData
                 'status' => 'sent',
                 'sent_at' => $at,
             ]),
+            RetentionCategory::CustomAlerts => CustomAlert::factory()->create(['project_id' => $project->id, 'occurred_at' => $at]),
             RetentionCategory::AuditLog => AdminAuditEntry::query()->forceCreate(['action' => 'team_created', 'created_at' => $at]),
             RetentionCategory::Notifications => DB::table('notifications')->insert(['id' => (string) Str::uuid(), 'type' => 'releases', 'notifiable_type' => (new User())->getMorphClass(), 'notifiable_id' => User::factory()->create()->id, 'data' => '{}', 'created_at' => $at, 'updated_at' => $at]),
         };
