@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-09
+
 ### Added
 
 - Connected data sources: connect an app using the Laravel package under **Data sources**, and Lumberjack pulls the figures, series, lists and tables it offers, to show on a screen. Pulled only over https, signed with a pull token per connection, one source per call, and only for what a screen shows.
@@ -114,7 +116,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.1.10...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/ExeQue/lumberjack/compare/v0.1.10...v0.2.0
 [0.1.10]: https://github.com/ExeQue/lumberjack/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/ExeQue/lumberjack/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/ExeQue/lumberjack/compare/v0.1.7...v0.1.8
