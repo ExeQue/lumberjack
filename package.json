@@ -62,7 +62,7 @@
         "esbuild": "^0.28.2",
         "puppeteer": "^25.16.0",
         "typescript": "^7.0.2",
-        "vite-plus": "1.4.0",
+        "vite-plus": "1.5.0",
         "vitepress": "^1.6.4"
     },
     "optionalDependencies": {
