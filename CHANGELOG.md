@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-10
+
 ### Added
 
 - **Connectors**: Lumberjack reads outside services itself, listed under **Data sources**. The first are Umami, on Umami Cloud with an API key or self-hosted with an API key or a login, picking the website from your own and your teams', and mosparo. Each connector can be connected as often as needed, such as several Umami websites in one project.
@@ -195,7 +197,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/ExeQue/lumberjack/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/ExeQue/lumberjack/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/ExeQue/lumberjack/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/ExeQue/lumberjack/compare/v0.4.0...v0.4.1
