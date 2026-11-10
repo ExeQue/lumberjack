@@ -36,14 +36,29 @@ class SaveDataSourceRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         if (is_string($this->input('url'))) {
-            $this->merge(['url' => preg_replace('~^webcals?://~i', 'https://', trim($this->input('url')))]);
+            $this->merge(['url' => self::normalizeUrl($this->input('url'))]);
         }
+    }
+
+    public static function normalizeUrl(string $url): string
+    {
+        return (string) preg_replace('~^webcals?://~i', 'https://', trim($url));
     }
 
     /**
      * @return array<string, array<mixed>>
      */
     public function rules(): array
+    {
+        return self::rulesFor();
+    }
+
+    /**
+     * The rules for a source, shared with the MCP tools.
+     *
+     * @return array<string, array<mixed>>
+     */
+    public static function rulesFor(): array
     {
         return [
             'name' => ['required', 'string', 'max:150'],
@@ -69,26 +84,31 @@ class SaveDataSourceRequest extends FormRequest
      */
     public function after(): array
     {
-        return [function (Validator $validator): void {
-            $source = $this->source();
-            $kept = array_map('strtolower', $source?->headerNames() ?? []);
-            // A value kept is only ever sent to the origin it was given for.
-            $moved = $source !== null && FetchDataSourceAction::origin((string) $this->input('url')) !== FetchDataSourceAction::origin($source->url);
+        return [fn (Validator $validator) => self::checkHeaderValues($validator, $this->source(), $this->input('url'), $this->input('headers', []))];
+    }
 
-            foreach ((array) $this->input('headers', []) as $i => $header) {
-                $name = (string) (is_array($header) ? ($header['name'] ?? '') : '');
-                $value = is_array($header) ? ($header['value'] ?? null) : null;
+    /**
+     * Each header without a value must be one the source has, and still for the same origin.
+     */
+    public static function checkHeaderValues(Validator $validator, ?DataSource $source, mixed $url, mixed $headers): void
+    {
+        $kept = array_map('strtolower', $source?->headerNames() ?? []);
+        // A value kept is only ever sent to the origin it was given for.
+        $moved = $source !== null && FetchDataSourceAction::origin((string) $url) !== FetchDataSourceAction::origin($source->url);
 
-                if ($value !== null && $value !== '') {
-                    continue;
-                }
+        foreach ((array) $headers as $i => $header) {
+            $name = (string) (is_array($header) ? ($header['name'] ?? '') : '');
+            $value = is_array($header) ? ($header['value'] ?? null) : null;
 
-                if (! in_array(strtolower($name), $kept, true)) {
-                    $validator->errors()->add("headers.{$i}.value", __('data_sources.header_value_required'));
-                } elseif ($moved) {
-                    $validator->errors()->add("headers.{$i}.value", __('data_sources.header_value_new_origin', ['header' => $name]));
-                }
+            if ($value !== null && $value !== '') {
+                continue;
             }
-        }];
+
+            if (! in_array(strtolower($name), $kept, true)) {
+                $validator->errors()->add("headers.{$i}.value", __('data_sources.header_value_required'));
+            } elseif ($moved) {
+                $validator->errors()->add("headers.{$i}.value", __('data_sources.header_value_new_origin', ['header' => $name]));
+            }
+        }
     }
 }

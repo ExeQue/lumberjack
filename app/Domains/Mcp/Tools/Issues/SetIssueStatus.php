@@ -8,6 +8,9 @@ use App\Domains\Issues\Actions\ChangeIssueStatusAction;
 use App\Domains\Issues\Data\IgnoreCondition;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Presenters\IssuePresenter;
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesMcpContext;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -16,13 +19,14 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[IsIdempotent]
+#[RequiresPermission(McpArea::Issues, McpLevel::Write)]
 class SetIssueStatus extends Tool
 {
     use UsesMcpContext;
 
     protected string $name = 'set_issue_status';
 
-    protected string $description = 'Resolves, ignores, re-opens or marks an issue in progress (someone is working on it; it still counts as open). Needs the write scope.';
+    protected string $description = 'Resolves, ignores, re-opens or marks an issue in progress (someone is working on it; it still counts as open).';
 
     public function __construct(
         private readonly ChangeIssueStatusAction $action,
@@ -42,9 +46,6 @@ class SetIssueStatus extends Tool
 
     public function handle(Request $request): Response
     {
-        if ($denied = $this->denyUnlessWrite()) {
-            return $denied;
-        }
 
         $request->validate(['status' => ['required', 'in:open,in_progress,resolved,ignored'], 'note' => ['nullable', 'string', 'max:20000'], 'until' => ['nullable', 'in:'.implode(',', IgnoreCondition::CHOICES)]]);
         $issue = $this->issue($request, 'update');

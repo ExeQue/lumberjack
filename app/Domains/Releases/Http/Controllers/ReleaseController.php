@@ -31,9 +31,7 @@ class ReleaseController
             'project' => $projects->header($project, $request->user()),
             'filters' => [...$this->filters($request), 'release' => $selected],
             'releases' => fn (): array => $query->get($project->id, $period, $environment),
-            'newIssues' => fn (): ?array => $selected === '' ? null : Issue::query()
-                ->whereKey($query->newIssueIds($project->id, $period, $environment, $selected))
-                ->with('assignee')->orderByDesc('occurrences_count')->limit(25)->get()
+            'newIssues' => fn (): ?array => $selected === '' ? null : $query->newIssues($project->id, $period, $environment, $selected)
                 ->map(fn (Issue $issue): array => $issues->summary($issue))->all(),
         ]);
     }

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Domains\Mcp\Tools\Telemetry;
 
 use App\Domains\Jobs\Queries\JobStatisticsQuery;
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesMcpContext;
 use App\Domains\Shared\Enums\Period;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -14,6 +17,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[RequiresPermission(McpArea::Telemetry, McpLevel::Read)]
 class ListJobs extends Tool
 {
     use UsesMcpContext;

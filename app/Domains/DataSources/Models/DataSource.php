@@ -115,6 +115,14 @@ class DataSource extends Model
     }
 
     /**
+     * A connected source comes and goes with its app; only one the app dropped can be removed.
+     */
+    public function isDeletable(): bool
+    {
+        return $this->format !== DataSourceFormat::Connected || $this->archived_at !== null;
+    }
+
+    /**
      * The names of its headers, the only part of them shown.
      *
      * @return list<string>
@@ -138,6 +146,14 @@ class DataSource extends Model
         // A calendar's secret address (Google, Outlook, iCloud) carries its key in the path.
         $url = $this->format === DataSourceFormat::Ical ? (string) preg_replace('~^([a-z][a-z0-9+.-]*://[^/?#]+)/[^?#]+~i', '$1/***', $this->url) : $this->url;
 
+        return self::maskQuery($url);
+    }
+
+    /**
+     * The url with every query value replaced by ***, keeping the names.
+     */
+    public static function maskQuery(string $url): string
+    {
         return (string) preg_replace_callback('/\?([^#]*)/', fn (array $m): string => '?'.implode('&', array_map(
             fn (string $pair): string => str_contains($pair, '=') ? strstr($pair, '=', true).'=***' : ($pair === '' ? '' : '***'),
             explode('&', $m[1]),

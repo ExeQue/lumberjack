@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\Mcp\Data\McpPermissions;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Mcp\Servers\LumberjackServer;
 use App\Domains\Mcp\Support\ScreenAccess;
@@ -70,9 +72,9 @@ describe('reading', function () {
 
 describe('designing', function () {
     it('needs the token to be allowed', function () {
-        $this->token->update(['can_design_screens' => false]);
+        $this->token->update(['permissions' => McpPermissions::everywhere(McpLevel::Read)]);
 
-        $this->callTool('lj_mcp_design', 'update_screen', ['screen' => $this->screen->uuid, 'revision' => 0, 'name' => 'New'])->assertJsonPath('result.isError', true);
+        expect($this->wasRefused($this->callTool('lj_mcp_design', 'update_screen', ['screen' => $this->screen->uuid, 'revision' => 0, 'name' => 'New'])))->toBeTrue();
 
         expect($this->screen->refresh()->name)->not->toBe('New');
     });

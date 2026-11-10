@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Domains\Mcp\Tools\Screens;
 
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesScreens;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -13,6 +16,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[RequiresPermission(McpArea::DataSources, McpLevel::Read)]
 class ListDataSources extends Tool
 {
     use UsesScreens;
@@ -28,7 +32,7 @@ class ListDataSources extends Tool
 
     public function handle(Request $request): Response
     {
-        $projects = $this->context()->projects();
+        $projects = $this->projects();
         $sources = DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->with('connection')->orderBy('name')->get()
             ->map(fn (DataSource $source): array => [
                 'uuid' => $source->uuid,

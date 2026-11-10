@@ -44,11 +44,6 @@ trait UsesScreens
             : Response::error('This screen shows projects the token does not cover.');
     }
 
-    protected function denyUnlessDesign(): ?Response
-    {
-        return $this->context()->token()->can_design_screens ? null : Response::error('This token may not design screens; a team admin can create one that does.');
-    }
-
     protected function outsideToken(): Response
     {
         return Response::error('That would show projects the token does not cover.');

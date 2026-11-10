@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Tools\Screens;
 
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesScreens;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -12,6 +15,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[RequiresPermission(McpArea::Screens, McpLevel::Read)]
 class GetScreenDesignGuide extends Tool
 {
     use UsesScreens;
@@ -20,15 +24,15 @@ class GetScreenDesignGuide extends Tool
 
     protected string $description = 'How designing status screens over MCP works: the grid, the widget shape, data sources, revisions and previews. Read it before changing a screen.';
 
-
     private const string GUIDE = <<<'MARKDOWN'
         # Designing Lumberjack screens
 
         A screen is a grid of widgets for a TV. Changes save at once and reach every TV showing it.
 
         ## Access
-        Reading works with any token, on screens showing only projects it covers. Changing needs a
-        token created with "Can design screens". You cannot delete screens or manage sharing or TVs.
+        You see screens showing only projects the token covers. Reading needs screens: Read, changing
+        screens: Write; duplicating and reloading too. Importing, deleting, sharing and choosing what a
+        TV shows need screens: Manage. list_my_permissions says what this token has.
 
         ## Workflow
         1. list_screens, then get_screen; note the revision.

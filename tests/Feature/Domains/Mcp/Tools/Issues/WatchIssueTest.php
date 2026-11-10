@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domains\Issues\Models\Issue;
+use App\Domains\Mcp\Data\McpPermissions;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Mcp\Tools\Issues\UnwatchIssue;
 use App\Domains\Mcp\Tools\Issues\WatchIssue;
@@ -33,11 +35,11 @@ describe('watching over MCP', function () {
     });
 
     it('refuses a read token and a token of nobody', function () {
-        $this->token->update(['scope' => 'read']);
-        expect($this->callTool('lj_mcp_secret', 'watch_issue', ['issue' => $this->issue->reference()])->json('result.isError'))->toBeTrue();
+        $this->token->update(['permissions' => McpPermissions::everywhere(McpLevel::Read)]);
+        expect($this->wasRefused($this->callTool('lj_mcp_secret', 'watch_issue', ['issue' => $this->issue->reference()])))->toBeTrue();
 
         // A token whose creator is gone does not authenticate at all.
-        $this->token->update(['scope' => 'write', 'user_id' => null]);
+        $this->token->update(['user_id' => null]);
         $this->callTool('lj_mcp_secret', 'watch_issue', ['issue' => $this->issue->reference()])->assertUnauthorized();
         expect($this->issue->watchers()->count())->toBe(0);
     });

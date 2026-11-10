@@ -6,6 +6,7 @@ namespace App\Domains\Issues\Actions;
 
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Label;
+use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Projects\Models\Project;
 use App\Models\User;
 
@@ -23,7 +24,7 @@ class BulkLabelIssuesAction
      * @param  list<string>  $uuids
      * @return int issues it changed
      */
-    public function execute(Project $project, array $uuids, string $label, bool $remove, User $by): int
+    public function execute(Project $project, array $uuids, string $label, bool $remove, ?User $by = null, ?McpToken $token = null): int
     {
         $changed = 0;
 
@@ -37,7 +38,7 @@ class BulkLabelIssuesAction
 
             $this->labels->execute($issue, array_values(($remove
                 ? $names->reject(fn (string $name): bool => mb_strtolower($name) === mb_strtolower(trim($label)))
-                : $names->push($label))->all()), $by);
+                : $names->push($label))->all()), $by, $token);
             $changed++;
         }
 

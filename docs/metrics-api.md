@@ -9,7 +9,8 @@ and alerting.
 
 - **A team token**, sent as `Authorization: Bearer lj_mcp_...`. Create it under **API
   and MCP tokens** on the team page, as described in [MCP](./mcp#tokens). The token
-  reads the projects it lists that its creator may see.
+  reads the projects it covers that its creator may see, where it may use
+  `get_metric_series`. `issues` also needs `list_issues` in that project.
 - **Public stats**, without a header. An owner or admin turns on **Public stats** in a
   project's **Settings, Keys**. That creates a secret URL,
   `https://your-lumberjack/api/v1/public/ps_.../`, which serves the same endpoints for

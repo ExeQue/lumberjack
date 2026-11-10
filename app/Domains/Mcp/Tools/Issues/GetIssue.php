@@ -6,6 +6,9 @@ namespace App\Domains\Mcp\Tools\Issues;
 
 use App\Domains\Issues\Models\IssueNote;
 use App\Domains\Issues\Presenters\IssuePresenter;
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesMcpContext;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -14,6 +17,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[RequiresPermission(McpArea::Issues, McpLevel::Read)]
 class GetIssue extends Tool
 {
     use UsesMcpContext;

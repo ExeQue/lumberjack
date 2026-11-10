@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Domains\Mcp\Http\Controllers;
 
 use App\Domains\Mcp\Actions\CreateMcpTokenAction;
-use App\Domains\Mcp\Enums\McpScope;
+use App\Domains\Mcp\Actions\UpdateMcpTokenAction;
 use App\Domains\Mcp\Http\Requests\StoreMcpTokenRequest;
+use App\Domains\Mcp\Http\Requests\UpdateMcpTokenRequest;
 use App\Domains\Mcp\Models\McpToken;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,13 +24,29 @@ class McpTokenController
             $team,
             $request->user(),
             $request->string('name')->toString(),
-            McpScope::from($request->string('scope')->toString()),
-            array_values($team->projects()->whereIn('uuid', (array) $request->input('projects'))->pluck('id')->map(fn ($id): int => (int) $id)->all()),
+            $request->boolean('all_projects'),
+            $request->projectIds($team),
+            $request->permissions(),
             $days !== null ? now()->addDays((int) $days) : null,
-            $request->boolean('can_design_screens'),
+            $request->changes($team),
         );
 
         return back()->with('secret', ['label' => __('mcp.token_created', ['name' => $request->string('name')->toString()]), 'value' => $plain]);
+    }
+
+    public function update(UpdateMcpTokenRequest $request, McpToken $token, UpdateMcpTokenAction $action): RedirectResponse
+    {
+        $action->execute(
+            $token,
+            $request->user(),
+            $request->string('name')->toString(),
+            $request->boolean('all_projects'),
+            $request->projectIds($token->team),
+            $request->permissions(),
+            $request->changes($token->team),
+        );
+
+        return back()->with('status', __('mcp.token_updated'));
     }
 
     public function destroy(Request $request, McpToken $token): RedirectResponse

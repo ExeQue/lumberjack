@@ -82,6 +82,20 @@ class DataSourceConnection extends Model
     }
 
     /**
+     * Whether pulls work: waiting before the app ever answered, failing after an error, else connected.
+     *
+     * @return 'waiting'|'failing'|'connected'
+     */
+    public function status(): string
+    {
+        return match (true) {
+            $this->last_ok_at === null => 'waiting',
+            $this->last_error !== null => 'failing',
+            default => 'connected',
+        };
+    }
+
+    /**
      * The tokens that can still be read. One saved under another APP_KEY counts as none,
      * so a changed key costs a rotation rather than the page.
      *

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Tools\Screens;
 
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesScreens;
 use App\Domains\Screens\Actions\UpdateScreenAction;
 use App\Domains\Screens\Http\Requests\UpdateScreenRequest;
@@ -12,13 +15,14 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 
+#[RequiresPermission(McpArea::Screens, McpLevel::Write)]
 class UpdateScreen extends Tool
 {
     use UsesScreens;
 
     protected string $name = 'update_screen';
 
-    protected string $description = 'Changes a screen settings, live on every TV showing it; pass only what changes. Needs a token that may design screens.';
+    protected string $description = 'Changes a screen settings, live on every TV showing it; pass only what changes.';
 
     public function __construct(
         private readonly UpdateScreenAction $update,
@@ -47,9 +51,6 @@ class UpdateScreen extends Tool
 
     public function handle(Request $request): Response
     {
-        if ($denied = $this->denyUnlessDesign()) {
-            return $denied;
-        }
 
         $screen = $this->screen($request, 'update');
 

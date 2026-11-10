@@ -22,6 +22,16 @@ class UpdateQueueAlertThresholdRequest extends FormRequest
     /** @return array<string, list<string>> */
     public function rules(): array
     {
+        return self::fieldRules();
+    }
+
+    /**
+     * The rules without the request, for MCP tools that take the same input.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function fieldRules(): array
+    {
         return [
             'connection' => ['required', 'string', 'max:255'],
             'queue' => ['required', 'string', 'max:255'],

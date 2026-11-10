@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Tools\Screens;
 
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesScreens;
 use App\Domains\Screens\Presenters\ScreenPresenter;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -13,6 +16,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[RequiresPermission(McpArea::Screens, McpLevel::Read)]
 class ListScreenVersions extends Tool
 {
     use UsesScreens;

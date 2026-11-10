@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Tools\Projects;
 
+use App\Domains\Mcp\Attributes\AlwaysAvailable;
 use App\Domains\Mcp\Tools\Concerns\UsesMcpContext;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -13,6 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[AlwaysAvailable]
 class ListProjects extends Tool
 {
     use UsesMcpContext;
@@ -29,7 +31,6 @@ class ListProjects extends Tool
     public function handle(Request $request): Response
     {
         return Response::json([
-            'scope' => $this->context()->token()->scope->value,
             'projects' => $this->context()->projects()->map(fn (Project $p): array => ['slug' => $p->slug, 'name' => $p->name, 'team' => $p->team->name])->values()->all(),
         ]);
     }

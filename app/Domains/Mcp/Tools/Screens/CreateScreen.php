@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Tools\Screens;
 
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesScreens;
 use App\Domains\Screens\Actions\CreateScreenAction;
 use App\Domains\Screens\Enums\ScreenTemplate;
@@ -15,13 +18,14 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 
+#[RequiresPermission(McpArea::Screens, McpLevel::Write)]
 class CreateScreen extends Tool
 {
     use UsesScreens;
 
     protected string $name = 'create_screen';
 
-    protected string $description = 'Creates a screen, empty or from a template. A template shows every project, so it needs a token covering them all. Needs a token that may design screens.';
+    protected string $description = 'Creates a screen, empty or from a template. A template shows every project, so it needs a token covering them all.';
 
     public function __construct(
         private readonly CreateScreenAction $create,
@@ -39,9 +43,6 @@ class CreateScreen extends Tool
 
     public function handle(Request $request): Response
     {
-        if ($denied = $this->denyUnlessDesign()) {
-            return $denied;
-        }
 
         $input = $request->validate([
             'name' => ['required', 'string', 'max:100'],

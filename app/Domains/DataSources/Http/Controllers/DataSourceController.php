@@ -39,11 +39,7 @@ class DataSourceController
                 'environment' => $c->environment,
                 'url' => $c->url,
                 'timezone' => $c->timezone,
-                'status' => match (true) {
-                    $c->last_ok_at === null => 'waiting',
-                    $c->last_error !== null => 'failing',
-                    default => 'connected',
-                },
+                'status' => $c->status(),
                 'last_ok_at' => $c->last_ok_at?->toIso8601String(),
                 'last_error' => $c->last_error,
             ])->all(),
@@ -111,8 +107,7 @@ class DataSourceController
     public function destroy(Project $project, DataSource $dataSource): RedirectResponse
     {
         Gate::authorize('update', $dataSource);
-        // A connected source comes and goes with its app; only one the app dropped can be removed.
-        abort_if($dataSource->format === DataSourceFormat::Connected && $dataSource->archived_at === null, 404);
+        abort_unless($dataSource->isDeletable(), 404);
 
         $dataSource->delete();
 

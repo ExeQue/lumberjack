@@ -43,7 +43,7 @@ class ScreenPreviewController
 
         $response = Inertia::render('screens/kiosk', [
             ...$presenter->kiosk($screen, ['data_url' => $data, 'channel' => 'screen-preview.'.Str::random(32), 'share' => true]),
-            'projects' => $token->readableProjects()->map(fn (Project $p): array => ['uuid' => $p->uuid, 'name' => $p->name])->all(),
+            'projects' => $token->readableProjects()->only($this->access->coveredProjects($token))->map(fn (Project $p): array => ['uuid' => $p->uuid, 'name' => $p->name])->values()->all(),
         ])->toResponse($request);
         $response->headers->add(self::HEADERS);
 
@@ -64,7 +64,7 @@ class ScreenPreviewController
     {
         abort_unless(URL::hasValidSignature($request, false, ['widget']), 403);
         $token = McpToken::query()->find($request->integer('token'));
-        abort_unless($token !== null && ! $token->isExpired() && $token->team_id === $screen->team_id && $token->allows('view', $screen) && $this->access->covers($token, $screen), 403);
+        abort_unless($token !== null && ! $token->isExpired() && $token->team_id === $screen->team_id && $token->permits('preview_screen') && $token->allows('view', $screen) && $this->access->covers($token, $screen), 403);
 
         return $token;
     }

@@ -6,10 +6,10 @@ namespace App\Domains\Retention\Http\Controllers;
 
 use App\Domains\Projects\Models\Project;
 use App\Domains\Retention\Actions\MeasureRetentionAction;
+use App\Domains\Retention\Actions\SaveProjectRetentionAction;
 use App\Domains\Retention\Actions\SaveRetentionPolicyAction;
 use App\Domains\Retention\Enums\RetentionCategory;
 use App\Domains\Retention\Http\Requests\UpdateRetentionRequest;
-use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Retention\Presenters\RetentionPresenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,31 +38,17 @@ class RetentionController
         return back()->with('status', __('retention.saved'));
     }
 
-    public function project(UpdateRetentionRequest $request, Project $project, SaveRetentionPolicyAction $action): RedirectResponse
+    public function project(UpdateRetentionRequest $request, Project $project, SaveProjectRetentionAction $action): RedirectResponse
     {
         Gate::authorize('update', $project);
 
-        DB::transaction(function () use ($request, $project, $action): void {
-            $this->saveDays($request, ['project_id' => $project->id], $action);
-
-            if ($request->has('job_overrides')) {
-                RetentionPolicy::query()->whereProject($project->id)->whereNotNull('job_class')->delete();
-
-                foreach ((array) $request->input('job_overrides') as $override) {
-                    $action->execute(['project_id' => $project->id, 'job_class' => $override['job_class']], RetentionCategory::JobRuns, (int) $override['days']);
-                }
-            }
-
-            if ($request->has('channels')) {
-                $channelIds = $project->logChannels()->pluck('id')->all();
-
-                foreach ((array) $request->input('channels') as $channelId => $days) {
-                    if (in_array((int) $channelId, $channelIds, true)) {
-                        $action->execute(['project_id' => $project->id, 'log_channel_id' => (int) $channelId], RetentionCategory::Logs, $days !== null ? (int) $days : null);
-                    }
-                }
-            }
-        });
+        $action->execute(
+            $project,
+            (array) $request->input('days', []),
+            array_values(array_filter((array) $request->input('forever', []), is_string(...))),
+            $request->has('job_overrides') ? array_values((array) $request->input('job_overrides')) : null,
+            $request->has('channels') ? (array) $request->input('channels') : null,
+        );
 
         return back()->with('status', __('retention.saved'));
     }

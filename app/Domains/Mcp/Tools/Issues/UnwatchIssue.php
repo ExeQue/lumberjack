@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Domains\Mcp\Tools\Issues;
 
 use App\Domains\Issues\Actions\UnwatchIssueAction;
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesMcpContext;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -13,13 +16,14 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[IsIdempotent]
+#[RequiresPermission(McpArea::Issues, McpLevel::Write)]
 class UnwatchIssue extends Tool
 {
     use UsesMcpContext;
 
     protected string $name = 'unwatch_issue';
 
-    protected string $description = 'Stops the person this MCP token belongs to watching an issue. It sticks: acting on the issue later does not make them watch it again. Needs the write scope.';
+    protected string $description = 'Stops the person this MCP token belongs to watching an issue. It sticks: acting on the issue later does not make them watch it again.';
 
     public function __construct(
         private readonly UnwatchIssueAction $unwatch,
@@ -35,9 +39,6 @@ class UnwatchIssue extends Tool
 
     public function handle(Request $request): Response
     {
-        if ($denied = $this->denyUnlessWrite()) {
-            return $denied;
-        }
 
         $issue = $this->issue($request);
 

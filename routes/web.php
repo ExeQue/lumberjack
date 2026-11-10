@@ -197,6 +197,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('team/invitations/{invitation}/resend', [InvitationController::class, 'resend'])->name('invitations.resend');
     Route::delete('team/invitations/{invitation}', [InvitationController::class, 'destroy'])->name('invitations.destroy');
     Route::post('team/mcp-tokens', [McpTokenController::class, 'store'])->name('mcp-tokens.store');
+    Route::put('team/mcp-tokens/{token}', [McpTokenController::class, 'update'])->name('mcp-tokens.update');
     Route::delete('team/mcp-tokens/{token}', [McpTokenController::class, 'destroy'])->name('mcp-tokens.destroy');
 
     // Status screens: the team's wall displays. See docs/screens.md.

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Domains\Mcp\Tools\Issues;
 
 use App\Domains\Issues\Actions\WatchIssueAction;
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesMcpContext;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -13,13 +16,14 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[IsIdempotent]
+#[RequiresPermission(McpArea::Issues, McpLevel::Write)]
 class WatchIssue extends Tool
 {
     use UsesMcpContext;
 
     protected string $name = 'watch_issue';
 
-    protected string $description = 'Makes the person this MCP token belongs to watch an issue: they hear of its notes, status and assignee changes, regressions and escalations by mail and toast, as their profile allows. Needs the write scope.';
+    protected string $description = 'Makes the person this MCP token belongs to watch an issue: they hear of its notes, status and assignee changes, regressions and escalations by mail and toast, as their profile allows.';
 
     public function __construct(
         private readonly WatchIssueAction $watch,
@@ -35,9 +39,6 @@ class WatchIssue extends Tool
 
     public function handle(Request $request): Response
     {
-        if ($denied = $this->denyUnlessWrite()) {
-            return $denied;
-        }
 
         $issue = $this->issue($request);
 

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Tools\Screens;
 
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesScreens;
 use App\Domains\Screens\Actions\RestoreScreenVersionAction;
 use App\Domains\Screens\Models\ScreenVersion;
@@ -13,13 +16,14 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 
+#[RequiresPermission(McpArea::Screens, McpLevel::Write)]
 class RestoreScreenVersion extends Tool
 {
     use UsesScreens;
 
     protected string $name = 'restore_screen_version';
 
-    protected string $description = 'Puts a screen back as it was, live on every TV showing it; what it is now becomes a version in turn. Needs a token that may design screens.';
+    protected string $description = 'Puts a screen back as it was, live on every TV showing it; what it is now becomes a version in turn.';
 
     public function __construct(
         private readonly RestoreScreenVersionAction $restore,
@@ -37,9 +41,6 @@ class RestoreScreenVersion extends Tool
 
     public function handle(Request $request): Response
     {
-        if ($denied = $this->denyUnlessDesign()) {
-            return $denied;
-        }
 
         $screen = $this->screen($request, 'update');
 

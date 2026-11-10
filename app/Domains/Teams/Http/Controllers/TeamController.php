@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Teams\Http\Controllers;
 
-use App\Domains\Mcp\Enums\McpScope;
 use App\Domains\Mcp\Models\McpToken;
+use App\Domains\Mcp\Presenters\McpTokenPresenter;
 use App\Domains\Teams\Actions\CreateTeamAction;
 use App\Domains\Teams\Actions\SwitchTeamAction;
 use App\Domains\Teams\Http\Middleware\UseTabTeam;
@@ -20,6 +20,10 @@ use Inertia\Response;
 
 class TeamController
 {
+    public function __construct(private readonly McpTokenPresenter $tokens)
+    {
+    }
+
     public function show(Request $request): Response
     {
         $user = $request->user();
@@ -46,18 +50,9 @@ class TeamController
                 'expired' => $i->isExpired(),
             ])->all(),
             // Each token's usability check reads its team, which is this one.
-            'tokens' => $team->mcpTokens()->chaperone('team')->with(['projects:id,name,slug', 'user:id,name,is_admin,suspended_at', 'user.teams:id'])->latest()->get()->map(fn (McpToken $t): array => [
-                'id' => $t->id,
-                'name' => $t->name,
-                'scope' => $t->scope->value,
-                'can_design_screens' => $t->can_design_screens,
-                'projects' => $t->projects->pluck('name')->all(),
-                'created_by' => $t->user?->name,
-                'usable' => $t->isUsable(),
-                'last_used_at' => $t->last_used_at?->toIso8601String(),
-                'expires_at' => $t->expires_at?->toIso8601String(),
-            ])->all(),
-            'scopes' => array_map(fn (McpScope $s): string => $s->value, McpScope::cases()),
+            'tokens' => $team->mcpTokens()->chaperone('team')->with(['projects:id,uuid,name,team_id', 'user:id,name,is_admin,suspended_at', 'user.teams:id'])->latest()->get()
+                ->map(fn (McpToken $t): array => $this->tokens->token($t))->all(),
+            'mcp_catalog' => $this->tokens->catalog(),
             'mcp_url' => url('/mcp'),
             'api_url' => url('/api/v1'),
             'can_create_team' => StoreTeamRequest::allowed($user),

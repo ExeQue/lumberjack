@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Domains\Releases\Queries;
 
 use App\Domains\Issues\Enums\IssueEventType;
+use App\Domains\Issues\Models\Issue;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Support\Sampling;
 use App\Domains\Shared\Support\StatisticsCache;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -66,13 +68,7 @@ class ReleaseHealthQuery
         $newIssues = DB::query()->fromSub($this->firstOccurrences($projectId, $period, $environment), 'firsts')
             ->whereNotNull('release')->groupBy('release')->selectRaw('release, COUNT(*) AS c')->pluck('c', 'release');
 
-        // The regressed event carries the release of the occurrence that reopened the issue.
-        $regressions = DB::table('issue_events')
-            ->join('issues', 'issues.id', '=', 'issue_events.issue_id')
-            ->where('issues.project_id', $projectId)
-            ->where('issue_events.type', IssueEventType::Regressed->value)
-            ->where('issue_events.occurred_at', '>=', $since)
-            ->when($environment !== null)->whereRaw("issue_events.data->>'environment' = ?", [$environment])
+        $regressions = $this->regressedEvents($projectId, $period, $environment)
             ->selectRaw("issue_events.data->>'release' AS release, COUNT(*) AS c")
             ->groupByRaw("issue_events.data->>'release'")
             ->pluck('c', 'release');
@@ -117,6 +113,43 @@ class ReleaseHealthQuery
     {
         return array_values(DB::query()->fromSub($this->firstOccurrences($projectId, $period, $environment), 'firsts')
             ->where('release', $release)->pluck('issue_id')->map(fn ($id): int => (int) $id)->all());
+    }
+
+    /**
+     * The issues a release brought in the period, the most frequent first.
+     *
+     * @return EloquentCollection<int, Issue>
+     */
+    public function newIssues(int $projectId, Period $period, ?string $environment, string $release, int $limit = 25): EloquentCollection
+    {
+        return Issue::query()->whereKey($this->newIssueIds($projectId, $period, $environment, $release))
+            ->with('assignee')->orderByDesc('occurrences_count')->limit($limit)->get();
+    }
+
+    /**
+     * The issues an occurrence of the release reopened in the period, the most frequent first.
+     *
+     * @return EloquentCollection<int, Issue>
+     */
+    public function regressedIssues(int $projectId, Period $period, ?string $environment, string $release, int $limit = 25): EloquentCollection
+    {
+        return Issue::query()
+            ->whereIn('id', $this->regressedEvents($projectId, $period, $environment)->whereRaw("issue_events.data->>'release' = ?", [$release])->select('issue_events.issue_id'))
+            ->with('assignee')->orderByDesc('occurrences_count')->limit($limit)->get();
+    }
+
+    /**
+     * The regressed events in the period. Each carries the release of the occurrence that
+     * reopened the issue.
+     */
+    private function regressedEvents(int $projectId, Period $period, ?string $environment): Builder
+    {
+        return DB::table('issue_events')
+            ->join('issues', 'issues.id', '=', 'issue_events.issue_id')
+            ->where('issues.project_id', $projectId)
+            ->where('issue_events.type', IssueEventType::Regressed->value)
+            ->where('issue_events.occurred_at', '>=', $period->since()->format('Y-m-d H:i:s'))
+            ->when($environment !== null)->whereRaw("issue_events.data->>'environment' = ?", [$environment]);
     }
 
     /**

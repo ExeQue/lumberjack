@@ -7,6 +7,9 @@ namespace App\Domains\Mcp\Tools\Issues;
 use App\Domains\Issues\Actions\SetIssueLabelsAction;
 use App\Domains\Issues\Models\Label;
 use App\Domains\Issues\Presenters\IssuePresenter;
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesMcpContext;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -15,13 +18,14 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[IsIdempotent]
+#[RequiresPermission(McpArea::Issues, McpLevel::Write)]
 class SetIssueLabels extends Tool
 {
     use UsesMcpContext;
 
     protected string $name = 'set_issue_labels';
 
-    protected string $description = 'Gives an issue exactly these labels, by name; an empty list removes them all. A name the project has no label for yet creates one. Up to 10 labels of at most 32 characters. Needs the write scope.';
+    protected string $description = 'Gives an issue exactly these labels, by name; an empty list removes them all. A name the project has no label for yet creates one. Up to 10 labels of at most 32 characters.';
 
     public function __construct(
         private readonly SetIssueLabelsAction $action,
@@ -39,9 +43,6 @@ class SetIssueLabels extends Tool
 
     public function handle(Request $request): Response
     {
-        if ($denied = $this->denyUnlessWrite()) {
-            return $denied;
-        }
 
         $request->validate(['labels' => ['present', 'array', 'max:'.Label::MAX_PER_ISSUE], 'labels.*' => ['string', 'max:'.Label::MAX_NAME]]);
         $issue = $this->issue($request, 'update');

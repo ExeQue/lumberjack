@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Cache;
 use LogicException;
 
 /**
- * Who is asking the metrics API: a team token (MCP token, any scope) for the projects it
- * lists, or a project's public stats key for that one project, aggregates only.
+ * Who is asking the metrics API: a team token (MCP token) for the projects where it may
+ * use get_metric_series, or a project's public stats key for that one project, aggregates only.
  */
 class MetricsCredential
 {
@@ -25,9 +25,14 @@ class MetricsCredential
     /** @var Collection<int, Project>|null */
     private ?Collection $projects = null;
 
+    private ?McpToken $token = null;
+
     public function authenticateToken(McpToken $token): void
     {
-        $this->projects = $token->readableProjects();
+        $this->token = $token;
+        $this->projects = $token->readableProjects()
+            ->filter(fn (Project $project): bool => $token->permits('get_metric_series', $project))
+            ->values();
     }
 
     public function authenticatePublic(Project $project): void
@@ -50,6 +55,15 @@ class MetricsCredential
     public function project(string $reference): ?Project
     {
         return $this->projects()->first(fn (Project $p): bool => $p->slug === $reference || $p->uuid === $reference);
+    }
+
+    /**
+     * Whether the credential may list the project's issues: a token only where it may read
+     * issues; public stats as they are set up.
+     */
+    public function readsIssues(Project $project): bool
+    {
+        return $this->token === null || $this->token->permits('list_issues', $project);
     }
 
     public function isPublic(): bool

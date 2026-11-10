@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Tools\Screens;
 
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesScreens;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\URL;
@@ -13,6 +16,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[RequiresPermission(McpArea::Screens, McpLevel::Read)]
 class PreviewScreen extends Tool
 {
     use UsesScreens;
@@ -20,7 +24,6 @@ class PreviewScreen extends Tool
     protected string $name = 'preview_screen';
 
     protected string $description = 'A link to the screen as a TV shows it, to open in a browser and size as the TV. It works without signing in and expires after 5 minutes.';
-
 
     private const int MINUTES = 5;
 

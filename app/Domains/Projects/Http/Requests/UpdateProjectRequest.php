@@ -36,6 +36,16 @@ class UpdateProjectRequest extends FormRequest
         /** @var Project $project */
         $project = $this->route('project');
 
+        return self::rulesFor($project);
+    }
+
+    /**
+     * Also used by MCP's update_project, which sends the issue prefix upper-cased already.
+     *
+     * @return array<string, mixed>
+     */
+    public static function rulesFor(Project $project): array
+    {
         return [
             'name' => ['required', 'string', 'max:100'],
             'slug' => ['required', 'string', 'max:100', 'alpha_dash:ascii', Rule::unique('projects', 'slug')->where('team_id', $project->team_id)->ignore($project->id)],

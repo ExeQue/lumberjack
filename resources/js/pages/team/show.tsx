@@ -1,6 +1,12 @@
 import { Relative, WithRelative } from '@/components/lj/relative';
 import { Form, Head, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
+import {
+    McpTokenEditor,
+    type McpCatalogArea,
+    type McpEditableToken,
+} from '@/components/lj/mcp-token-editor';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
@@ -27,10 +33,7 @@ import {
     resend as invitationResend,
     store as invitationStore,
 } from '@/routes/invitations';
-import {
-    destroy as tokenDestroy,
-    store as tokenStore,
-} from '@/routes/mcp-tokens';
+import { destroy as tokenDestroy } from '@/routes/mcp-tokens';
 import {
     destroy as memberDestroy,
     transfer as memberTransfer,
@@ -38,14 +41,6 @@ import {
 } from '@/routes/members';
 import { store as teamStore } from '@/routes/teams';
 import type { TeamShared } from '@/types/lumberjack';
-
-const firstError = (
-    errors: Record<string, string>,
-    prefix: string,
-): string | undefined =>
-    Object.entries(errors).find(
-        ([key]) => key === prefix || key.startsWith(`${prefix}.`),
-    )?.[1];
 
 type Role = 'owner' | 'admin' | 'member';
 type Member = {
@@ -62,12 +57,8 @@ type Invitation = {
     expires_at: string;
     expired: boolean;
 };
-type Token = {
-    id: number;
-    name: string;
-    scope: string;
-    can_design_screens: boolean;
-    projects: string[];
+type Token = McpEditableToken & {
+    tool_count: number;
     created_by: string | null;
     usable: boolean;
     last_used_at: string | null;
@@ -78,7 +69,7 @@ type Props = {
     members: Member[];
     invitations: Invitation[];
     tokens: Token[];
-    scopes: string[];
+    mcp_catalog: McpCatalogArea[];
     mcp_url: string;
     api_url: string;
     can_create_team: boolean;
@@ -88,7 +79,7 @@ export default function TeamShow({
     members,
     invitations,
     tokens,
-    scopes,
+    mcp_catalog,
     mcp_url,
     api_url,
     can_create_team,
@@ -97,6 +88,8 @@ export default function TeamShow({
     const { team } = usePage<{ team: TeamShared }>().props;
     const admin = team.can_administer;
     const isOwner = team.role === 'owner';
+    // null: closed; 'new': making a token; else the token being edited.
+    const [editing, setEditing] = useState<Token | 'new' | null>(null);
     useTeamLive(
         ['members.changed', 'invitations.changed', 'tokens.changed'],
         ['members', 'invitations', 'tokens'],
@@ -507,7 +500,7 @@ export default function TeamShow({
                                                 {t('team.tokens.projects')}
                                             </th>
                                             <th className={thClass}>
-                                                {t('team.tokens.scope')}
+                                                {t('team.tokens.permissions')}
                                             </th>
                                             <th className={thClass}>
                                                 {t('team.tokens.created_by')}
@@ -544,9 +537,7 @@ export default function TeamShow({
                                                         'text-ink-2',
                                                     )}
                                                 >
-                                                    {team.projects.length > 1 &&
-                                                    token.projects.length ===
-                                                        team.projects.length
+                                                    {token.all_projects
                                                         ? t(
                                                               'team.tokens.all_projects',
                                                               {
@@ -555,23 +546,22 @@ export default function TeamShow({
                                                                       .length,
                                                               },
                                                           )
-                                                        : token.projects.join(
-                                                              ', ',
-                                                          )}
+                                                        : token.projects
+                                                              .map(
+                                                                  (p) => p.name,
+                                                              )
+                                                              .join(', ')}
                                                 </td>
                                                 <td className={tdClass}>
                                                     <Badge>
                                                         {t(
-                                                            `team.tokens.scopes.${token.scope}`,
+                                                            'team.tokens.tool_count',
+                                                            {
+                                                                count: token.tool_count,
+                                                            },
+                                                            token.tool_count,
                                                         )}
                                                     </Badge>
-                                                    {token.can_design_screens && (
-                                                        <Badge>
-                                                            {t(
-                                                                'team.tokens.designs_screens',
-                                                            )}
-                                                        </Badge>
-                                                    )}
                                                 </td>
                                                 <td
                                                     className={cn(
@@ -633,6 +623,23 @@ export default function TeamShow({
                                                             'text-right',
                                                         )}
                                                     >
+                                                        <Button
+                                                            type="button"
+                                                            className="mr-2"
+                                                            onClick={() =>
+                                                                setEditing(
+                                                                    token,
+                                                                )
+                                                            }
+                                                        >
+                                                            {t(
+                                                                'team.tokens.edit',
+                                                            )}
+                                                            <span className="sr-only">
+                                                                {' '}
+                                                                {token.name}
+                                                            </span>
+                                                        </Button>
                                                         <ConfirmButton
                                                             question={t(
                                                                 'team.tokens.revoke_question',
@@ -672,184 +679,31 @@ export default function TeamShow({
                         )}
 
                         {admin && (
-                            <Form
-                                {...tokenStore.form()}
-                                options={{ preserveScroll: true }}
-                                resetOnSuccess
-                                className="flex flex-col gap-4 border-t border-line pt-4"
-                            >
-                                {({ errors, processing }) => (
-                                    <>
-                                        <h3 className="text-[13px] font-semibold">
-                                            {t('team.tokens.new')}
-                                        </h3>
-                                        <div className="flex flex-wrap gap-3">
-                                            <Field
-                                                label={t('team.tokens.name')}
-                                                htmlFor="token-name"
-                                                error={errors.name}
-                                                className="min-w-0 flex-[2_1_220px]"
-                                            >
-                                                <Input
-                                                    id="token-name"
-                                                    name="name"
-                                                    required
-                                                    maxLength={100}
-                                                    className="font-mono"
-                                                    placeholder="claude-local"
-                                                    autoComplete="off"
-                                                />
-                                            </Field>
-                                            <Field
-                                                label={t('team.tokens.expires')}
-                                                htmlFor="token-expires"
-                                                error={errors.expires_in_days}
-                                                className="flex-[1_1_160px]"
-                                            >
-                                                <Select
-                                                    id="token-expires"
-                                                    name="expires_in_days"
-                                                    defaultValue="90"
-                                                >
-                                                    {['30', '90', '365'].map(
-                                                        (days) => (
-                                                            <option
-                                                                key={days}
-                                                                value={days}
-                                                            >
-                                                                {t(
-                                                                    'team.tokens.expires_in',
-                                                                    {
-                                                                        count: Number(
-                                                                            days,
-                                                                        ),
-                                                                    },
-                                                                    Number(
-                                                                        days,
-                                                                    ),
-                                                                )}
-                                                            </option>
-                                                        ),
-                                                    )}
-                                                    <option value="">
-                                                        {t('team.tokens.never')}
-                                                    </option>
-                                                </Select>
-                                            </Field>
-                                        </div>
-                                        <fieldset className="flex flex-col gap-2">
-                                            <legend className="mb-1.5 text-[13px] font-medium">
-                                                {t('team.tokens.projects')}
-                                            </legend>
-                                            {team.projects.length === 0 ? (
-                                                <p className="text-xs text-ink-3">
-                                                    {t(
-                                                        'team.tokens.no_projects',
-                                                    )}
-                                                </p>
-                                            ) : (
-                                                <div className="flex flex-wrap gap-x-5 gap-y-2">
-                                                    {team.projects.map(
-                                                        (project) => (
-                                                            <label
-                                                                key={
-                                                                    project.uuid
-                                                                }
-                                                                className="inline-flex items-center gap-2 pointer-coarse:min-h-10"
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    name="projects[]"
-                                                                    value={
-                                                                        project.uuid
-                                                                    }
-                                                                    className="size-4 accent-amber"
-                                                                />
-                                                                <span className="font-mono text-xs">
-                                                                    {
-                                                                        project.name
-                                                                    }
-                                                                </span>
-                                                            </label>
-                                                        ),
-                                                    )}
-                                                </div>
-                                            )}
-                                            {firstError(errors, 'projects') && (
-                                                <p className="text-xs text-err">
-                                                    {firstError(
-                                                        errors,
-                                                        'projects',
-                                                    )}
-                                                </p>
-                                            )}
-                                        </fieldset>
-                                        <fieldset className="flex flex-col gap-2">
-                                            <legend className="mb-1.5 text-[13px] font-medium">
-                                                {t('team.tokens.scope')}
-                                            </legend>
-                                            {scopes.map((scope) => (
-                                                <label
-                                                    key={scope}
-                                                    className="inline-flex items-center gap-2 pointer-coarse:min-h-10"
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name="scope"
-                                                        value={scope}
-                                                        defaultChecked={
-                                                            scope === 'read'
-                                                        }
-                                                        className="size-4 accent-amber"
-                                                    />
-                                                    <span>
-                                                        <span className="font-mono text-xs">
-                                                            {scope}
-                                                        </span>
-                                                        :{' '}
-                                                        {t(
-                                                            `team.tokens.scope_hints.${scope}`,
-                                                        )}
-                                                    </span>
-                                                </label>
-                                            ))}
-                                            {errors.scope && (
-                                                <p className="text-xs text-err">
-                                                    {errors.scope}
-                                                </p>
-                                            )}
-                                        </fieldset>
-                                        <label className="inline-flex items-center gap-2 pointer-coarse:min-h-10">
-                                            <input
-                                                type="checkbox"
-                                                name="can_design_screens"
-                                                value="1"
-                                                className="size-4 accent-amber"
-                                            />
-                                            <span>
-                                                <span className="font-medium">
-                                                    {t(
-                                                        'team.tokens.can_design_screens',
-                                                    )}
-                                                </span>
-                                                :{' '}
-                                                {t(
-                                                    'team.tokens.can_design_screens_hint',
-                                                )}
-                                            </span>
-                                        </label>
-                                        <div>
-                                            <Button
-                                                type="submit"
-                                                variant="primary"
-                                                disabled={processing}
-                                            >
-                                                {t('team.tokens.create')}
-                                            </Button>
-                                        </div>
-                                    </>
+                            <div className="border-t border-line pt-4">
+                                <Button
+                                    type="button"
+                                    variant="primary"
+                                    onClick={() => setEditing('new')}
+                                    disabled={team.projects.length === 0}
+                                >
+                                    {t('team.tokens.new')}
+                                </Button>
+                                {team.projects.length === 0 && (
+                                    <p className="mt-2 text-xs text-ink-3">
+                                        {t('team.tokens.no_projects')}
+                                    </p>
                                 )}
-                            </Form>
+                            </div>
+                        )}
+                        {editing !== null && (
+                            <McpTokenEditor
+                                key={editing === 'new' ? 'new' : editing.id}
+                                open
+                                onClose={() => setEditing(null)}
+                                catalog={mcp_catalog}
+                                projects={team.projects}
+                                token={editing === 'new' ? null : editing}
+                            />
                         )}
                     </div>
                 </Card>

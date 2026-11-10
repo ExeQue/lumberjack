@@ -88,9 +88,9 @@ environment label. Only team owners and admins add, edit, archive and delete che
 
 | Type          | Fields (default)                                                                                                                                                      |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| HTTP          | URL, method (GET, HEAD or POST; GET), expected status (200), body contains, JSON path and JSON value, warn when slower than (1 to 60,000 ms), timeout (1 to 30 s; 10) |
+| HTTP          | URL, method (GET, HEAD or POST; GET), expected status (200), body contains, JSON path and JSON value, warn when slower than (1 to 60,000 ms), timeout (1 to 15 s; 10) |
 | SSL           | Host, port (443), warn days before expiry (14), fail days before expiry (3)                                                                                           |
-| TCP           | Host, port, timeout (1 to 30 s; 5)                                                                                                                                    |
+| TCP           | Host, port, timeout (1 to 15 s; 5)                                                                                                                                    |
 | DNS           | Name, record type (A, AAAA, CNAME, MX, TXT; A), expected value                                                                                                        |
 | Heartbeat     | Grace (0 to 1,440 minutes; 5)                                                                                                                                         |
 | Domain expiry | Domain, warn days before expiry (30), fail days before expiry (7)                                                                                                     |

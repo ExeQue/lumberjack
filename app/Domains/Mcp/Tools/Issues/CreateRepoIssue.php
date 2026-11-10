@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Tools\Issues;
 
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesMcpContext;
 use App\Domains\Repositories\Actions\CreateRepoIssueAction;
 use App\Domains\Repositories\Exceptions\RepositoryExceptionInterface;
@@ -12,15 +15,18 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
+use Laravel\Mcp\Server\Tools\Annotations\IsOpenWorld;
 
 #[IsIdempotent]
+#[RequiresPermission(McpArea::Issues, McpLevel::Write)]
+#[IsOpenWorld]
 class CreateRepoIssue extends Tool
 {
     use UsesMcpContext;
 
     protected string $name = 'create_repo_issue';
 
-    protected string $description = 'Creates an issue in the project\'s linked repository (GitHub) with your title and body; Lumberjack adds the stacktrace, environment, occurrence count and a link back. Idempotent: an issue that already has one returns its URL. Needs the write scope.';
+    protected string $description = 'Creates an issue in the project\'s linked repository (GitHub) with your title and body; Lumberjack adds the stacktrace, environment, occurrence count and a link back. Idempotent: an issue that already has one returns its URL.';
 
     public function __construct(private readonly CreateRepoIssueAction $action)
     {
@@ -37,9 +43,6 @@ class CreateRepoIssue extends Tool
 
     public function handle(Request $request): Response
     {
-        if ($denied = $this->denyUnlessWrite()) {
-            return $denied;
-        }
 
         $issue = $this->issue($request, 'update');
 

@@ -78,6 +78,7 @@ class MetricsApiController
     public function issues(ReadMetricsRequest $request, string $project, MetricsTablesQuery $tables): JsonResponse
     {
         $project = $this->project($project);
+        abort_unless($this->credential->readsIssues($project), 403, 'This token may not read issues in this project.');
 
         return response()->json($this->credential->remember(
             'issues',

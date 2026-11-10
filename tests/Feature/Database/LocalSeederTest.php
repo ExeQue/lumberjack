@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domains\Alerts\Enums\AlertRuleType;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Projects\Models\Project;
 use App\Models\User;
@@ -46,7 +48,7 @@ describe('the local seed', function () {
             $token = McpToken::query()->where('token_hash', McpToken::hash($agent['token']))->sole();
 
             expect($token->name)->toBe($agent['name'])
-                ->and($token->canWrite())->toBe($agent['write'])
+                ->and($token->permissions->level(McpArea::Issues) === McpLevel::Write)->toBe($agent['write'])
                 ->and($token->projects()->pluck('slug')->all())->toBe(['demo']);
         }
     });

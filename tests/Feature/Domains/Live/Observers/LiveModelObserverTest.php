@@ -16,7 +16,8 @@ use App\Domains\Issues\Enums\LabelColor;
 use App\Domains\Issues\Models\Label;
 use App\Domains\Live\Observers\LiveModelObserver;
 use App\Domains\Mcp\Actions\CreateMcpTokenAction;
-use App\Domains\Mcp\Enums\McpScope;
+use App\Domains\Mcp\Data\McpPermissions;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Projects\Actions\UpdateProjectAction;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Retention\Actions\SaveRetentionPolicyAction;
@@ -80,7 +81,7 @@ describe('team pages', function () {
 
     it('announces a new MCP token', function () {
         $this->listenForBroadcasts();
-        app(CreateMcpTokenAction::class)->execute($this->team, $this->owner, 'CI', McpScope::cases()[0], [], null);
+        app(CreateMcpTokenAction::class)->execute($this->team, $this->owner, 'CI', false, [], McpPermissions::everywhere(McpLevel::Read), null);
 
         expect($this->broadcasts())->toBe([$this->channel.' tokens.changed']);
     });

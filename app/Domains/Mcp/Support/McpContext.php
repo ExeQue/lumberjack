@@ -38,15 +38,18 @@ class McpContext
         return $this->projects ?? new Collection();
     }
 
-    /**
-     * The named project, or the only one when the token covers exactly one.
-     */
-    public function project(?string $slug): ?Project
+    public function isAuthenticated(): bool
     {
-        if ($slug === null || $slug === '') {
-            return $this->projects()->count() === 1 ? $this->projects()->first() : null;
-        }
+        return $this->token !== null;
+    }
 
-        return $this->projects()->first(fn (Project $p): bool => $p->slug === $slug || $p->uuid === $slug);
+    /**
+     * The token's projects in which it may use the tool.
+     *
+     * @return Collection<int, Project>
+     */
+    public function projectsFor(string $tool): Collection
+    {
+        return $this->projects()->filter(fn (Project $project): bool => $this->token()->permits($tool, $project))->values();
     }
 }

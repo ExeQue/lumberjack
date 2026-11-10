@@ -4,6 +4,19 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- MCP tokens get a permission per area (issues, telemetry, health checks, scheduled tasks, alerts, data sources, screens, project settings, team) at None, Read, Write or Manage, with presets, single tools turned on or off, and changes per project.
+- A token can cover all projects, including ones created later.
+- Tokens can be edited without making a new one.
+- 55 new MCP tools: set up health checks, alert rules, data sources and project settings, manage labels and bulk-change issues, read releases, browser errors, queues, hosts and metric series, and manage screens and displays. `list_my_permissions` tells an agent what its token may do where.
+
+### Changed
+
+- The token's read or write scope and **Can design screens** are replaced by permissions. Existing tokens keep what they could do.
+- The metrics API reads only the projects where the token reads telemetry.
+- Agents only see the MCP tools their token may use.
+
 ## [0.4.1] - 2026-11-09
 
 ### Added

@@ -24,6 +24,16 @@ class StoreLogChannelRequest extends FormRequest
         /** @var Project $project */
         $project = $this->route('project');
 
+        return self::rulesFor($project);
+    }
+
+    /**
+     * Also used by MCP's create_log_channel.
+     *
+     * @return array<string, mixed>
+     */
+    public static function rulesFor(Project $project): array
+    {
         return [
             'name' => [
                 'required', 'string', 'max:64', 'regex:'.LogChannel::NAME_PATTERN, Rule::notIn([LogChannel::DEFAULT]),

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domains\Mcp\Enums\McpScope;
+use App\Domains\Mcp\Data\McpAreaGrant;
+use App\Domains\Mcp\Data\McpPermissions;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Domains\Teams\Models\Team;
@@ -24,7 +27,8 @@ class McpTokenFactory extends Factory
             'user_id' => User::factory(),
             'name' => 'claude-local',
             'token_hash' => McpToken::hash('lj_mcp_'.Str::random(32)),
-            'scope' => McpScope::Write,
+            // Read everything, change issues: what the old write scope allowed.
+            'permissions' => McpPermissions::everywhere(McpLevel::Read)->with(McpArea::Issues, new McpAreaGrant(McpLevel::Write)),
         ];
     }
 
@@ -47,11 +51,27 @@ class McpTokenFactory extends Factory
 
     public function designsScreens(): static
     {
-        return $this->state(fn () => ['can_design_screens' => true]);
+        return $this->allowing(McpArea::Screens, McpLevel::Write);
     }
 
     public function readOnly(): static
     {
-        return $this->state(fn () => ['scope' => McpScope::Read]);
+        return $this->state(fn () => ['permissions' => McpPermissions::everywhere(McpLevel::Read)]);
+    }
+
+    public function allProjects(): static
+    {
+        return $this->state(fn () => ['all_projects' => true]);
+    }
+
+    /**
+     * @param  list<string>  $grant
+     * @param  list<string>  $deny
+     */
+    public function allowing(McpArea $area, McpLevel $level, array $grant = [], array $deny = []): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'permissions' => ($attributes['permissions'] ?? McpPermissions::everywhere(McpLevel::Read))->with($area, new McpAreaGrant($level, $grant, $deny)),
+        ]);
     }
 }

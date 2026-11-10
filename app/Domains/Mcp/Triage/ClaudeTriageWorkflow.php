@@ -102,7 +102,7 @@ final class ClaudeTriageWorkflow
 # Pull requests opened with the workflow's own token do not start other workflows,
 # so CI will not run on them until someone pushes to the branch or re-runs it.
 #
-# Secrets: {secret} (an MCP token with the write scope covering {slug})
+# Secrets: {secret} (an MCP token with issues: Write covering {slug})
 # and CLAUDE_CODE_OAUTH_TOKEN, which runs on your Claude subscription: create it
 # with `claude setup-token`. To pay per use instead, set ANTHROPIC_API_KEY and
 # swap the two lines in each step below.

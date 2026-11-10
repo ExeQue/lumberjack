@@ -6,25 +6,73 @@ can read issues and telemetry through it and help triage them.
 ## Tokens
 
 Team owners and admins create tokens under **API and MCP tokens** on the team page.
-Members see the list. The same tokens read the [metrics API](./metrics-api).
+Members see the list. The same tokens read the [metrics API](./metrics-api), in the
+projects where they read telemetry.
 
-| Field                  | Values                                                                                                                               |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Name**               | Up to 100 characters. Shown on everything the token does.                                                                            |
-| **Projects**           | The projects the token can see. At least one.                                                                                        |
-| **Scope**              | `read` only reads issues and telemetry. `write` can also change issues: status, assignee, labels, notes, watching and GitHub issues. |
-| **Can design screens** | Lets the token create and change status screens, live, whatever its **Scope**. Off by default.                                       |
-| **Expiry**             | 30, 90 or 365 days, or never.                                                                                                        |
+| Field           | Values                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Name**        | Up to 100 characters. Shown on everything the token does.                                                     |
+| **Projects**    | **All projects**, which includes projects created later, or **Selected projects**, at least one.              |
+| **Permissions** | A level per area, single tools added or taken away, and per-project changes. See [Permissions](#permissions). |
+| **Expiry**      | 30, 90 or 365 days, or never.                                                                                 |
 
-The token, `lj_mcp_...`, is shown once. The list shows who created each token and when
-it was last used, and **Revoke**s it.
+The token, `lj_mcp_...`, is shown once. The list shows who created each token, how many
+tools it reaches and when it was last used. **Edit** changes its name, projects and
+permissions without changing the token itself, and makes it act as the editor; **Revoke** ends it.
 
-- A token acts as the person who created it. It sees and changes only what that person
-  may see and change, within its projects and its team.
+- A token acts as the person who created it, or who last edited it. It sees and changes only what that person
+  may see and change, within its projects and its team. Its permissions only narrow that,
+  never widen it.
 - A token works only while its creator is an owner or admin of the team. When they
   leave the team, become a member, are suspended or are deleted, the token stops and
   shows as **Stopped**; a current admin has to create a new one.
 - A token makes at most 120 calls a minute.
+
+### Permissions
+
+Each area gets a level: **None**, **Read**, **Write** or **Manage**. A level includes the
+ones before it. Some areas offer fewer: telemetry and team are read only, scheduled tasks
+skip Write.
+
+| Area             | Key            | Covers                                                       |
+| ---------------- | -------------- | ------------------------------------------------------------ |
+| Issues           | `issues`       | Triage, status, labels, assignees, notes, GitHub issues.     |
+| Telemetry        | `telemetry`    | Traces, requests, queries, jobs, logs, releases and metrics. |
+| Health checks    | `health`       | Checks Lumberjack runs and those the app reports.            |
+| Scheduled tasks  | `schedule`     | Tasks the app reports.                                       |
+| Alerts           | `alerts`       | Alert rules, topics, queue thresholds. Team-wide.            |
+| Data sources     | `data_sources` | Pulled sources and app connections.                          |
+| Screens          | `screens`      | Screens, versions, displays and sharing. Team-wide.          |
+| Project settings | `project`      | Name, environments, log channels, retention, public stats.   |
+| Team             | `team`         | The members, for assigning and mentions. Team-wide.          |
+
+- **Presets** set every area at once: Read only (the default), Triage, Monitoring setup,
+  Screen designer and Everything.
+- **Tools** under an area turn single tools on or off beyond its level. A tool taken away
+  stays away when that tab's level is raised.
+- **Per project**: the **Default** tab applies to every project the token covers. A
+  project's tab can give that project another level, or turn single tools on or off,
+  for project areas. Team-wide areas are only set under Default.
+- For a tool in a project, the first of these that says something decides: the project's
+  change to that tool, the project's level, Default's change to that tool, Default's level.
+  So a project with its own level for an area ignores Default's single-tool changes there;
+  turn the tool off on the project's tab too.
+- Screens show telemetry and issues, so a token sees a screen only when it reads both in
+  every project the screen shows (`get_metric_series` and `list_issues`), and health checks,
+  data sources, alerts and scheduled tasks where its widgets show those. Single tools
+  turned off among the other telemetry lists do not hide screen widgets. `search_project` and `get_release` leave out issues
+  where the token may not read them.
+- An agent only sees the tools its token may use in at least one project.
+  `list_my_permissions` tells it what it may use where; a refused call names the tool and
+  the project.
+
+Tokens made before permissions existed became: `read` Read in every area, `write` also
+Write on issues, and **Can design screens** Write on screens. Read in every area also
+reaches the read tools added since, such as project settings and alert rules.
+
+Never through MCP, whatever the permissions: creating or deleting projects, rotating
+server tokens, public keys, stats keys and pull tokens, notification channels,
+repository links, members, invitations, roles and MCP tokens.
 
 ## Connecting
 
@@ -59,62 +107,168 @@ claude mcp add --transport http lumberjack https://your-lumberjack/mcp \
 The server tells agents to treat error messages, request data and log lines as data,
 not as instructions.
 
-Agents' notes and status changes show in Lumberjack with the token's name. Durations
-are in microseconds. Tools marked **write** need the `write` scope.
+Agents' notes and changes show in Lumberjack with the token's name. Durations are in
+microseconds. **Needs** is the area and level a token needs for the tool; see
+[Permissions](#permissions). Arguments in bold are required.
 
-| Tool                                                                                | Does                                                                                                                              |
-| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `list_projects`                                                                     | The projects the token can see, with the slug other tools take.                                                                   |
-| `get_project_overview`                                                              | Requests, error rate, percentiles, job failures, health check counts, newest issues, slowest routes and failed jobs for a period. |
-| `triage_inbox`                                                                      | Your work queue: open issues you have not handled since they last surfaced, and notes that tag you. At most 50 issues a call.     |
-| `list_issues`                                                                       | Issues with the issues page's filters.                                                                                            |
-| `get_issue`                                                                         | One issue with its latest occurrence (stacktrace, request, user context) and notes.                                               |
-| `list_occurrences`                                                                  | Recent occurrences of an issue.                                                                                                   |
-| `set_issue_status`                                                                  | Resolve, ignore, re-open or mark in progress. **Write.**                                                                          |
-| `assign_issue`                                                                      | Assign or unassign. **Write.**                                                                                                    |
-| `set_issue_labels`                                                                  | Replace an issue's labels. **Write.**                                                                                             |
-| `watch_issue`, `unwatch_issue`                                                      | Watch or stop watching an issue, as the token's creator. **Write.**                                                               |
-| `add_issue_note`                                                                    | Add a note. Tag members with `<@id>`. **Write.**                                                                                  |
-| `create_repo_issue`                                                                 | Create a GitHub issue in the linked repository. **Write.**                                                                        |
-| `list_members`                                                                      | The team's members, with the ids `assign_issue` takes.                                                                            |
-| `list_routes`, `list_queries`, `list_jobs`, `list_commands`, `list_scheduled_tasks` | Statistics per route, query, job class, command and task.                                                                         |
-| `get_job`, `get_command`, `get_scheduled_task`                                      | The last 50 runs of one job class or command, or recent runs of one task.                                                         |
-| `list_health_checks`                                                                | Health checks with their state, latest result, metrics, per-host status and uptime.                                               |
-| `get_trace`                                                                         | Everything recorded under one trace id, in time order.                                                                            |
-| `search_logs`                                                                       | Log lines by channel, level, text, period and trace id, newest first.                                                             |
+### Always available
+
+| Tool                  | Needs     | Does                                | Arguments |
+| --------------------- | --------- | ----------------------------------- | --------- |
+| `list_projects`       | any token | Projects the token can see.         | none      |
+| `list_my_permissions` | any token | What the token may do, per project. | none      |
+
+### Issues
+
+| Tool                 | Needs            | Does                                                         | Arguments                                                                             |
+| -------------------- | ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `triage_inbox`       | `issues: read`   | What needs attention across the token's projects.            | none                                                                                  |
+| `list_issues`        | `issues: read`   | Filter and page issues.                                      | `project`, `status`, `source`, `search`, `label`, `sort`, `limit`                     |
+| `get_issue`          | `issues: read`   | One issue with stack, context and timeline.                  | **`issue`**                                                                           |
+| `list_occurrences`   | `issues: read`   | Occurrences of an issue.                                     | **`issue`**, `limit`                                                                  |
+| `set_issue_status`   | `issues: write`  | Resolve, ignore, reopen.                                     | **`issue`**, **`status`**, `note`, `until`                                            |
+| `set_issue_labels`   | `issues: write`  | Set labels on an issue.                                      | **`issue`**, **`labels`**                                                             |
+| `assign_issue`       | `issues: write`  | Assign to a member.                                          | **`issue`**, `user_id`                                                                |
+| `watch_issue`        | `issues: write`  | Watch an issue.                                              | **`issue`**                                                                           |
+| `unwatch_issue`      | `issues: write`  | Stop watching an issue.                                      | **`issue`**                                                                           |
+| `add_issue_note`     | `issues: write`  | Add a note, with mentions.                                   | **`issue`**, **`body`**                                                               |
+| `create_repo_issue`  | `issues: write`  | Open a GitHub issue from an issue. Sends outside Lumberjack. | **`issue`**, `title`, `body`                                                          |
+| `list_labels`        | `issues: read`   | The project's labels.                                        | `project`                                                                             |
+| `bulk_update_issues` | `issues: write`  | Status, assignee or label on many issues.                    | `project`, **`issues`**, `status`, `user_id`, `unassign`, `add_label`, `remove_label` |
+| `update_label`       | `issues: manage` | Rename or recolor a label.                                   | `project`, **`label_id`**, **`name`**, **`color`**                                    |
+| `delete_label`       | `issues: manage` | Delete a label. Deletes.                                     | `project`, **`label_id`**                                                             |
+
+### Telemetry
+
+| Tool                  | Needs             | Does                         | Arguments                                                                                                                                          |
+| --------------------- | ----------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_trace`           | `telemetry: read` | One trace with spans.        | `project`, **`trace_id`**                                                                                                                          |
+| `list_routes`         | `telemetry: read` | Routes with timings.         | `project`, `period`, `environment`, `sort`, `search`                                                                                               |
+| `list_queries`        | `telemetry: read` | Slow and frequent queries.   | `project`, `period`, `environment`, `sort`, `search`                                                                                               |
+| `list_jobs`           | `telemetry: read` | Jobs and failures.           | `project`, `period`, `environment`, `queue`, `sort`                                                                                                |
+| `get_job`             | `telemetry: read` | One job run.                 | `project`, **`name`**, `uuid`, `status`                                                                                                            |
+| `list_commands`       | `telemetry: read` | Artisan command runs.        | `project`, `period`, `environment`                                                                                                                 |
+| `get_command`         | `telemetry: read` | One command run.             | `project`, **`name`**, `status`                                                                                                                    |
+| `search_logs`         | `telemetry: read` | Search log lines.            | `project`, `channel`, `level`, `search`, `trace_id`, `period`, `limit`                                                                             |
+| `list_browser_errors` | `telemetry: read` | Frontend errors.             | `project`, `period`, `environment`, `limit`                                                                                                        |
+| `list_releases`       | `telemetry: read` | Releases with health.        | `project`, `period`, `environment`, `limit`                                                                                                        |
+| `get_release`         | `telemetry: read` | One release with its issues. | `project`, **`release`**, `period`, `environment`                                                                                                  |
+| `get_metric_series`   | `telemetry: read` | A metric over time.          | `project`, **`metric`**, `from`, `to`, `interval`, `environment`, `route`, `domain`, `queue`, `job`, `host`, `release`, `check`, `group_by`, `top` |
+| `list_queues`         | `telemetry: read` | Queue depth and wait.        | `project`, `period`, `environment`                                                                                                                 |
+| `list_hosts`          | `telemetry: read` | Hosts and their load.        | `project`                                                                                                                                          |
+| `search_project`      | `telemetry: read` | Search a project.            | `project`, **`q`**                                                                                                                                 |
+
+### Health checks
+
+| Tool                   | Needs            | Does                                     | Arguments                                                                                                                                              |
+| ---------------------- | ---------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `list_health_checks`   | `health: read`   | Checks with state and uptime.            | `project`, `period`, `environment`, `attention`                                                                                                        |
+| `get_health_check`     | `health: read`   | One check with settings and results.     | `project`, **`check`**                                                                                                                                 |
+| `create_health_check`  | `health: write`  | Add a check Lumberjack runs.             | `project`, **`type`**, `name`, `description`, `environment`, **`interval_minutes`**, `degrade_after`, `down_after`, `recover_after`, `muted`, `config` |
+| `update_health_check`  | `health: write`  | Change a check.                          | `project`, **`check`**, `name`, `description`, `environment`, `interval_minutes`, `degrade_after`, `down_after`, `recover_after`, `muted`, `config`    |
+| `run_health_check`     | `health: write`  | Run a check now.                         | `project`, **`check`**                                                                                                                                 |
+| `archive_health_check` | `health: write`  | Archive or unarchive a check.            | `project`, **`check`**, **`archived`**                                                                                                                 |
+| `delete_health_check`  | `health: manage` | Delete a check and its history. Deletes. | `project`, **`check`**                                                                                                                                 |
+
+### Scheduled tasks
+
+| Tool                    | Needs              | Does                                 | Arguments                             |
+| ----------------------- | ------------------ | ------------------------------------ | ------------------------------------- |
+| `list_scheduled_tasks`  | `schedule: read`   | Tasks with last run and state.       | `project`, `environment`, `attention` |
+| `get_scheduled_task`    | `schedule: read`   | One task with its runs.              | `project`, **`name`**, `environment`  |
+| `delete_scheduled_task` | `schedule: manage` | Forget a task and its runs. Deletes. | `project`, **`name`**, `environment`  |
+
+### Alerts
+
+| Tool                         | Needs            | Does                                           | Arguments                                                                                                                    |
+| ---------------------------- | ---------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `list_alert_rules`           | `alerts: read`   | Team rules and a project's overrides.          | `project`                                                                                                                    |
+| `list_notification_channels` | `alerts: read`   | Channels and what sends to them.               | `project`                                                                                                                    |
+| `list_alert_topics`          | `alerts: read`   | Custom alert topics.                           | none                                                                                                                         |
+| `update_alert_rule`          | `alerts: write`  | Customize a rule for a project.                | `project`, **`type`**, `topic`, **`enabled`**, **`channels`**, `environments`, `settings`                                    |
+| `reset_alert_rule`           | `alerts: write`  | Back to the team's rule.                       | `project`, **`type`**, `topic`                                                                                               |
+| `set_alert_rule_add_ons`     | `alerts: write`  | Add channels to a team rule.                   | `project`, **`type`**, `topic`, **`channels`**                                                                               |
+| `set_queue_alert_threshold`  | `alerts: write`  | Thresholds for one queue.                      | `project`, **`connection`**, **`queue`**, `size`, `oldest_minutes`, `sustained_minutes`, **`muted`**                         |
+| `create_alert_topic`         | `alerts: write`  | New custom alert topic.                        | **`name`**                                                                                                                   |
+| `send_project_alert`         | `alerts: write`  | Send a custom alert. Sends outside Lumberjack. | `project`, **`title`**, `message`, `level`, `topic`, `environment`, `url`, `fields`, `links`, `dedupe_key`, `dedupe_minutes` |
+| `send_test_alert`            | `alerts: write`  | Test a channel. Sends outside Lumberjack.      | **`channel`**                                                                                                                |
+| `update_team_alert_rule`     | `alerts: manage` | Change a team rule.                            | **`type`**, `topic`, **`enabled`**, **`channels`**, `environments`, `settings`                                               |
+| `delete_alert_topic`         | `alerts: manage` | Delete a custom alert topic. Deletes.          | **`topic`**                                                                                                                  |
+
+### Data sources
+
+| Tool                            | Needs                  | Does                                  | Arguments                                                                                          |
+| ------------------------------- | ---------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `list_data_sources`             | `data_sources: read`   | Sources with group and last fetch.    | none                                                                                               |
+| `preview_data_source`           | `data_sources: read`   | Latest answer and readable paths.     | `project`, **`data_source`**, `type`, `path`, `label_path`, `value_path`                           |
+| `list_data_source_connections`  | `data_sources: read`   | Connected apps and their status.      | `project`                                                                                          |
+| `create_data_source`            | `data_sources: write`  | Add a fetched source.                 | `project`, **`name`**, **`url`**, **`format`**, **`interval_minutes`**, **`timeout_s`**, `headers` |
+| `update_data_source`            | `data_sources: write`  | Change a fetched source.              | `project`, **`data_source`**, `name`, `url`, `format`, `interval_minutes`, `timeout_s`, `headers`  |
+| `fetch_data_source`             | `data_sources: write`  | Fetch a source now.                   | `project`, **`data_source`**                                                                       |
+| `create_data_source_connection` | `data_sources: manage` | Connect an app.                       | `project`, **`environment`**, **`url`**, `timezone`                                                |
+| `update_data_source_connection` | `data_sources: manage` | Change an app's address or time zone. | `project`, **`connection`**, `url`, `timezone`                                                     |
+| `delete_data_source`            | `data_sources: manage` | Delete a source. Deletes.             | `project`, **`data_source`**                                                                       |
+| `delete_data_source_connection` | `data_sources: manage` | Disconnect an app. Deletes.           | `project`, **`connection`**                                                                        |
 
 ### Screens
 
-An agent reads `get_screen_design_guide` first. Reading works with any token, on screens
-that show only projects the token covers. Changing needs **Can design screens**, and a
-change may not make a screen show projects outside the token. A screen with a Wi-Fi
-password or a media widget needs a token covering every project of the team. Agents cannot delete
-screens or manage share links and TVs.
+| Tool                      | Needs             | Does                                     | Arguments                                                                                                                                                                 |
+| ------------------------- | ----------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_screens`            | `screens: read`   | Screens in the team.                     | none                                                                                                                                                                      |
+| `get_screen`              | `screens: read`   | Layout and widgets.                      | **`screen`**                                                                                                                                                              |
+| `list_widget_types`       | `screens: read`   | Widgets and their options.               | `type`                                                                                                                                                                    |
+| `get_screen_data`         | `screens: read`   | Widget data as shown.                    | **`screen`**, `widget`                                                                                                                                                    |
+| `list_screen_versions`    | `screens: read`   | Saved versions.                          | **`screen`**                                                                                                                                                              |
+| `preview_screen`          | `screens: read`   | Signed preview link.                     | **`screen`**                                                                                                                                                              |
+| `get_screen_design_guide` | `screens: read`   | Design guide for agents.                 | none                                                                                                                                                                      |
+| `create_screen`           | `screens: write`  | New screen.                              | **`name`**, `template`                                                                                                                                                    |
+| `update_screen`           | `screens: write`  | Name, theme, settings.                   | **`screen`**, **`revision`**, `name`, `theme`, `aspect`, `orientation`, `fit`, `show_header`, `show_clock`, `clock_format`, `light_from`, `light_to`, `timezone`, `scope` |
+| `update_screen_layout`    | `screens: write`  | Grid layout.                             | **`screen`**, **`revision`**, **`cols`**, **`rows`**, **`widgets`**                                                                                                       |
+| `update_screen_widget`    | `screens: write`  | One widget.                              | **`screen`**, **`revision`**, **`id`**, **`widget`**                                                                                                                      |
+| `restore_screen_version`  | `screens: write`  | Restore a version.                       | **`screen`**, **`revision`**, **`version`**                                                                                                                               |
+| `export_screen`           | `screens: read`   | Screen as a file.                        | **`screen`**                                                                                                                                                              |
+| `list_displays`           | `screens: read`   | Paired displays.                         | none                                                                                                                                                                      |
+| `list_screen_viewers`     | `screens: read`   | Who has it open.                         | **`screen`**                                                                                                                                                              |
+| `duplicate_screen`        | `screens: write`  | Copy a screen.                           | **`screen`**                                                                                                                                                              |
+| `reload_screen`           | `screens: write`  | Reload its TVs.                          | **`screen`**                                                                                                                                                              |
+| `import_screen`           | `screens: manage` | Screen from a file.                      | **`json`**                                                                                                                                                                |
+| `assign_display`          | `screens: manage` | What a display shows.                    | **`display`**, **`screen`**                                                                                                                                               |
+| `set_screen_share`        | `screens: manage` | Public share link. Can make data public. | **`screen`**, **`enabled`**, `include_titles`                                                                                                                             |
+| `delete_screen`           | `screens: manage` | Delete a screen. Deletes.                | **`screen`**                                                                                                                                                              |
 
-| Tool                         | What it does                                                                                  |
-| ---------------------------- | --------------------------------------------------------------------------------------------- |
-| `get_screen_design_guide`    | How the grid, widgets, data sources, revisions and previews work.                             |
-| `list_screens`, `get_screen` | Screens and one screen's settings, widgets and `revision`.                                    |
-| `list_widget_types`          | Widget types and sources; with `type`, its option fields.                                     |
-| `list_data_sources`          | Data sources and where they come from: project, connected app or endpoint, host, last answer. |
-| `get_screen_data`            | What the screen shows now. `pending: true` while a connected source has not answered yet.     |
-| `preview_screen`             | A link showing the screen as on a TV, without signing in. It expires after 5 minutes.         |
-| `list_screen_versions`       | The versions the screen can go back to.                                                       |
-| `create_screen`              | A new screen, blank or from a template. **Design.**                                           |
-| `update_screen`              | The screen's settings. **Design.**                                                            |
-| `update_screen_layout`       | The grid and all widgets. **Design.**                                                         |
-| `update_screen_widget`       | One widget. **Design.**                                                                       |
-| `restore_screen_version`     | Back to a version. **Design.**                                                                |
+### Project settings
 
-Changes need the `revision` they were based on, and are refused if the screen changed in
-the meantime. A preview stops working when its token does, or no longer covers the screen.
+| Tool                    | Needs             | Does                                               | Arguments                                                                  |
+| ----------------------- | ----------------- | -------------------------------------------------- | -------------------------------------------------------------------------- |
+| `get_project_overview`  | `project: read`   | Health of the project at a glance.                 | `project`, `period`, `environment`                                         |
+| `get_project_settings`  | `project: read`   | Settings without secrets.                          | `project`                                                                  |
+| `update_project`        | `project: write`  | Name, slug, prefix, origins, scrubbed keys.        | `project`, `name`, `slug`, `issue_prefix`, `allowed_origins`, `scrub_keys` |
+| `create_log_channel`    | `project: write`  | Add a log channel.                                 | `project`, **`name`**                                                      |
+| `delete_log_channel`    | `project: manage` | Delete a log channel and its lines. Deletes.       | `project`, **`channel_id`**                                                |
+| `set_project_retention` | `project: manage` | Days kept per data type. Deletes.                  | `project`, `days`, `forever`, `channels`                                   |
+| `set_public_stats`      | `project: manage` | Public stats link on or off. Can make data public. | `project`, **`enabled`**, `include_titles`                                 |
 
-### Arguments
+### Team
+
+| Tool           | Needs        | Does               | Arguments |
+| -------------- | ------------ | ------------------ | --------- |
+| `list_members` | `team: read` | Members and roles. | `project` |
+
+### About screens
+
+An agent reads `get_screen_design_guide` first. It sees only screens that show projects
+the token covers, and a change may not make a screen show projects outside the token. A
+screen with a Wi-Fi password or a media widget needs a token covering every project of
+the team. Changes need the `revision` they were based on, and are refused if the screen
+changed in the meantime. A preview stops working when its token does, or no longer
+covers the screen.
+
+### Argument details
 
 `project` is a project slug from `list_projects`. It is required only when the token
 covers more than one project. `issue` is an issue's number, such as `DEMO-42`, or its
 id. `period` is `1h`, `24h`, `7d` or `30d` (default `24h`). Arguments in bold are
-required.
+required. Every tool also describes its arguments to the agent itself.
 
 | Tool                   | Arguments                                                                                                                                                                                                                                                                           |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -158,7 +312,7 @@ body, and links it in its note or comment. It never pushes to the default branch
 merges. CI does not start on these pull requests by itself: push to the branch or re-run
 CI.
 
-1. Create a token with the write scope that covers the project.
+1. Create a token with the **Triage** preset (issues: Write) that covers the project.
 2. Add the secrets to the GitHub repository: `LUMBERJACK_MCP_TOKEN` (the token) and
    `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`, using your Claude
    subscription). To pay per use instead, swap the commented lines for

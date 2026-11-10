@@ -6,6 +6,7 @@ namespace App\Domains\Issues\Actions;
 
 use App\Domains\Issues\Data\IssueAssignment;
 use App\Domains\Issues\Models\Issue;
+use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Projects\Models\Project;
 use App\Models\User;
 
@@ -24,7 +25,7 @@ class BulkAssignIssuesAction
      * @param  list<string>  $uuids
      * @return int issues it changed
      */
-    public function execute(Project $project, array $uuids, ?User $assignee, User $by): int
+    public function execute(Project $project, array $uuids, ?User $assignee, ?User $by = null, ?McpToken $token = null): int
     {
         $changes = [];
 
@@ -35,11 +36,11 @@ class BulkAssignIssuesAction
                 continue;
             }
 
-            $this->assign->execute($issue, $assignee, $by, announce: false);
+            $this->assign->execute($issue, $assignee, $by, $token, announce: false);
             $changes[] = new IssueAssignment($issue, $from, $assignee);
         }
 
-        $this->assign->announce($changes, $by);
+        $this->assign->announce($changes, $by, $token);
 
         return count($changes);
     }

@@ -27,9 +27,19 @@ trait TargetsSelectedIssues
     /** @return array<string, mixed> */
     protected function issueRules(): array
     {
+        return self::issueRulesFor($this->project());
+    }
+
+    /**
+     * The picked issues: up to 100 issue uuids, all in the project. MCP's bulk_update_issues reuses them.
+     *
+     * @return array<string, mixed>
+     */
+    public static function issueRulesFor(?Project $project): array
+    {
         return [
             'issues' => ['required', 'array', 'max:100'],
-            'issues.*' => ['uuid', Rule::exists('issues', 'uuid')->where('project_id', $this->project()?->id)],
+            'issues.*' => ['uuid', Rule::exists('issues', 'uuid')->where('project_id', $project?->id)],
         ];
     }
 

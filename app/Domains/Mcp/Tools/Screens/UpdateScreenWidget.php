@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Tools\Screens;
 
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesScreens;
 use App\Domains\Screens\Actions\UpdateScreenWidgetAction;
 use App\Domains\Screens\Support\WidgetSchema;
@@ -13,13 +16,14 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 
+#[RequiresPermission(McpArea::Screens, McpLevel::Write)]
 class UpdateScreenWidget extends Tool
 {
     use UsesScreens;
 
     protected string $name = 'update_screen_widget';
 
-    protected string $description = 'Changes one widget on its cells, live on every TV showing it; send the whole widget. Needs a token that may design screens.';
+    protected string $description = 'Changes one widget on its cells, live on every TV showing it; send the whole widget.';
 
     public function __construct(
         private readonly UpdateScreenWidgetAction $update,
@@ -38,9 +42,6 @@ class UpdateScreenWidget extends Tool
 
     public function handle(Request $request): Response
     {
-        if ($denied = $this->denyUnlessDesign()) {
-            return $denied;
-        }
 
         $screen = $this->screen($request, 'update');
 

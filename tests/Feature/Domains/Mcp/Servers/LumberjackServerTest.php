@@ -8,6 +8,8 @@ use App\Domains\Health\Enums\HealthResultStatus;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
+use App\Domains\Mcp\Data\McpPermissions;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Http\Middleware\AuthenticateMcpToken;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Mcp\Servers\LumberjackServer;
@@ -189,16 +191,16 @@ describe('write tools', function () {
     });
 
     it('refuses writes with a read token', function () {
-        $this->token->update(['scope' => 'read']);
+        $this->token->update(['permissions' => McpPermissions::everywhere(McpLevel::Read)]);
         $issue = Issue::factory()->for($this->project)->create();
 
-        $this->callTool('lj_mcp_secret', 'set_issue_status', ['issue' => $issue->uuid, 'status' => 'resolved'])
-            ->assertJsonPath('result.isError', true);
+        expect($this->wasRefused($this->callTool('lj_mcp_secret', 'set_issue_status', ['issue' => $issue->uuid, 'status' => 'resolved'])))->toBeTrue();
 
         expect($issue->refresh()->status)->toBe(IssueStatus::Open);
     });
 
     test('every tool of the server is registered', function () {
+        $this->token->update(['permissions' => McpPermissions::everywhere(McpLevel::Manage)]);
         $response = $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'], ['Authorization' => 'Bearer lj_mcp_secret', 'Accept' => 'application/json, text/event-stream']);
 
         expect($response->json('result.tools'))->toHaveCount(count(LumberjackServer::TOOLS));

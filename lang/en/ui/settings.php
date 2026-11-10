@@ -162,7 +162,7 @@ return [
     'triage' => [
         'title' => 'Automatic triage',
         'description' => 'An agent that triages new issues and answers notes that tag it, on a schedule in your repository, through Lumberjack\'s MCP server.',
-        'step_token' => 'Create an MCP token with the write scope that covers this project.',
+        'step_token' => 'Create an MCP token with the Triage preset (issues: Write) that covers this project.',
         'tokens_link' => 'MCP tokens',
         'step_secrets' => 'Add these secrets to the GitHub repository:',
         'step_workflow' => 'Commit this workflow as',

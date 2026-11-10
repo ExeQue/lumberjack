@@ -52,11 +52,22 @@ class SaveHealthCheckRequest extends FormRequest
      */
     public function rules(): array
     {
-        $reported = $this->check()?->isReported() ?? false;
+        return self::rulesFor($this->check(), $this->type());
+    }
+
+    /**
+     * The rules for adding a check of $type ($check null) or editing $check; shared with
+     * the MCP tools.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public static function rulesFor(?HealthCheck $check, ?HealthCheckType $type): array
+    {
+        $reported = $check?->isReported() ?? false;
         $thresholds = [$reported ? 'nullable' : 'required', 'integer', 'min:1', 'max:100'];
         $common = [
             // A heartbeat has no settings to take a name from.
-            'name' => [$this->type() === HealthCheckType::Heartbeat ? 'required' : 'nullable', 'string', 'max:150'],
+            'name' => [$type === HealthCheckType::Heartbeat ? 'required' : 'nullable', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:1000'],
             'degrade_after' => $thresholds,
             'recover_after' => $thresholds,
@@ -70,11 +81,11 @@ class SaveHealthCheckRequest extends FormRequest
 
         return [
             ...$common,
-            'type' => [$this->check() === null ? 'required' : 'nullable', Rule::enum(HealthCheckType::class)],
+            'type' => [$check === null ? 'required' : 'nullable', Rule::enum(HealthCheckType::class)],
             'environment' => ['nullable', 'string', 'max:64'],
             'interval_minutes' => ['required', 'integer', Rule::in(HealthCheck::INTERVALS)],
             'config' => ['nullable', 'array'],
-            ...$this->configRules(),
+            ...self::configRules($type),
         ];
     }
 
@@ -86,29 +97,41 @@ class SaveHealthCheckRequest extends FormRequest
      */
     public function after(): array
     {
-        return [function (Validator $validator): void {
-            $project = $this->route('project');
+        $project = $this->route('project');
+
+        return [self::limitsFor($project instanceof Project ? $project : null, $this->check())];
+    }
+
+    /**
+     * The checks rules() cannot express, for adding to $project ($check null) or editing $check.
+     *
+     * @return Closure(Validator): void
+     */
+    public static function limitsFor(?Project $project, ?HealthCheck $check): Closure
+    {
+        return function (Validator $validator) use ($project, $check): void {
             $max = (int) config('health.max_checks_per_project', 50);
 
-            if ($this->check() === null && $project instanceof Project && $project->healthChecks()->whereMonitored()->count() >= $max) {
+            if ($check === null && $project !== null && $project->healthChecks()->whereMonitored()->count() >= $max) {
                 $validator->errors()->add('type', __('health.too_many_checks', ['max' => $max]));
             }
 
-            $down = $this->input('down_after');
-            $degrade = $this->input('degrade_after') ?? $this->check()?->degrade_after;
+            $data = $validator->getData();
+            $down = $data['down_after'] ?? null;
+            $degrade = $data['degrade_after'] ?? $check?->degrade_after;
 
             if (is_numeric($down) && is_numeric($degrade) && (int) $down < (int) $degrade) {
                 $validator->errors()->add('down_after', __('health.down_after_too_low', ['degrade' => (int) $degrade]));
             }
-        }];
+        };
     }
 
     /**
      * @return array<string, array<mixed>>
      */
-    private function configRules(): array
+    private static function configRules(?HealthCheckType $type): array
     {
-        return match ($this->type()) {
+        return match ($type) {
             HealthCheckType::Http => [
                 'config.url' => ['required', 'url:http,https', 'max:2000'],
                 'config.method' => ['nullable', Rule::in(['GET', 'HEAD', 'POST'])],
@@ -160,8 +183,19 @@ class SaveHealthCheckRequest extends FormRequest
      */
     public function config(): array
     {
-        $given = (array) $this->validated('config', []);
-        $keys = self::CONFIG_KEYS[$this->type()?->value] ?? [];
+        return self::configFrom($this->validated(), $this->type());
+    }
+
+    /**
+     * The settings of $type in validated input, empty ones left out so their defaults apply.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    public static function configFrom(array $validated, ?HealthCheckType $type): array
+    {
+        $given = (array) ($validated['config'] ?? []);
+        $keys = self::CONFIG_KEYS[$type?->value] ?? [];
 
         return array_filter(array_intersect_key($given, array_flip($keys)), fn (mixed $v): bool => $v !== null && $v !== '');
     }

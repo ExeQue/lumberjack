@@ -28,8 +28,13 @@ class SaveDataSourceConnectionRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         if (is_string($this->input('url'))) {
-            $this->merge(['url' => rtrim(trim($this->input('url')), '/')]);
+            $this->merge(['url' => self::normalizeUrl($this->input('url'))]);
         }
+    }
+
+    public static function normalizeUrl(string $url): string
+    {
+        return rtrim(trim($url), '/');
     }
 
     /**
@@ -40,9 +45,19 @@ class SaveDataSourceConnectionRequest extends FormRequest
         /** @var Project $project */
         $project = $this->route('project');
 
+        return static::rulesFor($project);
+    }
+
+    /**
+     * The rules for a connection of the project, shared with the MCP tools.
+     *
+     * @return array<string, array<mixed>>
+     */
+    public static function rulesFor(Project $project): array
+    {
         return [
             'environment' => ['required', 'string', 'max:64', Rule::unique('data_source_connections')->where('project_id', $project->id)],
-            'url' => $this->urlRules(),
+            'url' => self::urlRules(),
             'timezone' => ['sometimes', 'required', 'string', 'timezone:all_with_bc'],
         ];
     }
@@ -50,7 +65,7 @@ class SaveDataSourceConnectionRequest extends FormRequest
     /**
      * @return array<mixed>
      */
-    protected function urlRules(): array
+    protected static function urlRules(): array
     {
         return ['required', 'string', 'url:https', 'max:2000', new PublicUrl((bool) config('health.data_sources_allow_private', false)), function (string $attribute, mixed $value, Closure $fail): void {
             $parts = is_string($value) ? parse_url($value) : false;
@@ -66,13 +81,16 @@ class SaveDataSourceConnectionRequest extends FormRequest
      */
     public function after(): array
     {
-        return [function (Validator $validator): void {
-            /** @var Project $project */
-            $project = $this->route('project');
+        /** @var Project $project */
+        $project = $this->route('project');
 
-            if ($project->dataSourceConnections()->count() >= self::MAX_PER_PROJECT) {
-                $validator->errors()->add('url', __('data_sources.too_many_connections', ['max' => self::MAX_PER_PROJECT]));
-            }
-        }];
+        return [fn (Validator $validator) => self::checkLimit($validator, $project)];
+    }
+
+    public static function checkLimit(Validator $validator, Project $project): void
+    {
+        if ($project->dataSourceConnections()->count() >= self::MAX_PER_PROJECT) {
+            $validator->errors()->add('url', __('data_sources.too_many_connections', ['max' => self::MAX_PER_PROJECT]));
+        }
     }
 }

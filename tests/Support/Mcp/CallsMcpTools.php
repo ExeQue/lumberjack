@@ -32,4 +32,12 @@ trait CallsMcpTools
 
         return is_string($text) ? (array) json_decode($text, true) : [];
     }
+
+    /**
+     * Whether the server refused the call: a tool error, or a tool the token cannot see.
+     */
+    public function wasRefused(TestResponse $response): bool
+    {
+        return $response->json('result.isError') === true || $response->json('error') !== null;
+    }
 }

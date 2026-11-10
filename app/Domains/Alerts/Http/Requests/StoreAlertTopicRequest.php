@@ -18,6 +18,16 @@ class StoreAlertTopicRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
+        return self::fieldRules();
+    }
+
+    /**
+     * The rules without the request, for MCP tools that take the same input.
+     *
+     * @return array<string, mixed>
+     */
+    public static function fieldRules(): array
+    {
         return [
             'name' => ['required', 'string', 'max:64'],
         ];

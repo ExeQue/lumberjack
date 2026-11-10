@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Domains\Mcp\Tools\Telemetry;
 
 use App\Domains\Commands\Models\CommandRun;
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesMcpContext;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -13,6 +16,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+#[RequiresPermission(McpArea::Telemetry, McpLevel::Read)]
 class GetCommand extends Tool
 {
     use UsesMcpContext;

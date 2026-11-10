@@ -8,6 +8,7 @@ use App\Domains\Issues\Data\IssueAssignment;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Events\IssuesStatusChangedInBulk;
 use App\Domains\Issues\Models\Issue;
+use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Projects\Models\Project;
 use App\Models\User;
 
@@ -25,9 +26,10 @@ class BulkChangeIssueStatusAction
 
     /**
      * @param  list<string>  $uuids
+     * @param  McpToken|null  $token  set when an MCP token made the change; it is named instead of a person
      * @return int issues it changed
      */
-    public function execute(Project $project, array $uuids, IssueStatus $status, User $by): int
+    public function execute(Project $project, array $uuids, IssueStatus $status, ?User $by = null, ?McpToken $token = null): int
     {
         $issues = Issue::query()->with('assignee')->where('project_id', $project->id)->whereIn('uuid', $uuids)->get()
             ->reject(fn (Issue $issue): bool => $issue->status === $status);
@@ -37,7 +39,7 @@ class BulkChangeIssueStatusAction
 
         foreach ($issues as $issue) {
             $from = $issue->assignee;
-            $this->change->execute($issue, $status, $by, announce: $single);
+            $this->change->execute($issue, $status, $by, token: $token, announce: $single);
 
             if ($from !== null && $issue->assigned_user_id === null) {
                 $unassigned[] = new IssueAssignment($issue, $from, null);
@@ -46,11 +48,12 @@ class BulkChangeIssueStatusAction
 
         if (! $single) {
             // Resolving takes the issues off their assignees: one message per person.
-            $this->assign->announce($unassigned, $by, resolved: true);
+            $this->assign->announce($unassigned, $by, $token, resolved: true);
         }
 
         if ($issues->count() > 1) {
-            IssuesStatusChangedInBulk::dispatch($project, array_values($issues->map(fn (Issue $issue): int => $issue->id)->all()), $status, $by->name, $by->id);
+            $actor = $token !== null ? __('alerts.messages.via_mcp', ['token' => $token->name]) : ($by->name ?? __('alerts.messages.unknown_author'));
+            IssuesStatusChangedInBulk::dispatch($project, array_values($issues->map(fn (Issue $issue): int => $issue->id)->all()), $status, $actor, $token === null ? $by?->id : null);
         }
 
         return $issues->count();

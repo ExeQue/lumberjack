@@ -11,6 +11,8 @@ use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Teams\Models\Team;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Routing\Redirector;
+use Illuminate\Routing\Route;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -22,6 +24,23 @@ use Illuminate\Validation\Validator;
 class UpdateRetentionRequest extends FormRequest
 {
     public const int MAX_DAYS = 3650;
+
+    /**
+     * The request PUT projects/{project}/settings/retention would make, for callers without
+     * one (MCP's set_project_retention). validateResolved() runs the same rules and caps.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    public static function forProject(Project $project, array $input): self
+    {
+        $request = self::create('/projects/'.$project->slug.'/settings/retention', 'PUT', $input);
+        $route = (new Route('PUT', 'projects/{project}/settings/retention', []))->bind($request);
+        $route->setParameter('project', $project);
+        $request->setRouteResolver(fn (): Route => $route);
+        $request->setContainer(app())->setRedirector(app(Redirector::class));
+
+        return $request;
+    }
 
     /** @return array<string, mixed> */
     public function rules(): array

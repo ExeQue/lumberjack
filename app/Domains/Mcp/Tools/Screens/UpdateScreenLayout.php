@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Tools\Screens;
 
+use App\Domains\Mcp\Attributes\RequiresPermission;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesScreens;
 use App\Domains\Screens\Actions\UpdateScreenLayoutAction;
 use App\Domains\Screens\Http\Requests\UpdateScreenLayoutRequest;
@@ -13,13 +16,14 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 
+#[RequiresPermission(McpArea::Screens, McpLevel::Write)]
 class UpdateScreenLayout extends Tool
 {
     use UsesScreens;
 
     protected string $name = 'update_screen_layout';
 
-    protected string $description = 'Replaces a screen grid and all its widgets, live on every TV showing it. Send every widget you want to keep. Widgets may not overlap. Needs a token that may design screens.';
+    protected string $description = 'Replaces a screen grid and all its widgets, live on every TV showing it. Send every widget you want to keep. Widgets may not overlap.';
 
     public function __construct(
         private readonly UpdateScreenLayoutAction $update,
@@ -39,9 +43,6 @@ class UpdateScreenLayout extends Tool
 
     public function handle(Request $request): Response
     {
-        if ($denied = $this->denyUnlessDesign()) {
-            return $denied;
-        }
 
         $screen = $this->screen($request, 'update');
 
