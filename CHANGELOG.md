@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-10
+
 ### Added
 
 - MCP tokens get a permission per area (issues, telemetry, health checks, scheduled tasks, alerts, data sources, screens, project settings, team) at None, Read, Write or Manage, with presets, single tools turned on or off, and changes per project.
@@ -13,8 +15,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ### Changed
 
-- The token's read or write scope and **Can design screens** are replaced by permissions. Existing tokens keep what they could do.
-- The metrics API reads only the projects where the token reads telemetry.
+- The token's read or write scope and **Can design screens** are replaced by permissions. Existing tokens keep what they could do, and Read also reaches the new read tools.
+- The metrics API reads only the projects where the token reads telemetry, and lists issues only where it reads issues.
 - Agents only see the MCP tools their token may use.
 
 ## [0.4.1] - 2026-11-09
@@ -173,7 +175,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/ExeQue/lumberjack/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/ExeQue/lumberjack/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/ExeQue/lumberjack/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/ExeQue/lumberjack/compare/v0.3.0...v0.3.1
