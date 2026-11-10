@@ -1,8 +1,14 @@
-import { Deferred, Head, Link, router, usePage } from '@inertiajs/react';
+import { Deferred, Head, router, usePage } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
-import { Fragment, useState } from 'react';
-import type { ReactNode } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
+import {
+    ConnectionCard,
+    ConnectorPanel,
+    ConnectorTabs,
+    useHashTab,
+    useTrend,
+} from '@/components/lj/connectors/connection';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     UmamiConnectDialog,
@@ -39,8 +45,6 @@ import {
 } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { destroy as connectionDestroy } from '@/routes/data-source-connections';
-import { index as dataSourcesIndex } from '@/routes/data-sources';
 import { show as projectShow } from '@/routes/projects';
 import { index as umamiIndex } from '@/routes/connectors/umami';
 import {
@@ -74,6 +78,8 @@ type Row = {
     lcp_us?: number | null;
     /** UTM values only: the name it was given here. */
     label?: string | null;
+    /** Pages only: the domain it was seen on. */
+    host?: string | null;
 };
 
 /** Names a UTM value, or forgets its name when given an empty one. */
@@ -84,6 +90,10 @@ type CardRows = Record<string, Row[]>;
 type Props = {
     project: ProjectHeader;
     filters: DashboardFilters & { filter: Record<string, string> };
+    /** What each breakdown card was searched for, by card. */
+    searches: Record<string, string>;
+    /** How many rows each breakdown card shows, when more than the first ten. */
+    rows: Record<string, number>;
     connection: {
         uuid: string;
         website_id: string;
@@ -112,6 +122,10 @@ type Props = {
 
 const PERIODS: Period[] = ['1h', '24h', '7d', '30d'];
 
+/** Rows a breakdown shows at first and adds per Load more, and the most it loads. */
+const ROWS = 10;
+const MAX_ROWS = 200;
+
 /** Google's good and poor LCP thresholds, in µs. */
 const LCP = [2_500_000, 4_000_000];
 
@@ -120,29 +134,60 @@ export default function UmamiIndex(props: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
 
-    const visit = (changes: {
-        period?: Period;
-        filter?: Record<string, string>;
-        connection?: string;
-    }) => {
-        const filter = changes.filter ?? filters.filter;
-        const query: Record<string, string> = {
-            period: changes.period ?? filters.period,
-        };
-        const website = changes.connection ?? connection?.uuid;
+    /**
+     * Visits the page as changed: the website in the path, and only what differs from the
+     * defaults in the query, so the URL stays short. A card's search and rows are kept until
+     * the website, period or filters change.
+     */
+    const visit = (
+        changes: {
+            period?: Period;
+            filter?: Record<string, string>;
+            connection?: string;
+            searches?: Record<string, string>;
+            rows?: Record<string, number>;
+        },
+        only?: string[],
+    ) => {
+        const resets =
+            changes.connection !== undefined ||
+            changes.period !== undefined ||
+            changes.filter !== undefined;
+        const query: Record<string, string> = {};
+        const period = changes.period ?? filters.period;
 
-        if (website) {
-            query.connection = website;
+        if (period !== '24h') {
+            query.period = period;
         }
 
-        Object.entries(filter).forEach(([key, value]) => {
-            query[`filter[${key}]`] = value;
+        Object.entries(changes.filter ?? filters.filter).forEach(
+            ([key, value]) => (query[`filter[${key}]`] = value),
+        );
+        Object.entries(
+            changes.searches ?? (resets ? {} : props.searches),
+        ).forEach(([card, text]) => {
+            if (text.trim() !== '') {
+                query[`search[${card}]`] = text.trim();
+            }
         });
+        Object.entries(changes.rows ?? (resets ? {} : props.rows)).forEach(
+            ([card, count]) => (query[`rows[${card}]`] = String(count)),
+        );
+
+        const website = changes.connection ?? connection?.uuid;
+        const url = website
+            ? umamiIndex([project.uuid, website], { query }).url
+            : umamiIndex({ project: project.uuid }, { query }).url;
 
         router.get(
-            umamiIndex(project.uuid, { query }).url,
+            url + window.location.hash,
             {},
-            { preserveState: true, preserveScroll: true, replace: true },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+                ...(only ? { only } : {}),
+            },
         );
     };
 
@@ -160,10 +205,10 @@ export default function UmamiIndex(props: Props) {
                   )
             : undefined;
 
-    const [tab, setTab] = useState<Tab>('overview');
+    const [tab, setTab] = useHashTab<Tab>(TABS);
 
-    const addFilter = (key: string, value: string) =>
-        visit({ filter: { ...filters.filter, [key]: value } });
+    const addFilter = (values: Record<string, string>) =>
+        visit({ filter: { ...filters.filter, ...values } });
 
     return (
         <>
@@ -252,28 +297,40 @@ export default function UmamiIndex(props: Props) {
                                 visit({ filter: rest });
                             }}
                         />
-                        {error !== null ? (
-                            <Card>
-                                <EmptyState
-                                    title={t('connectors.umami.error_title')}
-                                >
-                                    <p>{error}</p>
-                                </EmptyState>
-                            </Card>
-                        ) : (
-                            props.summary && (
-                                <>
-                                    <Summary summary={props.summary} />
-                                    <Tabs
-                                        tabs={TABS.filter(
-                                            (tab) =>
-                                                tab !== 'connection' ||
-                                                project.can_administer,
+                        {props.summary && error === null && (
+                            <Summary summary={props.summary} />
+                        )}
+                        <ConnectorTabs<Tab>
+                            id="umami"
+                            label={t('connectors.umami.tabs.label')}
+                            tabs={TABS.filter((name) =>
+                                name === 'connection'
+                                    ? project.can_administer
+                                    : name === 'overview' ||
+                                      props.summary !== null,
+                            )}
+                            current={tab}
+                            onChange={setTab}
+                            title={(name) => t(`connectors.umami.tabs.${name}`)}
+                        />
+                        <ConnectorPanel
+                            id="umami"
+                            name="overview"
+                            current={tab}
+                        >
+                            {error !== null ? (
+                                <Card>
+                                    <EmptyState
+                                        title={t(
+                                            'connectors.umami.error_title',
                                         )}
-                                        current={tab}
-                                        onChange={setTab}
-                                    />
-                                    <Panel name="overview" current={tab}>
+                                    >
+                                        <p>{error}</p>
+                                    </EmptyState>
+                                </Card>
+                            ) : (
+                                props.summary && (
+                                    <>
                                         <Traffic
                                             project={project}
                                             connection={connection.uuid}
@@ -283,47 +340,54 @@ export default function UmamiIndex(props: Props) {
                                             period={filters.period}
                                         />
                                         <Heatmap grid={props.heatmap} />
-                                    </Panel>
-                                    {(
-                                        [
-                                            'pages',
-                                            'sources',
-                                            'audience',
-                                            'events',
-                                        ] as const
-                                    ).map((card) => (
-                                        <Panel
-                                            key={card}
-                                            name={card}
-                                            current={tab}
-                                        >
-                                            <Breakdown
-                                                card={card}
-                                                rows={props[card]}
-                                                total={
-                                                    props.summary!.current
-                                                        .visitors
-                                                }
-                                                dimensions={props.dimensions}
-                                                onFilter={addFilter}
-                                                onLabel={
-                                                    card === 'sources'
-                                                        ? saveLabel
-                                                        : undefined
-                                                }
-                                            />
-                                        </Panel>
-                                    ))}
-                                </>
-                            )
-                        )}
-                        {project.can_administer &&
-                            (error !== null || tab === 'connection') && (
-                                <Settings
+                                    </>
+                                )
+                            )}
+                        </ConnectorPanel>
+                        {props.summary !== null &&
+                            (
+                                [
+                                    'pages',
+                                    'sources',
+                                    'audience',
+                                    'events',
+                                ] as const
+                            ).map((card) => (
+                                <ConnectorPanel
+                                    key={card}
+                                    id="umami"
+                                    name={card}
+                                    current={tab}
+                                >
+                                    <Breakdown
+                                        card={card}
+                                        rows={props[card]}
+                                        total={props.summary!.current.visitors}
+                                        dimensions={props.dimensions}
+                                        searches={props.searches}
+                                        shown={props.rows}
+                                        onChange={visit}
+                                        onFilter={addFilter}
+                                        onLabel={
+                                            card === 'sources'
+                                                ? saveLabel
+                                                : undefined
+                                        }
+                                    />
+                                </ConnectorPanel>
+                            ))}
+                        {project.can_administer && (
+                            <ConnectorPanel
+                                id="umami"
+                                name="connection"
+                                current={tab}
+                            >
+                                <Connection
                                     project={project.uuid}
                                     connection={connection}
                                 />
-                            )}
+                            </ConnectorPanel>
+                        )}
                     </>
                 )}
             </PageBody>
@@ -341,79 +405,6 @@ const TABS = [
 ] as const;
 
 type Tab = (typeof TABS)[number];
-
-function Tabs({
-    tabs,
-    current,
-    onChange,
-}: {
-    tabs: Tab[];
-    current: Tab;
-    onChange: (tab: Tab) => void;
-}) {
-    const t = useT();
-
-    // Arrow keys move between tabs, as a tab list does.
-    const onKey = (e: React.KeyboardEvent) => {
-        const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
-
-        if (step === undefined) {
-            return;
-        }
-
-        const next =
-            tabs[(tabs.indexOf(current) + step + tabs.length) % tabs.length];
-        onChange(next);
-        document.getElementById(`umami-tab-${next}`)?.focus();
-    };
-
-    return (
-        <div
-            role="tablist"
-            aria-label={t('connectors.umami.tabs.label')}
-            className="flex gap-4 overflow-x-auto border-b border-line"
-            onKeyDown={onKey}
-        >
-            {tabs.map((name) => (
-                <button
-                    key={name}
-                    type="button"
-                    role="tab"
-                    id={`umami-tab-${name}`}
-                    aria-selected={current === name}
-                    aria-controls={`umami-panel-${name}`}
-                    tabIndex={current === name ? 0 : -1}
-                    onClick={() => onChange(name)}
-                    className="h-10 cursor-pointer border-b-2 border-transparent px-1 whitespace-nowrap text-ink-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-amber aria-selected:border-amber aria-selected:text-ink"
-                >
-                    {t(`connectors.umami.tabs.${name}`)}
-                </button>
-            ))}
-        </div>
-    );
-}
-
-function Panel({
-    name,
-    current,
-    children,
-}: {
-    name: Tab;
-    current: Tab;
-    children: ReactNode;
-}) {
-    return (
-        <div
-            role="tabpanel"
-            id={`umami-panel-${name}`}
-            aria-labelledby={`umami-tab-${name}`}
-            hidden={current !== name}
-            className="flex flex-col gap-4"
-        >
-            {current === name && children}
-        </div>
-    );
-}
 
 function NotConnected({ project }: { project: ProjectHeader }) {
     const t = useT();
@@ -489,26 +480,6 @@ function Filters({
 }
 
 /** "12 % more than the period before", or nothing without an earlier value. */
-function useTrend() {
-    const t = useT();
-
-    return (current: number | null, previous: number | null): string => {
-        if (current === null || previous === null || previous === 0) {
-            return '';
-        }
-
-        const change = (current - previous) / previous;
-
-        if (Math.abs(change) < 0.005) {
-            return t('overview.trend.same');
-        }
-
-        return t(change > 0 ? 'overview.trend.up' : 'overview.trend.down', {
-            percent: formatPercent(Math.abs(change), 0),
-        });
-    };
-}
-
 /** Umami counts time in whole seconds; a visit of one page has none. */
 const seconds = (value: number | null) =>
     value === null
@@ -878,19 +849,56 @@ function Breakdown({
     dimensions,
     onFilter,
     onLabel,
+    searches,
+    shown,
+    onChange,
 }: {
     card: 'pages' | 'sources' | 'audience' | 'events';
+    /** What each card's rows were searched for. */
+    searches: Record<string, string>;
+    /** How many rows each card shows, past the first ten. */
+    shown: Record<string, number>;
+    /** Loads the card again, searched or with more rows. */
+    onChange: (
+        changes: {
+            searches?: Record<string, string>;
+            rows?: Record<string, number>;
+        },
+        only: string[],
+    ) => void;
     rows: CardRows | undefined;
     total: number;
     dimensions: Props['dimensions'];
-    onFilter: (key: string, value: string) => void;
+    onFilter: (values: Record<string, string>) => void;
     onLabel?: SaveLabel;
 }) {
     const t = useT();
     const id = `umami-${card}`;
+    const searched = searches[card] ?? '';
+    const limit = shown[card] ?? ROWS;
     const [tab, setTab] = useState<string | null>(null);
+    const [search, setSearch] = useState(searched);
     const tabs = rows ? Object.keys(rows) : [];
     const current = tab ?? tabs[0];
+
+    // Umami searches all of the period's values, not only the rows shown; asked once typing pauses.
+    useEffect(() => {
+        if (search === searched) {
+            return;
+        }
+
+        const timer = setTimeout(
+            () =>
+                onChange({ searches: { ...searches, [card]: search } }, [
+                    card,
+                    'searches',
+                    'rows',
+                ]),
+            300,
+        );
+
+        return () => clearTimeout(timer);
+    }, [search, searched, searches, card, onChange]);
 
     return (
         <Card className="overflow-x-auto" aria-labelledby={id}>
@@ -903,17 +911,35 @@ function Breakdown({
                         : undefined
                 }
                 aside={
-                    tabs.length > 1 && (
-                        <Segmented<string>
-                            label={t(`connectors.umami.cards_titles.${card}`)}
-                            value={current}
-                            onChange={setTab}
-                            options={tabs.map((key) => ({
-                                value: key,
-                                label: t(`connectors.umami.dimensions.${key}`),
-                            }))}
+                    // Always a search, so every card's header is as tall as the next.
+                    <span className="flex flex-wrap items-center gap-2">
+                        <label className="sr-only" htmlFor={`${id}-search`}>
+                            {t('connectors.umami.search')}
+                        </label>
+                        <Input
+                            id={`${id}-search`}
+                            type="search"
+                            placeholder={t('connectors.umami.search')}
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-48 max-w-full"
                         />
-                    )
+                        {tabs.length > 1 && (
+                            <Segmented<string>
+                                label={t(
+                                    `connectors.umami.cards_titles.${card}`,
+                                )}
+                                value={current}
+                                onChange={setTab}
+                                options={tabs.map((key) => ({
+                                    value: key,
+                                    label: t(
+                                        `connectors.umami.dimensions.${key}`,
+                                    ),
+                                }))}
+                            />
+                        )}
+                    </span>
                 }
             />
             <Deferred
@@ -927,16 +953,40 @@ function Breakdown({
                 }
             >
                 {rows && current !== undefined ? (
-                    <Table
-                        dimension={current}
-                        rows={rows[current] ?? []}
-                        total={total}
-                        filter={dimensions[current] ?? null}
-                        onFilter={onFilter}
-                        onLabel={
-                            current.startsWith('utm') ? onLabel : undefined
-                        }
-                    />
+                    <>
+                        <Table
+                            dimension={current}
+                            rows={rows[current] ?? []}
+                            total={total}
+                            filter={dimensions[current] ?? null}
+                            onFilter={onFilter}
+                            onLabel={
+                                current.startsWith('utm') ? onLabel : undefined
+                            }
+                        />
+                        {/* A full page means Umami may have more. */}
+                        {(rows[current]?.length ?? 0) >= limit &&
+                            limit < MAX_ROWS && (
+                                <div className="border-t border-line p-2 text-center">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() =>
+                                            onChange(
+                                                {
+                                                    rows: {
+                                                        ...shown,
+                                                        [card]: limit + ROWS,
+                                                    },
+                                                },
+                                                [card, 'searches', 'rows'],
+                                            )
+                                        }
+                                    >
+                                        {t('connectors.umami.load_more')}
+                                    </Button>
+                                </div>
+                            )}
+                    </>
                 ) : (
                     <EmptyState title={t('connectors.umami.empty')} />
                 )}
@@ -957,7 +1007,7 @@ function Table({
     rows: Row[];
     total: number;
     filter: string | null;
-    onFilter: (key: string, value: string) => void;
+    onFilter: (values: Record<string, string>) => void;
     onLabel?: SaveLabel;
 }) {
     const t = useT();
@@ -1023,7 +1073,10 @@ function Table({
             </thead>
             <tbody>
                 {rows.map((row) => (
-                    <tr key={row.name} className="lj-row hover:bg-panel-2/60">
+                    <tr
+                        key={`${row.host ?? ''}${row.name}`}
+                        className="lj-row hover:bg-panel-2/60"
+                    >
                         <td className={`${tdClass} relative min-w-[200px]`}>
                             {/* The share of the top row, drawn behind the name. */}
                             <span
@@ -1037,11 +1090,24 @@ function Table({
                                 <button
                                     type="button"
                                     className="relative max-w-full truncate text-left font-mono text-xs hover:text-amber hover:underline"
-                                    onClick={() => onFilter(filter, row.name)}
+                                    onClick={() =>
+                                        onFilter({
+                                            [filter]: row.name,
+                                            // A page is filtered on its own domain too.
+                                            ...(row.host
+                                                ? { hostname: row.host }
+                                                : {}),
+                                        })
+                                    }
                                     title={t('connectors.umami.filters.add', {
-                                        value: row.name,
+                                        value: (row.host ?? '') + row.name,
                                     })}
                                 >
+                                    {row.host && (
+                                        <span className="text-ink-3">
+                                            {row.host}
+                                        </span>
+                                    )}
                                     {row.label ?? row.name}
                                 </button>
                             ) : (
@@ -1284,7 +1350,7 @@ function Heatmap({ grid }: { grid: number[][] | undefined }) {
     );
 }
 
-function Settings({
+function Connection({
     project,
     connection,
 }: {
@@ -1294,70 +1360,46 @@ function Settings({
     const t = useT();
 
     return (
-        <Card aria-labelledby="umami-settings">
-            <CardHeader
-                id="umami-settings"
-                title={t('connectors.umami.settings.title')}
-                description={
-                    connection.hosting === 'cloud'
-                        ? t('connectors.umami.settings.cloud', {
-                              timezone: connection.timezone,
-                          })
-                        : t('connectors.umami.settings.self_hosted', {
-                              instance: connection.instance ?? '',
-                              timezone: connection.timezone,
-                          })
-                }
-                aside={
-                    <span className="inline-flex flex-wrap gap-2">
-                        <Link
-                            href={dataSourcesIndex(project).url}
-                            className="self-center text-xs text-amber hover:underline"
-                        >
-                            {t('connectors.umami.settings.sources')}
-                        </Link>
-                        <ConfirmButton
-                            question={t(
-                                'connectors.umami.settings.disconnect_question',
-                            )}
-                            confirmLabel={t(
-                                'connectors.umami.settings.disconnect',
-                            )}
-                            onConfirm={() =>
-                                router.delete(
-                                    connectionDestroy([
-                                        project,
-                                        connection.uuid,
-                                    ]).url,
-                                )
-                            }
-                        >
-                            {t('connectors.umami.settings.disconnect')}
-                        </ConfirmButton>
-                    </span>
-                }
+        <ConnectionCard
+            project={project}
+            connection={connection.uuid}
+            description={
+                connection.hosting === 'cloud'
+                    ? t('connectors.umami.settings.cloud', {
+                          timezone: connection.timezone,
+                      })
+                    : t('connectors.umami.settings.self_hosted', {
+                          instance: connection.instance ?? '',
+                          timezone: connection.timezone,
+                      })
+            }
+            connectLabel={t('connectors.umami.settings.add')}
+            disconnectQuestion={t(
+                'connectors.umami.settings.disconnect_question',
+            )}
+            dialog={(onClose) => (
+                <UmamiConnectDialog project={project} onClose={onClose} />
+            )}
+        >
+            <UmamiWebsiteSwitcher
+                key={`change-${connection.uuid}`}
+                project={project}
+                connection={connection.uuid}
+                current={connection.website_id}
+                mode="change"
             />
-            <div className="flex flex-col gap-4 p-4">
+            <div className="flex flex-col gap-1.5 border-t border-line pt-4">
+                <p className="text-xs text-ink-2">
+                    {t('connectors.umami.settings.add_hint')}
+                </p>
                 <UmamiWebsiteSwitcher
-                    key={`change-${connection.uuid}`}
+                    key={`add-${connection.uuid}`}
                     project={project}
                     connection={connection.uuid}
-                    current={connection.website_id}
-                    mode="change"
+                    current={null}
+                    mode="add"
                 />
-                <div className="flex flex-col gap-1.5 border-t border-line pt-4">
-                    <p className="text-xs text-ink-2">
-                        {t('connectors.umami.settings.add_hint')}
-                    </p>
-                    <UmamiWebsiteSwitcher
-                        key={`add-${connection.uuid}`}
-                        project={project}
-                        connection={connection.uuid}
-                        current={null}
-                        mode="add"
-                    />
-                </div>
             </div>
-        </Card>
+        </ConnectionCard>
     );
 }

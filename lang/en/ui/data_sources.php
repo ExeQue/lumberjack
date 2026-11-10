@@ -20,15 +20,17 @@ return [
         'open' => 'Open',
     ],
     'connected' => [
-        // Button: open the Umami page of a connected website.
-        'open_umami' => 'Open Umami',
-        // The heading of an Umami connection in the list.
-        'umami' => 'Umami: :website',
+        // Opens the list of sources a connection offers.
+        'sources' => '{1} 1 source|[2,*] :count sources',
+        // Button: open the page of a connected service, such as Umami.
+        'open' => 'Open :service',
+        // The heading of a service's connection in the list, such as Umami: shop.example.
+        'service' => ':service: :name',
         'title' => 'From your apps',
         'hint' => 'Apps using the Laravel package, and an Umami website. Lumberjack asks them which sources they offer, and pulls a source only while a screen shows it.',
         'empty_title' => 'No apps connected',
         'empty_body' => 'Connect an app to show its figures on a screen.',
-        'no_sources' => 'No sources yet. They appear here once the app answers.',
+        'no_sources' => 'No sources yet. They appear here once it answers.',
         // Button
         'connect' => 'Connect app',
         'form_title' => 'Connect an app',
@@ -52,7 +54,7 @@ return [
         // Button
         'remove' => 'Remove',
         'remove_question' => 'Remove :source? Widgets that show it go empty.',
-        'columns' => ['key' => 'Key', 'shape' => 'Shape', 'environment' => 'Environment'],
+        'columns' => ['key' => 'Key', 'shape' => 'Shape'],
         'shapes' => ['number' => 'Number', 'series' => 'Series', 'list' => 'List', 'table' => 'Table'],
         'statuses' => [
             'connected' => 'Connected',

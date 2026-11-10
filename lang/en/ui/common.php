@@ -25,7 +25,10 @@ return [
         'routes' => 'Requests',
         'queries' => 'Database',
         'browser' => 'Browser',
+        // The group of the services a project reads, such as Umami and mosparo.
+        'connectors' => 'Connectors',
         'umami' => 'Umami',
+        'mosparo' => 'mosparo',
         'releases' => 'Releases',
         'jobs' => 'Jobs',
         'schedule' => 'Schedule',

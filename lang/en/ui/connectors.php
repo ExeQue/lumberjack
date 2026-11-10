@@ -3,9 +3,81 @@
 declare(strict_types=1);
 
 return [
+    // The Connection card and tab every connector page has.
+    'connection' => [
+        'title' => 'Connection',
+        // Buttons.
+        'disconnect' => 'Disconnect',
+    ],
+
+    // mosparo: a project's form submissions, read through mosparo's statistic API.
+    'mosparo' => [
+        'title' => 'mosparo',
+        'description' => 'Form submissions to :name as mosparo judged them, per day.',
+        'error_title' => 'mosparo could not be read',
+        // The picker of which connected mosparo project the page shows.
+        'project' => 'mosparo project',
+        'never' => 'No submissions yet',
+
+        'cards' => [
+            'valid' => 'Valid',
+            'spam' => 'Spam',
+            'spam_rate' => 'Spam rate',
+            'blocked' => 'Blocked requests',
+            'delayed' => 'Delayed requests',
+            'last_submission' => 'Last submission',
+        ],
+
+        'series' => [
+            'title' => 'Submissions',
+            'description' => 'Per day; days mosparo no longer keeps show none.',
+            'summary' => ':valid valid and :spam spam submissions over the period',
+        ],
+
+        'not_connected' => [
+            'description' => 'Valid and spam submissions from a mosparo project.',
+            'title' => 'Connect mosparo',
+            'body' => 'Give Lumberjack the API keys of a mosparo project. Its figures show here and as data sources for screens.',
+            'members' => 'No mosparo project is connected. A team owner or admin can connect one.',
+        ],
+
+        'connect' => [
+            'name' => 'Name',
+            'name_hint' => 'What it is shown as here, such as the form it protects.',
+            'url' => 'Address',
+            'url_hint' => 'The https address you open mosparo at, such as https://mosparo.example.com.',
+            'public_key' => 'Public key',
+            'private_key' => 'Private key',
+            'keys_hint' => 'In mosparo, under the project\'s settings > General settings > API keys.',
+            'timezone' => 'Days begin in',
+            'timezone_hint' => 'The time zone mosparo runs in, as it counts its days there.',
+            // Buttons.
+            'submit' => 'Connect',
+            'cancel' => 'Cancel',
+        ],
+
+        // mosparo counts whole days: 24 hours is today.
+        'periods' => ['24h' => '1 d', '7d' => '7 d', '30d' => '30 d'],
+        'tabs' => [
+            'label' => 'mosparo sections',
+            'overview' => 'Overview',
+            'connection' => 'Connection',
+        ],
+        'settings' => [
+            'body' => ':instance; days begin in :timezone.',
+            // Buttons.
+            'add' => 'Connect another mosparo project',
+            'disconnect_question' => 'Disconnect this mosparo project? Its data sources are removed, and widgets showing them go empty.',
+        ],
+    ],
+
     // Umami: a website's visitors, read through Umami's API.
     'umami' => [
         'title' => 'Umami',
+        // Button below a breakdown: show ten more rows.
+        'load_more' => 'Load more',
+        // Placeholder of the search above each breakdown.
+        'search' => 'Search',
         // The picker of which connected website the page shows.
         'website' => 'Website',
         'description' => 'Visitors to :website as Umami counted them, beside what Lumberjack saw of the same pages. Click a row to filter by it.',
@@ -137,7 +209,7 @@ return [
             'device' => 'Device',
             'screen' => 'Screen',
             'event' => 'Event',
-            'hostname' => 'Host',
+            'hostname' => 'Domain',
         ],
 
         'columns' => [
@@ -152,17 +224,15 @@ return [
         ],
 
         'settings' => [
-            'title' => 'Connection',
             'cloud' => 'Umami Cloud; days begin in :timezone.',
             'self_hosted' => ':instance; days begin in :timezone.',
-            'sources' => 'Its data sources',
-            'add_hint' => 'Read another website with the same credentials. A website on another Umami is connected from the data sources page.',
+            'add_hint' => 'Read another website with the same credentials.',
             // Buttons.
+            'add' => 'Connect another Umami',
             'change_website' => 'Change website',
             'save_website' => 'Use this website',
             'add_website' => 'Add a website',
             'connect_website' => 'Connect this website',
-            'disconnect' => 'Disconnect',
             'disconnect_question' => 'Disconnect this website? Its data sources are removed, and widgets showing them go empty.',
             'failed' => 'The websites could not be listed.',
         ],

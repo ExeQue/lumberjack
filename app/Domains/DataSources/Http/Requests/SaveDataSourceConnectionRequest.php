@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Http\Requests;
 
-use App\Domains\Connectors\Actions\Umami\ConnectUmamiAction;
+use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Rules\PublicUrl;
 use Closure;
@@ -58,7 +58,7 @@ class SaveDataSourceConnectionRequest extends FormRequest
     {
         return [
             'environment' => ['required', 'string', 'max:64', function (string $attribute, mixed $value, Closure $fail): void {
-                if (is_string($value) && ConnectUmamiAction::isUmamiEnvironment($value)) {
+                if (is_string($value) && ConnectionKind::ownsEnvironment($value)) {
                     $fail(__('validation.not_in', ['attribute' => $attribute]));
                 }
             }, Rule::unique('data_source_connections')->where('project_id', $project->id)],

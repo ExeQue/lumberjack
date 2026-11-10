@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Presenters;
 
+use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Jobs\Models\QueueSample;
@@ -19,6 +20,7 @@ use App\Domains\Screens\Support\ScreenLayout;
 use App\Domains\Screens\Support\ScreenQr;
 use App\Domains\Screens\Support\WidgetSchema;
 use App\Domains\Screens\Support\WidgetSources;
+use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Models\Team;
 use App\Models\User;
 
@@ -213,8 +215,8 @@ class ScreenPresenter
             'checks' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->get(['uuid', 'project_id', 'name', 'slug', 'type', 'config'])
                 ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name])->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all(),
             // External values pick one; names, formats and the app's host, never a full URL or header.
-            'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->with('connection:id,url,kind,website_id,website_name')->orderBy('name')->get(['uuid', 'project_id', 'name', 'group_path', 'format', 'shape', 'environment', 'data_source_connection_id'])
-                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'group' => $this->sourceGroup($s), 'host' => $s->connection?->isUmami() === true ? 'Umami' : $this->sourceHost($s), 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' && $s->connection?->isUmami() !== true ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name])->values()->all(),
+            'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->with('connection:id,url,kind,environment,name')->orderBy('name')->get(['uuid', 'project_id', 'name', 'group_path', 'format', 'shape', 'environment', 'data_source_connection_id'])
+                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'group' => $this->sourceGroup($s), 'host' => $s->connection !== null && ! $s->connection->isFor(ConnectionKind::App) ? $s->connection->kind->label() : $this->sourceHost($s), 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' && $s->connection?->isFor(ConnectionKind::App) !== false ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name, 'periods' => $s->connection !== null ? array_map(fn (Period $p): string => $p->value, $s->connection->kind->periods()) : null])->values()->all(),
             // Names a filter can pick from, so a queue, host, domain or database check is chosen, not typed.
             'filters' => [
                 'queue' => QueueSample::query()->whereIn('project_id', $projects->modelKeys())->where('sampled_at', '>=', now()->subDays(7))
@@ -238,15 +240,15 @@ class ScreenPresenter
     }
 
     /**
-     * A source's group in the picker; an Umami source's under its website, as one Umami
+     * A source's group in the picker; a service's under its website or project, as one
      * instance holds many.
      */
     private function sourceGroup(DataSource $source): ?string
     {
-        if ($source->connection?->isUmami() !== true) {
+        if ($source->connection === null || $source->connection->isFor(ConnectionKind::App)) {
             return $source->group_path;
         }
 
-        return implode(' > ', array_filter([$source->connection->website_name ?? $source->connection->website_id, $source->group_path]));
+        return implode(' > ', array_filter([$source->connection->displayName(), $source->group_path]));
     }
 }

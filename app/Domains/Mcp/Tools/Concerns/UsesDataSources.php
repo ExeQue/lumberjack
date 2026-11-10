@@ -113,7 +113,7 @@ trait UsesDataSources
             'uuid' => $connection->uuid,
             'kind' => $connection->kind->value,
             'environment' => $connection->environment,
-            'website' => $connection->website_name,
+            'website' => $connection->name,
             'host' => parse_url($connection->url, PHP_URL_HOST) ?: null,
             'timezone' => $connection->timezone,
             'status' => $connection->status(),

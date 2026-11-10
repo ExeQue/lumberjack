@@ -888,7 +888,9 @@ class ResolveWidgetDataAction
      */
     private function connected(Team $team, DataSource $source, WidgetType $type, WidgetScope $scope, array $options, array $limits, bool $aggregatesOnly): array
     {
-        $window = $source->archived_at === null ? $this->connectedSources->window($source, $scope->period, is_numeric($options['resolution'] ?? null) ? (int) $options['resolution'] : null) : null;
+        // A service that cannot answer for the period answers for the nearest it can, and the tile says which.
+        $period = $source->connection?->kind->period($scope->period) ?? $scope->period;
+        $window = $source->archived_at === null ? $this->connectedSources->window($source, $period, is_numeric($options['resolution'] ?? null) ? (int) $options['resolution'] : null) : null;
         $value = $window !== null && $source->shape === DataSourceShape::Number && is_numeric($window->data) ? (float) $window->data : null;
 
         $data = match ($type) {
@@ -901,7 +903,7 @@ class ResolveWidgetDataAction
                 'limits' => $limits,
             ],
             WidgetType::Chart => [
-                'interval' => (new MetricWindow($scope->period->since(), now(), $window->bucket ?? $scope->period->bucketSeconds()))->interval(),
+                'interval' => (new MetricWindow($period->since(), now(), $window->bucket ?? $period->bucketSeconds()))->interval(),
                 // A day's bar begins at midnight there, and is named by that day.
                 'timezone' => $source->connection?->timezone,
                 'red' => $this->number($options['red'] ?? null),
@@ -918,7 +920,7 @@ class ResolveWidgetDataAction
             default => [],
         };
 
-        return ['as_of' => $window?->fetched_at?->toIso8601String(), 'pending' => $window !== null && ! $window->has_data, ...$data];
+        return ['period' => $period->value, 'as_of' => $window?->fetched_at?->toIso8601String(), 'pending' => $window !== null && ! $window->has_data, ...$data];
     }
 
     /**

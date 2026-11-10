@@ -54,6 +54,8 @@ export type Catalog = {
         group?: string | null;
         /** The connected app it comes from, which roots it in the tree. */
         host: string | null;
+        /** The periods a connected service can answer for; null for all. */
+        periods?: string[] | null;
     }[];
     /** The screen's uuid, for the External JSON preview; without it there is none. */
     screen?: string;
@@ -1204,6 +1206,13 @@ export function WidgetInspector({
         valueSource?.id === 'external_json' &&
         catalog.data_sources?.find((s) => s.uuid === effective('data_source'))
             ?.format === 'prometheus';
+    // A service that counts whole days has no hour to pick.
+    const connectedPeriods =
+        valueSource?.id === 'external_json'
+            ? catalog.data_sources?.find(
+                  (s) => s.uuid === effective('data_source'),
+              )?.periods
+            : null;
     // A connected source declares its form, so there is no path to set.
     const connected =
         valueSource?.id === 'external_json' &&
@@ -1381,7 +1390,14 @@ export function WidgetInspector({
                             aria-label={t('screens.inspector.period')}
                             className="flex flex-wrap gap-1.5"
                         >
-                            {['', ...catalog.periods].map((p) => {
+                            {[
+                                '',
+                                ...catalog.periods.filter(
+                                    (p) =>
+                                        !connectedPeriods ||
+                                        connectedPeriods.includes(p),
+                                ),
+                            ].map((p) => {
                                 const on =
                                     ((first
                                         ? widget.scope.period

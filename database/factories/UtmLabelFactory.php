@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domains\Connectors\Enums\Umami\UtmDimension;
-use App\Domains\Connectors\Models\Umami\UtmLabel;
+use App\Domains\Connectors\Umami\Enums\UtmDimension;
+use App\Domains\Connectors\Umami\Models\UtmLabel;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

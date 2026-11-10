@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Models;
 
-use App\Domains\Connectors\Data\Umami\UmamiCredentials;
-use App\Domains\Connectors\Models\Umami\UtmLabel;
+use App\Domains\Connectors\Casts\ConnectorConfigCast;
+use App\Domains\Connectors\Mosparo\Data\MosparoConfig;
+use App\Domains\Connectors\Mosparo\Data\MosparoCredentials;
+use App\Domains\Connectors\Umami\Data\UmamiConfig;
+use App\Domains\Connectors\Umami\Data\UmamiCredentials;
+use App\Domains\Connectors\Umami\Models\UtmLabel;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
@@ -38,14 +42,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $last_error
  * @property CarbonImmutable|null $next_check_at
  * @property ConnectionKind $kind
- * @property string|null $website_id the Umami website it reads
- * @property string|null $website_name
- * @property string|null $username for an Umami login; without it the secret is an API key
- * @property string|null $secret the Umami API key or password
+ * @property string|null $name a service's website or project, as it is shown
+ * @property UmamiConfig|MosparoConfig|null $config a service's settings and credentials, encrypted
  * @property-read Project $project
  */
-#[Fillable(['project_id', 'kind', 'environment', 'url', 'timezone', 'pull_token', 'pull_token_previous', 'uses_previous', 'last_checked_at', 'last_ok_at', 'last_error', 'next_check_at', 'website_id', 'website_name', 'username', 'secret'])]
-#[Hidden(['pull_token', 'pull_token_previous', 'secret'])]
+#[Fillable(['project_id', 'kind', 'environment', 'url', 'timezone', 'pull_token', 'pull_token_previous', 'uses_previous', 'last_checked_at', 'last_ok_at', 'last_error', 'next_check_at', 'name', 'config'])]
+#[Hidden(['pull_token', 'pull_token_previous', 'config'])]
 #[UseFactory(DataSourceConnectionFactory::class)]
 class DataSourceConnection extends Model
 {
@@ -74,7 +76,7 @@ class DataSourceConnection extends Model
             'pull_token' => 'encrypted',
             'pull_token_previous' => 'encrypted',
             'kind' => ConnectionKind::class,
-            'secret' => 'encrypted',
+            'config' => ConnectorConfigCast::class,
             'uses_previous' => 'boolean',
             'last_checked_at' => 'datetime',
             'last_ok_at' => 'datetime',
@@ -149,9 +151,10 @@ class DataSourceConnection extends Model
         return $this->hasMany(UtmLabel::class);
     }
 
-    public function isUmami(): bool
+    /** Whether it pulls from this kind: an app with the Laravel package, or a service. */
+    public function isFor(ConnectionKind $kind): bool
     {
-        return $this->kind === ConnectionKind::Umami;
+        return $this->kind === $kind;
     }
 
     /**
@@ -162,6 +165,48 @@ class DataSourceConnection extends Model
      */
     public function umamiCredentials(): UmamiCredentials
     {
-        return new UmamiCredentials($this->url, $this->username, (string) $this->secret);
+        $config = $this->umamiConfig();
+
+        return new UmamiCredentials($this->url, $config->username, $config->secret);
+    }
+
+    /**
+     * @throws DecryptException
+     */
+    public function umamiConfig(): UmamiConfig
+    {
+        $config = $this->config;
+
+        return $config instanceof UmamiConfig ? $config : new UmamiConfig('', null, '');
+    }
+
+    /** The Umami website it reads; empty when its settings cannot be read. */
+    public function umamiWebsiteId(): string
+    {
+        try {
+            return $this->umamiConfig()->websiteId;
+        } catch (DecryptException) {
+            return '';
+        }
+    }
+
+    /**
+     * How to reach its mosparo project.
+     *
+     * @throws DecryptException
+     */
+    public function mosparoCredentials(): MosparoCredentials
+    {
+        $config = $this->config;
+
+        return $config instanceof MosparoConfig
+            ? new MosparoCredentials($this->url, $config->publicKey, $config->privateKey)
+            : new MosparoCredentials($this->url, '', '');
+    }
+
+    /** What it is called on a page: an app's environment, a service's website or project. */
+    public function displayName(): string
+    {
+        return $this->isFor(ConnectionKind::App) ? $this->environment : ($this->name ?? $this->environment);
     }
 }

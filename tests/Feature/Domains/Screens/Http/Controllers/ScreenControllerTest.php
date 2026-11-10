@@ -222,7 +222,7 @@ describe('the pages', function () {
     });
 
     it('files an Umami source under Umami and its website, not the Umami instance', function () {
-        $connection = DataSourceConnection::factory()->umami()->for($this->project)->create(['website_name' => 'eazy.photo']);
+        $connection = DataSourceConnection::factory()->umami()->for($this->project)->create(['name' => 'eazy.photo']);
         DataSource::factory()->for($this->project)->connected('visitors')->create(['data_source_connection_id' => $connection->id, 'environment' => 'umami', 'group_path' => 'Campaigns']);
 
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Actions;
 
-use App\Domains\Connectors\Actions\Umami\PullUmamiSourceAction;
 use App\Domains\Connectors\Exceptions\ConnectorsExceptionInterface;
+use App\Domains\Connectors\Mosparo\Actions\PullMosparoSourceAction;
+use App\Domains\Connectors\Umami\Actions\PullUmamiSourceAction;
+use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Enums\DataSourceShape;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceWindow;
@@ -38,6 +40,7 @@ class FetchDataSourceWindowAction
     public function __construct(
         private readonly SendSignedPullAction $send,
         private readonly PullUmamiSourceAction $pullUmami,
+        private readonly PullMosparoSourceAction $pullMosparo,
     ) {
     }
 
@@ -59,7 +62,7 @@ class FetchDataSourceWindowAction
         }
 
         try {
-            $this->store($window, $window->source->connection?->isUmami() === true ? $this->pullFromUmami($window) : ($this->pull($window)[$window->source->key] ?? null));
+            $this->store($window, $window->source->connection !== null && ! $window->source->connection->isFor(ConnectionKind::App) ? $this->pullFromService($window) : ($this->pull($window)[$window->source->key] ?? null));
         } catch (HealthExceptionInterface|ConnectorsExceptionInterface|ConnectionException $e) {
             $this->failed($window, $e->getMessage());
         } catch (Throwable $e) {
@@ -93,24 +96,29 @@ class FetchDataSourceWindowAction
     }
 
     /**
-     * The same range an app would be asked for, read from Umami instead.
+     * The same range an app would be asked for, read from the service's API instead.
      *
      * @return array{shape: string, data: mixed}
      */
-    private function pullFromUmami(DataSourceWindow $window): array
+    private function pullFromService(DataSourceWindow $window): array
     {
         $source = $window->source;
         $period = Period::from($window->period);
         $step = self::stepSeconds($source, $period);
         $to = (int) (floor(now()->getTimestamp() / $step) * $step);
+        $from = CarbonImmutable::createFromTimestamp($to - self::periodSeconds($period));
+        $until = CarbonImmutable::createFromTimestamp($to);
+        $timezone = (string) $source->connection?->timezone;
 
         try {
-            $source->connection?->umamiCredentials();
+            return match ($source->connection?->kind) {
+                ConnectionKind::Umami => $this->pullUmami->execute($source, $from, $until, $window->bucket, $timezone),
+                ConnectionKind::Mosparo => $this->pullMosparo->execute($source, $from, $until, $timezone),
+                default => throw new ProbeFailedException(__('data_sources.errors.no_answer')),
+            };
         } catch (DecryptException) {
-            throw new ProbeFailedException(__('connectors.umami.errors.secret_unreadable'));
+            throw new ProbeFailedException(__('connectors.secret_unreadable'));
         }
-
-        return $this->pullUmami->execute($source, CarbonImmutable::createFromTimestamp($to - self::periodSeconds($period)), CarbonImmutable::createFromTimestamp($to), $window->bucket, (string) $source->connection?->timezone);
     }
 
     /** Rounded, as the two clock readings can fall either side of a second. */

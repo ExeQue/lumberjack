@@ -6,6 +6,7 @@ use App\Domains\Alerts\Models\QueueAlertThreshold;
 use App\Domains\DataSources\Enums\DataSourceFormat;
 use App\Domains\DataSources\Enums\DataSourceShape;
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\DataSources\Support\Prometheus;
 use App\Domains\Health\Enums\HealthStatus;
@@ -837,6 +838,16 @@ describe('connected data sources', function () {
         expect(($this->resolve)(WidgetType::Chart, 'external_json', $options, new WidgetScope(period: Period::Hour))['interval'])->toBe('2m')
             ->and(DataSourceWindow::query()->where('period', '1h')->value('bucket'))->toBe(120);
     })->with(['too coarse' => '86400', 'automatic' => 'auto']);
+
+    it('reads a service that counts whole days for the day in place of the hour, and says so', function () {
+        $connection = DataSourceConnection::factory()->mosparo()->for($this->project)->create();
+        $source = DataSource::factory()->for($this->project)->connected('valid')->create(['data_source_connection_id' => $connection->id]);
+
+        $data = ($this->resolve)(WidgetType::Stat, 'external_json', ['data_source' => $source->uuid], new WidgetScope(period: Period::Hour));
+
+        expect($data['period'])->toBe('24h')
+            ->and(DataSourceWindow::query()->where('data_source_id', $source->id)->value('period'))->toBe('24h');
+    });
 
     it('shows a number', function () {
         $data = ($this->resolve)(WidgetType::Stat, 'external_json', ($this->connected)(DataSourceShape::Number, 42), new WidgetScope(period: Period::Day));

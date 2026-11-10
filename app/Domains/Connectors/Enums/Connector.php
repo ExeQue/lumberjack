@@ -14,6 +14,7 @@ use App\Domains\Projects\Models\Project;
 enum Connector: string
 {
     case Umami = 'umami';
+    case Mosparo = 'mosparo';
 
     public function label(): string
     {
@@ -30,13 +31,27 @@ enum Connector: string
     {
         return match ($this) {
             self::Umami => ConnectionKind::Umami,
+            self::Mosparo => ConnectionKind::Mosparo,
         };
+    }
+
+    /** The connector a connection was made with; none for an app's. */
+    public static function forKind(ConnectionKind $kind): ?self
+    {
+        foreach (self::cases() as $connector) {
+            if ($connector->kind() === $kind) {
+                return $connector;
+            }
+        }
+
+        return null;
     }
 
     public function url(Project $project): string
     {
         return match ($this) {
             self::Umami => route('connectors.umami.index', $project),
+            self::Mosparo => route('connectors.mosparo.index', $project),
         };
     }
 

@@ -32,8 +32,9 @@ A project reads as many websites as you connect, each with its own connection, d
 and notes. Connecting a website the project already reads renews its credentials. Under the
 page's **Connection** tab:
 
-- **Add a website** connects another website the same credentials can read. A website on
-  another Umami is connected from **Data sources** again.
+- **Connect another Umami** opens the connect dialog, for a website on another Umami or
+  under other credentials.
+- **Add a website** connects another website the same credentials can read.
 - **Change website** points this connection at another website; screens showing its sources
   go on with the new one.
 - **Disconnect** removes this website's connection and its data sources.
@@ -48,17 +49,25 @@ figure work like the other statistics pages. On top are visitors, visits, page v
 per visit, bounce rate and time per visit, each against the period before, and how many are
 on the site right now.
 
-| Tab            | What it shows                                                                                                                                                                              |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Overview**   | Visitors or page views per bucket, with a dashed line for each release Lumberjack saw go out and each [note](#notes), and the busiest hours of the week over the last four weeks.          |
-| **Pages**      | Pages, entry and exit pages, with each page's LCP as the [browser script](./performance.md#browser) measured it. Ids in a path are folded, so `/orders/12` is matched with `/orders/{id}`. |
-| **Sources**    | Referrers, channels and the UTM source, medium and campaign.                                                                                                                               |
-| **Audience**   | Countries, devices, browsers, operating systems and languages.                                                                                                                             |
-| **Events**     | Custom events, with the share of the period's visitors who triggered each.                                                                                                                 |
-| **Connection** | The connection, for team owners and admins.                                                                                                                                                |
+| Tab            | What it shows                                                                                                                                                                                                                      |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Overview**   | Visitors or page views per bucket, with a dashed line for each release Lumberjack saw go out and each [note](#notes), and the busiest hours of the week over the last four weeks.                                                  |
+| **Pages**      | Pages, entry and exit pages, each with its domain and its LCP as the [browser script](./performance.md#browser) measured it, and the domains themselves. Ids in a path are folded, so `/orders/12` is matched with `/orders/{id}`. |
+| **Sources**    | Referrers, channels and the UTM source, medium and campaign.                                                                                                                                                                       |
+| **Audience**   | Countries, devices, browsers, operating systems and languages.                                                                                                                                                                     |
+| **Events**     | Custom events, with the share of the period's visitors who triggered each.                                                                                                                                                         |
+| **Connection** | The connection, for team owners and admins.                                                                                                                                                                                        |
 
-Click a row to show only what matches it, such as one page or one campaign. The filters show
-above the figures; click one to remove it.
+Click a row to show only what matches it, such as one page on its domain or one campaign.
+The filters show above the figures; click one to remove it.
+
+Each table shows the ten values seen most. **Search** above it asks Umami for the values
+containing what you type, over the whole period, not only those shown; a UTM value is found by
+its [name](#naming-utm-values) too. **Load more** below it shows ten more, up to 200.
+
+The tab, the website, the period, filters, searches and rows loaded are kept in the address,
+so a reload or a shared link opens the same view. The website is part of the path, such as
+`/projects/…/connectors/umami/…#sources`.
 
 Umami counts bounces and time per visit for the whole site and per channel, but leaves them at
 0 for most other breakdowns. A table hides those columns when Umami counted none.
@@ -80,8 +89,8 @@ empty name to forget it.
 
 ## Data sources
 
-An Umami connection offers these sources, filed under **Umami** in the designer's
-**Data source** tree. They are read from Umami only while a screen shows them, like an
+An Umami connection offers these sources, filed under **Umami** and the website's name in the
+designer's **Data source** tree, and under the connection on the **Data sources** page. They are read from Umami only while a screen shows them, like an
 app's [connected sources](./data-sources.md#connected-sources).
 
 | Source                                                                                                                                         | Shape          |
@@ -94,7 +103,7 @@ app's [connected sources](./data-sources.md#connected-sources).
 | Each custom event seen in the last 30 days: its count, and the count over time                                                                 | number, series |
 | Each UTM campaign seen in the last 30 days, or given a name: its visitors, and its visitors over time                                          | number, series |
 
-A campaign that has a name stays a source when it goes quiet, under **Umami > Campaigns**.
+A campaign that has a name stays a source when it goes quiet, under the website's **Campaigns**.
 
 ## When Umami cannot be read
 

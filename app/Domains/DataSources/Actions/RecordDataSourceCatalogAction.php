@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Actions;
 
+use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Enums\DataSourceFormat;
 use App\Domains\DataSources\Enums\DataSourceShape;
 use App\Domains\DataSources\Models\DataSource;
@@ -79,7 +80,7 @@ class RecordDataSourceCatalogAction
                 'cache_seconds' => is_int($source['cache'] ?? null) && $source['cache'] > 0 ? min($source['cache'], FetchDataSourceWindowAction::MAX_STEP_SECONDS) : null,
                 'archived_at' => null,
                 // Only a connector Lumberjack reads itself narrows a source; an app's answer is its own.
-                'filter_value' => $connection->isUmami() && is_string($source['filter'] ?? null) ? mb_substr($source['filter'], 0, 500) : null,
+                'filter_value' => ! $connection->isFor(ConnectionKind::App) && is_string($source['filter'] ?? null) ? mb_substr($source['filter'], 0, 500) : null,
             ]);
 
             // What was pulled in the old form cannot be read as the new one.

@@ -53,7 +53,7 @@ function NavLink({ item }: { item: NavItem }) {
         );
     }
 
-    return (
+    const link = (
         <Link
             href={item.href}
             aria-current={item.active ? 'page' : undefined}
@@ -69,6 +69,44 @@ function NavLink({ item }: { item: NavItem }) {
                 </span>
             )}
         </Link>
+    );
+
+    if (!item.tabs || item.tabs.length < 2) {
+        return link;
+    }
+
+    // A group's pages fold out below it on hover or focus, and stay out while one is open.
+    return (
+        <div className="group/nav flex flex-col">
+            {link}
+            <div
+                className={cn(
+                    'grid grid-rows-[0fr] transition-[grid-template-rows] duration-150 group-focus-within/nav:grid-rows-[1fr] group-hover/nav:grid-rows-[1fr]',
+                    item.active && 'grid-rows-[1fr]',
+                )}
+            >
+                <div className="flex flex-col gap-0.5 overflow-hidden pl-3">
+                    {item.tabs.map((tab) => (
+                        <Link
+                            key={tab.href}
+                            href={tab.href}
+                            aria-current={tab.active ? 'page' : undefined}
+                            className={cn(
+                                'mt-0.5 flex h-7 items-center justify-between rounded-md px-2.5 text-xs text-ink-3 hover:bg-panel-2 hover:text-ink',
+                                tab.active && 'text-ink',
+                            )}
+                        >
+                            {tab.label}
+                            {tab.count !== undefined && tab.count > 0 && (
+                                <span className="font-mono text-[11px] text-err">
+                                    {tab.count > 99 ? '99+' : tab.count}
+                                </span>
+                            )}
+                        </Link>
+                    ))}
+                </div>
+            </div>
+        </div>
     );
 }
 

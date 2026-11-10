@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Mcp\Tools\DataSources;
 
 use App\Domains\DataSources\Actions\ChangeDataSourceConnectionUrlAction;
+use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Http\Requests\SaveDataSourceConnectionRequest;
 use App\Domains\DataSources\Http\Requests\UpdateDataSourceConnectionRequest;
 use App\Domains\Mcp\Attributes\RequiresPermission;
@@ -50,8 +51,8 @@ class UpdateDataSourceConnection extends Tool
             return $connection;
         }
 
-        if ($connection->isUmami()) {
-            return Response::error('An Umami connection is changed on the project\'s Umami page.');
+        if (! $connection->isFor(ConnectionKind::App)) {
+            return Response::error('A '.$connection->kind->label().' connection is changed on the project\'s '.$connection->kind->label().' page.');
         }
 
         $url = $request->get('url');

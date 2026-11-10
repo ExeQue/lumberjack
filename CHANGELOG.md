@@ -6,10 +6,17 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ### Added
 
-- **Connectors**: Lumberjack reads outside services itself, listed under **Data sources**. The first is Umami, on Umami Cloud with an API key or self-hosted with an API key or a login, picking the website from your own and your teams'. Each connector can be connected as often as needed, such as several Umami websites in one project.
-- An **Umami** page per connected project: visitors, visits, page views, bounce rate and time per visit against the period before, traffic with releases marked, the busiest hours of the week, notes kept as Umami annotations, and pages (with their LCP), sources, audience and events to filter by with a click.
+- **Connectors**: Lumberjack reads outside services itself, listed under **Data sources**. The first are Umami, on Umami Cloud with an API key or self-hosted with an API key or a login, picking the website from your own and your teams', and mosparo. Each connector can be connected as often as needed, such as several Umami websites in one project.
+- An **Umami** page per connected project: visitors, visits, page views, bounce rate and time per visit against the period before, traffic with releases marked, the busiest hours of the week, notes kept as Umami annotations, and pages (with their domain and LCP), sources, audience and events to filter by with a click, search across the period and load more of. The tab, website and view are kept in the address.
 - UTM values can be given names, shown on the page, in screens and as the name of a campaign's data source.
 - Umami's figures, lists, custom events and UTM campaigns as data sources for screen widgets.
+- A **mosparo** page per connected mosparo project: valid and spam submissions, the spam rate and the requests delayed or blocked over 1, 7 or 30 days against the days before, and those submissions per day. Its counts, spam rate and submissions per day are data sources for screens; as mosparo counts whole days, they offer no hour.
+- Both connector pages keep their key figures above their tabs and a **Connection** tab, for team owners and admins, to connect another or disconnect.
+- On **Data sources**, each connection lists its sources below it, folded away until opened.
+
+### Changed
+
+- A service connection's credentials and settings are kept in one encrypted column.
 
 ## [0.5.1] - 2026-11-10
 

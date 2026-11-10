@@ -26,6 +26,7 @@ import { index as releasesIndex } from '@/routes/releases';
 import { index as routesIndex } from '@/routes/routes';
 import { index as scheduleIndex } from '@/routes/schedule';
 import { index as screensIndex } from '@/routes/screens';
+import { index as mosparoIndex } from '@/routes/connectors/mosparo';
 import { index as umamiIndex } from '@/routes/connectors/umami';
 import { displays as teamDisplays, show as teamShow } from '@/routes/team';
 import { show as teamRetention } from '@/routes/team/retention';
@@ -42,6 +43,8 @@ export type NavItem = {
     tabs?: NavItem[];
     /** Reached another way than the sidebar list (project settings: the gear). */
     hidden?: boolean;
+    /** A group whose pages fold out in the sidebar only, without tabs above them. */
+    sidebarOnly?: boolean;
 };
 
 /** A group of pages behind one sidebar entry: active on any of them, their counts added. */
@@ -78,10 +81,14 @@ export function useNavigation(
 ): { projectNav: NavItem[]; teamNav: NavItem[]; adminNav: NavItem[] } {
     const t = useT();
     const page = usePage<{
-        sidebar_project?: { has_umami?: boolean } | null;
+        sidebar_project?: {
+            has_umami?: boolean;
+            has_mosparo?: boolean;
+        } | null;
     }>();
     // The routed project on a project page, so it is the one these entries are for.
     const hasUmami = page.props.sidebar_project?.has_umami === true;
+    const hasMosparo = page.props.sidebar_project?.has_mosparo === true;
     // Without the query or a #section (the settings page keeps its section there).
     const path = page.url.split(/[?#]/)[0];
     const isAt = (href: string, exact = false) =>
@@ -96,6 +103,27 @@ export function useNavigation(
         return { label, href, active: isAt(href, exact), ...rest };
     };
 
+    const connectors: NavItem[] = project
+        ? [
+              ...(hasUmami
+                  ? [
+                        item(
+                            t('common.nav.umami'),
+                            umamiIndex({ project: project.uuid }).url,
+                        ),
+                    ]
+                  : []),
+              ...(hasMosparo
+                  ? [
+                        item(
+                            t('common.nav.mosparo'),
+                            mosparoIndex({ project: project.uuid }).url,
+                        ),
+                    ]
+                  : []),
+          ]
+        : [];
+
     const projectNav: NavItem[] = project
         ? [
               item(t('common.nav.overview'), projectShow(project.uuid).url, {
@@ -107,10 +135,6 @@ export function useNavigation(
               item(t('common.nav.routes'), routesIndex(project.uuid).url),
               item(t('common.nav.queries'), queriesIndex(project.uuid).url),
               item(t('common.nav.browser'), browserIndex(project.uuid).url),
-              // Only for a project that reads an Umami website; connected under Data sources.
-              ...(hasUmami
-                  ? [item(t('common.nav.umami'), umamiIndex(project.uuid).url)]
-                  : []),
               item(t('common.nav.jobs'), jobsIndex(project.uuid).url, {
                   count: counts?.jobs,
               }),
@@ -135,6 +159,22 @@ export function useNavigation(
                   count: counts?.health,
               }),
               item(t('common.nav.releases'), releasesIndex(project.uuid).url),
+              // The services the project reads, last before its settings; connected under Data sources.
+              ...(connectors.length > 0
+                  ? [
+                        {
+                            ...group(
+                                t('common.nav.connectors'),
+                                connectors.toSorted((a, b) =>
+                                    a.label.localeCompare(b.label, undefined, {
+                                        sensitivity: 'base',
+                                    }),
+                                ),
+                            ),
+                            sidebarOnly: true,
+                        },
+                    ]
+                  : []),
               // Last in the list: the settings (with the data sources in their menu) for
               // whoever administers the project, else the data sources, read only.
               {
@@ -216,12 +256,13 @@ export function useSectionTabs(): NavItem[] | null {
         page.props.sidebar_project?.counts,
         page.props.is_admin,
     );
-    const path = page.url.split(/[?#]/)[0];
 
-    // Only on the pages themselves, not on what they lead to (one route, one job).
+    // On a tab's page and below it; a tab that must not reach further, such as Screens
+    // over a screen, is exact. A sidebar-only group, such as Connectors, has none.
     const tabs =
-        [...projectNav, ...teamNav].find((entry) =>
-            entry.tabs?.some((tab) => tab.href === path),
+        [...projectNav, ...teamNav].find(
+            (entry) =>
+                !entry.sidebarOnly && entry.tabs?.some((tab) => tab.active),
         )?.tabs ?? [];
 
     // One page alone needs no tabs (a member's gear: only the data sources).
@@ -233,7 +274,8 @@ const sections: Record<string, (project: string) => { url: string }> = {
     requests: routesIndex,
     database: queriesIndex,
     browser: browserIndex,
-    umami: umamiIndex,
+    umami: (project) => umamiIndex({ project }),
+    mosparo: (project) => mosparoIndex({ project }),
     releases: releasesIndex,
     jobs: jobsIndex,
     schedule: scheduleIndex,

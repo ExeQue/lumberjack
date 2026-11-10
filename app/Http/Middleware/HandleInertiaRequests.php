@@ -101,7 +101,7 @@ class HandleInertiaRequests extends Middleware
      * The project the sidebar keeps showing on pages that are not about one
      * project: the one being viewed, else the last one visited, else the first.
      *
-     * @return array{uuid: string, name: string, can_administer: bool, has_umami: bool, counts: array{issues: int, jobs: int, schedule: int, health: int, commands: int}}|null
+     * @return array{uuid: string, name: string, can_administer: bool, has_umami: bool, has_mosparo: bool, counts: array{issues: int, jobs: int, schedule: int, health: int, commands: int}}|null
      */
     private function sidebarProject(Request $request): ?array
     {
@@ -129,6 +129,7 @@ class HandleInertiaRequests extends Middleware
             'can_administer' => $user->can('update', $project),
             // The Umami page is in the sidebar only for a project that reads a website.
             'has_umami' => $project->umamiConnections()->exists(),
+            'has_mosparo' => $project->mosparoConnections()->exists(),
             // Reused for half a minute, and forgotten when a live broadcast says they changed.
             'counts' => Cache::remember(self::sidebarCountsKey($project->id), self::SIDEBAR_COUNTS_SECONDS, fn (): array => [
                 'issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->count(),

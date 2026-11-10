@@ -126,7 +126,17 @@ class Project extends Model
      */
     public function umamiConnections(): HasMany
     {
-        return $this->hasMany(DataSourceConnection::class)->where('kind', ConnectionKind::Umami)->orderBy('website_name')->orderBy('id');
+        return $this->hasMany(DataSourceConnection::class)->where('kind', ConnectionKind::Umami)->orderBy('name')->orderBy('id');
+    }
+
+    /**
+     * The mosparo projects it reads, one connection each, by name.
+     *
+     * @return HasMany<DataSourceConnection, $this>
+     */
+    public function mosparoConnections(): HasMany
+    {
+        return $this->hasMany(DataSourceConnection::class)->where('kind', ConnectionKind::Mosparo)->orderBy('name')->orderBy('id');
     }
 
     /** @return HasMany<DataSource, $this> */

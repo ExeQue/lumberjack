@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domains\Connectors\Actions\Umami\ConnectUmamiAction;
+use App\Domains\Connectors\Mosparo\Data\MosparoConfig;
+use App\Domains\Connectors\Umami\Data\UmamiConfig;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
@@ -32,19 +33,33 @@ class DataSourceConnectionFactory extends Factory
     {
         return $this->state(fn (): array => [
             'kind' => ConnectionKind::Umami,
-            'environment' => ConnectUmamiAction::environment(),
+            'environment' => ConnectionKind::Umami->environment(),
             'url' => 'https://umami.example.com/api',
             'pull_token' => null,
-            'secret' => 'umami_key',
-            'website_id' => $websiteId,
-            'website_name' => 'Shop',
+            'name' => 'Shop',
+            'config' => new UmamiConfig($websiteId, null, 'umami_key'),
+        ]);
+    }
+
+    /**
+     * A mosparo project, read with its public and private key.
+     */
+    public function mosparo(): static
+    {
+        return $this->state(fn (): array => [
+            'kind' => ConnectionKind::Mosparo,
+            'environment' => ConnectionKind::Mosparo->environment(),
+            'url' => 'https://mosparo.example.com',
+            'pull_token' => null,
+            'name' => 'Contact form',
+            'config' => new MosparoConfig('public_key', 'private_key'),
         ]);
     }
 
     /** Signed in to Umami with a user name and password rather than an API key. */
     public function withUmamiLogin(): static
     {
-        return $this->state(fn (): array => ['username' => 'admin', 'secret' => 'hunter2']);
+        return $this->state(fn (array $attributes): array => ['config' => new UmamiConfig($attributes['config']->websiteId, 'admin', 'hunter2')]);
     }
 
     /** The app was last seen answering. */

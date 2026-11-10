@@ -3,11 +3,47 @@
 declare(strict_types=1);
 
 return [
+    // A service connection whose settings were saved under another APP_KEY.
+    'secret_unreadable' => 'The saved credentials cannot be decrypted (was APP_KEY changed?). Connect it again.',
+
     // The catalog of services a project can connect to, on the data sources page.
     'catalog' => [
+        'mosparo' => [
+            'label' => 'mosparo',
+            'description' => 'Valid and spam form submissions of a mosparo project, on a page of their own and as data sources for screens.',
+        ],
         'umami' => [
             'label' => 'Umami',
             'description' => 'Visitors, pages, sources and events of an Umami website, on a page of their own and as data sources for screens.',
+        ],
+    ],
+
+    // mosparo: a project's form submissions, read through mosparo's statistic API.
+    'mosparo' => [
+        // Flash message after connecting.
+        'connected' => 'mosparo connected: :name. Its sources show up under Data sources within a minute.',
+
+        // The data sources a mosparo project offers screens.
+        'sources' => [
+            'valid' => 'Valid submissions',
+            'spam' => 'Spam submissions',
+            'spam_rate' => 'Spam rate (%)',
+            'delayed' => 'Delayed requests',
+            'blocked' => 'Blocked requests',
+            'valid_series' => 'Valid submissions per day',
+            'spam_series' => 'Spam submissions per day',
+        ],
+
+        // Why asking mosparo failed, shown on the connection, its sources and the mosparo page.
+        'errors' => [
+            'unauthorized' => 'mosparo refused the keys. Check the public and private key in the project\'s settings in mosparo.',
+            'not_mosparo' => 'The address did not answer as mosparo. Check it is the address you open mosparo at.',
+            'not_https' => 'mosparo is only asked over https, so the private key never travels in the clear.',
+            'rate_limited' => 'mosparo asks to slow down. It is asked again shortly.',
+            'status' => 'mosparo answered with HTTP :status.',
+            'too_large' => 'mosparo\'s answer was larger than Lumberjack reads.',
+            'unknown_source' => 'mosparo has no such source.',
+            'secret_unreadable' => 'The mosparo keys cannot be decrypted (was APP_KEY changed?). Connect mosparo again.',
         ],
     ],
 

@@ -113,6 +113,10 @@ page of its own once connected, and offers its figures as data sources. A connec
 connected as often as needed, such as one Umami website each time:
 
 - [Umami](./umami.md): the visitors of an Umami website.
+- [mosparo](./mosparo.md): the valid and spam form submissions of a mosparo project.
+
+A connected service's page is under **Connectors** in the project's sidebar. On this page each
+connection lists its sources below it, folded away until opened.
 
 ## Connected sources
 
@@ -125,6 +129,8 @@ table, computed by the app for the period a screen shows. See
 2. The pull token is shown once. Set it as `LUMBERJACK_PULL_TOKEN` in the app.
 3. Lumberjack asks the app every five minutes which sources it has. Until it answers, the
    connection reads **Waiting for the app**.
+
+Each connection lists its sources below it, folded away until you open them.
 
 Nothing goes through the agent: Lumberjack pulls it all, signing every call with the token,
 which never travels itself. It only uses https, and the app answers 404 to anything else. A

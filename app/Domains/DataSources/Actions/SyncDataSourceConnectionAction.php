@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Actions;
 
-use App\Domains\Connectors\Actions\Umami\BuildUmamiCatalogAction;
 use App\Domains\Connectors\Exceptions\ConnectorsExceptionInterface;
+use App\Domains\Connectors\Mosparo\Actions\BuildMosparoCatalogAction;
+use App\Domains\Connectors\Umami\Actions\BuildUmamiCatalogAction;
+use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Health\Exceptions\HealthExceptionInterface;
 use App\Domains\Health\Exceptions\ProbeFailedException;
@@ -24,6 +26,7 @@ class SyncDataSourceConnectionAction
         private readonly SendSignedPullAction $send,
         private readonly RecordDataSourceCatalogAction $record,
         private readonly BuildUmamiCatalogAction $umamiCatalog,
+        private readonly BuildMosparoCatalogAction $mosparoCatalog,
     ) {
     }
 
@@ -36,12 +39,12 @@ class SyncDataSourceConnectionAction
         }
 
         try {
-            $connection->isUmami() ? $this->syncUmami($connection) : $this->sync($connection);
+            $connection->isFor(ConnectionKind::App) ? $this->sync($connection) : $this->syncService($connection);
             $connection->update(['last_checked_at' => now(), 'last_ok_at' => now(), 'last_error' => null]);
         } catch (HealthExceptionInterface|ConnectorsExceptionInterface|ConnectionException $e) {
             $this->failed($connection, $e->getMessage());
         } catch (DecryptException) {
-            $this->failed($connection, __('connectors.umami.errors.secret_unreadable'));
+            $this->failed($connection, __('connectors.secret_unreadable'));
         } catch (Throwable $e) {
             report($e);
             $this->failed($connection, __('data_sources.errors.bad_index'));
@@ -80,10 +83,14 @@ class SyncDataSourceConnectionAction
         throw new ProbeFailedException(__('data_sources.errors.not_answering'));
     }
 
-    /** An Umami website's list is made here, from what Umami says it has seen. */
-    private function syncUmami(DataSourceConnection $connection): void
+    /** A service's list is made here, from what its API says it has. */
+    private function syncService(DataSourceConnection $connection): void
     {
-        $this->record->execute($connection, $this->umamiCatalog->execute($connection));
+        $this->record->execute($connection, match ($connection->kind) {
+            ConnectionKind::Umami => $this->umamiCatalog->execute($connection),
+            ConnectionKind::Mosparo => $this->mosparoCatalog->execute($connection),
+            ConnectionKind::App => throw new ProbeFailedException(__('data_sources.errors.bad_index')),
+        });
     }
 
     /**
