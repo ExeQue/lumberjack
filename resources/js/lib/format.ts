@@ -1,4 +1,5 @@
-const locale = (): string =>
+/** The app's locale, which every date and number on a page is written in. */
+export const locale = (): string =>
     (document.documentElement.lang || 'en').replace('_', '-');
 
 export function formatNumber(value: number, fractionDigits = 0): string {
@@ -92,6 +93,16 @@ export function formatRelative(
     }
 
     return rtf.format(Math.round(seconds / 86400), 'day');
+}
+
+export function formatDate(iso: string | null | undefined): string {
+    if (!iso) {
+        return '-';
+    }
+
+    return new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(
+        new Date(iso),
+    );
 }
 
 export function formatDateTime(iso: string | null | undefined): string {

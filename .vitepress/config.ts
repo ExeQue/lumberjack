@@ -142,6 +142,7 @@ export default defineConfig({
                     { text: 'Status screens', link: '/docs/screens' },
                     { text: 'Widgets', link: '/docs/widgets' },
                     { text: 'Data sources', link: '/docs/data-sources' },
+                    { text: 'Umami', link: '/docs/umami' },
                     { text: 'Finding things', link: '/docs/finding-things' },
                     { text: 'MCP', link: '/docs/mcp' },
                     {

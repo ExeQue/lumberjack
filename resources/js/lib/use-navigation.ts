@@ -26,6 +26,7 @@ import { index as releasesIndex } from '@/routes/releases';
 import { index as routesIndex } from '@/routes/routes';
 import { index as scheduleIndex } from '@/routes/schedule';
 import { index as screensIndex } from '@/routes/screens';
+import { index as umamiIndex } from '@/routes/connectors/umami';
 import { displays as teamDisplays, show as teamShow } from '@/routes/team';
 import { show as teamRetention } from '@/routes/team/retention';
 import type { ProjectHeader } from '@/types/lumberjack';
@@ -76,7 +77,11 @@ export function useNavigation(
     is_admin: boolean,
 ): { projectNav: NavItem[]; teamNav: NavItem[]; adminNav: NavItem[] } {
     const t = useT();
-    const page = usePage();
+    const page = usePage<{
+        sidebar_project?: { has_umami?: boolean } | null;
+    }>();
+    // The routed project on a project page, so it is the one these entries are for.
+    const hasUmami = page.props.sidebar_project?.has_umami === true;
     // Without the query or a #section (the settings page keeps its section there).
     const path = page.url.split(/[?#]/)[0];
     const isAt = (href: string, exact = false) =>
@@ -102,6 +107,10 @@ export function useNavigation(
               item(t('common.nav.routes'), routesIndex(project.uuid).url),
               item(t('common.nav.queries'), queriesIndex(project.uuid).url),
               item(t('common.nav.browser'), browserIndex(project.uuid).url),
+              // Only for a project that reads an Umami website; connected under Data sources.
+              ...(hasUmami
+                  ? [item(t('common.nav.umami'), umamiIndex(project.uuid).url)]
+                  : []),
               item(t('common.nav.jobs'), jobsIndex(project.uuid).url, {
                   count: counts?.jobs,
               }),
@@ -224,6 +233,7 @@ const sections: Record<string, (project: string) => { url: string }> = {
     requests: routesIndex,
     database: queriesIndex,
     browser: browserIndex,
+    umami: umamiIndex,
     releases: releasesIndex,
     jobs: jobsIndex,
     schedule: scheduleIndex,

@@ -4,6 +4,13 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- **Connectors**: Lumberjack reads outside services itself, listed under **Data sources**. The first is Umami, on Umami Cloud with an API key or self-hosted with an API key or a login, picking the website from your own and your teams'. Each connector can be connected as often as needed, such as several Umami websites in one project.
+- An **Umami** page per connected project: visitors, visits, page views, bounce rate and time per visit against the period before, traffic with releases marked, the busiest hours of the week, notes kept as Umami annotations, and pages (with their LCP), sources, audience and events to filter by with a click.
+- UTM values can be given names, shown on the page, in screens and as the name of a campaign's data source.
+- Umami's figures, lists, custom events and UTM campaigns as data sources for screen widgets.
+
 ## [0.5.1] - 2026-11-10
 
 ### Added

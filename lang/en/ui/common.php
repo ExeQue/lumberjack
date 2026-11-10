@@ -25,6 +25,7 @@ return [
         'routes' => 'Requests',
         'queries' => 'Database',
         'browser' => 'Browser',
+        'umami' => 'Umami',
         'releases' => 'Releases',
         'jobs' => 'Jobs',
         'schedule' => 'Schedule',

@@ -15,6 +15,8 @@ covers(TeamController::class, StoreTeamRequest::class);
 uses(ReadsQueryCounts::class);
 
 describe('creating a team', function () {
+    beforeEach(fn () => config(['lumberjack.teams.allow_creation' => 'everyone']));
+
     it('lets anyone create a team by default', function () {
         $user = User::factory()->inTeam()->create();
 

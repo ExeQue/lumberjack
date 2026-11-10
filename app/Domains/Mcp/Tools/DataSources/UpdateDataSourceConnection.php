@@ -50,6 +50,10 @@ class UpdateDataSourceConnection extends Tool
             return $connection;
         }
 
+        if ($connection->isUmami()) {
+            return Response::error('An Umami connection is changed on the project\'s Umami page.');
+        }
+
         $url = $request->get('url');
         $input = [
             'url' => is_string($url) ? SaveDataSourceConnectionRequest::normalizeUrl($url) : $connection->url,

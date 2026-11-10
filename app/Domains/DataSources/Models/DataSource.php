@@ -49,6 +49,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property DataSourceShape|null $shape
  * @property int|null $cache_seconds
  * @property int|null $data_source_connection_id
+ * @property string|null $filter_value the one value a connector's source is narrowed to, such as an Umami event or campaign
  * @property-read DataSourceConnection|null $connection
  * @property CarbonImmutable|null $archived_at
  * @property CarbonImmutable|null $created_at
@@ -57,7 +58,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'project_id', 'name', 'group_path', 'url', 'format', 'headers', 'interval_minutes', 'timeout_s', 'next_fetch_at',
     'last_fetched_at', 'last_ok_at', 'last_status_code', 'last_error', 'last_body',
-    'key', 'environment', 'shape', 'cache_seconds', 'data_source_connection_id', 'archived_at',
+    'key', 'environment', 'shape', 'cache_seconds', 'data_source_connection_id', 'archived_at', 'filter_value',
 ])]
 #[Hidden(['headers', 'last_body'])]
 #[UseFactory(DataSourceFactory::class)]

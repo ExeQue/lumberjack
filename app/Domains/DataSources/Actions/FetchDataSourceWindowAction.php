@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Actions;
 
+use App\Domains\Connectors\Actions\Umami\PullUmamiSourceAction;
+use App\Domains\Connectors\Exceptions\ConnectorsExceptionInterface;
 use App\Domains\DataSources\Enums\DataSourceShape;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\Health\Exceptions\HealthExceptionInterface;
 use App\Domains\Health\Exceptions\ProbeFailedException;
 use App\Domains\Shared\Enums\Period;
+use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Client\ConnectionException;
 use Throwable;
 
@@ -33,6 +37,7 @@ class FetchDataSourceWindowAction
 
     public function __construct(
         private readonly SendSignedPullAction $send,
+        private readonly PullUmamiSourceAction $pullUmami,
     ) {
     }
 
@@ -54,8 +59,8 @@ class FetchDataSourceWindowAction
         }
 
         try {
-            $this->store($window, $this->pull($window)[$window->source->key] ?? null);
-        } catch (HealthExceptionInterface|ConnectionException $e) {
+            $this->store($window, $window->source->connection?->isUmami() === true ? $this->pullFromUmami($window) : ($this->pull($window)[$window->source->key] ?? null));
+        } catch (HealthExceptionInterface|ConnectorsExceptionInterface|ConnectionException $e) {
             $this->failed($window, $e->getMessage());
         } catch (Throwable $e) {
             // Whatever an app answered, the failure is shown on the source.
@@ -85,6 +90,27 @@ class FetchDataSourceWindowAction
         $answer = $this->send->json($response);
 
         return is_array($answer['sources'] ?? null) ? $answer['sources'] : throw new ProbeFailedException(__('data_sources.errors.not_json'));
+    }
+
+    /**
+     * The same range an app would be asked for, read from Umami instead.
+     *
+     * @return array{shape: string, data: mixed}
+     */
+    private function pullFromUmami(DataSourceWindow $window): array
+    {
+        $source = $window->source;
+        $period = Period::from($window->period);
+        $step = self::stepSeconds($source, $period);
+        $to = (int) (floor(now()->getTimestamp() / $step) * $step);
+
+        try {
+            $source->connection?->umamiCredentials();
+        } catch (DecryptException) {
+            throw new ProbeFailedException(__('connectors.umami.errors.secret_unreadable'));
+        }
+
+        return $this->pullUmami->execute($source, CarbonImmutable::createFromTimestamp($to - self::periodSeconds($period)), CarbonImmutable::createFromTimestamp($to), $window->bucket, (string) $source->connection?->timezone);
     }
 
     /** Rounded, as the two clock readings can fall either side of a second. */

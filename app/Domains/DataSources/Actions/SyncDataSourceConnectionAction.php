@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Actions;
 
+use App\Domains\Connectors\Actions\Umami\BuildUmamiCatalogAction;
+use App\Domains\Connectors\Exceptions\ConnectorsExceptionInterface;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Health\Exceptions\HealthExceptionInterface;
 use App\Domains\Health\Exceptions\ProbeFailedException;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Client\ConnectionException;
 use Throwable;
 
@@ -20,6 +23,7 @@ class SyncDataSourceConnectionAction
     public function __construct(
         private readonly SendSignedPullAction $send,
         private readonly RecordDataSourceCatalogAction $record,
+        private readonly BuildUmamiCatalogAction $umamiCatalog,
     ) {
     }
 
@@ -32,10 +36,12 @@ class SyncDataSourceConnectionAction
         }
 
         try {
-            $this->sync($connection);
+            $connection->isUmami() ? $this->syncUmami($connection) : $this->sync($connection);
             $connection->update(['last_checked_at' => now(), 'last_ok_at' => now(), 'last_error' => null]);
-        } catch (HealthExceptionInterface|ConnectionException $e) {
+        } catch (HealthExceptionInterface|ConnectorsExceptionInterface|ConnectionException $e) {
             $this->failed($connection, $e->getMessage());
+        } catch (DecryptException) {
+            $this->failed($connection, __('connectors.umami.errors.secret_unreadable'));
         } catch (Throwable $e) {
             report($e);
             $this->failed($connection, __('data_sources.errors.bad_index'));
@@ -72,6 +78,12 @@ class SyncDataSourceConnectionAction
         }
 
         throw new ProbeFailedException(__('data_sources.errors.not_answering'));
+    }
+
+    /** An Umami website's list is made here, from what Umami says it has seen. */
+    private function syncUmami(DataSourceConnection $connection): void
+    {
+        $this->record->execute($connection, $this->umamiCatalog->execute($connection));
     }
 
     /**

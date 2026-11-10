@@ -106,6 +106,14 @@ In the screen designer, pick the widget, then the source under **Data source**:
 Charts read the source's history: each answer up to 64 KB is kept, 30 days by default.
 See [retention](./projects#retention), under **Data source history**.
 
+## Connectors
+
+Lumberjack can also read outside services itself. Each is listed under **Connectors**, has a
+page of its own once connected, and offers its figures as data sources. A connector can be
+connected as often as needed, such as one Umami website each time:
+
+- [Umami](./umami.md): the visitors of an Umami website.
+
 ## Connected sources
 
 An app using the Laravel package can offer its own sources: a figure, a series, a list or a

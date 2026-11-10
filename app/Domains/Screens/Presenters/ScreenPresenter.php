@@ -213,8 +213,8 @@ class ScreenPresenter
             'checks' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->get(['uuid', 'project_id', 'name', 'slug', 'type', 'config'])
                 ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name])->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all(),
             // External values pick one; names, formats and the app's host, never a full URL or header.
-            'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->with('connection:id,url')->orderBy('name')->get(['uuid', 'project_id', 'name', 'group_path', 'format', 'shape', 'environment', 'data_source_connection_id'])
-                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'group' => $s->group_path, 'host' => $s->connection !== null ? (parse_url($s->connection->url, PHP_URL_HOST) ?: null) : null, 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name])->values()->all(),
+            'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->with('connection:id,url,kind,website_id,website_name')->orderBy('name')->get(['uuid', 'project_id', 'name', 'group_path', 'format', 'shape', 'environment', 'data_source_connection_id'])
+                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'group' => $this->sourceGroup($s), 'host' => $s->connection?->isUmami() === true ? 'Umami' : $this->sourceHost($s), 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' && $s->connection?->isUmami() !== true ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name])->values()->all(),
             // Names a filter can pick from, so a queue, host, domain or database check is chosen, not typed.
             'filters' => [
                 'queue' => QueueSample::query()->whereIn('project_id', $projects->modelKeys())->where('sampled_at', '>=', now()->subDays(7))
@@ -227,5 +227,26 @@ class ScreenPresenter
             ],
             'limits' => ['min_cols' => Screen::MIN_COLS, 'max_cols' => Screen::MAX_COLS, 'min_rows' => Screen::MIN_ROWS, 'max_rows' => Screen::MAX_ROWS, 'max_widgets' => WidgetSchema::MAX_WIDGETS],
         ];
+    }
+
+    /**
+     * Where a source is read from, at the top of the picker: an app's host.
+     */
+    private function sourceHost(DataSource $source): ?string
+    {
+        return $source->connection !== null ? (parse_url($source->connection->url, PHP_URL_HOST) ?: null) : null;
+    }
+
+    /**
+     * A source's group in the picker; an Umami source's under its website, as one Umami
+     * instance holds many.
+     */
+    private function sourceGroup(DataSource $source): ?string
+    {
+        if ($source->connection?->isUmami() !== true) {
+            return $source->group_path;
+        }
+
+        return implode(' > ', array_filter([$source->connection->website_name ?? $source->connection->website_id, $source->group_path]));
     }
 }

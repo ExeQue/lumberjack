@@ -14,7 +14,7 @@ covers(CheckForUpdateAction::class, AdminUpdateCheckController::class, AppVersio
 
 describe('checking for a newer release', function () {
     beforeEach(function () {
-        config(['lumberjack.version' => '0.1.8']);
+        config(['lumberjack.version' => '0.1.8', 'lumberjack.update_check' => true]);
     });
 
     it('tells a system administrator about a newer release on every page', function () {

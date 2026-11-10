@@ -11,9 +11,21 @@ return [
     'empty_title' => 'No data sources yet',
     'empty_body' => 'Add a JSON or Prometheus endpoint to show its figures on a screen: a stat, a gauge, a chart or a list.',
     'formats' => ['json' => 'JSON', 'prometheus' => 'Prometheus', 'ical' => 'iCalendar (.ics)', 'connected' => 'Connected'],
+    'connectors' => [
+        'title' => 'Connectors',
+        'hint' => 'Services Lumberjack reads for this project. Each has a page of its own, and offers its figures to screens as data sources.',
+        'connected' => ':count connected',
+        // Buttons.
+        'connect' => 'Connect',
+        'open' => 'Open',
+    ],
     'connected' => [
+        // Button: open the Umami page of a connected website.
+        'open_umami' => 'Open Umami',
+        // The heading of an Umami connection in the list.
+        'umami' => 'Umami: :website',
         'title' => 'From your apps',
-        'hint' => 'Apps using the Laravel package. Lumberjack asks them which sources they offer, and pulls a source only while a screen shows it.',
+        'hint' => 'Apps using the Laravel package, and an Umami website. Lumberjack asks them which sources they offer, and pulls a source only while a screen shows it.',
         'empty_title' => 'No apps connected',
         'empty_body' => 'Connect an app to show its figures on a screen.',
         'no_sources' => 'No sources yet. They appear here once the app answers.',

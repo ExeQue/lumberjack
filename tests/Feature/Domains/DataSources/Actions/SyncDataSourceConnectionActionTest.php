@@ -19,7 +19,7 @@ covers(SyncDataSourceConnectionAction::class, DispatchDueDataSourceConnectionsAc
 uses(FakesHealthProbes::class);
 
 beforeEach(function () {
-    config(['health.allow_private' => false]);
+    config(['health.allow_private' => false, 'health.data_sources_allow_private' => false]);
     $this->fakeDns();
     $this->connection = DataSourceConnection::factory()->create();
     $this->url = 'https://app.example.com/lumberjack/data-sources';

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Http\Controllers;
 
+use App\Domains\Connectors\Enums\Connector;
 use App\Domains\DataSources\Actions\DispatchDueDataSourceWindowsAction;
 use App\Domains\DataSources\Actions\SaveDataSourceAction;
 use App\Domains\DataSources\Enums\DataSourceFormat;
@@ -34,8 +35,11 @@ class DataSourceController
 
         return Inertia::render('data-sources/index', [
             'project' => $presenter->header($project, $request->user()),
+            'connectors' => fn (): array => Connector::catalog($project),
             'connections' => fn (): array => $project->dataSourceConnections()->orderBy('environment')->get()->map(fn (DataSourceConnection $c): array => [
                 'uuid' => $c->uuid,
+                'kind' => $c->kind->value,
+                'website_name' => $c->website_name,
                 'environment' => $c->environment,
                 'url' => $c->url,
                 'timezone' => $c->timezone,
@@ -43,12 +47,13 @@ class DataSourceController
                 'last_ok_at' => $c->last_ok_at?->toIso8601String(),
                 'last_error' => $c->last_error,
             ])->all(),
-            'connected' => fn (): array => $project->dataSources()->whereConnected()->with(['windows' => fn ($query) => $query->whereNotNull('error')->where('requested_at', '>=', now()->subMinutes(DispatchDueDataSourceWindowsAction::ACTIVE_MINUTES))->latest('id')])->orderBy('environment')->orderBy('name')->get()->map(fn (DataSource $s): array => [
+            'connected' => fn (): array => $project->dataSources()->whereConnected()->with(['connection:id,kind,website_name', 'windows' => fn ($query) => $query->whereNotNull('error')->where('requested_at', '>=', now()->subMinutes(DispatchDueDataSourceWindowsAction::ACTIVE_MINUTES))->latest('id')])->orderBy('environment')->orderBy('name')->get()->map(fn (DataSource $s): array => [
                 'uuid' => $s->uuid,
                 'name' => $s->name,
                 'key' => $s->key,
                 'group' => $s->group_path,
-                'environment' => $s->environment !== '' ? $s->environment : null,
+                // An Umami source by its website, as its environment is only a key.
+                'environment' => $s->connection?->isUmami() === true ? $s->connection->website_name : ($s->environment !== '' ? $s->environment : null),
                 'shape' => $s->shape?->value,
                 'status' => match (true) {
                     $s->archived_at !== null => 'archived',

@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Http;
 covers(DiscordDriver::class, SlackDriver::class, TeamsDriver::class, TelegramDriver::class, NtfyDriver::class, PushoverDriver::class);
 
 beforeEach(function () {
+    config(['alerts.webhooks.allow_private' => false]);
     $this->issue = Issue::factory()->create(['title' => 'App\\Exceptions\\PaymentFailed', 'message' => 'Card <declined> & retried']);
     $this->alert = fn (AlertRuleType $type = AlertRuleType::NewIssue, ?int $burst = null) => new IssueAlert($this->issue, $type, 'production', 'https://lumberjack.test/issues/1', burst: $burst);
     $this->channel = fn (ChannelType $type, array $config) => NotificationChannel::factory()->for($this->issue->project->team)->create(['type' => $type, 'name' => 'Ops', 'config' => $config]);

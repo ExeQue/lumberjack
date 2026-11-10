@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Storage;
 covers(SetupController::class, EnsureSetupIsOpen::class, SetupState::class, RedirectToSetup::class, RequirePasswordChange::class);
 
 describe('first-run setup', function () {
+    beforeEach(fn () => config(['app.setup_token' => null]));
+
     test('an empty Lumberjack sends every page to setup', function () {
         $this->get(route('login'))->assertRedirect(route('setup'));
         $this->get(route('setup'))->assertOk();

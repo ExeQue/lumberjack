@@ -20,6 +20,8 @@ covers(WebhookDriver::class, PublicUrl::class);
 uses(FakesHealthProbes::class);
 
 describe('the webhook channel', function () {
+    beforeEach(fn () => config(['alerts.webhooks.allow_private' => false]));
+
     it('posts the alert as JSON, signed with the channel\'s own secret', function () {
         Http::fake(['93.184.215.14/*' => Http::response(null, 204)]);
         $issue = Issue::factory()->create(['title' => 'App\\Exceptions\\PaymentFailed']);

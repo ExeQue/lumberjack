@@ -23,7 +23,7 @@ covers(SendSignedPullAction::class, FetchDataSourceWindowAction::class, Dispatch
 uses(FakesHealthProbes::class);
 
 beforeEach(function () {
-    config(['health.allow_private' => false]);
+    config(['health.allow_private' => false, 'health.data_sources_allow_private' => false]);
     $this->fakeDns();
     $this->project = Project::factory()->create();
     $this->source = DataSource::factory()->for($this->project)->connected()->create();

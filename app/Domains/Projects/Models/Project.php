@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Projects\Models;
 
 use App\Domains\Alerts\Models\AlertRule;
+use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Health\Models\HealthCheck;
@@ -116,6 +117,16 @@ class Project extends Model
     public function dataSourceConnections(): HasMany
     {
         return $this->hasMany(DataSourceConnection::class);
+    }
+
+    /**
+     * The Umami websites the project reads, one connection each, by name.
+     *
+     * @return HasMany<DataSourceConnection, $this>
+     */
+    public function umamiConnections(): HasMany
+    {
+        return $this->hasMany(DataSourceConnection::class)->where('kind', ConnectionKind::Umami)->orderBy('website_name')->orderBy('id');
     }
 
     /** @return HasMany<DataSource, $this> */

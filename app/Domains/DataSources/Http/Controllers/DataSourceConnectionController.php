@@ -29,14 +29,17 @@ class DataSourceConnectionController
     public function update(UpdateDataSourceConnectionRequest $request, Project $project, DataSourceConnection $dataSourceConnection, ChangeDataSourceConnectionUrlAction $action): RedirectResponse
     {
         $this->authorizeFor($project, $dataSourceConnection);
+        // An Umami connection's address comes with its credentials, changed on the Umami page.
+        abort_if($dataSourceConnection->isUmami(), 404);
         $action->execute($dataSourceConnection, $request->string('url')->toString(), $request->input('timezone'));
 
-        return back()->with('status', __('data_sources.connection_updated', ['environment' => $dataSourceConnection->environment]));
+        return back()->with('status', __('data_sources.connection_updated', ['environment' => $dataSourceConnection->isUmami() ? $dataSourceConnection->website_name : $dataSourceConnection->environment]));
     }
 
     public function rotate(Project $project, DataSourceConnection $dataSourceConnection, RotatePullTokenAction $action): RedirectResponse
     {
         $this->authorizeFor($project, $dataSourceConnection);
+        abort_if($dataSourceConnection->isUmami(), 404);
 
         return back()->with('secret', ['label' => __('data_sources.pull_token'), 'value' => $action->execute($dataSourceConnection)]);
     }

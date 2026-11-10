@@ -21,7 +21,7 @@ covers(DataSourceConnectionController::class, SaveDataSourceConnectionRequest::c
 uses(FakesHealthProbes::class);
 
 beforeEach(function () {
-    config(['health.allow_private' => false]);
+    config(['health.allow_private' => false, 'health.data_sources_allow_private' => false]);
     $this->fakeDns();
     $this->project = Project::factory()->create();
     $this->admin = User::factory()->inTeam($this->project->team)->create();

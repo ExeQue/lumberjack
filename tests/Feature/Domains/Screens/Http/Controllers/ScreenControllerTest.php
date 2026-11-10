@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Performance\Models\RequestRun;
@@ -218,6 +219,17 @@ describe('the pages', function () {
                 ->where('data_sources.0.group', 'Events > Storage')
                 ->where('data_sources.0.host', 'app.example.com')
                 ->where('data_sources.1.group', null));
+    });
+
+    it('files an Umami source under Umami and its website, not the Umami instance', function () {
+        $connection = DataSourceConnection::factory()->umami()->for($this->project)->create(['website_name' => 'eazy.photo']);
+        DataSource::factory()->for($this->project)->connected('visitors')->create(['data_source_connection_id' => $connection->id, 'environment' => 'umami', 'group_path' => 'Campaigns']);
+
+        $this->actingAs($this->user)->get(route('screens.edit', $this->screen))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('data_sources.0.host', 'Umami')
+                ->where('data_sources.0.group', 'eazy.photo > Campaigns')
+                ->where('data_sources.0.environment', null));
     });
 
     it('names a check without a name of its own by what it looks at', function () {

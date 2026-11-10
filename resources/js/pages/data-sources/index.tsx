@@ -1,5 +1,7 @@
 import { Form, Head, router, usePage } from '@inertiajs/react';
 import { Fragment, useState } from 'react';
+import type { ReactNode } from 'react';
+import { UmamiConnectDialog } from '@/components/lj/connectors/umami/connect';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { TimezoneSelect } from '@/components/lj/screen/timezone-select';
 import { Relative } from '@/components/lj/relative';
@@ -12,6 +14,7 @@ import {
     EmptyState,
     Field,
     Input,
+    LinkButton,
     Mono,
     PageTitle,
     Select,
@@ -47,6 +50,7 @@ import {
     settings as projectSettings,
     show as projectShow,
 } from '@/routes/projects';
+import { index as umamiIndex } from '@/routes/connectors/umami';
 import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
 
 /** A source as the page gets it: its headers by name only, their values never leave the server. */
@@ -81,6 +85,9 @@ type ConnectedRow = {
 
 type ConnectionRow = {
     uuid: string;
+    /** An app pulled by signature, or an Umami website read through its API. */
+    kind: 'app' | 'umami';
+    website_name: string | null;
     environment: string;
     url: string;
     timezone: string;
@@ -89,8 +96,19 @@ type ConnectionRow = {
     last_error: string | null;
 };
 
+/** A service in the catalog, with the page it is connected and read on. */
+type ConnectorRow = {
+    key: string;
+    label: string;
+    description: string;
+    /** How many of it the project has connected. */
+    connections: number;
+    url: string;
+};
+
 type Props = {
     project: ProjectHeader;
+    connectors: ConnectorRow[];
     sources: DataSourceRow[];
     connected: ConnectedRow[];
     connections: ConnectionRow[];
@@ -114,6 +132,7 @@ const browserTimezone =
 
 export default function DataSourcesIndex({
     project,
+    connectors,
     sources,
     connected,
     connections,
@@ -163,6 +182,8 @@ export default function DataSourcesIndex({
                         )
                     }
                 />
+
+                <Connectors project={project} connectors={connectors} />
 
                 <ConnectedSources
                     project={project}
@@ -247,6 +268,117 @@ export default function DataSourcesIndex({
     );
 }
 
+/** The outside services a project can connect to, each on a page of its own. */
+function Connectors({
+    project,
+    connectors,
+}: {
+    project: ProjectHeader;
+    connectors: ConnectorRow[];
+}) {
+    const t = useT();
+    const [connecting, setConnecting] = useState<string | null>(null);
+    const Connect = connecting === null ? null : CONNECT_DIALOGS[connecting];
+
+    return (
+        <Card aria-labelledby="connectors-title" className="mb-6">
+            <CardHeader
+                id="connectors-title"
+                title={t('data_sources.connectors.title')}
+                description={t('data_sources.connectors.hint')}
+            />
+            <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-3 p-4">
+                {connectors.map((connector) => (
+                    <li
+                        key={connector.key}
+                        className="flex flex-col gap-2 rounded-md border border-line p-3"
+                    >
+                        <span className="flex items-center gap-2 text-sm font-medium">
+                            {connector.label}
+                            {connector.connections > 0 && (
+                                <Badge tone="ok">
+                                    {t('data_sources.connectors.connected', {
+                                        count: connector.connections,
+                                    })}
+                                </Badge>
+                            )}
+                        </span>
+                        <span className="text-xs text-ink-2">
+                            {connector.description}
+                        </span>
+                        {/* Connected as often as needed, one website or account each. */}
+                        <span className="flex flex-wrap gap-2">
+                            {connector.connections > 0 && (
+                                <LinkButton href={connector.url}>
+                                    {t('data_sources.connectors.open')}
+                                </LinkButton>
+                            )}
+                            {project.can_administer &&
+                                connector.key in CONNECT_DIALOGS && (
+                                    <Button
+                                        onClick={() =>
+                                            setConnecting(connector.key)
+                                        }
+                                    >
+                                        {t('data_sources.connectors.connect')}
+                                    </Button>
+                                )}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+            {Connect && (
+                <Connect
+                    project={project.uuid}
+                    onClose={() => setConnecting(null)}
+                />
+            )}
+        </Card>
+    );
+}
+
+/** Each connector's dialog for connecting it, by its key in the catalog. */
+const CONNECT_DIALOGS: Record<
+    string,
+    (props: { project: string; onClose: () => void }) => ReactNode
+> = {
+    umami: UmamiConnectDialog,
+};
+
+/** Changing an app's address and rotating its pull token; an Umami connection has neither. */
+function AppConnectionActions({
+    project,
+    connection,
+    onChangeUrl,
+}: {
+    project: string;
+    connection: ConnectionRow;
+    onChangeUrl: () => void;
+}) {
+    const t = useT();
+
+    return (
+        <>
+            <Button onClick={onChangeUrl}>
+                {t('data_sources.connected.change_url')}
+            </Button>
+            <ConfirmButton
+                question={t('data_sources.connected.rotate_question')}
+                confirmLabel={t('data_sources.connected.rotate')}
+                onConfirm={() =>
+                    router.post(
+                        connectionRotate([project, connection.uuid]).url,
+                        {},
+                        { preserveScroll: true },
+                    )
+                }
+            >
+                {t('data_sources.connected.rotate')}
+            </ConfirmButton>
+        </>
+    );
+}
+
 const CONNECTED_TONES = {
     connected: 'ok',
     failing: 'err',
@@ -297,7 +429,12 @@ function ConnectedSources({
                         >
                             <span className="min-w-0">
                                 <span className="flex items-center gap-2 font-medium">
-                                    {connection.environment}
+                                    {connection.kind === 'umami'
+                                        ? t('data_sources.connected.umami', {
+                                              website:
+                                                  connection.website_name ?? '',
+                                          })
+                                        : connection.environment}
                                     <Badge
                                         tone={
                                             CONNECTED_TONES[connection.status]
@@ -319,33 +456,30 @@ function ConnectedSources({
                             </span>
                             {project.can_administer && (
                                 <span className="inline-flex flex-wrap gap-2">
-                                    <Button
-                                        onClick={() =>
-                                            setChangingUrl(connection)
-                                        }
-                                    >
-                                        {t('data_sources.connected.change_url')}
-                                    </Button>
-                                    <ConfirmButton
-                                        question={t(
-                                            'data_sources.connected.rotate_question',
-                                        )}
-                                        confirmLabel={t(
-                                            'data_sources.connected.rotate',
-                                        )}
-                                        onConfirm={() =>
-                                            router.post(
-                                                connectionRotate([
-                                                    project.uuid,
-                                                    connection.uuid,
-                                                ]).url,
-                                                {},
-                                                { preserveScroll: true },
-                                            )
-                                        }
-                                    >
-                                        {t('data_sources.connected.rotate')}
-                                    </ConfirmButton>
+                                    {connection.kind === 'umami' ? (
+                                        <LinkButton
+                                            href={
+                                                umamiIndex(project.uuid, {
+                                                    query: {
+                                                        connection:
+                                                            connection.uuid,
+                                                    },
+                                                }).url
+                                            }
+                                        >
+                                            {t(
+                                                'data_sources.connected.open_umami',
+                                            )}
+                                        </LinkButton>
+                                    ) : (
+                                        <AppConnectionActions
+                                            project={project.uuid}
+                                            connection={connection}
+                                            onChangeUrl={() =>
+                                                setChangingUrl(connection)
+                                            }
+                                        />
+                                    )}
                                     <ConfirmButton
                                         question={t(
                                             'data_sources.connected.disconnect_question',
