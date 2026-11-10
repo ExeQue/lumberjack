@@ -4,6 +4,12 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-10
+
+### Changed
+
+- Dependencies updated, among them Laravel 13.42, Inertia 3.11 and Tailwind 4.3.4.
+
 ## [0.6.0] - 2026-11-10
 
 ### Added
@@ -197,7 +203,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/ExeQue/lumberjack/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ExeQue/lumberjack/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/ExeQue/lumberjack/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/ExeQue/lumberjack/compare/v0.4.1...v0.5.0
