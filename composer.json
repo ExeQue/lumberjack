@@ -26,7 +26,7 @@
         "softcreatr/jsonpath": "^2.1"
     },
     "require-dev": {
-        "exeque/laravel-monocle": "^0.12",
+        "exeque/laravel-monocle": "^0.13",
         "fakerphp/faker": "^1.24",
         "larastan/larastan": "^3.9",
         "laravel/boost": "^2.2",
