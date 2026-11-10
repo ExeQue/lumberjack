@@ -2,7 +2,7 @@
 
 Connect a project to its website in [Umami](https://umami.is), and Lumberjack shows the
 visitors on a page of its own, beside what it saw of the same pages itself, and offers the
-figures to screen [widgets](./widgets.md) as [data sources](./data-sources.md).
+figures to screen [widgets](../widgets.md) as [data sources](../data-sources.md).
 
 Lumberjack only reads Umami. Visitors keep being tracked by Umami's own script.
 
@@ -49,14 +49,14 @@ figure work like the other statistics pages. On top are visitors, visits, page v
 per visit, bounce rate and time per visit, each against the period before, and how many are
 on the site right now.
 
-| Tab            | What it shows                                                                                                                                                                                                                      |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Overview**   | Visitors or page views per bucket, with a dashed line for each release Lumberjack saw go out and each [note](#notes), and the busiest hours of the week over the last four weeks.                                                  |
-| **Pages**      | Pages, entry and exit pages, each with its domain and its LCP as the [browser script](./performance.md#browser) measured it, and the domains themselves. Ids in a path are folded, so `/orders/12` is matched with `/orders/{id}`. |
-| **Sources**    | Referrers, channels and the UTM source, medium and campaign.                                                                                                                                                                       |
-| **Audience**   | Countries, devices, browsers, operating systems and languages.                                                                                                                                                                     |
-| **Events**     | Custom events, with the share of the period's visitors who triggered each.                                                                                                                                                         |
-| **Connection** | The connection, for team owners and admins.                                                                                                                                                                                        |
+| Tab            | What it shows                                                                                                                                                                                                                       |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Overview**   | Visitors or page views per bucket, with a dashed line for each release Lumberjack saw go out and each [note](#notes), and the busiest hours of the week over the last four weeks.                                                   |
+| **Pages**      | Pages, entry and exit pages, each with its domain and its LCP as the [browser script](../performance.md#browser) measured it, and the domains themselves. Ids in a path are folded, so `/orders/12` is matched with `/orders/{id}`. |
+| **Sources**    | Referrers, channels and the UTM source, medium and campaign.                                                                                                                                                                        |
+| **Audience**   | Countries, devices, browsers, operating systems and languages.                                                                                                                                                                      |
+| **Events**     | Custom events, with the share of the period's visitors who triggered each.                                                                                                                                                          |
+| **Connection** | The connection, for team owners and admins.                                                                                                                                                                                         |
 
 Click a row to show only what matches it, such as one page on its domain or one campaign.
 The filters show above the figures; click one to remove it.
@@ -91,7 +91,7 @@ empty name to forget it.
 
 An Umami connection offers these sources, filed under **Umami** and the website's name in the
 designer's **Data source** tree, and under the connection on the **Data sources** page. They are read from Umami only while a screen shows them, like an
-app's [connected sources](./data-sources.md#connected-sources).
+app's [connected sources](../data-sources.md#connected-sources).
 
 | Source                                                                                                                                         | Shape          |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |

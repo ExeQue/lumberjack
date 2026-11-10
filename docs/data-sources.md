@@ -108,15 +108,8 @@ See [retention](./projects#retention), under **Data source history**.
 
 ## Connectors
 
-Lumberjack can also read outside services itself. Each is listed under **Connectors**, has a
-page of its own once connected, and offers its figures as data sources. A connector can be
-connected as often as needed, such as one Umami website each time:
-
-- [Umami](./umami.md): the visitors of an Umami website.
-- [mosparo](./mosparo.md): the valid and spam form submissions of a mosparo project.
-
-A connected service's page is under **Connectors** in the project's sidebar. On this page each
-connection lists its sources below it, folded away until opened.
+Lumberjack can also read outside services itself, such as Umami and mosparo. See
+[Connectors](./connectors/).
 
 ## Connected sources
 

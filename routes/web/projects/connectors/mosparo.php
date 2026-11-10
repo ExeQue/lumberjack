@@ -7,7 +7,7 @@ use App\Domains\Connectors\Mosparo\Http\Controllers\MosparoController;
 use Illuminate\Support\Facades\Route;
 
 /*
- * The mosparo connector: its page and connecting a mosparo project. See docs/mosparo.md. Loaded inside the project group.
+ * The mosparo connector: its page and connecting a mosparo project. See docs/connectors/mosparo.md. Loaded inside the project group.
  */
 
 Route::post('mosparo/connection', [MosparoConnectionController::class, 'store'])->name('connectors.mosparo.connection.store');

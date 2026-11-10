@@ -7,7 +7,7 @@ use App\Domains\Connectors\Umami\Http\Controllers\UmamiController;
 use Illuminate\Support\Facades\Route;
 
 /*
- * The Umami connector: its page, connecting websites, UTM names and annotations. See docs/umami.md. Loaded inside the project group.
+ * The Umami connector: its page, connecting websites, UTM names and annotations. See docs/connectors/umami.md. Loaded inside the project group.
  */
 
 Route::get('umami/{dataSourceConnection?}', UmamiController::class)->name('connectors.umami.index');

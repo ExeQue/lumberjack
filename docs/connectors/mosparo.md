@@ -2,7 +2,7 @@
 
 Connect a project to a project in [mosparo](https://mosparo.io), the spam protection for
 forms, and Lumberjack shows its valid and spam submissions on a page of its own and offers the
-counts to screen [widgets](./widgets.md) as [data sources](./data-sources.md).
+counts to screen [widgets](../widgets.md) as [data sources](../data-sources.md).
 
 Lumberjack only reads mosparo, through its
 [statistic API](https://documentation.mosparo.io/docs/api/statistic). That API counts whole
@@ -52,7 +52,7 @@ chart shows the valid or spam submissions per day.
 
 A mosparo connection offers these sources, filed under **mosparo** and the connection's name in
 the designer's **Data source** tree. They are read from mosparo only while a screen shows them,
-like an app's [connected sources](./data-sources.md#connected-sources).
+like an app's [connected sources](../data-sources.md#connected-sources).
 
 | Source                                              | Shape  |
 | --------------------------------------------------- | ------ |
