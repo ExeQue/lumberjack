@@ -31,7 +31,7 @@ class McpTokenController
             $request->changes($team),
         );
 
-        return back()->with('secret', ['label' => __('mcp.token_created', ['name' => $request->string('name')->toString()]), 'value' => $plain]);
+        return back()->with('secret', ['label' => __('mcp.token_created', ['name' => $request->string('name')->toString()]), 'value' => $plain, 'mcp_url' => url('/mcp')]);
     }
 
     public function update(UpdateMcpTokenRequest $request, McpToken $token, UpdateMcpTokenAction $action): RedirectResponse

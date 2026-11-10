@@ -53,9 +53,11 @@ export function CopyText({
  */
 export function CopyButton({
     text,
+    label,
     className,
 }: {
     text: string;
+    label?: string;
     className?: string;
 }) {
     const t = useT();
@@ -63,6 +65,7 @@ export function CopyButton({
     return (
         <Button
             className={className}
+            aria-label={label}
             onClick={() => {
                 void navigator.clipboard
                     .writeText(text)

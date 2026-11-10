@@ -27,7 +27,7 @@ beforeEach(function () {
 
 describe('making a token', function () {
     it('saves Default, single-tool changes and per-project changes', function () {
-        $this->actingAs($this->admin)->post(route('mcp-tokens.store'), $this->valid)->assertRedirect()->assertSessionHas('secret');
+        $this->actingAs($this->admin)->post(route('mcp-tokens.store'), $this->valid)->assertRedirect()->assertSessionHas('secret.mcp_url', url('/mcp'));
 
         $token = McpToken::query()->sole();
 

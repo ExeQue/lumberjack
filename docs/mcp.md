@@ -1,7 +1,7 @@
 # MCP
 
-Lumberjack has an MCP server. AI agents such as Claude Code, Claude Desktop or Cursor
-can read issues and telemetry through it and help triage them.
+Lumberjack has an MCP server. AI agents such as Claude Code, Codex, Cursor, VS Code or
+Claude Desktop can read issues and telemetry through it and help triage them.
 
 ## Tokens
 
@@ -77,30 +77,100 @@ repository links, members, invitations, roles and MCP tokens.
 ## Connecting
 
 The server is at `https://your-lumberjack/mcp`. It uses streamable HTTP and takes the
-token as a bearer token in the `Authorization` header.
+token as a bearer token in the `Authorization` header. **Connect a client** under the
+tokens on the team page, and the dialog shown when a token is created, show these
+snippets with your address filled in.
 
-**Claude Code**
+::: warning Keep the token out of version control
+A token opens your team's data like a password. Never put the token itself in a file you commit, such
+as `.mcp.json`, `.cursor/mcp.json` or `.vscode/mcp.json`. Keep it in an environment
+variable or your client's secret store, as below, and revoke it on the team page if it
+leaks.
+:::
+
+Set the variable where the client runs, in a shell profile that is not in a dotfiles
+repository, or through a secret manager. On Windows, use `setx LUMBERJACK_MCP_TOKEN lj_mcp_...`.
 
 ```bash
-claude mcp add --transport http lumberjack https://your-lumberjack/mcp \
-  --header "Authorization: Bearer lj_mcp_..."
+export LUMBERJACK_MCP_TOKEN=lj_mcp_...
 ```
 
-**Other clients** that read an `mcpServers` JSON file, such as Cursor or `.mcp.json`:
+**Claude Code**, in your repository. It writes `.mcp.json` with the variable, not the
+token, so the file can be committed:
+
+```bash
+claude mcp add --transport http --scope project --header 'Authorization: Bearer ${LUMBERJACK_MCP_TOKEN}' lumberjack https://your-lumberjack/mcp
+```
+
+**Codex** adds it to `~/.codex/config.toml`:
+
+```bash
+codex mcp add lumberjack --url https://your-lumberjack/mcp --bearer-token-env-var LUMBERJACK_MCP_TOKEN
+```
+
+**Cursor**, in `.cursor/mcp.json`. Restart Cursor after setting the variable:
 
 ```json
 {
     "mcpServers": {
         "lumberjack": {
-            "type": "http",
             "url": "https://your-lumberjack/mcp",
-            "headers": {
-                "Authorization": "Bearer lj_mcp_..."
-            }
+            "headers": { "Authorization": "Bearer ${env:LUMBERJACK_MCP_TOKEN}" }
         }
     }
 }
 ```
+
+**VS Code**, in `.vscode/mcp.json`. It asks for the token on first use and keeps it in
+its secret store:
+
+```json
+{
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "lumberjack-token",
+            "description": "Lumberjack MCP token",
+            "password": true
+        }
+    ],
+    "servers": {
+        "lumberjack": {
+            "type": "http",
+            "url": "https://your-lumberjack/mcp",
+            "headers": { "Authorization": "Bearer ${input:lumberjack-token}" }
+        }
+    }
+}
+```
+
+**Claude Desktop**, in `claude_desktop_config.json` (**Settings**, **Developer**, **Edit
+config**), through `mcp-remote`, which needs Node.js. This file holds the token itself:
+keep it out of any repository.
+
+```json
+{
+    "mcpServers": {
+        "lumberjack": {
+            "command": "npx",
+            "args": [
+                "mcp-remote",
+                "https://your-lumberjack/mcp",
+                "--header",
+                "Authorization:${AUTH_HEADER}"
+            ],
+            "env": { "AUTH_HEADER": "Bearer lj_mcp_..." }
+        }
+    }
+}
+```
+
+::: tip More than one token
+Using tokens for other teams, servers or permissions? Give each its own server name and
+variable, such as `lumberjack-work` with `LUMBERJACK_WORK_MCP_TOKEN`, or set
+`LUMBERJACK_MCP_TOKEN` per repository with a tool like [direnv](https://direnv.net) in a
+git-ignored `.envrc`.
+:::
 
 ## Tools
 

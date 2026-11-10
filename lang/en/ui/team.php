@@ -42,6 +42,41 @@ return [
         'description' => 'Gives an agent access to the selected projects through MCP, and Grafana or a script read access through the metrics API.',
         'endpoint' => 'Endpoint:',
         'api_endpoint' => 'Metrics API:',
+        'connect' => [
+            // Button and dialog title
+            'title' => 'Connect a client',
+            'description' => 'Set up an MCP client for :url with one of the team\'s tokens.',
+            'several' => 'Tip: using more than one token, for other teams, servers or permissions? Give each its own server name and variable, such as lumberjack-work with LUMBERJACK_WORK_MCP_TOKEN, or set LUMBERJACK_MCP_TOKEN per repository with a tool like direnv in a git-ignored .envrc.',
+            'warning' => 'A token opens your team\'s data like a password. Never put the token itself in a file you commit, such as .mcp.json or .cursor/mcp.json: keep it in an environment variable or your client\'s secret store, as below.',
+            'client' => 'Client',
+            'env' => 'Then set :env where the client runs, with your token in place of the placeholder. Use a shell profile that is not in a dotfiles repository, or a secret manager. On Windows, run setx :env with the token instead.',
+            // Accessible names of the Copy buttons
+            'copy_token' => 'Copy token',
+            'copy_setup' => 'Copy setup',
+            'copy_env' => 'Copy variable',
+            'clients' => [
+                'claude_code' => [
+                    'name' => 'Claude Code',
+                    'where' => 'Run in your repository. It writes .mcp.json with the variable, not the token, so the file can be committed.',
+                ],
+                'codex' => [
+                    'name' => 'Codex',
+                    'where' => 'Run once. It adds the server to ~/.codex/config.toml, reading the token from the variable.',
+                ],
+                'cursor' => [
+                    'name' => 'Cursor',
+                    'where' => 'In .cursor/mcp.json. Restart Cursor after setting the variable.',
+                ],
+                'vscode' => [
+                    'name' => 'VS Code',
+                    'where' => 'In .vscode/mcp.json. VS Code asks for the token on first use and keeps it in its secret store.',
+                ],
+                'claude_desktop' => [
+                    'name' => 'Claude Desktop',
+                    'where' => 'In claude_desktop_config.json (Settings, Developer, Edit config), with your token in place of the placeholder. This file holds the token itself: keep it out of any repository. Needs Node.js.',
+                ],
+            ],
+        ],
         'empty' => 'No tokens yet',
         'name' => 'Name',
         'projects' => 'Projects',

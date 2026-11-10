@@ -7,6 +7,7 @@ import {
     type McpCatalogArea,
     type McpEditableToken,
 } from '@/components/lj/mcp-token-editor';
+import { McpSetupDialog } from '@/components/lj/mcp-setup';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
@@ -680,14 +681,17 @@ export default function TeamShow({
 
                         {admin && (
                             <div className="border-t border-line pt-4">
-                                <Button
-                                    type="button"
-                                    variant="primary"
-                                    onClick={() => setEditing('new')}
-                                    disabled={team.projects.length === 0}
-                                >
-                                    {t('team.tokens.new')}
-                                </Button>
+                                <div className="flex flex-wrap gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="primary"
+                                        onClick={() => setEditing('new')}
+                                        disabled={team.projects.length === 0}
+                                    >
+                                        {t('team.tokens.new')}
+                                    </Button>
+                                    <McpSetupDialog url={mcp_url} />
+                                </div>
                                 {team.projects.length === 0 && (
                                     <p className="mt-2 text-xs text-ink-3">
                                         {t('team.tokens.no_projects')}

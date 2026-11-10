@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- **Connect a client** on the team page, and the dialog with a new token, show the setup for Claude Code, Codex, Cursor, VS Code and Claude Desktop, with the token kept in an environment variable or the client's secret store instead of a committed file.
+
 ## [0.5.0] - 2026-11-10
 
 ### Added

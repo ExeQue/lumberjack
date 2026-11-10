@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button, Input } from '@/components/lj/ui';
 import { CopyButton } from '@/components/lj/copy-text';
+import { McpSetup } from '@/components/lj/mcp-setup';
 import {
     Dialog,
     DialogContent,
@@ -15,7 +16,7 @@ import { useT } from '@/lib/i18n';
 
 type Flash = {
     status: string | null;
-    secret: { label: string; value: string } | null;
+    secret: { label: string; value: string; mcp_url?: string } | null;
 };
 
 /**
@@ -68,7 +69,13 @@ export function FlashMessages() {
             open={secret !== null}
             onOpenChange={(open) => !open && setSecret(null)}
         >
-            <DialogContent>
+            <DialogContent
+                className={
+                    secret?.mcp_url
+                        ? 'max-h-[90vh] overflow-y-auto sm:max-w-2xl'
+                        : ''
+                }
+            >
                 <DialogHeader>
                     <DialogTitle>{secret?.label}</DialogTitle>
                     <DialogDescription>
@@ -85,8 +92,16 @@ export function FlashMessages() {
                     className="w-full font-mono"
                     onFocus={(e) => e.currentTarget.select()}
                 />
+                {secret?.mcp_url && <McpSetup url={secret.mcp_url} />}
                 <DialogFooter>
-                    <CopyButton text={secret?.value ?? ''} />
+                    <CopyButton
+                        text={secret?.value ?? ''}
+                        label={
+                            secret?.mcp_url
+                                ? t('team.tokens.connect.copy_token')
+                                : undefined
+                        }
+                    />
                     <Button variant="primary" onClick={() => setSecret(null)}>
                         {t('common.done')}
                     </Button>
