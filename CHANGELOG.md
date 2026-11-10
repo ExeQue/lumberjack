@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-10
+
 ### Added
 
 - **Connect a client** on the team page, and the dialog with a new token, show the setup for Claude Code, Codex, Cursor, VS Code and Claude Desktop, with the token kept in an environment variable or the client's secret store instead of a committed file.
@@ -179,7 +181,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/ExeQue/lumberjack/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/ExeQue/lumberjack/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/ExeQue/lumberjack/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/ExeQue/lumberjack/compare/v0.3.1...v0.4.0
