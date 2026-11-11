@@ -83,4 +83,6 @@ straight to the [ingest API](https://exeque.github.io/lumberjack/docs/api) from 
 - [MCP](https://exeque.github.io/lumberjack/docs/mcp)
 - [Metrics API](https://exeque.github.io/lumberjack/docs/metrics-api): read figures from Grafana, Prometheus or a script.
 - [Ingest and API](https://exeque.github.io/lumberjack/docs/api): the endpoints SDKs and agents send to, and their limits.
+- [OpenTelemetry](https://exeque.github.io/lumberjack/docs/opentelemetry): send traces, logs and exceptions from an
+  OpenTelemetry SDK or collector over OTLP/HTTP.
 - [Development](https://exeque.github.io/lumberjack/docs/development): run Lumberjack from source, demo data and screenshots.
