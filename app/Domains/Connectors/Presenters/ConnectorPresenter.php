@@ -13,14 +13,14 @@ class ConnectorPresenter
 {
     /**
      * The catalog as the Connectors page shows it: the connected ones first, then the rest,
-     * each group by name, with the project's connections of each.
+     * each group by name, with the project's connections of each by name and how its checks went.
      *
-     * @return list<array{key: string, label: string, description: string, tags: list<string>, url: string, connections: list<array{uuid: string, name: string, url: string}>}>
+     * @return list<array{key: string, label: string, description: string, tags: list<string>, url: string, connections: list<array{uuid: string, name: string, url: string, environment: string, last_ok_at: string|null, last_checked_at: string|null, last_error: string|null}>}>
      */
     public function catalog(Project $project): array
     {
         $connections = $project->dataSourceConnections()->orderBy('name')->orderBy('id')
-            ->get(['id', 'uuid', 'kind', 'name', 'environment'])
+            ->get(['id', 'uuid', 'kind', 'name', 'environment', 'last_ok_at', 'last_checked_at', 'last_error'])
             ->groupBy(fn (DataSourceConnection $connection): string => $connection->kind->value);
 
         return array_values(collect(Connector::cases())
@@ -35,6 +35,10 @@ class ConnectorPresenter
                         'uuid' => $connection->uuid,
                         'name' => $connection->displayName(),
                         'url' => $connector->url($project, $connection),
+                        'environment' => $connection->environment,
+                        'last_ok_at' => $connection->last_ok_at?->toIso8601String(),
+                        'last_checked_at' => $connection->last_checked_at?->toIso8601String(),
+                        'last_error' => $connection->last_error,
                     ])->all()),
             ])
             ->sortBy([

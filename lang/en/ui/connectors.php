@@ -15,8 +15,27 @@ return [
         'results' => '{0} No connectors match|{1} 1 connector|[2,*] :count connectors',
         'connected' => 'Connected',
         'not_connected' => 'Not connected',
-        // Before the names of the connected websites, repositories or ledgers, which link to them.
+        // Button above the first few connected websites, repositories or ledgers, which link to
+        // them; it opens a dialog with all of them.
         'connections' => '{1} 1 connection|[2,*] :count connections',
+        // Button below those, when the card lists only some; opens the same dialog.
+        // After the number of connections, when some of them fail to be read.
+        'failing' => ':count failing',
+        // How the last check of a connection went, beside an icon.
+        'statuses' => [
+            'ok' => 'OK',
+            'failing' => 'Failing',
+            'unchecked' => 'Not checked yet',
+        ],
+        // The dialog listing every connection of a connector.
+        'dialog' => [
+            'title' => ':connector connections',
+            'search' => 'Search connections',
+            'search_placeholder' => 'Search by name',
+            'empty' => 'No connections match',
+            // Under a connection that works: "Checked 5 minutes ago".
+            'checked' => 'Checked :time',
+        ],
         // Buttons.
         'connect' => 'Connect',
         'connect_another' => 'Connect another',
@@ -66,10 +85,25 @@ return [
             // A duration in hours, such as "4.5 h".
             'hours' => ':hours h',
             'stars' => 'Stars',
-            'forks_watchers' => ':forks forks, :watchers watchers',
+            'forks' => 'Forks',
+            'watchers' => 'Watchers',
             'issues_opened' => 'Issues opened',
             'issues_closed' => 'Issues closed',
             'open_bugs' => 'Open bugs',
+            'dependabot_alerts' => 'Dependabot alerts',
+            'code_scanning_alerts' => 'Code scanning alerts',
+            'secret_scanning_alerts' => 'Secret scanning alerts',
+            // Read by screen readers after a figure, which links to its page on GitHub.
+            'opens_github' => '(opens GitHub in a new tab)',
+        ],
+
+        // The headings of the key figures' checkboxes on the Connection tab.
+        'groups' => [
+            'pull_requests' => 'Pull requests',
+            'code' => 'Code',
+            'issues' => 'Issues',
+            'community' => 'Community',
+            'security' => 'Security',
         ],
 
         'tabs' => [
@@ -184,8 +218,10 @@ return [
             'missing' => 'Missing',
             'branch' => 'Branch',
             'branch_hint' => 'Commits, the CI status and failed runs are read from it; pull requests, releases, issues and security stay repository-wide. Empty for the default branch.',
+            'figures' => 'Key figures',
+            'figures_hint' => 'Which figures show on top of this page. Data sources for screens stay available either way.',
             // Button.
-            'save_branch' => 'Save branch',
+            'save' => 'Save',
         ],
     ],
 

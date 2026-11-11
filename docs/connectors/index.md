@@ -47,8 +47,12 @@ on connectors listed under another category.
 
 **Connectors** in the project's sidebar opens the list of every connector, and its chevron
 folds out the ones the project has connected. Each card shows what the connector reads, its
-tags, and whether it is connected, with links to each connection. The connected ones come
-first, then the rest, each by name.
+tags, and whether it is connected. The connected ones come first, then the rest, each by name.
+
+A connected card shows how many connections it has, and how many of them fail. The
+**n connections** button opens them all, each with its status (`OK`, `Failing` or
+`Not checked yet`), when it was last checked or the error it failed on, and a search once
+there are more than eight.
 
 - **Search** matches a connector's name, description and tags.
 - The **tags** (`Analytics` `Commerce` `Development` `Forms` `Payments` `Security`) narrow the list

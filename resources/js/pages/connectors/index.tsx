@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Search } from 'lucide-react';
+import { CircleAlert, CircleCheck, CircleDashed, Search } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { ConnectorIcon } from '@/components/lj/connectors/connector-icon';
@@ -7,6 +7,7 @@ import { GitHubConnectDialog } from '@/components/lj/connectors/github/connect';
 import { MobilePayConnectDialog } from '@/components/lj/connectors/mobilepay/connect';
 import { MosparoConnectDialog } from '@/components/lj/connectors/mosparo/connect';
 import { UmamiConnectDialog } from '@/components/lj/connectors/umami/connect';
+import { WithRelative } from '@/components/lj/relative';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
@@ -17,10 +18,29 @@ import {
     LinkButton,
     PageTitle,
 } from '@/components/lj/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import { useT } from '@/lib/i18n';
 import { show as projectShow } from '@/routes/projects';
 import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
+
+/** One of the project's connections to a service, by name, with how its checks went. */
+type ConnectionRow = {
+    uuid: string;
+    name: string;
+    url: string;
+    environment: string;
+    last_ok_at: string | null;
+    last_checked_at: string | null;
+    last_error: string | null;
+};
 
 /** A service in the catalog, with what the project has connected of it. */
 type ConnectorRow = {
@@ -29,8 +49,12 @@ type ConnectorRow = {
     description: string;
     tags: string[];
     url: string;
-    connections: { uuid: string; name: string; url: string }[];
+    connections: ConnectionRow[];
 };
+
+/** How many connections a card lists; the rest are in the dialog. */
+/** Above this many rows the dialog gets a search. */
+const SEARCH_FROM = 8;
 
 type Props = {
     project: ProjectHeader;
@@ -256,7 +280,11 @@ function ConnectorCard({
     onConnect: () => void;
 }) {
     const t = useT();
+    const [listing, setListing] = useState(false);
     const connected = connector.connections.length > 0;
+    const failing = connector.connections.filter(
+        (connection) => connection.last_error !== null,
+    ).length;
     const titleId = `connector-${connector.key}`;
 
     return (
@@ -302,23 +330,25 @@ function ConnectorCard({
 
                 {connected && (
                     <div className="text-xs text-ink-2">
-                        {t(
-                            'connectors.index.connections',
-                            { count: connector.connections.length },
-                            connector.connections.length,
+                        <button
+                            type="button"
+                            onClick={() => setListing(true)}
+                            className="cursor-pointer underline-offset-2 hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+                        >
+                            {t(
+                                'connectors.index.connections',
+                                { count: connector.connections.length },
+                                connector.connections.length,
+                            )}
+                        </button>
+                        {failing > 0 && (
+                            <span className="text-err">
+                                {' · '}
+                                {t('connectors.index.failing', {
+                                    count: failing,
+                                })}
+                            </span>
                         )}
-                        <ul className="mt-1 flex flex-col gap-0.5">
-                            {connector.connections.map((connection) => (
-                                <li key={connection.uuid} className="truncate">
-                                    <Link
-                                        href={connection.url}
-                                        className="text-ink underline-offset-2 hover:underline"
-                                    >
-                                        {connection.name}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
                     </div>
                 )}
 
@@ -356,6 +386,187 @@ function ConnectorCard({
                     </div>
                 )}
             </Card>
+            {listing && (
+                <ConnectionsDialog
+                    connector={connector}
+                    canConnect={canConnect}
+                    onConnect={() => {
+                        setListing(false);
+                        onConnect();
+                    }}
+                    onClose={() => setListing(false)}
+                />
+            )}
         </li>
+    );
+}
+
+/** Failing on an error, OK once a check went through, else not checked yet. */
+function statusOf(connection: ConnectionRow): 'failing' | 'ok' | 'unchecked' {
+    if (connection.last_error !== null) {
+        return 'failing';
+    }
+
+    return connection.last_ok_at === null ? 'unchecked' : 'ok';
+}
+
+const STATUS_ICONS = {
+    ok: CircleCheck,
+    failing: CircleAlert,
+    unchecked: CircleDashed,
+};
+
+const STATUS_CLASSES = {
+    ok: 'text-ok',
+    failing: 'text-err',
+    unchecked: 'text-ink-3',
+};
+
+/** The status in a word beside its icon, so it never rests on color alone. */
+function ConnectionStatus({ connection }: { connection: ConnectionRow }) {
+    const t = useT();
+    const status = statusOf(connection);
+    const Icon = STATUS_ICONS[status];
+
+    return (
+        <span
+            className={`inline-flex shrink-0 items-center gap-1 ${STATUS_CLASSES[status]}`}
+        >
+            <Icon className="size-3.5" aria-hidden="true" />
+            {t(`connectors.index.statuses.${status}`)}
+        </span>
+    );
+}
+
+/** Every connection of a connector, with its status, searchable once the list is long. */
+function ConnectionsDialog({
+    connector,
+    canConnect,
+    onConnect,
+    onClose,
+}: {
+    connector: ConnectorRow;
+    canConnect: boolean;
+    onConnect: () => void;
+    onClose: () => void;
+}) {
+    const t = useT();
+    const [q, setQ] = useState('');
+    const needle = q.trim().toLocaleLowerCase();
+    const shown = connector.connections.filter((connection) =>
+        connection.name.toLocaleLowerCase().includes(needle),
+    );
+
+    return (
+        <Dialog open onOpenChange={(open) => !open && onClose()}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>
+                        {t('connectors.index.dialog.title', {
+                            connector: connector.label,
+                        })}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {t(
+                            'connectors.index.connections',
+                            { count: connector.connections.length },
+                            connector.connections.length,
+                        )}
+                    </DialogDescription>
+                </DialogHeader>
+
+                {connector.connections.length > SEARCH_FROM && (
+                    <div className="relative">
+                        <Search
+                            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-ink-3"
+                            aria-hidden="true"
+                        />
+                        <Input
+                            type="search"
+                            aria-label={t('connectors.index.dialog.search')}
+                            placeholder={t(
+                                'connectors.index.dialog.search_placeholder',
+                            )}
+                            value={q}
+                            onChange={(e) => setQ(e.target.value)}
+                            className="w-full pl-8"
+                            autoComplete="off"
+                        />
+                    </div>
+                )}
+
+                {shown.length === 0 ? (
+                    <p role="status" className="text-sm text-ink-2">
+                        {t('connectors.index.dialog.empty')}
+                    </p>
+                ) : (
+                    <ul className="-mx-1 flex max-h-[60vh] flex-col overflow-y-auto">
+                        {shown.map((connection) => (
+                            <li
+                                key={connection.uuid}
+                                className="flex flex-col gap-0.5 border-b border-line/60 px-1 py-2 text-sm last:border-b-0"
+                            >
+                                <span className="flex items-center justify-between gap-3">
+                                    <Link
+                                        href={connection.url}
+                                        className="truncate text-ink underline-offset-2 hover:underline"
+                                    >
+                                        {connection.name}
+                                    </Link>
+                                    <span className="text-xs">
+                                        <ConnectionStatus
+                                            connection={connection}
+                                        />
+                                    </span>
+                                </span>
+                                <ConnectionDetail connection={connection} />
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                {canConnect && (
+                    <DialogFooter>
+                        <Button
+                            onClick={onConnect}
+                            aria-label={t(
+                                'connectors.index.connect_another_label',
+                                { connector: connector.label },
+                            )}
+                        >
+                            {t('connectors.index.connect_another')}
+                        </Button>
+                    </DialogFooter>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+/** Under a connection in the dialog: its error, or when it was last checked. */
+function ConnectionDetail({ connection }: { connection: ConnectionRow }) {
+    const t = useT();
+    const status = statusOf(connection);
+
+    if (status === 'failing') {
+        return (
+            <span className="text-xs wrap-break-word text-ink-2">
+                {connection.last_error}
+            </span>
+        );
+    }
+
+    if (status === 'unchecked') {
+        return null;
+    }
+
+    return (
+        <span className="text-xs text-ink-3">
+            <WithRelative
+                iso={connection.last_checked_at ?? connection.last_ok_at}
+            >
+                {(time) => t('connectors.index.dialog.checked', { time })}
+            </WithRelative>
+        </span>
     );
 }
