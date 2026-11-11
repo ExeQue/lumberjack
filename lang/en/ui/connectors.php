@@ -78,9 +78,12 @@ return [
 
         'connect' => [
             'repository' => 'Repository',
-            'repository_hint' => 'As owner/name, such as acme/shop, or its address on github.com.',
+            'repository_hint' => 'As owner/name, such as acme/shop, or any address on github.com under the repository.',
             'token' => 'Token',
             'token_hint' => 'A fine-grained token for this repository with read-only Metadata, Pull requests, Actions and Contents. Not the token of the repository integration.',
+            'create_token' => 'Create token on GitHub',
+            'opens_new_tab' => '(opens in a new tab)',
+            'token_description' => 'Lets Lumberjack read pull requests, Actions and releases of :repository.',
             // Buttons.
             'submit' => 'Connect',
             'cancel' => 'Cancel',

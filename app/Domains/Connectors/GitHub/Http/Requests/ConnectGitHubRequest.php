@@ -32,12 +32,13 @@ class ConnectGitHubRequest extends FormRequest
         ];
     }
 
-    /** The address copied from the browser is taken as well as owner/name. */
+    /** Any address copied from the browser under the repository is taken as well as owner/name. */
     #[Override]
     protected function prepareForValidation(): void
     {
         if (is_string($repository = $this->input('repository'))) {
-            $this->merge(['repository' => preg_replace(['~^\s*(?:https?://)?(?:www\.)?github\.com/~i', '~(?:\.git)?/*\s*$~'], '', $repository)]);
+            // Any page under the repository: /tree/main/src, /pulls/12, ?tab=readme.
+            $this->merge(['repository' => preg_replace('~^(?:https?://)?(?:www\.)?github\.com/([^/\s?#]+)/([^/\s?#]+?)(?:\.git)?(?:[/?#].*)?$~i', '$1/$2', trim($repository))]);
         }
     }
 
