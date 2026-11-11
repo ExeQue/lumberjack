@@ -14,7 +14,7 @@ use App\Domains\Projects\Models\Project;
 
 /**
  * Connects a project to a GitHub repository, once the token proves it reads the repository
- * and everything the connector shows. A project reads as many repositories as it likes, one
+ * and everything the connector requires, remembering which optional permissions it has. A project reads as many repositories as it likes, one
  * connection each; connecting a repository it already reads renews that connection's token.
  */
 class ConnectGitHubAction
@@ -31,6 +31,8 @@ class ConnectGitHubAction
     {
         // GitHub's own spelling, so the same repository typed otherwise is the same connection.
         $repository = $this->client->verify($credentials)['full_name'];
+        // Asked again on every renewal, as a new token may have more or fewer.
+        $granted = $this->client->grantedPermissions($credentials);
 
         $connection = $project->gitHubConnections()->where('name', $repository)->first()
             ?? new DataSourceConnection([
@@ -42,7 +44,7 @@ class ConnectGitHubAction
         $connection->fill([
             'url' => 'https://github.com/'.$repository,
             'name' => $repository,
-            'config' => new GitHubConfig($repository, $credentials->token),
+            'config' => new GitHubConfig($repository, $credentials->token, $granted),
             'last_error' => null,
             // Its sources are listed within a minute.
             'next_check_at' => null,

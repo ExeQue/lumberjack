@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domains\Connectors\GitHub\Actions\ConnectGitHubAction;
+use App\Domains\Connectors\GitHub\Data\GitHubConfig;
+use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Http\Controllers\GitHubConnectionController;
 use App\Domains\Connectors\GitHub\Http\Controllers\GitHubController;
 use App\Domains\Connectors\GitHub\Http\Requests\ConnectGitHubRequest;
@@ -13,6 +15,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Connectors\FakesGitHub;
 
@@ -67,6 +70,27 @@ describe('connecting a repository', function () {
         'surrounding spaces' => ['  https://www.github.com/acme/shop/issues  '],
     ]);
 
+    it('remembers the optional permissions the token has, and says which it lacks', function () {
+        $this->gitHubAnswers = ['/repos/acme/shop/issues' => [['message' => 'Resource not accessible by personal access token'], 403]];
+
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), $this->input)
+            ->assertSessionHas('status', __('connectors.github.connected_missing', ['name' => 'acme/shop', 'permissions' => 'Issues']));
+
+        expect(GitHubConfig::grantedBy(DataSourceConnection::query()->sole()->config))->toBe([GitHubPermission::DependabotAlerts, GitHubPermission::CodeScanningAlerts, GitHubPermission::SecretScanningAlerts]);
+    });
+
+    it('asks for the optional permissions again when the token is renewed', function () {
+        $this->actingAs($this->admin);
+        $this->gitHubAnswers = ['/repos/acme/shop/issues' => [['message' => 'Resource not accessible by personal access token'], 403]];
+        $this->post(route('connectors.github.connection.store', $this->project), $this->input);
+        $this->gitHubAnswers = [];
+
+        $this->post(route('connectors.github.connection.store', $this->project), [...$this->input, 'token' => 'renewed'])
+            ->assertSessionHas('status', __('connectors.github.connected', ['name' => 'acme/shop']));
+
+        expect(GitHubConfig::grantedBy(DataSourceConnection::query()->sole()->config))->toBe(GitHubPermission::cases());
+    });
+
     it('says on the token which permission it lacks, saving nothing', function () {
         $this->gitHubAnswers = ['/repos/acme/shop/actions/runs' => [['message' => 'Resource not accessible by personal access token'], 403]];
 
@@ -110,6 +134,42 @@ describe('the GitHub page', function () {
                 ->has('runs', 1)
                 ->has('releases', 1)
                 ->where('sidebar_project.has_github', true));
+    });
+
+    it('shows commits, lead time, stars, issues and security alerts', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', GitHubPermission::cases())]);
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('error', null)
+                ->where('summary.lead_time_hours', ['current' => 4, 'previous' => 4])
+                ->where('summary.stars', 42)
+                ->where('commits.count', ['current' => 3, 'previous' => 17])
+                ->where('commits.authors', 2)
+                ->where('commits.contributors', [['author' => 'ana', 'commits' => 2], ['author' => 'Bo', 'commits' => 1]])
+                ->has('commits.series', 28)
+                ->where('commits.series.27', ['t' => '2026-11-10T06:00:00Z', 'commits' => 1])
+                ->has('commits.latest', 3)
+                ->where('issues', ['opened' => ['current' => 6, 'previous' => 6], 'closed' => ['current' => 2, 'previous' => 2], 'open_bugs' => 1])
+                ->where('security.0.count', 3)
+                ->where('security.0.by_severity', ['critical' => 1, 'high' => 2, 'medium' => 0, 'low' => 0])
+                ->where('security.1.error', __('connectors.github.errors.unavailable', ['permission' => 'Code scanning alerts']))
+                ->where('security.2.count', 0)
+                ->where('permissions.0.granted', true));
+    });
+
+    it('asks nothing a token without the optional permissions cannot read', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('error', null)
+                ->where('issues', null)
+                ->where('security.0.granted', false)
+                ->where('security.0.count', null)
+                ->where('permissions.0', ['key' => 'issues', 'label' => 'Issues', 'unlocks' => __('connectors.github.permissions.unlocks.issues'), 'granted' => false]));
+
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'alerts') || str_contains(urldecode($request->url()), 'is:issue'));
     });
 
     it('says why when GitHub cannot be read', function () {

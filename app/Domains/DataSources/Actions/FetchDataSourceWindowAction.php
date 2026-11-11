@@ -146,7 +146,7 @@ class FetchDataSourceWindowAction
             return match ($source->dataSourceConnection?->kind) {
                 ConnectionKind::Umami => $this->pullUmami->execute($source, $from, $until, $window->bucket, $timezone),
                 ConnectionKind::Mosparo => $this->pullMosparo->execute($source, $from, $until, $timezone),
-                ConnectionKind::GitHub => $this->pullGitHub->execute($source, $from, $until),
+                ConnectionKind::GitHub => $this->pullGitHub->execute($source, $from, $until, $window->bucket, $timezone),
                 ConnectionKind::MobilePay => $this->pullMobilePay->execute($source, $from, $until, $timezone),
                 default => throw new ProbeFailedException(__('data_sources.errors.no_answer')),
             };

@@ -13,7 +13,7 @@ return [
     // GitHub: a repository's pull requests, workflow runs and releases.
     'github' => [
         'title' => 'GitHub',
-        'description' => 'Pull requests, workflow runs and releases of :name.',
+        'description' => 'Pull requests, commits, workflow runs, releases and security alerts of :name.',
         'error_title' => 'GitHub could not be read',
         // The picker of which connected repository the page shows.
         'repository' => 'Repository',
@@ -28,14 +28,60 @@ return [
             'ci' => 'CI on :branch',
             'ci_none' => 'CI',
             'latest_release' => 'Latest release',
+            'commits' => 'Commits',
+            'authors' => 'Authors',
+            'lead_time' => 'Lead time',
+            // A duration in hours, such as "4.5 h".
+            'hours' => ':hours h',
+            'stars' => 'Stars',
+            'forks_watchers' => ':forks forks, :watchers watchers',
+            'issues_opened' => 'Issues opened',
+            'issues_closed' => 'Issues closed',
+            'open_bugs' => 'Open bugs',
         ],
 
         'tabs' => [
             'label' => 'GitHub sections',
             'pull_requests' => 'Pull requests',
+            'commits' => 'Commits',
             'actions' => 'Actions',
             'releases' => 'Releases',
+            'security' => 'Security',
             'connection' => 'Connection',
+        ],
+
+        'commits' => [
+            'title' => 'Commits',
+            'description' => 'On the default branch, by the time they were committed.',
+            'summary' => ':commits commits by :authors authors over the period',
+            // Shown when the period has more commits than are read.
+            'capped' => 'Only the newest :max commits of the period are read.',
+            'contributors' => 'Top contributors',
+            'contributors_description' => 'The most commits over the period.',
+            'author' => 'Author',
+            'count' => 'Commits',
+            'latest' => 'Latest commits',
+            'latest_description' => 'The newest first.',
+            'commit' => 'Commit',
+            'committed' => 'Committed',
+            'empty' => 'No commits over the period.',
+        ],
+
+        'security' => [
+            'title' => 'Open security alerts',
+            'description' => 'As they are now.',
+            'kinds' => [
+                'vulnerability_alerts' => 'Dependabot',
+                'security_events' => 'Code scanning',
+                'secret_scanning_alerts' => 'Secret scanning',
+            ],
+            'severities' => [
+                'critical' => 'Critical',
+                'high' => 'High',
+                'medium' => 'Medium',
+                'low' => 'Low',
+            ],
+            'no_permission' => 'The token cannot read :permission. Connect the repository again with a token that has :permission: read-only.',
         ],
 
         'pull_requests' => [
@@ -80,7 +126,7 @@ return [
             'repository' => 'Repository',
             'repository_hint' => 'As owner/name, such as acme/shop, or any address on github.com under the repository.',
             'token' => 'Token',
-            'token_hint' => 'A fine-grained token for this repository with read-only Metadata, Pull requests, Actions and Contents. Not the token of the repository integration.',
+            'token_hint' => 'A fine-grained token for this repository with read-only Metadata, Pull requests, Actions and Contents. Optionally also Issues, Dependabot alerts, Code scanning alerts and Secret scanning alerts, for their figures. Not the token of the repository integration.',
             'create_token' => 'Create token on GitHub',
             'opens_new_tab' => '(opens in a new tab)',
             'token_description' => 'Lets Lumberjack read pull requests, Actions and releases of :repository.',
@@ -94,6 +140,10 @@ return [
             // Buttons.
             'add' => 'Connect another repository',
             'disconnect_question' => 'Disconnect this repository? Its data sources are removed, and widgets showing them go empty.',
+            'optional' => 'Optional permissions',
+            'optional_hint' => 'Read when the token was last connected. Connect the repository again with a new token to add one.',
+            'granted' => 'Granted',
+            'missing' => 'Missing',
         ],
     ],
 

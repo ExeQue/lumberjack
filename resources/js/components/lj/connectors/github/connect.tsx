@@ -42,6 +42,11 @@ export function GitHubConnectDialog({
             contents: 'read',
             pull_requests: 'read',
             actions: 'read',
+            // Optional: each adds sources, and connecting works without them.
+            issues: 'read',
+            vulnerability_alerts: 'read',
+            security_events: 'read',
+            secret_scanning_alerts: 'read',
         },
     ).toString()}`;
 

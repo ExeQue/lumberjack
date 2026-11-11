@@ -19,8 +19,9 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * A project's GitHub repository: its pull requests, workflow runs and releases, with the
- * pull requests merged and the runs failed over the period against the period before.
+ * A project's GitHub repository: its pull requests, commits, workflow runs, releases, and
+ * the issues and security alerts its token reads, with the period's figures against the
+ * period before.
  */
 class GitHubController
 {
@@ -38,6 +39,9 @@ class GitHubController
         $pullRequests = [];
         $runs = [];
         $releases = [];
+        $commits = null;
+        $issues = null;
+        $security = [];
 
         if ($connection !== null) {
             try {
@@ -45,6 +49,9 @@ class GitHubController
                 $pullRequests = $query->pullRequests($connection);
                 $runs = $query->runs($connection);
                 $releases = $query->releases($connection);
+                $commits = $query->commits($connection, $period);
+                $issues = $query->issues($connection, $period);
+                $security = $query->security($connection);
             } catch (GitHubExceptionInterface $e) {
                 $error = $e->getMessage();
             } catch (DecryptException) {
@@ -67,6 +74,11 @@ class GitHubController
             'pull_requests' => $pullRequests,
             'runs' => $runs,
             'releases' => $releases,
+            'commits' => $commits,
+            'issues' => $issues,
+            'security' => $security,
+            // Which optional permissions the token has, for the Connection tab.
+            'permissions' => $connection === null ? [] : $query->permissions($connection),
         ]);
     }
 }
