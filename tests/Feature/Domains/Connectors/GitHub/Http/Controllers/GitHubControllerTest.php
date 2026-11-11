@@ -2,16 +2,20 @@
 
 declare(strict_types=1);
 
+use App\Domains\Connectors\GitHub\Actions\ChangeGitHubBranchAction;
 use App\Domains\Connectors\GitHub\Actions\ConnectGitHubAction;
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
 use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
+use App\Domains\Connectors\GitHub\Exceptions\GitHubRequestFailedException;
 use App\Domains\Connectors\GitHub\Http\Controllers\GitHubConnectionController;
 use App\Domains\Connectors\GitHub\Http\Controllers\GitHubController;
+use App\Domains\Connectors\GitHub\Http\Requests\ChangeGitHubBranchRequest;
 use App\Domains\Connectors\GitHub\Http\Requests\ConnectGitHubRequest;
 use App\Domains\Connectors\GitHub\Queries\GitHubDashboardQuery;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Illuminate\Http\Client\Request;
@@ -20,7 +24,7 @@ use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Connectors\FakesGitHub;
 
-covers(GitHubController::class, GitHubConnectionController::class, ConnectGitHubRequest::class, ConnectGitHubAction::class, GitHubDashboardQuery::class);
+covers(GitHubController::class, GitHubConnectionController::class, ConnectGitHubRequest::class, ChangeGitHubBranchRequest::class, ConnectGitHubAction::class, ChangeGitHubBranchAction::class, GitHubDashboardQuery::class);
 
 uses(FakesGitHub::class);
 
@@ -240,4 +244,133 @@ describe('loading more of a list', function () {
         'fewer than at first' => [5],
         'a negative number' => [-40],
     ]);
+});
+
+describe('the branch read', function () {
+    /** Whether a request went to the path ending so, with the query value. */
+    $sentTo = fn (string $path, string $key, string $value): Closure => fn (Request $request): bool => str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), $path) && ($request->data()[$key] ?? null) === $value;
+
+    it('is the default branch when none is given', function () use ($sentTo) {
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), $this->input)->assertSessionHasNoErrors();
+        $connection = DataSourceConnection::query()->sole();
+
+        expect(GitHubConfig::branchOf($connection->config))->toBeNull();
+
+        $this->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page->where('connection.branch', null)->where('summary.ci.branch', 'main'));
+
+        Http::assertSent($sentTo('/commits', 'sha', 'main'));
+        Http::assertSent($sentTo('/actions/runs', 'branch', 'main'));
+        // Failed runs count on every branch, as before a branch could be chosen.
+        Http::assertNotSent(fn (Request $request): bool => ($request->data()['status'] ?? null) === 'failure' && isset($request->data()['branch']));
+    });
+
+    it('reads commits, CI and failed runs from the branch chosen when connecting', function () use ($sentTo) {
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), [...$this->input, 'branch' => 'develop'])->assertSessionHasNoErrors();
+        $connection = DataSourceConnection::query()->sole();
+
+        expect(GitHubConfig::branchOf($connection->config))->toBe('develop');
+
+        $this->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page->where('connection.branch', 'develop'));
+
+        Http::assertSent($sentTo('/commits', 'sha', 'develop'));
+        Http::assertSent(fn (Request $request): bool => ($request->data()['branch'] ?? null) === 'develop' && ($request->data()['exclude_pull_requests'] ?? null) === 'true');
+        Http::assertSent(fn (Request $request): bool => ($request->data()['branch'] ?? null) === 'develop' && ($request->data()['status'] ?? null) === 'failure');
+        Http::assertNotSent($sentTo('/commits', 'sha', 'main'));
+    });
+
+    it('refuses a branch the repository does not have, saving nothing', function () {
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), [...$this->input, 'branch' => 'nope'])
+            ->assertSessionHasErrors(['branch' => __('connectors.github.errors.branch_not_found', ['branch' => 'nope', 'repository' => 'acme/shop'])]);
+
+        expect(DataSourceConnection::query()->count())->toBe(0);
+    });
+
+    it('refuses what cannot be a branch name', function (string $branch) {
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), [...$this->input, 'branch' => $branch])
+            ->assertSessionHasErrors('branch');
+    })->with([
+        'a space' => ['my branch'],
+        'two dots' => ['a..b'],
+        'a leading dash' => ['-x'],
+        'a trailing slash' => ['feature/'],
+    ]);
+
+    it('changes on a connection, and back to the default branch', function () use ($sentTo) {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+        $this->actingAs($this->admin);
+        $this->get(route('connectors.github.index', [$this->project, $connection]));
+
+        $this->put(route('connectors.github.connection.update', [$this->project, $connection]), ['branch' => 'develop'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', __('connectors.github.branch_changed', ['branch' => 'develop']));
+
+        expect(GitHubConfig::branchOf($connection->refresh()->config))->toBe('develop')
+            ->and($connection->gitHubCredentials()->token)->toBe('github_pat_test')
+            ->and($connection->next_check_at)->toBeNull();
+
+        // Its figures are not the cached ones of the default branch.
+        $this->get(route('connectors.github.index', [$this->project, $connection]))->assertInertia(fn (Assert $page) => $page->where('connection.branch', 'develop'));
+        Http::assertSent($sentTo('/commits', 'sha', 'develop'));
+
+        $this->put(route('connectors.github.connection.update', [$this->project, $connection]), ['branch' => ''])
+            ->assertSessionHas('status', __('connectors.github.branch_default'));
+
+        expect(GitHubConfig::branchOf($connection->refresh()->config))->toBeNull();
+    });
+
+    it('keeps the branch when the one asked for is unknown', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+
+        $this->actingAs($this->admin)->put(route('connectors.github.connection.update', [$this->project, $connection]), ['branch' => 'nope'])
+            ->assertSessionHasErrors(['branch' => __('connectors.github.errors.branch_not_found', ['branch' => 'nope', 'repository' => 'acme/shop'])]);
+
+        expect(GitHubConfig::branchOf($connection->refresh()->config))->toBeNull();
+    });
+
+    it('is changed only by those who administer the project', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+
+        $this->actingAs($this->member)->put(route('connectors.github.connection.update', [$this->project, $connection]), ['branch' => 'develop'])->assertForbidden();
+
+        expect(GitHubConfig::branchOf($connection->refresh()->config))->toBeNull();
+    });
+
+    it('is changed only on a GitHub connection of the project', function () {
+        $other = DataSourceConnection::factory()->github()->create();
+
+        $this->actingAs($this->admin)->put(route('connectors.github.connection.update', [$this->project, DataSourceConnection::factory()->mosparo()->for($this->project)->create()]), ['branch' => 'develop'])->assertNotFound();
+        $this->put(route('connectors.github.connection.update', [$this->project, $other]), ['branch' => 'develop'])->assertNotFound();
+    });
+});
+
+describe('asking GitHub for the summary', function () {
+    it('asks for the independent figures at once, each call as before', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+
+        app(GitHubDashboardQuery::class)->summary($connection, Period::Week);
+
+        $sent = collect(Http::recorded())->map(fn (array $pair): string => $pair[0]->method().' '.urldecode((string) preg_replace('~^https://api\.github\.com~', '', $pair[0]->url())))->sort()->values()->all();
+
+        expect($sent)->toBe(collect([
+            'GET /repos/acme/shop',
+            'GET /search/issues?q=repo:acme/shop is:pr is:open&per_page=1',
+            'GET /search/issues?q=repo:acme/shop is:pr is:open draft:false review:none&per_page=1',
+            'GET /search/issues?q=repo:acme/shop is:pr is:merged merged:2026-11-03T12:00:00Z..2026-11-10T12:00:00Z&per_page=100',
+            'GET /search/issues?q=repo:acme/shop is:pr is:merged merged:2026-10-27T12:00:00Z..2026-11-03T12:00:00Z&per_page=100',
+            'GET /repos/acme/shop/actions/runs?status=failure&created=2026-11-03T12:00:00Z..2026-11-10T12:00:00Z&per_page=1',
+            'GET /repos/acme/shop/actions/runs?status=failure&created=2026-10-27T12:00:00Z..2026-11-03T12:00:00Z&per_page=1',
+            'GET /repos/acme/shop/actions/runs?branch=main&exclude_pull_requests=true&per_page=1',
+            'GET /repos/acme/shop/releases?per_page=5',
+        ])->sort()->values()->all());
+    });
+
+    it('still names the one call GitHub refused', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+        $this->gitHubAnswers = ['/repos/acme/shop/actions/runs' => [['message' => 'Resource not accessible by personal access token'], 403]];
+
+        expect(fn () => app(GitHubDashboardQuery::class)->summary($connection, Period::Week))
+            ->toThrow(GitHubRequestFailedException::class, __('connectors.github.errors.permission', ['permission' => 'Actions']));
+    });
 });

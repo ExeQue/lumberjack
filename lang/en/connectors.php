@@ -14,7 +14,7 @@ return [
         ],
         'mobilepay' => [
             'label' => 'Vipps MobilePay',
-            'description' => 'Revenue, transactions, refunds, fees and payouts of a Vipps MobilePay ledger per day, on a page of their own and as data sources for screens.',
+            'description' => 'Revenue, transactions, refunds, fees, payouts and the balance of a Vipps MobilePay ledger, on a page of their own and as data sources for screens.',
         ],
         'mosparo' => [
             'label' => 'mosparo',
@@ -31,6 +31,9 @@ return [
         // Flash message after connecting.
         'connected' => 'GitHub connected: :name. Its sources show up under Data sources within a minute.',
         'connected_missing' => 'GitHub connected: :name. Its sources show up under Data sources within a minute. The token cannot read :permissions, so their sources are left out; the Connection tab says what they add.',
+        // Flash message after changing the branch on the Connection tab.
+        'branch_changed' => 'Commits and CI are now read from :branch.',
+        'branch_default' => 'Commits and CI are now read from the default branch.',
 
         // The optional read permissions a token may have, as GitHub's token form names them, and what each adds.
         'permissions' => [
@@ -54,6 +57,7 @@ return [
             'failed_runs' => 'Failed workflow runs',
             'open_issues' => 'Open issues',
             'ci_status' => 'CI on the default branch',
+            'ci_status_branch' => 'CI on :branch',
             'latest_release' => 'Latest release',
             'commits' => 'Commits',
             'commits_series' => 'Commits over time',
@@ -115,6 +119,8 @@ return [
             // A security feature the repository has turned off, or a token without its permission; GitHub answers both alike.
             'unavailable' => ':permission are not enabled for the repository, or the token cannot read them.',
             'secret_unreadable' => 'The GitHub token cannot be decrypted (was APP_KEY changed?). Connect GitHub again.',
+            'branch_not_found' => ':repository has no branch :branch. Check the name, or leave it empty for the default branch.',
+            'not_github' => 'This connection does not read a GitHub repository.',
         ],
     ],
 
@@ -131,6 +137,33 @@ return [
             'fees' => 'Fees (:currency)',
             'payouts' => 'Payouts (:currency)',
             'revenue_series' => 'Revenue per day (:currency)',
+            'average_order' => 'Average order value (:currency)',
+            'refund_rate' => 'Refund rate (%)',
+            'fee_rate' => 'Fee rate (%)',
+            'balance' => 'Balance to be paid out (:currency)',
+            'latest_transactions' => 'Latest transactions (:currency)',
+            'largest_sales' => 'Largest sales (:currency)',
+            'payout_list' => 'Latest payouts (:currency)',
+            'sales_by_hour' => 'Sales by hour of day',
+            'sales_by_weekday' => 'Sales by weekday',
+            'revenue_by_unit' => 'Revenue per sales unit (:currency)',
+        ],
+
+        // A transaction's kind, in a row of "Latest transactions": "2026-11-10 14:05 Sale (order-123)".
+        'types' => [
+            'capture' => 'Sale',
+            'refund' => 'Refund',
+        ],
+
+        // The rows of "Sales by weekday", and the weekday bars on the Vipps MobilePay page; 1 is Monday.
+        'weekdays' => [
+            1 => 'Monday',
+            2 => 'Tuesday',
+            3 => 'Wednesday',
+            4 => 'Thursday',
+            5 => 'Friday',
+            6 => 'Saturday',
+            7 => 'Sunday',
         ],
 
         // Why asking Vipps MobilePay failed, shown in the connect dialog, on the connection, its sources and the Vipps MobilePay page.

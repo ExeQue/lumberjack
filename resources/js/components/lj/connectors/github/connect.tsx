@@ -95,6 +95,25 @@ export function GitHubConnectDialog({
                                 />
                             </Field>
                             <Field
+                                label={t('connectors.github.connect.branch')}
+                                htmlFor="github-branch"
+                                hint={t(
+                                    'connectors.github.connect.branch_hint',
+                                )}
+                                error={errors.branch}
+                            >
+                                <Input
+                                    id="github-branch"
+                                    name="branch"
+                                    maxLength={255}
+                                    placeholder={t(
+                                        'connectors.github.connect.branch_placeholder',
+                                    )}
+                                    className="font-mono"
+                                    autoComplete="off"
+                                />
+                            </Field>
+                            <Field
                                 label={t('connectors.github.connect.token')}
                                 htmlFor="github-token"
                                 hint={t('connectors.github.connect.token_hint')}

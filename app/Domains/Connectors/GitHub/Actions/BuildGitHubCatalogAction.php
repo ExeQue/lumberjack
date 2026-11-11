@@ -31,11 +31,12 @@ class BuildGitHubCatalogAction
     {
         $this->client->repository($connection->gitHubCredentials());
         $granted = GitHubConfig::grantedBy($connection->config);
+        $branch = GitHubConfig::branchOf($connection->config);
         $offered = array_filter(GitHubSource::cases(), fn (GitHubSource $source): bool => $source->permission() === null || in_array($source->permission(), $granted, true));
 
         return ['version' => 1, 'complete' => true, 'sources' => array_values(array_map(fn (GitHubSource $source): array => [
             'key' => $source->value,
-            'label' => $source->label(),
+            'label' => $source->label($branch),
             'shape' => $source->shape()->value,
             'group' => [],
         ], $offered))];

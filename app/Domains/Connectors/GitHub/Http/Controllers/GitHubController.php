@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Connectors\GitHub\Http\Controllers;
 
 use App\Domains\Connectors\GitHub\Actions\PullGitHubSourceAction;
+use App\Domains\Connectors\GitHub\Data\GitHubConfig;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubExceptionInterface;
 use App\Domains\Connectors\GitHub\Queries\GitHubDashboardQuery;
 use App\Domains\Connectors\GitHub\Support\GitHubClient;
@@ -88,6 +89,8 @@ class GitHubController
                 'uuid' => $connection->uuid,
                 'name' => $connection->displayName(),
                 'url' => $connection->url,
+                // The branch commits and CI are read from; null for the default branch.
+                'branch' => GitHubConfig::branchOf($connection->config),
             ],
             // Every repository the project reads, to switch between.
             'repositories' => $connections->map(fn (DataSourceConnection $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName()])->all(),

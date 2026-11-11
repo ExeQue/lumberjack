@@ -218,7 +218,7 @@ class DataSourceConnection extends Model
         $config = $this->config;
 
         return $config instanceof GitHubConfig
-            ? new GitHubCredentials($config->repository, $config->token)
+            ? new GitHubCredentials($config->repository, $config->token, $config->branch)
             : new GitHubCredentials((string) $this->name, '');
     }
 

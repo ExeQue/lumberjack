@@ -55,6 +55,7 @@ return [
         'commits' => [
             'title' => 'Commits',
             'description' => 'On the default branch, by the time they were committed.',
+            'description_branch' => 'On :branch, by the time they were committed.',
             'summary' => ':commits commits by :authors authors over the period',
             // Shown when the period has more commits than are read.
             'capped' => 'Only the newest :max commits of the period are read.',
@@ -134,6 +135,9 @@ return [
             'create_token' => 'Create token on GitHub',
             'opens_new_tab' => '(opens in a new tab)',
             'token_description' => 'Lets Lumberjack read pull requests, Actions and releases of :repository.',
+            'branch' => 'Branch (optional)',
+            'branch_hint' => 'Commits, the CI status and failed runs are read from it. Empty for the repository\'s default branch.',
+            'branch_placeholder' => 'Default branch',
             // Buttons.
             'submit' => 'Connect',
             'cancel' => 'Cancel',
@@ -148,6 +152,10 @@ return [
             'optional_hint' => 'Read when the token was last connected. Connect the repository again with a new token to add one.',
             'granted' => 'Granted',
             'missing' => 'Missing',
+            'branch' => 'Branch',
+            'branch_hint' => 'Commits, the CI status and failed runs are read from it; pull requests, releases, issues and security stay repository-wide. Empty for the default branch.',
+            // Button.
+            'save_branch' => 'Save branch',
         ],
     ],
 
@@ -165,12 +173,69 @@ return [
             'refunds' => 'Refunds',
             'fees' => 'Fees',
             'payouts' => 'Payouts',
+            'average_order' => 'Average order',
+            'refund_rate' => 'Refund rate',
+            'fee_rate' => 'Fee rate',
+            'balance' => 'Balance',
+            // Under the balance: what Vipps MobilePay holds for the merchant until the next payout.
+            'balance_note' => 'To be paid out',
         ],
 
         'series' => [
             'title' => 'Revenue',
             'description' => 'Per ledger date. Today fills in as Vipps MobilePay books it, and is complete once the day closes.',
             'summary' => ':revenue from :transactions transactions over the period',
+        ],
+
+        // Button below a list: show more rows.
+        'load_more' => 'Load more',
+        'time' => 'Time',
+        'amount' => 'Amount',
+        'reference' => 'Reference',
+
+        'transactions' => [
+            'title' => 'Latest transactions',
+            'description' => 'Sales and refunds over the period, the newest first.',
+            'type' => 'Type',
+            'capture' => 'Sale',
+            'refund' => 'Refund',
+            'empty' => 'No sales or refunds over the period.',
+        ],
+
+        'largest' => [
+            'title' => 'Largest sales',
+            'description' => 'The period\'s largest captures.',
+            'empty' => 'No sales over the period.',
+        ],
+
+        'payouts' => [
+            'title' => 'Payouts',
+            'description' => 'What was scheduled to be paid out to the bank account, per ledger date, the newest first.',
+            'date' => 'Ledger date',
+            'empty' => 'No payouts over the period.',
+        ],
+
+        'hours' => [
+            'title' => 'Sales by hour of day',
+            'description' => 'Captures per hour over the period, in :timezone.',
+            // Screen reader summary of the bars.
+            'summary' => '{0} No sales over the period|{1} Sales per hour of the day, the busiest :hour with 1 sale|[2,*] Sales per hour of the day, the busiest :hour with :count sales',
+            // Hover text of a bar: "14:00 · 12 sales · 1 200,00 kr".
+            'tip' => '{1} :label · 1 sale · :revenue|[0,*] :label · :count sales · :revenue',
+        ],
+
+        'weekdays' => [
+            'title' => 'Sales by weekday',
+            'description' => 'Captures per weekday over the period, in :timezone.',
+            'summary' => '{0} No sales over the period|{1} Sales per weekday, the busiest :weekday with 1 sale|[2,*] Sales per weekday, the busiest :weekday with :count sales',
+        ],
+
+        'units' => [
+            'title' => 'Revenue per sales unit',
+            'description' => 'The captures of each sales unit settling to the ledger, the most first.',
+            'unit' => 'Sales unit',
+            'revenue' => 'Revenue',
+            'empty' => 'No sales over the period.',
         ],
 
         'not_connected' => [

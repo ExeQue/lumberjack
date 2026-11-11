@@ -16,7 +16,9 @@ the **GitHub** page of a project that has none yet.
 
 1. In Lumberjack, choose **Connect** and give the **Repository** as `owner/name`, such as
    `acme/shop`, or any address on github.com under it, such as
-   `https://github.com/acme/shop/pull/12`.
+   `https://github.com/acme/shop/pull/12`. Optionally give a **Branch**, such as `develop`,
+   to read the commits, the CI status and the failed workflow runs from it; left empty they
+   follow the repository's default branch.
 2. **Create token on GitHub** opens GitHub with the name, owner, expiry (90 days) and the
    permissions below filled in, the optional ones included. Under **Repository access**,
    choose **Only select repositories** and pick the repository; GitHub has no way to fill
@@ -37,7 +39,8 @@ the **GitHub** page of a project that has none yet.
     organization's approval first.
 
 3. Paste the token under **Token** and choose **Connect**. Lumberjack asks GitHub once for
-   each required permission, and says on the token which one it lacks. It then asks for
+   each required permission, and says on the token which one it lacks. A branch the
+   repository does not have is refused on the branch. It then asks for
    each optional one and remembers which the token has: their sources are offered only
    then, and the message after connecting names the ones missing. A security feature the
    repository has turned off (GitHub answers it with a 403 or 404 that does not say the
@@ -50,12 +53,17 @@ again. Connections made before optional permissions existed have none until then
 The token is stored encrypted, never shown again, and only ever sent to `api.github.com`.
 
 A project reads as many repositories as you connect, one connection each. Connecting a
-repository the project already reads renews its token. With more than one, a picker beside
+repository the project already reads renews its token, and sets its branch to the one given
+(empty for the default branch). With more than one, a picker beside
 the title switches between them. Under the page's **Connection** tab, for team owners and
 admins:
 
 - **Connect another repository** opens the connect dialog.
 - **Disconnect** removes this connection and its data sources.
+- **Branch** changes the branch the commits, the CI status and the failed runs are read
+  from, without connecting again; GitHub is asked whether the repository has it before it
+  is saved. Empty goes back to the default branch. Pull requests, releases, issues,
+  security alerts and stars always cover the whole repository.
 - **Optional permissions** lists each, whether the token had it when last connected, and
   what it adds.
 
@@ -63,20 +71,21 @@ admins:
 
 Once connected, **GitHub** shows in the project's sidebar. On top are the open pull
 requests, those waiting for review, the pull requests merged, their median lead time, the
-commits on the default branch and the workflow runs that failed in the period, each against
-the period before, the commit authors, the open issues, the result of the latest run on the
-default branch, the latest release, and the stars with forks and watchers. With **Issues**,
+commits on the branch read and the workflow runs that failed in the period (on the branch
+read, when one is chosen, or else on every branch), each against the period before, the
+commit authors, the open issues, the result of the latest run on the branch read, the
+latest release, and the stars with forks and watchers. With **Issues**,
 the issues opened and closed in the period (against the period before) and the open bugs
 are there too.
 
 | Tab               | What it shows                                                                                   |
 | ----------------- | ----------------------------------------------------------------------------------------------- |
 | **Pull requests** | The newest open pull requests, drafts marked, with their author.                                |
-| **Commits**       | Commits on the default branch over the period as a chart, the top contributors, the latest.     |
+| **Commits**       | Commits on the branch read over the period as a chart, the top contributors, the latest.        |
 | **Actions**       | The latest workflow runs on every branch, with their result.                                    |
 | **Releases**      | The newest releases, pre-releases marked, each opening to its notes. Drafts are not shown.      |
 | **Security**      | Open Dependabot (by severity), code scanning and secret scanning alerts, or why there are none. |
-| **Connection**    | The connection and its optional permissions, for team owners and admins.                        |
+| **Connection**    | The connection, its branch and its optional permissions, for team owners and admins.            |
 
 Each list shows its first 20 rows (the top contributors 10). **Load more** below it shows as
 many more, up to 100, or for the latest commits up to the 1,000 commits read for the period.
@@ -84,7 +93,10 @@ The rows loaded are kept in the address until the repository or period changes.
 
 The figures on top and the commits are kept as long as on the other statistics pages (5
 minutes for 7 days), and the tabs' lists and the security alerts for a minute, so a reloaded
-page does not ask GitHub again.
+page does not ask GitHub again. Figures that do not wait on one another (the figures on top,
+the issue counts, the security alerts, connecting's permission checks) are asked of GitHub
+at once rather than one after another; a list's further pages still follow one another.
+Changing the branch reads its figures afresh.
 
 ## Data sources
 
@@ -97,12 +109,12 @@ like an app's [connected sources](../data-sources.md#connected-sources).
 | Open pull requests               | number | Open pull requests, drafts included, as they are now.                      |
 | Pull requests waiting for review | number | Open pull requests that are not drafts and have no review yet.             |
 | Pull requests merged             | number | Pull requests merged in the period.                                        |
-| Failed workflow runs             | number | Workflow runs started in the period that failed.                           |
+| Failed workflow runs             | number | Workflow runs started in the period that failed, on the chosen branch.     |
 | Open issues                      | number | Open issues, pull requests not counted, as they are now.                   |
-| CI on the default branch         | list   | One row: the latest workflow run on the default branch, and its result.    |
+| CI on the default branch         | list   | One row: the latest workflow run on the branch read, and its result.       |
 | Latest release                   | list   | One row: the newest published release and its day, or else the first tag.  |
-| Commits                          | number | Commits on the default branch in the period.                               |
-| Commits over time                | series | Commits on the default branch per bucket of the period, 0 when none.       |
+| Commits                          | number | Commits on the branch read in the period.                                  |
+| Commits over time                | series | Commits on the branch read per bucket of the period, 0 when none.          |
 | Commit authors                   | number | Distinct authors of the period's commits.                                  |
 | Latest commits                   | list   | The 10 newest commits: first line of the message (author), and the time.   |
 | Top contributors                 | list   | The 10 authors with the most commits in the period, and their count.       |
@@ -119,13 +131,19 @@ like an app's [connected sources](../data-sources.md#connected-sources).
 | Open code scanning alerts        | number | Open code scanning alerts. Needs **Code scanning alerts**.                 |
 | Open secret scanning alerts      | number | Open secret scanning alerts. Needs **Secret scanning alerts**.             |
 
+The **branch read** is the one chosen when connecting or on the **Connection** tab, or else
+the repository's default branch. It decides Failed workflow runs (all branches when none is
+chosen), CI (named "CI on" the chosen branch), Commits, Commits over time, Commit authors,
+Latest commits and Top contributors; the period before's commit count on the page follows
+it too. Every other source covers the whole repository.
+
 Sources that need an optional permission are offered only when the token had it when the
 repository was last connected. A security source whose feature the repository has turned off
 says so on the source, rather than failing the connection.
 
 ### How commits are counted
 
-Commits are those on the default branch whose **committer date** falls in the period, as
+Commits are those on the branch read whose **committer date** falls in the period, as
 GitHub's commits list filters them (`since` and `until`), so a series buckets them by the
 same date. A rebased or cherry-picked commit counts on the day it was committed again, not
 the day it was first written. Buckets follow the period's resolution, as on the other

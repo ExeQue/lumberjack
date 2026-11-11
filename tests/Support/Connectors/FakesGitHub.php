@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Http;
  * two pages (ana on 10 and 7 November, Bo without an account on 9 November), and 17 when
  * only counted; six issues opened, two closed, one open bug. Dependabot has three open
  * alerts (critical, high, high), code scanning is not set up, secret scanning has none.
+ * It has the branches main and develop, and no other.
  */
 trait FakesGitHub
 {
@@ -81,6 +82,8 @@ trait FakesGitHub
                     ['tag_name' => 'v1.2.0', 'name' => '', 'draft' => false, 'prerelease' => false, 'html_url' => 'https://github.com/acme/shop/releases/tag/v1.2.0', 'published_at' => '2026-11-09T10:00:00Z', 'body' => "## Fixed\n\n- The cart <script>keeps</script> its items.\n"],
                 ]),
                 '/repos/acme/shop/tags' => Http::response([['name' => 'v0.1.0']]),
+                '/repos/acme/shop/branches/main', '/repos/acme/shop/branches/develop' => Http::response(['name' => basename($path)]),
+                '/repos/acme/shop/branches/nope' => Http::response(['message' => 'Branch not found'], 404),
                 default => Http::response(['message' => 'Not Found'], 404),
             };
         });

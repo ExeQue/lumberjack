@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Form, Head, router, usePage } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import { Fragment, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -18,6 +18,8 @@ import {
     Card,
     CardHeader,
     EmptyState,
+    Field,
+    Input,
     PageTitle,
     Segmented,
     Select,
@@ -32,6 +34,7 @@ import { PageBody } from '@/layouts/lumberjack-layout';
 import { formatNumber, formatRelative } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { index as githubIndex } from '@/routes/connectors/github';
+import { update as connectionUpdate } from '@/routes/connectors/github/connection';
 import { show as projectShow } from '@/routes/projects';
 import type { Period, ProjectHeader, TeamShared } from '@/types/lumberjack';
 
@@ -109,7 +112,13 @@ type Props = {
     filters: { period: Period };
     /** How many rows each list shows, when more than at first. */
     rows: Partial<Record<List, number>>;
-    connection: { uuid: string; name: string; url: string } | null;
+    connection: {
+        uuid: string;
+        name: string;
+        url: string;
+        /** The branch commits and CI are read from; null for the default branch. */
+        branch: string | null;
+    } | null;
     /** Every repository the project reads, by the uuid of its connection. */
     repositories: { uuid: string; name: string }[];
     error: string | null;
@@ -374,6 +383,7 @@ export default function GitHubIndex({
                         >
                             {error === null && commits && (
                                 <CommitsPanel
+                                    branch={connection.branch}
                                     commits={commits}
                                     period={filters.period}
                                     shown={rows}
@@ -583,17 +593,23 @@ function Summary({
 
 /** Commits over the period, who made the most, and the latest. */
 function CommitsPanel({
+    branch,
     commits,
     period,
     shown,
     onMore,
 }: {
+    branch: string | null;
     commits: Commits;
     period: Period;
     shown: Props['rows'];
     onMore: LoadMore;
 }) {
     const t = useT();
+    const description =
+        branch === null
+            ? t('connectors.github.commits.description')
+            : t('connectors.github.commits.description_branch', { branch });
 
     return (
         <div className="flex flex-col gap-4">
@@ -603,11 +619,11 @@ function CommitsPanel({
                     title={t('connectors.github.commits.title')}
                     description={
                         commits.capped
-                            ? `${t('connectors.github.commits.description')} ${t(
+                            ? `${description} ${t(
                                   'connectors.github.commits.capped',
                                   { max: formatNumber(commits.count.current) },
                               )}`
-                            : t('connectors.github.commits.description')
+                            : description
                     }
                 />
                 <div className="p-4">
@@ -1232,6 +1248,41 @@ function Connection({
                 <GitHubConnectDialog project={project} onClose={onClose} />
             )}
         >
+            <Form
+                {...connectionUpdate.form([project, connection.uuid])}
+                options={{ preserveScroll: true }}
+                className="flex flex-wrap items-end gap-2"
+            >
+                {({ errors, processing }) => (
+                    <>
+                        <Field
+                            label={t('connectors.github.settings.branch')}
+                            htmlFor="github-settings-branch"
+                            hint={t('connectors.github.settings.branch_hint')}
+                            error={errors.branch}
+                        >
+                            <Input
+                                id="github-settings-branch"
+                                name="branch"
+                                maxLength={255}
+                                defaultValue={connection.branch ?? ''}
+                                placeholder={t(
+                                    'connectors.github.connect.branch_placeholder',
+                                )}
+                                className="font-mono"
+                                autoComplete="off"
+                            />
+                        </Field>
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            disabled={processing}
+                        >
+                            {t('connectors.github.settings.save_branch')}
+                        </Button>
+                    </>
+                )}
+            </Form>
             <section aria-labelledby="github-permissions">
                 <h3 id="github-permissions" className="text-sm font-medium">
                     {t('connectors.github.settings.optional')}

@@ -16,8 +16,9 @@ use Carbon\CarbonImmutable;
 /**
  * One of a GitHub repository's sources over a range, as an app would answer for it. The
  * open counts, the CI status, the latest release, the open pull requests, stars, forks,
- * watchers and alerts are as they are now, whatever the range. The commit sources read the default branch's commits in the range
- * once between them.
+ * watchers and alerts are as they are now, whatever the range. The commit sources read the
+ * commits in the range of the branch read (the chosen one, or the default branch) once
+ * between them; the CI status and failed runs follow a chosen branch too.
  */
 class PullGitHubSourceAction
 {
@@ -42,7 +43,7 @@ class PullGitHubSourceAction
 
         // The range ends on a step, so the sources a screen shows for it ask GitHub once.
         $commits = $kind->readsCommits()
-            ? StatisticsCache::remember('github-commits-range', Period::Day, [$connection->id, $connection->url, $from->getTimestamp(), $to->getTimestamp()], fn (): array => $this->client->commits($credentials, $this->client->repository($credentials)['default_branch'], $from, $to))
+            ? StatisticsCache::remember('github-commits-range', Period::Day, [$connection->id, $connection->url, $credentials->branch, $from->getTimestamp(), $to->getTimestamp()], fn (): array => $this->client->commits($credentials, $this->client->branch($credentials), $from, $to))
             : [];
 
         $data = match ($kind) {
@@ -51,7 +52,7 @@ class PullGitHubSourceAction
             GitHubSource::Merged => $this->client->merged($credentials, $from, $to),
             GitHubSource::FailedRuns => $this->client->failedRuns($credentials, $from, $to),
             GitHubSource::OpenIssues => $this->client->openIssues($credentials),
-            GitHubSource::CiStatus => self::ciStatus($this->client->defaultBranchRun($credentials)),
+            GitHubSource::CiStatus => self::ciStatus($this->client->branchRun($credentials)),
             GitHubSource::LatestRelease => self::latestRelease($this->client->latestRelease($credentials)),
             GitHubSource::Commits => count($commits),
             GitHubSource::CommitsSeries => array_map(fn (int $at, int $count): array => ['at' => $at, 'value' => $count], array_keys($series = self::perBucket($commits, $from, $to, $bucket, $timezone)), $series),
