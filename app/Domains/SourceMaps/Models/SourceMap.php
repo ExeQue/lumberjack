@@ -56,12 +56,13 @@ class SourceMap extends Model
 
     /**
      * Only the path of a bundle's address counts: /build/assets/app-3f9a.js, whatever the host.
+     * Decoded, so a browser's frame and an upload match however each encoded it.
      */
     public static function normalizePath(string $path): string
     {
         $path = parse_url($path, PHP_URL_PATH);
 
-        return '/'.ltrim(is_string($path) ? $path : '', '/');
+        return '/'.ltrim(rawurldecode(is_string($path) ? $path : ''), '/');
     }
 
     /** Where the map lives on the default disk. */

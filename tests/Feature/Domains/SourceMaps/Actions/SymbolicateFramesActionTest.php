@@ -86,6 +86,14 @@ describe('browser frames with an uploaded map', function () {
         expect(Occurrence::query()->get()->filter(fn (Occurrence $o): bool => isset($o->stacktrace[0]['minified']))->count())->toBe(SymbolicateFramesAction::MAX_DECODES_PER_MINUTE);
     });
 
+    it('matches a frame and an upload however each encoded the path', function () {
+        SourceMap::factory()->for($this->project)->withFile($this->map)->create(['path' => SourceMap::normalizePath('/build/app[2]/my%20assets/app.js')]);
+
+        ($this->sendBrowserError)($this->minifiedBrowserError('https://app.example.test/build/app[2]/my%20assets/app.js'));
+
+        expect(Occurrence::sole()->stacktrace[0])->toHaveKey('minified');
+    });
+
     it('groups the same error from two builds on one issue', function () {
         foreach (['app-BxQ3kZ9a', 'app-Kd81Lm2Q'] as $bundle) {
             SourceMap::factory()->for($this->project)->withFile($this->map)->create(['path' => "/build/assets/{$bundle}.js"]);
