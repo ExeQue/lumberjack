@@ -8,7 +8,7 @@ Lumberjack only reads Umami. Visitors keep being tracked by Umami's own script.
 
 ## Connecting
 
-Team owners and admins connect Umami from **Data sources**, under **Connectors**, or from
+Team owners and admins connect Umami from the project's **Connectors** page, or from
 the **Umami** page of a project that has none yet.
 
 1. Choose **Connect**, and where Umami runs:

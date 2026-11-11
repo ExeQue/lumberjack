@@ -23,6 +23,7 @@ Route::prefix('projects/{project}')->scopeBindings()->middleware(['can:view,proj
     require __DIR__.'/projects/performance.php';
     require __DIR__.'/projects/operations.php';
     Route::prefix('connectors')->group(function () {
+        require __DIR__.'/projects/connectors/index.php';
         require __DIR__.'/projects/connectors/github.php';
         require __DIR__.'/projects/connectors/mobilepay.php';
         require __DIR__.'/projects/connectors/mosparo.php';

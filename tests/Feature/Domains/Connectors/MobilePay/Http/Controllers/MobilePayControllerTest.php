@@ -75,7 +75,7 @@ describe('connecting a ledger', function () {
 describe('the Vipps MobilePay page', function () {
     it('offers to connect one, and keeps it out of the sidebar', function () {
         $this->actingAs($this->member)->get(route('connectors.mobilepay.index', $this->project))
-            ->assertInertia(fn (Assert $page) => $page->component('connectors/mobilepay/index')->where('connection', null)->where('sidebar_project.has_mobilepay', false));
+            ->assertInertia(fn (Assert $page) => $page->component('connectors/mobilepay/index')->where('connection', null)->where('sidebar_project.connectors', []));
     });
 
     it('shows a week\'s figures against the week before, and the revenue of each day', function () {
@@ -92,7 +92,7 @@ describe('the Vipps MobilePay page', function () {
                 ->has('series', 7)
                 ->where('series.0.t', '2026-11-04T00:00:00+00:00')
                 ->where('series.6', ['t' => '2026-11-10T00:00:00+00:00', 'revenue' => 250, 'transactions' => 2])
-                ->where('sidebar_project.has_mobilepay', true));
+                ->has('sidebar_project.connectors.mobilepay', 1));
     });
 
     it('shows the period\'s transactions, largest sales, payouts and breakdowns, times in the connection\'s zone', function () {

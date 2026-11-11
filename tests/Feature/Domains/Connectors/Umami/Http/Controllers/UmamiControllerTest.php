@@ -34,12 +34,12 @@ describe('a project without Umami', function () {
         $this->actingAs($this->member)->get(route('connectors.umami.index', $this->project))
             ->assertInertia(fn (Assert $page) => $page->component('connectors/umami/index')
                 ->where('connection', null)
-                ->where('sidebar_project.has_umami', false));
+                ->where('sidebar_project.connectors', []));
     });
 
-    it('lists Umami in the catalog of the data sources page as not connected', function () {
-        $this->actingAs($this->member)->get(route('data-sources.index', $this->project))
-            ->assertInertia(fn (Assert $page) => $page->where('connectors.0.key', 'umami')->where('connectors.0.connections', 0));
+    it('lists Umami on the Connectors page as not connected', function () {
+        $this->actingAs($this->member)->get(route('connectors.index', $this->project))
+            ->assertInertia(fn (Assert $page) => $page->where('connectors.2.key', 'umami')->where('connectors.2.connections', []));
     });
 });
 
@@ -55,7 +55,7 @@ describe('a project reading an Umami website', function () {
         DataSource::factory()->for($this->project)->connected('visitors')->create(['data_source_connection_id' => $connection->id, 'environment' => $connection->environment]);
 
         $this->actingAs($this->member)->get(route('data-sources.index', $this->project))
-            ->assertInertia(fn (Assert $page) => $page->where('connected.0.environment', 'Shop')->where('connected.0.connection', $connection->uuid)->where('connectors.0.connections', 1));
+            ->assertInertia(fn (Assert $page) => $page->where('connected.0.environment', 'Shop')->where('connected.0.connection', $connection->uuid)->missing('connectors'));
     });
 
     it('shows the website in its path, the first by name otherwise, and lists them all', function () {
@@ -114,7 +114,7 @@ describe('a project reading an Umami website', function () {
                 ->where('summary.previous.visitors', 20)
                 ->where('active', 3)
                 ->where('filters.filter', ['country' => 'DK'])
-                ->where('sidebar_project.has_umami', true)
+                ->has('sidebar_project.connectors.umami', 1)
                 ->has('series', 24));
 
         Http::assertSent(fn ($request): bool => str_contains($request->url(), '/stats') && str_contains($request->url(), 'country=DK') && ! str_contains($request->url(), 'password'));

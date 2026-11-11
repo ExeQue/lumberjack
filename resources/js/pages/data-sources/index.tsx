@@ -1,10 +1,5 @@
-import { Form, Head, router, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Fragment, useState } from 'react';
-import type { ReactNode } from 'react';
-import { GitHubConnectDialog } from '@/components/lj/connectors/github/connect';
-import { MobilePayConnectDialog } from '@/components/lj/connectors/mobilepay/connect';
-import { MosparoConnectDialog } from '@/components/lj/connectors/mosparo/connect';
-import { UmamiConnectDialog } from '@/components/lj/connectors/umami/connect';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { TimezoneSelect } from '@/components/lj/screen/timezone-select';
 import { Relative } from '@/components/lj/relative';
@@ -53,6 +48,7 @@ import {
     settings as projectSettings,
     show as projectShow,
 } from '@/routes/projects';
+import { index as connectorsIndex } from '@/routes/connectors';
 import { index as githubIndex } from '@/routes/connectors/github';
 import { index as mobilepayIndex } from '@/routes/connectors/mobilepay';
 import { index as mosparoIndex } from '@/routes/connectors/mosparo';
@@ -105,19 +101,8 @@ type ConnectionRow = {
     last_error: string | null;
 };
 
-/** A service in the catalog, with the page it is connected and read on. */
-type ConnectorRow = {
-    key: string;
-    label: string;
-    description: string;
-    /** How many of it the project has connected. */
-    connections: number;
-    url: string;
-};
-
 type Props = {
     project: ProjectHeader;
-    connectors: ConnectorRow[];
     sources: DataSourceRow[];
     connected: ConnectedRow[];
     connections: ConnectionRow[];
@@ -141,7 +126,6 @@ const browserTimezone =
 
 export default function DataSourcesIndex({
     project,
-    connectors,
     sources,
     connected,
     connections,
@@ -192,7 +176,15 @@ export default function DataSourcesIndex({
                     }
                 />
 
-                <Connectors project={project} connectors={connectors} />
+                <p className="text-[13px] text-ink-2">
+                    {t('data_sources.connectors.moved')}{' '}
+                    <Link
+                        href={connectorsIndex(project.uuid).url}
+                        className="text-ink underline underline-offset-2 hover:text-amber"
+                    >
+                        {t('data_sources.connectors.open')}
+                    </Link>
+                </p>
 
                 <ConnectedSources
                     project={project}
@@ -276,86 +268,6 @@ export default function DataSourcesIndex({
         </>
     );
 }
-
-/** The outside services a project can connect to, each on a page of its own. */
-function Connectors({
-    project,
-    connectors,
-}: {
-    project: ProjectHeader;
-    connectors: ConnectorRow[];
-}) {
-    const t = useT();
-    const [connecting, setConnecting] = useState<string | null>(null);
-    const Connect = connecting === null ? null : CONNECT_DIALOGS[connecting];
-
-    return (
-        <Card aria-labelledby="connectors-title" className="mb-6">
-            <CardHeader
-                id="connectors-title"
-                title={t('data_sources.connectors.title')}
-                description={t('data_sources.connectors.hint')}
-            />
-            <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-3 p-4">
-                {connectors.map((connector) => (
-                    <li
-                        key={connector.key}
-                        className="flex flex-col gap-2 rounded-md border border-line p-3"
-                    >
-                        <span className="flex items-center gap-2 text-sm font-medium">
-                            {connector.label}
-                            {connector.connections > 0 && (
-                                <Badge tone="ok">
-                                    {t('data_sources.connectors.connected', {
-                                        count: connector.connections,
-                                    })}
-                                </Badge>
-                            )}
-                        </span>
-                        <span className="text-xs text-ink-2">
-                            {connector.description}
-                        </span>
-                        {/* Connected as often as needed, one website or account each. */}
-                        <span className="flex flex-wrap gap-2">
-                            {connector.connections > 0 && (
-                                <LinkButton href={connector.url}>
-                                    {t('data_sources.connectors.open')}
-                                </LinkButton>
-                            )}
-                            {project.can_administer &&
-                                connector.key in CONNECT_DIALOGS && (
-                                    <Button
-                                        onClick={() =>
-                                            setConnecting(connector.key)
-                                        }
-                                    >
-                                        {t('data_sources.connectors.connect')}
-                                    </Button>
-                                )}
-                        </span>
-                    </li>
-                ))}
-            </ul>
-            {Connect && (
-                <Connect
-                    project={project.uuid}
-                    onClose={() => setConnecting(null)}
-                />
-            )}
-        </Card>
-    );
-}
-
-/** Each connector's dialog for connecting it, by its key in the catalog. */
-const CONNECT_DIALOGS: Record<
-    string,
-    (props: { project: string; onClose: () => void }) => ReactNode
-> = {
-    umami: UmamiConnectDialog,
-    mosparo: MosparoConnectDialog,
-    github: GitHubConnectDialog,
-    mobilepay: MobilePayConnectDialog,
-};
 
 /** The page of each service a connection reads, opened at that connection. */
 const SERVICE_PAGES = {

@@ -6,24 +6,34 @@ return [
     // A service connection whose settings were saved under another APP_KEY.
     'secret_unreadable' => 'The saved credentials cannot be decrypted (was APP_KEY changed?). Connect it again.',
 
-    // The catalog of services a project can connect to, on the data sources page.
+    // The catalog of services a project can connect to, on the Connectors page.
     'catalog' => [
         'github' => [
             'label' => 'GitHub',
-            'description' => 'Pull requests, workflow runs and releases of a GitHub repository, on a page of their own and as data sources for screens.',
+            'description' => 'Pull requests, commits, CI, releases and security alerts from a GitHub repository.',
         ],
         'mobilepay' => [
             'label' => 'Vipps MobilePay',
-            'description' => 'Revenue, transactions, refunds, fees, payouts and the balance of a Vipps MobilePay ledger, on a page of their own and as data sources for screens.',
+            'description' => 'Sales, refunds, fees and payouts from a Vipps MobilePay ledger.',
         ],
         'mosparo' => [
             'label' => 'mosparo',
-            'description' => 'Valid and spam form submissions of a mosparo project, on a page of their own and as data sources for screens.',
+            'description' => 'Valid and spam form submissions from a mosparo project.',
         ],
         'umami' => [
             'label' => 'Umami',
-            'description' => 'Visitors, pages, sources and events of an Umami website, on a page of their own and as data sources for screens.',
+            'description' => 'Visitors, pages, sources and events from an Umami website.',
         ],
+    ],
+
+    // What a connector is about, as chips to filter the Connectors page by.
+    'tags' => [
+        'analytics' => 'Analytics',
+        'commerce' => 'Commerce',
+        'development' => 'Development',
+        'forms' => 'Forms',
+        'payments' => 'Payments',
+        'security' => 'Security',
     ],
 
     // GitHub: a repository's pull requests, workflow runs and releases, read through GitHub's REST API.

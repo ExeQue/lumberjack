@@ -5,17 +5,64 @@ connectors. Connect one to a project, and it gets a page of its own under
 **Connectors** in the project's sidebar and offers its figures to screen
 [widgets](../widgets.md) as [data sources](../data-sources.md).
 
-| Connector                         | What it reads                                                              |
-| --------------------------------- | -------------------------------------------------------------------------- |
-| [Umami](./umami.md)               | The visitors of a website, from Umami's API.                               |
-| [mosparo](./mosparo.md)           | The valid and spam form submissions of a mosparo project.                  |
-| [GitHub](./github.md)             | The pull requests, workflow runs and releases of a repository.             |
-| [Vipps MobilePay](./mobilepay.md) | The revenue, refunds, fees and payouts booked on a Vipps MobilePay ledger. |
+Connectors are grouped by category, the same tags the **Connectors** page filters by. A
+connector is listed under its main category; its other tags are in the last column.
+
+### Analytics
+
+Visitors and traffic of a website.
+
+| Connector           | What it reads                                | Tags        |
+| ------------------- | -------------------------------------------- | ----------- |
+| [Umami](./umami.md) | The visitors of a website, from Umami's API. | `Analytics` |
+
+### Development
+
+The work on a code repository and its pipelines.
+
+| Connector             | What it reads                                                                                    | Tags                     |
+| --------------------- | ------------------------------------------------------------------------------------------------ | ------------------------ |
+| [GitHub](./github.md) | The pull requests, commits, workflow runs, releases, issues and security alerts of a repository. | `Development` `Security` |
+
+### Forms
+
+What comes in through the forms on a website.
+
+| Connector               | What it reads                                             | Tags               |
+| ----------------------- | --------------------------------------------------------- | ------------------ |
+| [mosparo](./mosparo.md) | The valid and spam form submissions of a mosparo project. | `Forms` `Security` |
+
+### Payments
+
+Money taken and paid out.
+
+| Connector                         | What it reads                                                              | Tags                  |
+| --------------------------------- | -------------------------------------------------------------------------- | --------------------- |
+| [Vipps MobilePay](./mobilepay.md) | The revenue, refunds, fees and payouts booked on a Vipps MobilePay ledger. | `Payments` `Commerce` |
+
+`Security` (spam held off, security alerts) and `Commerce` (sales) are tags only, so far
+on connectors listed under another category.
+
+## The Connectors page
+
+**Connectors** in the project's sidebar opens the list of every connector, and its chevron
+folds out the ones the project has connected. Each card shows what the connector reads, its
+tags, and whether it is connected, with links to each connection. The connected ones come
+first, then the rest, each by name.
+
+- **Search** matches a connector's name, description and tags.
+- The **tags** (`Analytics` `Commerce` `Development` `Forms` `Payments` `Security`) narrow the list
+  to the connectors with any of the tags picked.
+
+The search and the tags are kept in the address, so a link shows the same list. With
+nothing matching, **Clear filters** shows them all again.
+
+Every member of the team sees the page; only owners and admins can connect.
 
 ## Connecting
 
-Team owners and admins connect a service from **Data sources**, under **Connectors**, or
-from the connector's page in a project that has none yet. Credentials are stored encrypted,
+Team owners and admins choose **Connect** on a connector's card (**Connect another** once
+it is connected), or connect from the connector's page in a project that has none yet. Credentials are stored encrypted,
 never shown again, and only ever sent to the address given, over https. A private address is
 refused unless `LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE=true`.
 

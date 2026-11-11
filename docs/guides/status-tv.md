@@ -42,7 +42,7 @@ A widget can also show a [data source](../data-sources.md): a figure from your o
 or from a service through a [connector](../connectors/index.md), such as the open pull
 requests and failed workflow runs of a [GitHub](../connectors/github.md) repository, or
 the revenue per day on a [Vipps MobilePay](../connectors/mobilepay.md) ledger. A team owner
-or admin connects one from **Data sources**, under **Connectors**; then pick its figure
+or admin connects one on the project's **Connectors** page; then pick its figure
 under **Data source**.
 
 During a [maintenance window](../health.md#maintenance-windows), the health and project

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Http\Controllers;
 
-use App\Domains\Connectors\Enums\Connector;
 use App\Domains\DataSources\Actions\SaveDataSourceAction;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Enums\DataSourceFormat;
@@ -36,7 +35,6 @@ class DataSourceController
 
         return Inertia::render('data-sources/index', [
             'project' => $presenter->header($project, $request->user()),
-            'connectors' => fn (): array => Connector::catalog($project),
             'connections' => fn (): array => $project->dataSourceConnections()->orderBy('environment')->get()->map(fn (DataSourceConnection $c): array => [
                 'uuid' => $c->uuid,
                 'kind' => $c->kind->value,

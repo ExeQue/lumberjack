@@ -6,6 +6,9 @@ namespace App\Http\Middleware;
 
 use App\Domains\Commands\Enums\CommandRunStatus;
 use App\Domains\Commands\Models\CommandRun;
+use App\Domains\Connectors\Enums\Connector;
+use App\Domains\DataSources\Enums\ConnectionKind;
+use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Enums\JobRunStatus;
@@ -16,6 +19,7 @@ use App\Domains\Shared\Support\AppVersion;
 use App\Domains\Shared\Support\Translations;
 use App\Domains\Teams\Models\Team;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
@@ -101,7 +105,7 @@ class HandleInertiaRequests extends Middleware
      * The project the sidebar keeps showing on pages that are not about one
      * project: the one being viewed, else the last one visited, else the first.
      *
-     * @return array{uuid: string, name: string, can_administer: bool, has_umami: bool, has_mosparo: bool, has_github: bool, has_mobilepay: bool, counts: array{issues: int, jobs: int, schedule: int, health: int, commands: int}}|null
+     * @return array{uuid: string, name: string, can_administer: bool, connectors: array<string, list<array{uuid: string, name: string}>>, counts: array{issues: int, jobs: int, schedule: int, health: int, commands: int}}|null
      */
     private function sidebarProject(Request $request): ?array
     {
@@ -127,11 +131,8 @@ class HandleInertiaRequests extends Middleware
             'uuid' => $project->uuid,
             'name' => $project->name,
             'can_administer' => $user->can('update', $project),
-            // The Umami page is in the sidebar only for a project that reads a website.
-            'has_umami' => $project->umamiConnections()->exists(),
-            'has_mosparo' => $project->mosparoConnections()->exists(),
-            'has_github' => $project->gitHubConnections()->exists(),
-            'has_mobilepay' => $project->mobilePayConnections()->exists(),
+            // A connector is under Connectors only once connected, its connections below it when several.
+            'connectors' => $this->sidebarConnectors($project),
             // Reused for half a minute, and forgotten when a live broadcast says they changed.
             'counts' => Cache::remember(self::sidebarCountsKey($project->id), self::SIDEBAR_COUNTS_SECONDS, fn (): array => [
                 'issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->count(),
@@ -144,5 +145,24 @@ class HandleInertiaRequests extends Middleware
                     ->where('status', CommandRunStatus::Failed->value)->count(),
             ]),
         ];
+    }
+
+    /**
+     * Each connected connector's connections by its key, in name order; none for one not connected.
+     *
+     * @return array<string, list<array{uuid: string, name: string}>>
+     */
+    private function sidebarConnectors(Project $project): array
+    {
+        return $project->dataSourceConnections()
+            ->whereIn('kind', collect(Connector::cases())->map(fn (Connector $connector): ConnectionKind => $connector->kind()))
+            ->orderBy('name')->orderBy('id')
+            ->get(['id', 'uuid', 'kind', 'name', 'environment'])
+            ->groupBy(fn (DataSourceConnection $connection): string => Connector::forKind($connection->kind)->value ?? '')
+            ->map(fn (Collection $connections): array => array_values($connections->map(fn (DataSourceConnection $connection): array => [
+                'uuid' => $connection->uuid,
+                'name' => $connection->displayName(),
+            ])->all()))
+            ->all();
     }
 }

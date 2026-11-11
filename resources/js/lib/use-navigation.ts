@@ -26,6 +26,7 @@ import { index as releasesIndex } from '@/routes/releases';
 import { index as routesIndex } from '@/routes/routes';
 import { index as scheduleIndex } from '@/routes/schedule';
 import { index as screensIndex } from '@/routes/screens';
+import { index as connectorsIndex } from '@/routes/connectors';
 import { index as githubIndex } from '@/routes/connectors/github';
 import { index as mobilepayIndex } from '@/routes/connectors/mobilepay';
 import { index as mosparoIndex } from '@/routes/connectors/mosparo';
@@ -62,9 +63,27 @@ function group(label: string, tabs: NavItem[]): NavItem {
     };
 }
 
-/** Every page behind the entries, one per page: for the command palette. */
+/** The connectors with a page, by their key in the catalog: the sidebar label and the page. */
+const CONNECTOR_PAGES: Record<
+    string,
+    [label: string, page: typeof umamiIndex]
+> = {
+    umami: ['common.nav.umami', umamiIndex],
+    mosparo: ['common.nav.mosparo', mosparoIndex],
+    github: ['common.nav.github', githubIndex],
+    mobilepay: ['common.nav.mobilepay', mobilepayIndex],
+};
+
+/**
+ * Every page behind the entries, one per page: for the command palette. A sidebar-only
+ * group, such as Connectors, is a page of its own too.
+ */
 export function leaves(items: NavItem[]): NavItem[] {
-    return items.flatMap((item) => item.tabs ?? [item]);
+    return items.flatMap((item) =>
+        item.sidebarOnly
+            ? [{ ...item, tabs: undefined }, ...(item.tabs ?? [])]
+            : (item.tabs ?? [item]),
+    );
 }
 
 /** The pages the sidebar and the command palette offer, in sidebar order. */
@@ -84,17 +103,12 @@ export function useNavigation(
     const t = useT();
     const page = usePage<{
         sidebar_project?: {
-            has_umami?: boolean;
-            has_mosparo?: boolean;
-            has_github?: boolean;
-            has_mobilepay?: boolean;
+            /** Each connected connector's connections, by its key, in name order. */
+            connectors?: Record<string, { uuid: string; name: string }[]>;
         } | null;
     }>();
     // The routed project on a project page, so it is the one these entries are for.
-    const hasUmami = page.props.sidebar_project?.has_umami === true;
-    const hasMosparo = page.props.sidebar_project?.has_mosparo === true;
-    const hasGitHub = page.props.sidebar_project?.has_github === true;
-    const hasMobilePay = page.props.sidebar_project?.has_mobilepay === true;
+    const connected = page.props.sidebar_project?.connectors ?? {};
     // Without the query or a #section (the settings page keeps its section there).
     const path = page.url.split(/[?#]/)[0];
     const isAt = (href: string, exact = false) =>
@@ -109,41 +123,42 @@ export function useNavigation(
         return { label, href, active: isAt(href, exact), ...rest };
     };
 
+    // One entry per connection, by connector then connection name; the connector's name alone
+    // when it has one connection.
     const connectors: NavItem[] = project
-        ? [
-              ...(hasUmami
-                  ? [
-                        item(
-                            t('common.nav.umami'),
-                            umamiIndex({ project: project.uuid }).url,
-                        ),
-                    ]
-                  : []),
-              ...(hasMosparo
-                  ? [
-                        item(
-                            t('common.nav.mosparo'),
-                            mosparoIndex({ project: project.uuid }).url,
-                        ),
-                    ]
-                  : []),
-              ...(hasGitHub
-                  ? [
-                        item(
-                            t('common.nav.github'),
-                            githubIndex({ project: project.uuid }).url,
-                        ),
-                    ]
-                  : []),
-              ...(hasMobilePay
-                  ? [
-                        item(
-                            t('common.nav.mobilepay'),
-                            mobilepayIndex({ project: project.uuid }).url,
-                        ),
-                    ]
-                  : []),
-          ]
+        ? Object.entries(CONNECTOR_PAGES)
+              .map(([key, [label, pageOf]]) => ({
+                  key,
+                  label: t(label),
+                  pageOf,
+              }))
+              .toSorted((a, b) =>
+                  a.label.localeCompare(b.label, undefined, {
+                      sensitivity: 'base',
+                  }),
+              )
+              .flatMap(({ key, label, pageOf }) => {
+                  const connections = connected[key] ?? [];
+                  const base = pageOf({ project: project.uuid }).url;
+
+                  if (connections.length === 1) {
+                      return [item(label, base)];
+                  }
+
+                  return connections.map((connection, i) => {
+                      const href = pageOf([project.uuid, connection.uuid]).url;
+
+                      return {
+                          label: t('common.nav.connector_connection', {
+                              connector: label,
+                              connection: connection.name,
+                          }),
+                          href,
+                          // Without one picked, the page shows the first by name.
+                          active: isAt(href) || (i === 0 && path === base),
+                      };
+                  });
+              })
         : [];
 
     const projectNav: NavItem[] = project
@@ -181,24 +196,16 @@ export function useNavigation(
                   count: counts?.health,
               }),
               item(t('common.nav.releases'), releasesIndex(project.uuid).url),
-              // The services the project reads, last before its settings; connected under Data sources.
-              // One connector is its own entry; more fold out under Connectors.
-              ...(connectors.length === 1 ? connectors : []),
-              ...(connectors.length > 1
-                  ? [
-                        {
-                            ...group(
-                                t('common.nav.connectors'),
-                                connectors.toSorted((a, b) =>
-                                    a.label.localeCompare(b.label, undefined, {
-                                        sensitivity: 'base',
-                                    }),
-                                ),
-                            ),
-                            sidebarOnly: true,
-                        },
-                    ]
-                  : []),
+              // The services the project reads, last before its settings: the label opens the
+              // Connectors page, the chevron folds out those connected.
+              {
+                  ...item(
+                      t('common.nav.connectors'),
+                      connectorsIndex(project.uuid).url,
+                  ),
+                  tabs: connectors,
+                  sidebarOnly: true,
+              },
               // Last in the list: the settings (with the data sources in their menu) for
               // whoever administers the project, else the data sources, read only.
               {
@@ -308,6 +315,7 @@ const sections: Record<string, (project: string) => { url: string }> = {
     commands: commandsIndex,
     logs: logsIndex,
     health: healthIndex,
+    connectors: connectorsIndex,
     'data-sources': dataSourcesIndex,
     settings: projectSettings,
 };
