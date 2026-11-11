@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Health\Http\Controllers;
 
+use App\Domains\DataSources\Enums\ConnectionKind;
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Actions\ArchiveHealthCheckAction;
 use App\Domains\Health\Actions\DeleteHealthCheckAction;
 use App\Domains\Health\Actions\SaveHealthCheckAction;
@@ -16,6 +18,7 @@ use App\Domains\Health\Models\HealthOutage;
 use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
+use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Http\Concerns\ReadsDashboardFilters;
 use App\Domains\Shared\Support\TimeSeries;
 use Illuminate\Http\RedirectResponse;
@@ -68,6 +71,14 @@ class HealthController
             ],
             'types' => array_map(fn (HealthCheckType $t): string => $t->value, HealthCheckType::cases()),
             'intervals' => HealthCheck::INTERVALS,
+            // For the add and edit dialog, which only those who may change checks open.
+            'data_sources' => fn (): array => ! $request->user()?->can('update', $project) ? [] : DataSource::query()->where('project_id', $project->id)->whereNumeric()->with('dataSourceConnection:id,url,kind,environment,name')->orderBy('name')
+                ->get(['uuid', 'name', 'group_path', 'format', 'environment', 'data_source_connection_id'])
+                ->map(fn (DataSource $s): array => [
+                    'uuid' => $s->uuid, 'name' => $s->name, 'group' => $s->pickerGroup(), 'host' => $s->pickerHost(), 'format' => $s->format->value,
+                    'environment' => $s->environment !== '' && $s->dataSourceConnection?->isFor(ConnectionKind::App) !== false ? $s->environment : null,
+                    'periods' => $s->dataSourceConnection !== null ? array_map(fn (Period $p): string => $p->value, $s->dataSourceConnection->kind->periods()) : null,
+                ])->all(),
         ]);
     }
 

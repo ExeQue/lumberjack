@@ -41,8 +41,8 @@ class UtmLabel extends Model
     }
 
     /** @return BelongsTo<DataSourceConnection, $this> */
-    public function connection(): BelongsTo
+    public function dataSourceConnection(): BelongsTo
     {
-        return $this->belongsTo(DataSourceConnection::class, 'data_source_connection_id');
+        return $this->belongsTo(DataSourceConnection::class);
     }
 }

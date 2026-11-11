@@ -10,6 +10,8 @@ use App\Domains\DataSources\Jobs\FetchDataSourceWindow;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\DataSources\Support\PullSignature;
+use App\Domains\Health\Enums\HealthCheckType;
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Enums\Period;
 use Illuminate\Http\Client\Request;
@@ -60,7 +62,7 @@ describe('the signature', function () {
     });
 
     it('uses the previous token while the app still holds it', function () {
-        $this->source->connection->update(['pull_token' => 'lj_pull_new', 'pull_token_previous' => 'lj_pull_test', 'uses_previous' => true]);
+        $this->source->dataSourceConnection->update(['pull_token' => 'lj_pull_new', 'pull_token_previous' => 'lj_pull_test', 'uses_previous' => true]);
         Http::fake([$this->url => Http::response(['sources' => ['orders:total' => ['shape' => 'number', 'data' => 1]]])]);
 
         expect(($this->pull)()->has_data)->toBeTrue();
@@ -125,7 +127,7 @@ describe('the range', function () {
     });
 
     it('tells the app the resolution of the period and the time zone of the connection', function () {
-        $this->source->connection->update(['timezone' => 'Europe/Copenhagen']);
+        $this->source->dataSourceConnection->update(['timezone' => 'Europe/Copenhagen']);
         Http::fake(['*' => Http::response(['version' => 1, 'sources' => ['orders:total' => ['shape' => 'number', 'data' => 1]]])]);
 
         app(FetchDataSourceWindowAction::class)->execute(DataSourceWindow::factory()->for($this->source, 'source')->create(['period' => '30d', 'bucket' => 86400])->id);
@@ -138,12 +140,12 @@ describe('the range', function () {
     });
 
     it('asks the app again when it has moved on from the old token', function () {
-        $this->source->connection->update(['pull_token' => 'lj_pull_new', 'pull_token_previous' => 'lj_pull_test', 'uses_previous' => true, 'next_check_at' => now()->addMinutes(4)]);
+        $this->source->dataSourceConnection->update(['pull_token' => 'lj_pull_new', 'pull_token_previous' => 'lj_pull_test', 'uses_previous' => true, 'next_check_at' => now()->addMinutes(4)]);
         Http::fake([$this->url => Http::response('', 404)]);
 
         ($this->pull)();
 
-        expect($this->source->connection->refresh()->next_check_at)->toBeNull();
+        expect($this->source->dataSourceConnection->refresh()->next_check_at)->toBeNull();
     });
 
     it('tries again soon after a failure, however long the app caches', function () {
@@ -217,8 +219,50 @@ describe('what is never pulled', function () {
     });
 });
 
+describe('the health checks reading a pull', function () {
+    it('judge only a pull at the period\'s own resolution', function (int $bucket, int $results) {
+        Http::fake([$this->url => Http::response(['version' => 1, 'sources' => ['orders:total' => ['shape' => 'number', 'data' => 42]]])]);
+        $check = HealthCheck::factory()->for($this->project)->monitored(HealthCheckType::DataSource, ['data_source' => $this->source->uuid, 'period' => '24h'])->create();
+        $this->window->update(['bucket' => $bucket]);
+
+        ($this->pull)();
+
+        expect($check->results()->count())->toBe($results);
+    })->with([
+        'the period\'s own' => [3600, 1],
+        'a chart\'s finer one' => [600, 0],
+    ]);
+});
+
 describe('queueing pulls', function () {
     beforeEach(fn () => Queue::fake());
+
+    it('keeps a period a check reads due after screens stopped asking, however long the app caches', function () {
+        $this->window->update(['requested_at' => now()->subHour()]);
+        $source = DataSource::factory()->for($this->project)->connected('orders:hourly')->create(['cache_seconds' => 3600]);
+        HealthCheck::factory()->for($source->project)->monitored(HealthCheckType::DataSource, ['data_source' => $source->uuid, 'period' => '24h'])->create();
+        $read = DataSourceWindow::factory()->forSource($source)->create(['period' => '24h', 'bucket' => 3600, 'requested_at' => now()->subHour(), 'next_fetch_at' => null]);
+        $unread = DataSourceWindow::factory()->forSource($source)->create(['period' => '7d', 'bucket' => 21600, 'requested_at' => now()->subHour(), 'next_fetch_at' => null]);
+
+        app(DispatchDueDataSourceWindowsAction::class)->execute();
+
+        Queue::assertPushed(FetchDataSourceWindow::class, 1);
+        expect($read->refresh()->next_fetch_at)->not->toBeNull()
+            ->and($unread->refresh()->next_fetch_at)->toBeNull();
+    });
+
+    it('pulls first what a health check reads when an app\'s pulls are rationed', function () {
+        $read = DataSource::factory()->for($this->project)->connected('orders:checked')->create();
+        HealthCheck::factory()->for($this->project)->monitored(HealthCheckType::DataSource, ['data_source' => $read->uuid, 'period' => '24h'])->create();
+        $checked = DataSourceWindow::factory()->forSource($read)->create(['next_fetch_at' => now()->subMinute()]);
+        foreach (range(1, 4) as $n) {
+            DataSourceWindow::factory()->forSource(DataSource::factory()->for($this->project)->connected("orders:{$n}")->create())->create();
+        }
+
+        app(DispatchDueDataSourceWindowsAction::class)->execute();
+
+        expect($checked->refresh()->next_fetch_at->isFuture())->toBeTrue();
+    });
 
     it('queues one pull per source and period, once', function () {
         $other = DataSource::factory()->for($this->project)->connected('orders:today')->create();

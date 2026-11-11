@@ -11,8 +11,10 @@ use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Enums\DataSourceShape;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceWindow;
+use App\Domains\Health\Actions\RunHealthCheckAction;
 use App\Domains\Health\Exceptions\HealthExceptionInterface;
 use App\Domains\Health\Exceptions\ProbeFailedException;
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Shared\Enums\Period;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -41,6 +43,7 @@ class FetchDataSourceWindowAction
         private readonly SendSignedPullAction $send,
         private readonly PullUmamiSourceAction $pullUmami,
         private readonly PullMosparoSourceAction $pullMosparo,
+        private readonly RunHealthCheckAction $runHealthCheckAction,
     ) {
     }
 
@@ -55,20 +58,45 @@ class FetchDataSourceWindowAction
 
     public function execute(int $id): void
     {
-        $window = DataSourceWindow::query()->whereKey($id)->with('source.connection')->first();
+        $window = DataSourceWindow::query()->whereKey($id)->with('source.dataSourceConnection')->first();
 
         if ($window === null) {
             return;
         }
 
+        $recorded = true;
+
         try {
-            $this->store($window, $window->source->connection !== null && ! $window->source->connection->isFor(ConnectionKind::App) ? $this->pullFromService($window) : ($this->pull($window)[$window->source->key] ?? null));
+            $this->store($window, $window->source->dataSourceConnection !== null && ! $window->source->dataSourceConnection->isFor(ConnectionKind::App) ? $this->pullFromService($window) : ($this->pull($window)[$window->source->key] ?? null));
         } catch (HealthExceptionInterface|ConnectorsExceptionInterface|ConnectionException $e) {
-            $this->failed($window, $e->getMessage());
+            $recorded = $this->failed($window, $e->getMessage());
         } catch (Throwable $e) {
             // Whatever an app answered, the failure is shown on the source.
             report($e);
-            $this->failed($window, __('data_sources.errors.bad_shape'));
+            $recorded = $this->failed($window, __('data_sources.errors.bad_shape'));
+        }
+
+        // A pull whose answer no longer counts is not judged either.
+        if ($recorded) {
+            $this->runHealthChecks($window);
+        }
+    }
+
+    /**
+     * The health checks reading this period judge the pull, which also keeps the period
+     * asked for while they exist. Only the period's own resolution: a chart's finer one is
+     * the same figure again.
+     */
+    private function runHealthChecks(DataSourceWindow $window): void
+    {
+        if ($window->bucket !== Period::from($window->period)->bucketSeconds()) {
+            return;
+        }
+
+        $checks = HealthCheck::query()->whereReadsDataSource($window->source)->whereReadsPeriod($window->period)->whereMonitored()->whereNotArchived()->get();
+
+        foreach ($checks as $check) {
+            $this->runHealthCheckAction->execute($check, afterFetch: true);
         }
     }
 
@@ -78,16 +106,16 @@ class FetchDataSourceWindowAction
     private function pull(DataSourceWindow $window): array
     {
         $source = $window->source;
-        $token = $source->connection?->activeToken() ?? throw new ProbeFailedException(__('data_sources.errors.token_unreadable'));
+        $token = $source->dataSourceConnection?->activeToken() ?? throw new ProbeFailedException(__('data_sources.errors.token_unreadable'));
         $period = Period::from($window->period);
         $step = self::stepSeconds($source, $period);
         $to = (int) (floor(now()->getTimestamp() / $step) * $step);
 
-        $response = $this->send->execute($source->url, $token, ['bucket' => $window->bucket, 'from' => $to - self::periodSeconds($period), 'only' => (string) $source->key, 'timezone' => $source->connection->timezone, 'to' => $to]);
+        $response = $this->send->execute($source->url, $token, ['bucket' => $window->bucket, 'from' => $to - self::periodSeconds($period), 'only' => (string) $source->key, 'timezone' => $source->dataSourceConnection->timezone, 'to' => $to]);
 
         // During a rotation that is the app having moved on: find out which token it holds now.
-        if ($response->status() === 404 && $source->connection->uses_previous) {
-            $source->connection->update(['next_check_at' => null]);
+        if ($response->status() === 404 && $source->dataSourceConnection->uses_previous) {
+            $source->dataSourceConnection->update(['next_check_at' => null]);
         }
 
         $answer = $this->send->json($response);
@@ -108,10 +136,10 @@ class FetchDataSourceWindowAction
         $to = (int) (floor(now()->getTimestamp() / $step) * $step);
         $from = CarbonImmutable::createFromTimestamp($to - self::periodSeconds($period));
         $until = CarbonImmutable::createFromTimestamp($to);
-        $timezone = (string) $source->connection?->timezone;
+        $timezone = (string) $source->dataSourceConnection?->timezone;
 
         try {
-            return match ($source->connection?->kind) {
+            return match ($source->dataSourceConnection?->kind) {
                 ConnectionKind::Umami => $this->pullUmami->execute($source, $from, $until, $window->bucket, $timezone),
                 ConnectionKind::Mosparo => $this->pullMosparo->execute($source, $from, $until, $timezone),
                 default => throw new ProbeFailedException(__('data_sources.errors.no_answer')),
@@ -155,11 +183,14 @@ class FetchDataSourceWindowAction
         $source->update(['last_fetched_at' => now(), 'last_ok_at' => now(), 'last_error' => null]);
     }
 
-    private function failed(DataSourceWindow $window, string $message): void
+    /**
+     * @return bool false when what it said no longer counts, and nothing was kept
+     */
+    private function failed(DataSourceWindow $window, string $message): bool
     {
         // The app moved while this was asking the old address: what that said no longer counts.
         if ($window->source->fresh()?->url !== $window->source->url) {
-            return;
+            return false;
         }
 
         $message = SendSignedPullAction::cleanMessage($message);
@@ -167,5 +198,7 @@ class FetchDataSourceWindowAction
         // What was last pulled stays on screen, with the age it really has.
         $window->update(['error' => $message, 'failures' => $window->failures + 1, 'next_fetch_at' => now()->addMinutes(self::EVERY_MINUTES * 2 ** min($window->failures, self::MOST_DOUBLINGS))]);
         $window->source->update(['last_fetched_at' => now(), 'last_error' => $message]);
+
+        return true;
     }
 }

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Models;
 
+use App\Domains\DataSources\Eloquent\Builders\DataSourceWindowBuilder;
 use Carbon\CarbonImmutable;
 use Database\Factories\DataSourceWindowFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Attributes\WithoutTimestamps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,13 +26,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $has_data
  * @property string|null $error
  * @property CarbonImmutable $requested_at
+ * @property CarbonImmutable|null $wanted_since since when the period has been asked for without a break
  * @property CarbonImmutable|null $fetched_at
  * @property int $failures
  * @property CarbonImmutable|null $next_fetch_at
  */
-#[Fillable(['data_source_id', 'period', 'bucket', 'data', 'has_data', 'error', 'failures', 'requested_at', 'fetched_at', 'next_fetch_at'])]
+#[Fillable(['data_source_id', 'period', 'bucket', 'data', 'has_data', 'error', 'failures', 'requested_at', 'wanted_since', 'fetched_at', 'next_fetch_at'])]
 #[WithoutTimestamps]
 #[UseFactory(DataSourceWindowFactory::class)]
+#[UseEloquentBuilder(DataSourceWindowBuilder::class)]
 class DataSourceWindow extends Model
 {
     /** @use HasFactory<DataSourceWindowFactory> */
@@ -42,6 +46,7 @@ class DataSourceWindow extends Model
             'data' => 'array',
             'has_data' => 'boolean',
             'requested_at' => 'datetime',
+            'wanted_since' => 'datetime',
             'fetched_at' => 'datetime',
             'next_fetch_at' => 'datetime',
         ];

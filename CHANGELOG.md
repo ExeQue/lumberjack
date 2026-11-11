@@ -6,12 +6,14 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ### Added
 
+- **Data source value** health check: holds a number from a data source against a warn and a fail limit (`>`, `>=`, `<`, `<=`, `=` or `!=`), judged after each fetch. JSON and Prometheus sources are read at a path; Umami, mosparo and connected apps' number sources over a period, which the check keeps pulled. It fails when the source fails, is not fetched in time or has no number, and shows the value it read. The source is picked in the same searchable, grouped picker as in the screen designer. The MCP tools set it up too.
 - **About** shows the changelog the install was built with, by release, with a sticky row of versions to jump to.
 
 ### Changed
 
 - A grouped sidebar entry folds its pages out from a chevron beside it, not on hover, so the sidebar no longer changes height under the mouse.
 - With a single connector, the sidebar shows it as its own entry instead of under **Connectors**.
+- Periods a health check reads are pulled before those only screens show when an app's pulls are rationed, and count on the **Data sources** page as being read: a failing one shows as failing there.
 
 ## [0.6.1] - 2026-11-10
 

@@ -1,8 +1,8 @@
 # Data sources
 
 A data source is an external endpoint that Lumberjack fetches on an interval, for screen
-[widgets](./widgets.md) to show: a number from a JSON API, a Prometheus metric, or the
-events of a calendar.
+[widgets](./widgets.md) to show and [health checks](./health.md) to hold against limits: a
+number from a JSON API, a Prometheus metric, or the events of a calendar.
 
 ## Where to find them
 
@@ -128,9 +128,9 @@ Each connection lists its sources below it, folded away until you open them.
 Nothing goes through the agent: Lumberjack pulls it all, signing every call with the token,
 which never travels itself. It only uses https, and the app answers 404 to anything else. A
 source is pulled one per call, only while a screen shows that period and about 12 minutes
-after, every five minutes or as often as the app caches it (`#[CacheFor]`), up to once a day and at
+after, or a health check reads it over that period, every five minutes or as often as the app caches it (`#[CacheFor]`), up to once a day and at
 least once per the length of the period.
-One app gets at most four pulls queued per minute, so with many sources on screens they refresh less often.
+One app gets at most four pulls queued per minute, so with many sources on screens they refresh less often. Periods a health check reads go first, as a late pull fails a check but only ages a screen.
 An app that moved or works in another time zone is changed with **Edit connection**; its token, sources and widgets stay.
 
 An app can file a source under a group with `#[Group('Events', 'Storage')]`, from version 0.6.0 of the package (up to 3 levels of 40 characters). The data sources page groups it the same way, and **Data source** in the designer, a tree you can search, lists it under its project and group, such as **Shop > Events > Storage**. A source without a group is listed under its project alone.
@@ -145,9 +145,9 @@ themselves within five minutes of the app answering to the new one.
 
 | Status              | Meaning                                                                                                                                                                                            |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Connected           | Pulls work for what screens show now, or none of its periods is on a screen.                                                                                                                       |
+| Connected           | Pulls work for what screens show and health checks read now, or nothing asks for its periods.                                                                                                      |
 | Waiting for the app | It has never given a valid answer: it is not deployed with the token yet, or the address is wrong. The reason is shown.                                                                            |
-| Failing             | The last call for a period on a screen failed; the reason is shown under it. A screen keeps what it last got, with its real age.                                                                   |
+| Failing             | The last call for a period on a screen or in a health check failed; the reason is shown under it. A screen keeps what it last got, with its real age.                                              |
 | No longer offered   | A complete list from the app no longer has this source. It comes back if it returns, or can be removed. An app that lists nothing at all archives nothing, as an empty list is more often a fault. |
 
 Each connection is one environment, so the same key can exist in several.

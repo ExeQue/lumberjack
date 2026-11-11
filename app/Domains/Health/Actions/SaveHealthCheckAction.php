@@ -16,6 +16,11 @@ use App\Domains\Projects\Models\Project;
  */
 class SaveHealthCheckAction
 {
+    public function __construct(
+        private readonly WantDataSourcePeriodAction $wantDataSourcePeriodAction,
+    ) {
+    }
+
     /**
      * @param  array<string, mixed>  $attributes  validated
      * @param  array<string, mixed>  $config  the type's settings
@@ -59,11 +64,22 @@ class SaveHealthCheckAction
             'next_run_at' => null,
         ]);
 
+        // A data source check judges each fetch once; new limits judge the latest fetch again.
+        $reads = $check->type === HealthCheckType::DataSource && $check->isDirty('config');
+
+        if ($reads) {
+            $check->last_result_at = null;
+        }
+
         if ($check->type === HealthCheckType::Heartbeat && $check->ping_token === null) {
             $check->ping_token = bin2hex(random_bytes(20));
         }
 
         $check->save();
+
+        if ($reads) {
+            $this->wantDataSourcePeriodAction->execute($check);
+        }
 
         return $check;
     }

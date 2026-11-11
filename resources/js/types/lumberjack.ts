@@ -258,7 +258,8 @@ export type HealthCheckType =
     | 'dns'
     | 'heartbeat'
     | 'domain'
-    | 'smtp';
+    | 'smtp'
+    | 'data_source';
 
 export type HealthHost = {
     host: string | null;

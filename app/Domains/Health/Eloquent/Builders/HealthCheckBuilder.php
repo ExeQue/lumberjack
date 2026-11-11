@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Health\Eloquent\Builders;
 
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Enums\HealthCheckSource;
+use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Enums\HealthStatus;
 use App\Domains\Health\Models\HealthCheck;
 use Carbon\Carbon;
@@ -76,6 +78,34 @@ class HealthCheckBuilder extends Builder
     public function orWhereDue(?Carbon $datetime = null): self
     {
         return $this->orWhere(fn (self $q) => $q->whereDue($datetime));
+    }
+
+    /**
+     * Data source checks that read the given source.
+     */
+    public function whereReadsDataSource(DataSource $source): self
+    {
+        return $this->where('type', HealthCheckType::DataSource->value)
+            ->where('project_id', $source->project_id)
+            ->where('config->data_source', $source->uuid);
+    }
+
+    public function orWhereReadsDataSource(DataSource $source): self
+    {
+        return $this->orWhere(fn (self $q) => $q->whereReadsDataSource($source));
+    }
+
+    /**
+     * Data source checks that read their connected source over the given period.
+     */
+    public function whereReadsPeriod(string $period): self
+    {
+        return $this->where('type', HealthCheckType::DataSource->value)->where('config->period', $period);
+    }
+
+    public function orWhereReadsPeriod(string $period): self
+    {
+        return $this->orWhere(fn (self $q) => $q->whereReadsPeriod($period));
     }
 
     /**

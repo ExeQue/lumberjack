@@ -34,7 +34,7 @@ class PullUmamiSourceAction
      */
     public function execute(DataSource $source, CarbonImmutable $from, CarbonImmutable $to, int $bucket, string $timezone): array
     {
-        $connection = $source->connection ?? throw new UmamiRequestFailedException(__('connectors.umami.errors.not_found'));
+        $connection = $source->dataSourceConnection ?? throw new UmamiRequestFailedException(__('connectors.umami.errors.not_found'));
         $credentials = $connection->umamiCredentials();
         $website = $connection->umamiWebsiteId();
         $key = (string) $source->key;

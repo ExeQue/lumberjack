@@ -60,7 +60,7 @@ return [
     'health_check' => [
         'recovered' => '{1} Recovered after 1 minute.|[2,*] Recovered after :count minutes.',
         'states' => ['down' => 'Down', 'degraded' => 'Degraded', 'recovered' => 'Recovered'],
-        'types' => ['http' => 'HTTP', 'ssl' => 'SSL certificate', 'tcp' => 'TCP port', 'dns' => 'DNS record', 'heartbeat' => 'Heartbeat', 'domain' => 'Domain expiry', 'smtp' => 'SMTP server'],
+        'types' => ['http' => 'HTTP', 'ssl' => 'SSL certificate', 'tcp' => 'TCP port', 'dns' => 'DNS record', 'heartbeat' => 'Heartbeat', 'domain' => 'Domain expiry', 'smtp' => 'SMTP server', 'data_source' => 'Data source value'],
         'facts' => ['status' => 'Status', 'check' => 'Check', 'environment' => 'Environment', 'hosts' => 'Hosts'],
     ],
     'bulk_status' => [

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Actions;
 
+use App\Domains\DataSources\Eloquent\Builders\DataSourceWindowBuilder;
 use App\Domains\DataSources\Jobs\FetchDataSourceWindow;
 use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\Shared\Enums\Period;
@@ -11,7 +12,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Runs every minute: queues the pulls that are due, one per source and period. Only periods
- * a screen asked for lately, so an app is never asked for what nobody looks at.
+ * a screen asked for lately or a health check reads, so an app is never asked for what
+ * nobody looks at.
  */
 class DispatchDueDataSourceWindowsAction
 {
@@ -31,13 +33,16 @@ class DispatchDueDataSourceWindowsAction
     {
         DataSourceWindow::query()->where('requested_at', '<', now()->subHours(self::KEEP_HOURS))->delete();
 
-        $due = fn (Builder $q): Builder => $q
-            ->where('requested_at', '>=', now()->subMinutes(self::ACTIVE_MINUTES))
+        // A health check reading the period keeps it pulled however long the app caches.
+        $due = fn (DataSourceWindowBuilder $q): DataSourceWindowBuilder => $q
+            ->whereActive()
             ->where(fn (Builder $q) => $q->whereNull('next_fetch_at')->orWhere('next_fetch_at', '<=', now()))
             ->whereHas('source', fn (Builder $q) => $q->whereConnected()->whereNotArchived());
 
         $queued = 0;
-        $windows = DataSourceWindow::query()->select(['id', 'data_source_id', 'period'])->tap($due)->orderByRaw('next_fetch_at asc nulls first')->with('source:id,cache_seconds,data_source_connection_id')->get();
+        // What a health check reads first: rationed per app, a late pull fails a check but only ages a screen.
+        $windows = DataSourceWindow::query()->select(['id', 'data_source_id', 'period'])->selectReadByHealthCheck()->tap($due)
+            ->orderByRaw('read_by_check nulls last')->orderByRaw('next_fetch_at asc nulls first')->with('source:id,cache_seconds,data_source_connection_id')->get();
         $perConnection = [];
 
         foreach ($windows as $window) {

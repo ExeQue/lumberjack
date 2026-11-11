@@ -25,7 +25,7 @@ class CreateHealthCheck extends Tool
 
     protected string $name = 'create_health_check';
 
-    protected string $description = 'Adds a check Lumberjack runs: http, ssl, tcp, dns, heartbeat, domain (expiry) or smtp. Pass the type, interval and thresholds, and the type\'s settings under config; returns the new check. A heartbeat\'s ping URL is a secret: find it on the Health page.';
+    protected string $description = 'Adds a check Lumberjack runs: http, ssl, tcp, dns, heartbeat, domain (expiry), smtp or data_source (a number from a data source against limits). Pass the type, interval and thresholds, and the type\'s settings under config; returns the new check. A heartbeat\'s ping URL is a secret: find it on the Health page.';
 
     public function __construct(
         private readonly SaveHealthCheckAction $save,

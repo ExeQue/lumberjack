@@ -105,7 +105,7 @@ describe('disconnecting', function () {
     it('removes the connection and its sources', function () {
         $source = DataSource::factory()->for($this->project)->connected()->create();
 
-        $this->actingAs($this->admin)->delete(route('data-source-connections.destroy', [$this->project, $source->connection]))->assertRedirect();
+        $this->actingAs($this->admin)->delete(route('data-source-connections.destroy', [$this->project, $source->dataSourceConnection]))->assertRedirect();
 
         expect(DataSource::query()->whereKey($source->id)->exists())->toBeFalse()
             ->and(DataSourceConnection::query()->count())->toBe(0);

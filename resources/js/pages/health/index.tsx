@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { CopyButton } from '@/components/lj/copy-text';
 import { HealthCheckDialog } from '@/components/lj/health-check-dialog';
+import type { HealthDataSource } from '@/components/lj/health-check-dialog';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
@@ -67,6 +68,7 @@ type Props = {
     detail: HealthCheckDetail | null;
     types: HealthCheckType[];
     intervals: number[];
+    data_sources: HealthDataSource[];
 };
 
 const stateTone: Record<HealthState, Tone> = {
@@ -377,9 +379,26 @@ function ChecksTable({
                                         : undefined
                                 }
                             >
-                                {check.last_result_at
-                                    ? latency(check.metrics, check.duration_us)
-                                    : '-'}
+                                {!check.last_result_at
+                                    ? '-'
+                                    : check.type === 'data_source'
+                                      ? // It measures nothing: the value it read, said to be one.
+                                        check.metrics.value !== undefined
+                                          ? t('health.value', {
+                                                value: formatNumber(
+                                                    check.metrics.value,
+                                                    Number.isInteger(
+                                                        check.metrics.value,
+                                                    )
+                                                        ? 0
+                                                        : 2,
+                                                ),
+                                            })
+                                          : '-'
+                                      : latency(
+                                            check.metrics,
+                                            check.duration_us,
+                                        )}
                                 <DatabaseFigures metrics={check.metrics} />
                             </td>
                             <td className={cn(tdClass, numClass)}>
@@ -406,6 +425,7 @@ export default function HealthIndex({
     detail,
     types,
     intervals,
+    data_sources,
 }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
@@ -573,6 +593,7 @@ export default function HealthIndex({
                     check={dialog === 'new' ? undefined : dialog}
                     types={types}
                     intervals={intervals}
+                    dataSources={data_sources}
                     onClose={() => setDialog(null)}
                 />
             )}
@@ -723,18 +744,20 @@ function CheckDetail({
                         </section>
                     )}
 
-                    <section className="flex flex-col gap-2">
-                        <h3 className="text-xs font-medium text-ink-3 uppercase">
-                            {t('health.detail.latency')}
-                        </h3>
-                        <TimeBars
-                            series={detail.latency_series}
-                            period={period}
-                            label={t('health.detail.latency')}
-                            height={90}
-                            formatValue={(v) => formatDuration(v)}
-                        />
-                    </section>
+                    {check.type !== 'data_source' && (
+                        <section className="flex flex-col gap-2">
+                            <h3 className="text-xs font-medium text-ink-3 uppercase">
+                                {t('health.detail.latency')}
+                            </h3>
+                            <TimeBars
+                                series={detail.latency_series}
+                                period={period}
+                                label={t('health.detail.latency')}
+                                height={90}
+                                formatValue={(v) => formatDuration(v)}
+                            />
+                        </section>
+                    )}
 
                     {check.hosts.length > 1 && (
                         <section className="flex flex-col gap-2">
@@ -1032,9 +1055,12 @@ function CheckDetail({
                                                         numClass,
                                                     )}
                                                 >
-                                                    {formatDuration(
-                                                        result.duration_us,
-                                                    )}
+                                                    {check.type ===
+                                                    'data_source'
+                                                        ? '-'
+                                                        : formatDuration(
+                                                              result.duration_us,
+                                                          )}
                                                 </td>
                                             </tr>
                                         ))}

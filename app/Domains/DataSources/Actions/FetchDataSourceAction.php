@@ -12,6 +12,7 @@ use App\Domains\Health\Actions\RunHealthCheckAction;
 use App\Domains\Health\Data\HealthResultData;
 use App\Domains\Health\Exceptions\HealthExceptionInterface;
 use App\Domains\Health\Exceptions\ProbeFailedException;
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Support\NetworkGuard;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
@@ -45,10 +46,23 @@ class FetchDataSourceAction
 
     public function __construct(
         private readonly NetworkGuard $guard,
+        private readonly RunHealthCheckAction $runHealthCheckAction,
     ) {
     }
 
+    /**
+     * Fetches it, then runs the health checks that read it, on this fetch as on a failed one.
+     */
     public function execute(DataSource $source): void
+    {
+        $this->fetchAndKeep($source);
+
+        foreach (HealthCheck::query()->whereReadsDataSource($source)->whereMonitored()->whereNotArchived()->get() as $check) {
+            $this->runHealthCheckAction->execute($check, afterFetch: true);
+        }
+    }
+
+    private function fetchAndKeep(DataSource $source): void
     {
         $now = now();
         $source->last_fetched_at = $now;

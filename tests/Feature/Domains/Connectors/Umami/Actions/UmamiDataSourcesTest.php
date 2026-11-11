@@ -60,8 +60,8 @@ describe('listing an Umami website\'s sources', function () {
     });
 
     it('offers each campaign seen lately or given a name, under its name, kept by its value', function () {
-        UtmLabel::factory()->for($this->connection, 'connection')->create(['value' => '5251806', 'label' => 'Black Friday']);
-        UtmLabel::factory()->for($this->connection, 'connection')->create(['value' => 'quiet', 'label' => 'Spring']);
+        UtmLabel::factory()->for($this->connection, 'dataSourceConnection')->create(['value' => '5251806', 'label' => 'Black Friday']);
+        UtmLabel::factory()->for($this->connection, 'dataSourceConnection')->create(['value' => 'quiet', 'label' => 'Spring']);
 
         ($this->sync)();
 
@@ -139,7 +139,7 @@ describe('pulling a source for a screen', function () {
     });
 
     it('lists UTM values by the names they were given', function () {
-        UtmLabel::factory()->for($this->connection, 'connection')->create(['dimension' => UtmDimension::Campaign, 'value' => '5251806', 'label' => 'Black Friday']);
+        UtmLabel::factory()->for($this->connection, 'dataSourceConnection')->create(['dimension' => UtmDimension::Campaign, 'value' => '5251806', 'label' => 'Black Friday']);
 
         expect(($this->pull)('utm_campaigns')->data)->toBe([['label' => 'Black Friday', 'value' => 9]]);
     });

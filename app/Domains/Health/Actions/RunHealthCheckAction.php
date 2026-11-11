@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domains\Health\Actions;
 
+use App\Domains\DataSources\Actions\FetchDataSourceWindowAction;
+use App\Domains\DataSources\Enums\DataSourceFormat;
+use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Queries\ConnectedDataSourceQuery;
+use App\Domains\DataSources\Queries\DataSourceValuesQuery;
 use App\Domains\DataSources\Support\JsonPath;
 use App\Domains\Health\Data\HealthResultData;
 use App\Domains\Health\Enums\HealthCheckType;
@@ -16,6 +21,7 @@ use App\Domains\Health\Support\NetworkGuard;
 use App\Domains\Health\Support\SmtpProbe;
 use App\Domains\Health\Support\TcpProbe;
 use App\Domains\Health\Support\TlsCertificateReader;
+use App\Domains\Shared\Enums\Period;
 use Carbon\CarbonInterface;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
@@ -39,6 +45,9 @@ class RunHealthCheckAction
     /** How much of a body an HTTP check reads to look for its text. */
     public const int MAX_BODY_BYTES = 1_048_576;
 
+    /** How a data source check compares the value with its limits. */
+    public const array OPERATORS = ['>', '>=', '<', '<=', '=', '!='];
+
     public function __construct(
         private readonly NetworkGuard $guard,
         private readonly DnsResolver $dns,
@@ -46,11 +55,16 @@ class RunHealthCheckAction
         private readonly TlsCertificateReader $tls,
         private readonly DomainExpiryLookup $domains,
         private readonly SmtpProbe $smtp,
+        private readonly DataSourceValuesQuery $values,
+        private readonly ConnectedDataSourceQuery $connected,
         private readonly RecordHealthResultAction $recordHealthResultAction,
     ) {
     }
 
-    public function execute(HealthCheck $check): ?HealthResultData
+    /**
+     * @param  bool  $afterFetch  run because its data source was just fetched, so it judges that fetch
+     */
+    public function execute(HealthCheck $check, bool $afterFetch = false): ?HealthResultData
     {
         $started = hrtime(true);
 
@@ -63,6 +77,7 @@ class RunHealthCheckAction
                 HealthCheckType::Heartbeat => $this->heartbeat($check),
                 HealthCheckType::Domain => $this->domain($check),
                 HealthCheckType::Smtp => $this->smtp($check),
+                HealthCheckType::DataSource => $this->dataSource($check, $afterFetch),
                 null => null,
             };
         } catch (HealthExceptionInterface|ConnectionException $e) {
@@ -226,5 +241,81 @@ class RunHealthCheckAction
         return $deadline->isPast()
             ? new HealthResultData(HealthResultStatus::Failed, $check->last_ping_at !== null ? __('health.results.heartbeat_late', ['since' => $check->last_ping_at->toIso8601String()]) : __('health.results.heartbeat_never'), durationUs: 0)
             : null;
+    }
+
+    /**
+     * Each fetch of the source (for a connected one: each pull of the check's period) runs
+     * it with $afterFetch, so on its own schedule it only speaks when that cannot: a check
+     * with no result yet (new, or its settings changed), or a source no longer fetched in
+     * time. A source not fetched yet leaves it pending. Reading a connected source's period
+     * is also what keeps it pulled.
+     */
+    private function dataSource(HealthCheck $check, bool $afterFetch): ?HealthResultData
+    {
+        $source = DataSource::query()->with('dataSourceConnection')->whereReadBy($check)->first();
+
+        if ($source === null) {
+            return new HealthResultData(HealthResultStatus::Failed, __('health.results.data_source_missing'), durationUs: 0);
+        }
+
+        $period = Period::tryFrom((string) $check->setting('period'));
+        $path = (string) $check->setting('path');
+
+        if ($source->format === DataSourceFormat::Connected) {
+            // An app that no longer offers it, or a check saved without a period, has nothing to read.
+            if ($source->archived_at !== null || $period === null) {
+                return new HealthResultData(HealthResultStatus::Failed, __($period === null ? 'health.results.data_source_no_period' : 'health.results.data_source_not_offered'), durationUs: 0);
+            }
+
+            $window = $this->connected->window($source, $period);
+            $wanted = $window->wanted_since ?? $window->requested_at;
+            // A pull from before the period became wanted (a screen's, hours ago) is not this check's to judge or wait from.
+            $fetched = $window->fetched_at?->gte($wanted) ? $window->fetched_at : null;
+            $error = $window->error;
+            $since = $fetched ?? $wanted;
+            $span = 2 * FetchDataSourceWindowAction::stepSeconds($source, $period) + 60;
+            $read = fn (): ?float => is_int($window->data) || is_float($window->data) ? (float) $window->data : null;
+        } else {
+            $fetched = $source->last_fetched_at;
+            $error = $source->last_error;
+            $since = $fetched ?? $source->created_at ?? now();
+            $span = 2 * $source->interval_minutes * 60 + 60;
+            $read = fn (): ?float => $this->values->number($source, $path);
+        }
+
+        $stale = $since->addSeconds($span)->isPast();
+
+        if (! $stale && (($fetched === null && $error === null) || (! $afterFetch && $check->last_result_at !== null))) {
+            return null;
+        }
+
+        $value = $stale || $error !== null ? null : $read();
+
+        // A source that is asked but fails says why, however long it has failed.
+        if ($value === null) {
+            return new HealthResultData(HealthResultStatus::Failed, match (true) {
+                $error !== null => __('health.results.data_source_error', ['error' => $error]),
+                $stale => $fetched !== null ? __('health.results.data_source_stale', ['since' => $fetched->toIso8601String()]) : __('health.results.data_source_never'),
+                default => __('health.results.data_source_no_value', ['path' => $path !== '' ? $path : $source->name]),
+            }, durationUs: 0);
+        }
+
+        $operator = (string) $check->setting('operator', '>');
+        $metrics = ['value' => $value];
+        $breaks = fn (string $key): bool => is_numeric($limit = $check->setting($key)) && match ($operator) {
+            '>' => $value > (float) $limit,
+            '>=' => $value >= (float) $limit,
+            '<' => $value < (float) $limit,
+            '<=' => $value <= (float) $limit,
+            '=' => $value === (float) $limit,
+            default => $value !== (float) $limit,
+        };
+        $breached = fn (string $key): string => __('health.results.data_source_breached', ['value' => $value, 'operator' => $operator, 'limit' => $check->setting($key)]);
+
+        return match (true) {
+            $breaks('fail') => new HealthResultData(HealthResultStatus::Failed, $breached('fail'), $metrics, 0),
+            $breaks('warn') => new HealthResultData(HealthResultStatus::Warning, $breached('warn'), $metrics, 0),
+            default => new HealthResultData(HealthResultStatus::Ok, __('health.results.data_source_ok', ['value' => $value]), $metrics, 0),
+        };
     }
 }

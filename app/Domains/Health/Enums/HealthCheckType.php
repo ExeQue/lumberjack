@@ -17,6 +17,9 @@ enum HealthCheckType: string
     case Domain = 'domain';
     case Smtp = 'smtp';
 
+    /** Holds a number a data source of the project answered against limits; reads what was fetched, connects to nothing. */
+    case DataSource = 'data_source';
+
     /**
      * Types that open a connection to the host, so they go through the private address guard.
      */

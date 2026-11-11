@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace App\Domains\Health\Http\Requests;
 
+use App\Domains\DataSources\Enums\DataSourceFormat;
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Support\JsonPath;
 use App\Domains\Health\Actions\RunHealthCheckAction;
 use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Support\SmtpProbe;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Shared\Enums\Period;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -31,6 +35,7 @@ class SaveHealthCheckRequest extends FormRequest
         'heartbeat' => ['grace_minutes'],
         'domain' => ['domain', 'warn_days', 'fail_days'],
         'smtp' => ['host', 'port', 'encryption', 'timeout_s'],
+        'data_source' => ['data_source', 'path', 'period', 'operator', 'warn', 'fail'],
     ];
 
     private const string HOST = 'regex:/^[A-Za-z0-9.-]{1,253}$|^\[?[0-9A-Fa-f:.]+\]?$/';
@@ -66,8 +71,8 @@ class SaveHealthCheckRequest extends FormRequest
         $reported = $check?->isReported() ?? false;
         $thresholds = [$reported ? 'nullable' : 'required', 'integer', 'min:1', 'max:100'];
         $common = [
-            // A heartbeat has no settings to take a name from.
-            'name' => [$type === HealthCheckType::Heartbeat ? 'required' : 'nullable', 'string', 'max:150'],
+            // A heartbeat has no settings to take a name from, and a data source check's are a path or a period.
+            'name' => [in_array($type, [HealthCheckType::Heartbeat, HealthCheckType::DataSource], true) ? 'required' : 'nullable', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:1000'],
             'degrade_after' => $thresholds,
             'recover_after' => $thresholds,
@@ -123,6 +128,25 @@ class SaveHealthCheckRequest extends FormRequest
             if (is_numeric($down) && is_numeric($degrade) && (int) $down < (int) $degrade) {
                 $validator->errors()->add('down_after', __('health.down_after_too_low', ['degrade' => (int) $degrade]));
             }
+
+            $config = is_array($data['config'] ?? null) ? $data['config'] : [];
+            $uuid = $config['data_source'] ?? null;
+            $type = $check->type ?? HealthCheckType::tryFrom(is_string($data['type'] ?? null) ? $data['type'] : '');
+
+            if ($type !== HealthCheckType::DataSource || ! is_string($uuid) || ! Str::isUuid($uuid)) {
+                return;
+            }
+
+            // Only a source of the check's own project with a number to read.
+            $source = DataSource::query()->with('dataSourceConnection')->where('project_id', $check->project_id ?? $project?->id)->where('uuid', $uuid)->whereNumeric()->first();
+
+            if ($source === null) {
+                $validator->errors()->add('config.data_source', __('health.unknown_data_source'));
+            } elseif ($source->format !== DataSourceFormat::Connected && ($config['path'] ?? '') === '') {
+                $validator->errors()->add('config.path', __('validation.required', ['attribute' => 'path']));
+            } elseif ($source->format === DataSourceFormat::Connected && ! in_array(Period::tryFrom((string) ($config['period'] ?? '')), $source->dataSourceConnection?->kind->periods() ?? [], true)) {
+                $validator->errors()->add('config.period', __('health.unknown_period'));
+            }
         };
     }
 
@@ -168,6 +192,15 @@ class SaveHealthCheckRequest extends FormRequest
                 'config.name' => ['required', 'string', 'max:253', 'regex:/^[A-Za-z0-9._-]+$/'],
                 'config.record_type' => ['required', Rule::in(['A', 'AAAA', 'CNAME', 'MX', 'TXT'])],
                 'config.expected' => ['nullable', 'string', 'max:255'],
+            ],
+            HealthCheckType::DataSource => [
+                'config.data_source' => ['required', 'uuid'],
+                // The path for a fetched source, the period for a connected one: which, the source says (limitsFor).
+                'config.path' => ['nullable', 'string', 'max:'.JsonPath::MAX_PATH],
+                'config.period' => ['nullable', Rule::enum(Period::class)],
+                'config.operator' => ['nullable', Rule::in(RunHealthCheckAction::OPERATORS)],
+                'config.warn' => ['nullable', 'numeric'],
+                'config.fail' => ['nullable', 'numeric'],
             ],
             HealthCheckType::Heartbeat => [
                 'config.grace_minutes' => ['nullable', 'integer', 'min:0', 'max:1440'],

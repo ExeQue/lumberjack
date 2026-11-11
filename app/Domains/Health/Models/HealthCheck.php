@@ -167,6 +167,7 @@ class HealthCheck extends Model
             HealthCheckType::Tcp => 'TCP: '.$host.':'.$port,
             HealthCheckType::Domain => 'Domain: '.$this->setting('domain'),
             HealthCheckType::Smtp => 'SMTP: '.$host.':'.$port,
+            HealthCheckType::DataSource => 'Data source: '.($this->setting('path') ?? $this->setting('period')),
             HealthCheckType::Dns => 'DNS: '.$this->setting('name').' ('.$this->setting('record_type', 'A').')',
             default => (string) $this->type?->value,
         };

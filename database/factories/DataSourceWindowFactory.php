@@ -20,6 +20,7 @@ class DataSourceWindowFactory extends Factory
             'period' => '24h',
             'bucket' => 3600,
             'requested_at' => now(),
+            'wanted_since' => now(),
         ];
     }
 

@@ -31,7 +31,7 @@ class PullMosparoSourceAction
      */
     public function execute(DataSource $source, CarbonImmutable $from, CarbonImmutable $to, string $timezone): array
     {
-        $connection = $source->connection ?? throw new MosparoRequestFailedException(__('connectors.mosparo.errors.not_mosparo'));
+        $connection = $source->dataSourceConnection ?? throw new MosparoRequestFailedException(__('connectors.mosparo.errors.not_mosparo'));
         $kind = MosparoSource::tryFrom((string) $source->key) ?? throw new MosparoRequestFailedException(__('connectors.mosparo.errors.unknown_source'));
         $kept = $this->client->statistics($connection->mosparoCredentials())['days'];
         $today = CarbonImmutable::now($timezone)->startOfDay();

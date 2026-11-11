@@ -25,7 +25,7 @@ class RunHealthCheck extends Tool
 
     protected string $name = 'run_health_check';
 
-    protected string $description = 'Runs a check Lumberjack runs now, waits for it (up to about a minute) and records the result like a scheduled run. A heartbeat only records a result when its ping is overdue. Checks the app reports cannot be run from here.';
+    protected string $description = 'Runs a check Lumberjack runs now, waits for it (up to about a minute) and records the result like a scheduled run. A heartbeat only records a result when its ping is overdue; a data_source check only when it has no result yet (new, or its settings changed) or its source is not fetched in time, and always when its source or period is missing (it never fetches the source itself: it reads the latest fetch, and fetches follow the source\'s own schedule). Checks the app reports cannot be run from here.';
 
     public function __construct(
         private readonly RunHealthCheckAction $run,

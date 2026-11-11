@@ -9,6 +9,8 @@ use App\Domains\DataSources\Jobs\FetchDataSource;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\DataSources\Policies\DataSourcePolicy;
+use App\Domains\Health\Enums\HealthCheckType;
+use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Teams\Enums\TeamRole;
@@ -273,6 +275,14 @@ describe('connected sources', function () {
         $window->update(['requested_at' => now()->subHour()]);
 
         $this->get(route('data-sources.index', $this->project))->assertInertia(fn (Assert $page) => $status($page, 'connected', null));
+    });
+
+    it('read failing for a period a health check reads, however long since a screen asked', function () {
+        DataSourceWindow::factory()->forSource($this->connected)->create(['period' => '24h', 'bucket' => 3600, 'error' => 'Timed out', 'requested_at' => now()->subHour()]);
+        HealthCheck::factory()->for($this->project)->monitored(HealthCheckType::DataSource, ['data_source' => $this->connected->uuid, 'period' => '24h'])->create();
+
+        $this->actingAs($this->member)->get(route('data-sources.index', $this->project))
+            ->assertInertia(fn (Assert $page) => $page->where('connected.0.status', 'failing')->where('connected.0.last_error', 'Timed out'));
     });
 
     it('are listed apart, with their connection and no token', function () {

@@ -1,5 +1,6 @@
 import { Form } from '@inertiajs/react';
 import { useState } from 'react';
+import { TreeSelect } from '@/components/lj/tree-select';
 import { Button, Field, Input, Select, Switch } from '@/components/lj/ui';
 import {
     Dialog,
@@ -13,13 +14,31 @@ import { useT } from '@/lib/i18n';
 import { store as healthStore, update as healthUpdate } from '@/routes/health';
 import type { HealthCheckRow, HealthCheckType } from '@/types/lumberjack';
 
+/** A data source a check can read: JSON or Prometheus at a path, or a connected one's number over a period. */
+export type HealthDataSource = {
+    uuid: string;
+    name: string;
+    group: string | null;
+    format: 'json' | 'prometheus' | 'connected';
+    environment: string | null;
+    /** A service's name or an app's host, at the top of the picker. */
+    host: string | null;
+    /** The periods a connected source answers for; null for a fetched one. */
+    periods: string[] | null;
+};
+
 type ConfigField = {
     key: string;
-    type: 'text' | 'url' | 'number' | 'select';
+    type: 'text' | 'url' | 'number' | 'select' | 'source';
     required?: boolean;
     placeholder?: string;
     options?: string[];
     hint?: boolean;
+    decimal?: boolean;
+    /** The translation key the options are named under; without it they show as they are. */
+    optionLabels?: string;
+    /** Only for a fetched source (a path), or only for a connected one (a period). */
+    only?: 'fetched' | 'connected';
 };
 
 // The settings each type takes, in the order the form shows them.
@@ -103,6 +122,31 @@ const configFields: Record<HealthCheckType, ConfigField[]> = {
         },
         { key: 'timeout_s', type: 'number', placeholder: '10' },
     ],
+    data_source: [
+        { key: 'data_source', type: 'source', required: true },
+        {
+            key: 'path',
+            type: 'text',
+            required: true,
+            hint: true,
+            placeholder: 'queue.size',
+            only: 'fetched',
+        },
+        {
+            key: 'period',
+            type: 'select',
+            hint: true,
+            optionLabels: 'common.periods',
+            only: 'connected',
+        },
+        {
+            key: 'operator',
+            type: 'select',
+            options: ['>', '>=', '<', '<=', '=', '!='],
+        },
+        { key: 'warn', type: 'number', hint: true, decimal: true },
+        { key: 'fail', type: 'number', hint: true, decimal: true },
+    ],
 };
 
 /**
@@ -114,12 +158,14 @@ export function HealthCheckDialog({
     check,
     types,
     intervals,
+    dataSources,
     onClose,
 }: {
     project: string;
     check?: HealthCheckRow;
     types: HealthCheckType[];
     intervals: number[];
+    dataSources: HealthDataSource[];
     onClose: () => void;
 }) {
     const t = useT();
@@ -127,6 +173,28 @@ export function HealthCheckDialog({
         check?.type ?? null,
     );
     const [muted, setMuted] = useState(check?.muted ?? false);
+    // One no longer offered (archived or deleted) starts empty, so it is picked again.
+    const [source, setSource] = useState(() => {
+        const saved = String(check?.config?.data_source ?? '');
+
+        return dataSources.some((s) => s.uuid === saved) ? saved : '';
+    });
+    const picked = dataSources.find((s) => s.uuid === source);
+    const prometheus = picked?.format === 'prometheus';
+    const connected = picked?.format === 'connected';
+    // A period select offers what the picked source answers for.
+    const fieldsOf = (fields: ConfigField[]) =>
+        fields
+            .filter(
+                (field) =>
+                    field.only === undefined ||
+                    field.only === (connected ? 'connected' : 'fetched'),
+            )
+            .map((field) =>
+                field.key === 'period'
+                    ? { ...field, options: picked?.periods ?? [] }
+                    : field,
+            );
     const reported = check?.source === 'reported';
     const form = check
         ? healthUpdate.form([project, check.uuid])
@@ -194,7 +262,10 @@ export function HealthCheckDialog({
                                         <Input
                                             id="health-name"
                                             name="name"
-                                            required={type === 'heartbeat'}
+                                            required={
+                                                type === 'heartbeat' ||
+                                                type === 'data_source'
+                                            }
                                             autoFocus
                                             maxLength={150}
                                             defaultValue={
@@ -205,7 +276,9 @@ export function HealthCheckDialog({
                                                 t(
                                                     type === 'heartbeat'
                                                         ? 'health.form.name_placeholder'
-                                                        : 'health.form.name_from_settings',
+                                                        : type === 'data_source'
+                                                          ? 'health.form.name_placeholder_data_source'
+                                                          : 'health.form.name_from_settings',
                                                 )
                                             }
                                             autoComplete="off"
@@ -254,23 +327,49 @@ export function HealthCheckDialog({
                                         <legend className="px-1 text-xs text-ink-3">
                                             {t(`health.types.${type}`)}
                                         </legend>
-                                        {configFields[type].map((field) => (
-                                            <ConfigInput
-                                                key={field.key}
-                                                field={field}
-                                                value={
-                                                    check?.config?.[field.key]
-                                                }
-                                                error={
-                                                    (
-                                                        errors as Record<
-                                                            string,
-                                                            string
-                                                        >
-                                                    )[`config.${field.key}`]
-                                                }
-                                            />
-                                        ))}
+                                        {fieldsOf(configFields[type]).map(
+                                            (field) => (
+                                                <ConfigInput
+                                                    // A period's options follow the source picked.
+                                                    key={
+                                                        field.key === 'period'
+                                                            ? `period-${source}`
+                                                            : field.key
+                                                    }
+                                                    field={field}
+                                                    source={
+                                                        field.type === 'source'
+                                                            ? {
+                                                                  options:
+                                                                      dataSources,
+                                                                  value: source,
+                                                                  onChange:
+                                                                      setSource,
+                                                              }
+                                                            : undefined
+                                                    }
+                                                    placeholder={
+                                                        field.key === 'path' &&
+                                                        prometheus
+                                                            ? 'queue_size{queue="default"}'
+                                                            : field.placeholder
+                                                    }
+                                                    value={
+                                                        check?.config?.[
+                                                            field.key
+                                                        ]
+                                                    }
+                                                    error={
+                                                        (
+                                                            errors as Record<
+                                                                string,
+                                                                string
+                                                            >
+                                                        )[`config.${field.key}`]
+                                                    }
+                                                />
+                                            ),
+                                        )}
                                     </fieldset>
                                 )}
 
@@ -413,7 +512,12 @@ export function HealthCheckDialog({
                                     <Button
                                         type="submit"
                                         variant="primary"
-                                        disabled={processing}
+                                        disabled={
+                                            processing ||
+                                            // The picker is no form field the browser can require.
+                                            (type === 'data_source' &&
+                                                source === '')
+                                        }
                                     >
                                         {check
                                             ? t('health.form.save')
@@ -431,16 +535,24 @@ export function HealthCheckDialog({
 
 function ConfigInput({
     field,
+    source,
+    placeholder,
     value,
     error,
 }: {
     field: ConfigField;
+    source?: {
+        options: HealthDataSource[];
+        value: string;
+        onChange: (uuid: string) => void;
+    };
+    placeholder?: string;
     value: string | number | undefined;
     error?: string;
 }) {
     const t = useT();
     const id = `health-config-${field.key}`;
-    const wide = field.type === 'url';
+    const wide = field.type === 'url' || field.type === 'source';
 
     return (
         <Field
@@ -454,7 +566,20 @@ function ConfigInput({
             error={error}
             className={wide ? 'sm:col-span-2' : undefined}
         >
-            {field.type === 'select' ? (
+            {source ? (
+                <>
+                    <DataSourcePicker
+                        id={id}
+                        name={`config[${field.key}]`}
+                        {...source}
+                    />
+                    {source.options.length === 0 && (
+                        <span className="text-xs text-ink-3">
+                            {t('health.form.config.data_source_empty')}
+                        </span>
+                    )}
+                </>
+            ) : field.type === 'select' ? (
                 <Select
                     id={id}
                     name={`config[${field.key}]`}
@@ -462,7 +587,9 @@ function ConfigInput({
                 >
                     {field.options?.map((option) => (
                         <option key={option} value={option}>
-                            {option}
+                            {field.optionLabels
+                                ? t(`${field.optionLabels}.${option}`)
+                                : option}
                         </option>
                     ))}
                 </Select>
@@ -471,13 +598,59 @@ function ConfigInput({
                     id={id}
                     name={`config[${field.key}]`}
                     type={field.type}
+                    step={field.decimal ? 'any' : undefined}
                     required={field.required}
                     className="font-mono"
                     defaultValue={value ?? ''}
-                    placeholder={field.placeholder}
+                    placeholder={placeholder}
                     autoComplete="off"
                 />
             )}
         </Field>
+    );
+}
+
+/**
+ * The data sources to read, searchable and filed under their groups as in the screen
+ * designer; named with their environment when they do not all share one.
+ */
+function DataSourcePicker({
+    id,
+    name,
+    options,
+    value,
+    onChange,
+}: {
+    id: string;
+    name: string;
+    options: HealthDataSource[];
+    value: string;
+    onChange: (uuid: string) => void;
+}) {
+    const t = useT();
+    const oneEnvironment = new Set(options.map((s) => s.environment)).size <= 1;
+
+    return (
+        <TreeSelect
+            id={id}
+            name={name}
+            label={t('health.form.config.data_source')}
+            options={options.map((s) => ({
+                value: s.uuid,
+                label:
+                    s.environment && !oneEnvironment
+                        ? `${s.name} (${s.environment})`
+                        : s.name,
+                path: [
+                    ...(s.host ? [s.host] : []),
+                    ...(s.group ? s.group.split(' > ') : []),
+                ],
+            }))}
+            value={value}
+            onChange={(uuid) => onChange(uuid ?? '')}
+            placeholder={t('health.form.config.data_source_none')}
+            searchPlaceholder={t('health.form.config.data_source_search')}
+            noMatches={t('health.form.config.data_source_no_matches')}
+        />
     );
 }

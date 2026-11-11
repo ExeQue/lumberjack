@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\DataSources\Queries;
 
+use App\Domains\DataSources\Actions\FetchDataSourceWindowAction;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\Shared\Enums\Period;
@@ -27,11 +28,30 @@ class ConnectedDataSourceQuery
     {
         $window = DataSourceWindow::query()->firstOrCreate(
             ['data_source_id' => $source->id, 'period' => $period->value, 'bucket' => $this->bucket($period, $resolution)],
-            ['requested_at' => now()],
+            ['requested_at' => now(), 'wanted_since' => now()],
         );
 
         if ($window->requested_at->lt(now()->subMinutes(self::TOUCH_MINUTES))) {
             $window->update(['requested_at' => now()]);
+        }
+
+        return $window;
+    }
+
+    /**
+     * Asks for the period's own resolution from now on, as a health check that starts
+     * reading it does: one nobody kept pulled is wanted from now, so its next pull is
+     * waited for, not timed from an old one.
+     */
+    public function want(DataSource $source, Period $period): DataSourceWindow
+    {
+        $window = $this->window($source, $period);
+        $kept = $window->fetched_at?->addSeconds(2 * FetchDataSourceWindowAction::stepSeconds($source, $period) + 60)->isFuture() ?? false;
+
+        // Pulled on the next minute, not after a backoff from before anyone wanted it, and
+        // an error from then is not what the next pull says.
+        if (! $kept) {
+            $window->update(['wanted_since' => now(), 'next_fetch_at' => null, 'error' => null, 'failures' => 0]);
         }
 
         return $window;

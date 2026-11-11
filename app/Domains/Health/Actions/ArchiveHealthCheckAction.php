@@ -13,9 +13,19 @@ use App\Domains\Health\Models\HealthCheck;
  */
 class ArchiveHealthCheckAction
 {
+    public function __construct(
+        private readonly WantDataSourcePeriodAction $wantDataSourcePeriodAction,
+    ) {
+    }
+
     public function execute(HealthCheck $check, bool $archived): HealthCheck
     {
         $check->update(['archived_at' => $archived ? now() : null]);
+
+        // Back from the archive, a data source check waits for the next pull of its period.
+        if (! $archived) {
+            $this->wantDataSourcePeriodAction->execute($check);
+        }
 
         return $check;
     }

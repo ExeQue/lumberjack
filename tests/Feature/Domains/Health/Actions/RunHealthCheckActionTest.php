@@ -2,8 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Domains\DataSources\Actions\FetchDataSourceAction;
+use App\Domains\DataSources\Actions\FetchDataSourceWindowAction;
+use App\Domains\DataSources\Models\DataSource;
+use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\Health\Actions\DispatchDueHealthChecksAction;
 use App\Domains\Health\Actions\RunHealthCheckAction;
+use App\Domains\Health\Actions\SaveHealthCheckAction;
 use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Enums\HealthResultStatus;
 use App\Domains\Health\Jobs\RunHealthCheck;
@@ -297,5 +302,121 @@ describe('smtp checks', function () {
         $this->fakeSmtp();
 
         expect(($this->run)(HealthCheckType::Smtp, ['host' => 'mail.internal', 'port' => 25])->status)->toBe(HealthResultStatus::Failed);
+    });
+});
+
+describe('data source checks', function () {
+    beforeEach(function () {
+        $this->source = DataSource::factory()->create();
+        $this->check = fn (array $config = []): HealthCheck => HealthCheck::factory()->for($this->source->project)
+            ->monitored(HealthCheckType::DataSource, ['data_source' => $this->source->uuid, 'path' => 'queue.size', 'operator' => '>', 'warn' => 500, 'fail' => 1000, ...$config])->create();
+    });
+
+    it('holds the value of each fetch against its limits', function (int $size, HealthResultStatus $expected) {
+        Http::fake(['https://example.com/stats.json' => Http::response(['queue' => ['size' => $size]])]);
+        $check = ($this->check)();
+
+        app(FetchDataSourceAction::class)->execute($this->source);
+
+        $result = $check->results()->sole();
+        expect($result->status)->toBe($expected)
+            ->and($result->metrics)->toBe(['value' => $size]);
+    })->with([
+        'under both' => [10, HealthResultStatus::Ok],
+        'over warn' => [600, HealthResultStatus::Warning],
+        'over fail' => [1500, HealthResultStatus::Failed],
+    ]);
+
+    it('fails when the fetch fails or the path gives no number', function (mixed $body, int $status) {
+        Http::fake(['https://example.com/stats.json' => Http::response($body, $status)]);
+        $check = ($this->check)();
+
+        app(FetchDataSourceAction::class)->execute($this->source);
+
+        expect($check->results()->sole()->status)->toBe(HealthResultStatus::Failed);
+    })->with([
+        'a failed fetch' => [['queue' => ['size' => 1]], 503],
+        'no number at the path' => [['queue' => []], 200],
+    ]);
+
+    it('judges each fetch once, and fails on its own schedule when the source stops being fetched', function () {
+        Http::fake(['https://example.com/stats.json' => Http::response(['queue' => ['size' => 1]])]);
+        $check = ($this->check)();
+        app(FetchDataSourceAction::class)->execute($this->source);
+
+        expect(app(RunHealthCheckAction::class)->execute($check->refresh()))->toBeNull();
+
+        // Fetched every 5 minutes: stale after two intervals and a minute.
+        $this->travel(12)->minutes();
+        expect(app(RunHealthCheckAction::class)->execute($check->refresh())?->status)->toBe(HealthResultStatus::Failed);
+    });
+
+    it('waits for the first fetch of a new source', function () {
+        expect(app(RunHealthCheckAction::class)->execute(($this->check)()))->toBeNull();
+    });
+
+    it('fails a connected check whose period was never pulled in time', function () {
+        $source = DataSource::factory()->for($this->source->project)->connected()->create();
+        $check = HealthCheck::factory()->for($source->project)
+            ->monitored(HealthCheckType::DataSource, ['data_source' => $source->uuid, 'period' => '24h'])->create();
+
+        expect(app(RunHealthCheckAction::class)->execute($check))->toBeNull();
+
+        $this->travel(12)->minutes();
+        expect(app(RunHealthCheckAction::class)->execute($check->refresh())?->message)->toBe('The data source has never been fetched.');
+    });
+
+    it('times a period never pulled from when it was first asked for, not from when the check was made', function () {
+        $source = DataSource::factory()->for($this->source->project)->connected()->create();
+        $check = HealthCheck::factory()->for($source->project)
+            ->monitored(HealthCheckType::DataSource, ['data_source' => $source->uuid, 'period' => '24h'])->create(['created_at' => now()->subMonth()]);
+
+        expect(app(RunHealthCheckAction::class)->execute($check))->toBeNull();
+    });
+
+    it('waits for the next pull of a period it starts reading, not timing it from one before it', function () {
+        $source = DataSource::factory()->for($this->source->project)->connected()->create();
+        // A screen showed it until hours ago, its last pull failing; nobody kept it pulled since.
+        DataSourceWindow::factory()->forSource($source)->answered(42)->create([
+            'period' => '24h', 'bucket' => 3600, 'requested_at' => now()->subHours(3), 'wanted_since' => now()->subHours(4), 'fetched_at' => now()->subHours(3),
+            'error' => 'Timed out', 'failures' => 3,
+        ]);
+
+        $check = app(SaveHealthCheckAction::class)->execute($source->project, null, [
+            'type' => 'data_source', 'name' => 'Orders', 'interval_minutes' => 5, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 5,
+        ], ['data_source' => $source->uuid, 'period' => '24h']);
+
+        expect(app(RunHealthCheckAction::class)->execute($check))->toBeNull();
+    });
+
+    it('says why a connected source fails, however long it has failed', function () {
+        $source = DataSource::factory()->for($this->source->project)->connected()->create();
+        $check = HealthCheck::factory()->for($source->project)
+            ->monitored(HealthCheckType::DataSource, ['data_source' => $source->uuid, 'period' => '24h'])->create();
+        DataSourceWindow::factory()->forSource($source)->create([
+            'period' => '24h', 'bucket' => 3600, 'requested_at' => now(), 'wanted_since' => now()->subDay(),
+            'fetched_at' => now()->subDay(), 'error' => 'The app answered 500.',
+        ]);
+
+        expect(app(RunHealthCheckAction::class)->execute($check, afterFetch: true)?->message)->toBe('The data source failed: The app answered 500.');
+    });
+
+    it('keeps a connected source\'s period pulled and judges each pull', function () {
+        config(['health.data_sources_allow_private' => false]);
+        $source = DataSource::factory()->for($this->source->project)->connected()->create();
+        $check = HealthCheck::factory()->for($source->project)
+            ->monitored(HealthCheckType::DataSource, ['data_source' => $source->uuid, 'period' => '24h', 'operator' => '<', 'fail' => 50])->create();
+        Http::fake(['https://app.example.com/*' => Http::response(['version' => 1, 'sources' => ['orders:total' => ['shape' => 'number', 'data' => 42]]])]);
+
+        // Its first run asks for the period, as a screen would, and waits for the pull.
+        expect(app(RunHealthCheckAction::class)->execute($check))->toBeNull();
+        $window = DataSourceWindow::query()->where('data_source_id', $source->id)->sole();
+        expect($window->period)->toBe('24h');
+
+        app(FetchDataSourceWindowAction::class)->execute($window->id);
+
+        $result = $check->results()->sole();
+        expect($result->status)->toBe(HealthResultStatus::Failed)
+            ->and($result->metrics)->toBe(['value' => 42]);
     });
 });

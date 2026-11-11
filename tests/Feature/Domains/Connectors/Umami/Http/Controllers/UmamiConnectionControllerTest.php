@@ -208,7 +208,7 @@ describe('naming a UTM value', function () {
     });
 
     it('forgets the name when given none', function () {
-        UtmLabel::factory()->for($this->connection, 'connection')->create(['value' => '5251806']);
+        UtmLabel::factory()->for($this->connection, 'dataSourceConnection')->create(['value' => '5251806']);
 
         $this->actingAs($this->admin);
         ($this->name)('');

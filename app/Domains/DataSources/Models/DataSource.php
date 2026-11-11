@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\DataSources\Models;
 
 use App\Domains\DataSources\Eloquent\Builders\DataSourceBuilder;
+use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Enums\DataSourceFormat;
 use App\Domains\DataSources\Enums\DataSourceShape;
 use App\Domains\Projects\Models\Project;
@@ -50,7 +51,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $cache_seconds
  * @property int|null $data_source_connection_id
  * @property string|null $filter_value the one value a connector's source is narrowed to, such as an Umami event or campaign
- * @property-read DataSourceConnection|null $connection
+ * @property-read DataSourceConnection|null $dataSourceConnection
  * @property CarbonImmutable|null $archived_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
@@ -84,10 +85,14 @@ class DataSource extends Model
         return $this->hasMany(DataSourceWindow::class);
     }
 
-    /** @return BelongsTo<DataSourceConnection, $this> */
-    public function connection(): BelongsTo
+    /**
+     * Not named connection: on a model that is the name of its database connection.
+     *
+     * @return BelongsTo<DataSourceConnection, $this>
+     */
+    public function dataSourceConnection(): BelongsTo
     {
-        return $this->belongsTo(DataSourceConnection::class, 'data_source_connection_id');
+        return $this->belongsTo(DataSourceConnection::class);
     }
 
     public function getRouteKeyName(): string
@@ -136,6 +141,36 @@ class DataSource extends Model
             // Encrypted under another APP_KEY: the page still opens, and the fetch says why it fails.
             return [];
         }
+    }
+
+    /**
+     * Where it is read from, at the top of a picker: a service's name, or an app's host.
+     * Needs the connection loaded.
+     */
+    public function pickerHost(): ?string
+    {
+        $connection = $this->dataSourceConnection;
+
+        if ($connection === null) {
+            return null;
+        }
+
+        return $connection->isFor(ConnectionKind::App) ? (parse_url($connection->url, PHP_URL_HOST) ?: null) : $connection->kind->label();
+    }
+
+    /**
+     * Its group in a picker; a service's under its website or project, as one instance
+     * holds many. Needs the connection loaded.
+     */
+    public function pickerGroup(): ?string
+    {
+        $connection = $this->dataSourceConnection;
+
+        if ($connection === null || $connection->isFor(ConnectionKind::App)) {
+            return $this->group_path;
+        }
+
+        return implode(' > ', array_filter([$connection->displayName(), $this->group_path]));
     }
 
     /**

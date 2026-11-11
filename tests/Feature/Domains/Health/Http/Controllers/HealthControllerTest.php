@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Domains\DataSources\Enums\DataSourceShape;
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Enums\HealthStatus;
 use App\Domains\Health\Http\Controllers\HealthController;
@@ -139,6 +141,39 @@ describe('adding and editing checks', function () {
         $this->actingAs($this->admin)->put(route('health.update', [$this->project, $this->reported]), ['down_after' => 4])->assertSessionHasNoErrors();
 
         expect($this->reported->refresh())->down_after->toBe(4)->thresholds_overridden->toBeTrue();
+    });
+
+    it('offers the data sources to read only to those who can add checks', function () {
+        DataSource::factory()->for($this->project)->create(['name' => 'Orders API']);
+
+        $this->actingAs($this->admin)->get(route('health.index', $this->project))
+            ->assertInertia(fn (Assert $page) => $page->where('data_sources.0.name', 'Orders API'));
+        $this->actingAs($this->member)->get(route('health.index', $this->project))
+            ->assertInertia(fn (Assert $page) => $page->where('data_sources', []));
+    });
+
+    it('takes a data source of its own project with a number, and what that source reads by', function (Closure $source, array $config, ?string $error) {
+        $response = $this->actingAs($this->admin)->post(route('health.store', $this->project), [
+            'type' => 'data_source', 'name' => 'Queue', 'interval_minutes' => 5, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 5,
+            'config' => ['data_source' => $source($this->project)->uuid, 'operator' => '>', 'fail' => 1000, ...$config],
+        ]);
+
+        $error === null ? $response->assertSessionHasNoErrors() : $response->assertSessionHasErrors($error);
+    })->with([
+        'its own json source with a path' => [fn (Project $p) => DataSource::factory()->for($p)->create(), ['path' => 'queue.size'], null],
+        'a json source without a path' => [fn (Project $p) => DataSource::factory()->for($p)->create(), [], 'config.path'],
+        'another project\'s source' => [fn (Project $p) => DataSource::factory()->create(), ['path' => 'queue.size'], 'config.data_source'],
+        'a calendar' => [fn (Project $p) => DataSource::factory()->for($p)->ical()->create(), ['path' => 'queue.size'], 'config.data_source'],
+        'a connected number with a period' => [fn (Project $p) => DataSource::factory()->for($p)->connected()->create(), ['period' => '24h'], null],
+        'a connected number without a period' => [fn (Project $p) => DataSource::factory()->for($p)->connected()->create(), [], 'config.period'],
+        'a connected series' => [fn (Project $p) => DataSource::factory()->for($p)->connected('orders:daily', DataSourceShape::Series)->create(), ['period' => '24h'], 'config.data_source'],
+    ]);
+
+    it('ignores a data source sent with a check of another type', function () {
+        $this->actingAs($this->admin)->post(route('health.store', $this->project), [
+            'type' => 'tcp', 'name' => 'Database', 'interval_minutes' => 5, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 5,
+            'config' => ['host' => 'db.example.com', 'port' => 5432, 'data_source' => DataSource::factory()->create()->uuid],
+        ])->assertSessionHasNoErrors();
     });
 
     it('validates the settings of the type', function () {

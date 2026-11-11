@@ -84,7 +84,7 @@ trait UsesHealthChecks
     protected function settingsSchema(JsonSchema $schema): array
     {
         return [
-            'name' => $schema->string()->description('Optional, except for a heartbeat; without one a check is named from its settings.'),
+            'name' => $schema->string()->description('Optional, except for a heartbeat or a data_source check; without one a check is named from its settings.'),
             'description' => $schema->string(),
             'environment' => $schema->string()->description('A label, e.g. production.'),
             'interval_minutes' => $schema->integer()->enum(HealthCheck::INTERVALS)->description('How often it runs.'),
@@ -100,7 +100,8 @@ trait UsesHealthChecks
                 .'dns: name, record_type (A, AAAA, CNAME, MX, TXT; both required), expected. '
                 .'heartbeat: grace_minutes (5). '
                 .'domain: domain (required), warn_days (30), fail_days (7). '
-                .'smtp: host, port (both required), encryption (STARTTLS, TLS, None; STARTTLS), timeout_s (10).'
+                .'smtp: host, port (both required), encryption (STARTTLS, TLS, None; STARTTLS), timeout_s (10). '
+                .'data_source: data_source (uuid of a data source of the project with a number: json, prometheus, or a connected one of shape number; required), path (JSONPath, or a Prometheus selector; required for json and prometheus), period (1h, 24h, 7d, 30d, as the connection answers for; required for a connected source, which the check then keeps pulled); operator (>, >=, <, <=, =, !=; >), warn, fail (numbers; the value breaching fail fails, breaching warn warns). Judged after each fetch of the source; fails when the source fails or is not fetched in time.'
             ),
         ];
     }

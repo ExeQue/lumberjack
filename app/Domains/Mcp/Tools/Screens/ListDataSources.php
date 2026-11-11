@@ -33,7 +33,7 @@ class ListDataSources extends Tool
     public function handle(Request $request): Response
     {
         $projects = $this->projects();
-        $sources = DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->with('connection')->orderBy('name')->get()
+        $sources = DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->with('dataSourceConnection')->orderBy('name')->get()
             ->map(fn (DataSource $source): array => [
                 'uuid' => $source->uuid,
                 'name' => $source->name,
@@ -42,8 +42,8 @@ class ListDataSources extends Tool
                 'shape' => $source->shape?->value,
                 'environment' => $source->environment !== '' ? $source->environment : null,
                 'key' => $source->key,
-                'origin' => $source->connection !== null ? 'connected_app' : 'endpoint',
-                'host' => parse_url($source->connection->url ?? $source->url, PHP_URL_HOST) ?: null,
+                'origin' => $source->dataSourceConnection !== null ? 'connected_app' : 'endpoint',
+                'host' => parse_url($source->dataSourceConnection->url ?? $source->url, PHP_URL_HOST) ?: null,
                 'interval_minutes' => $source->interval_minutes,
                 'last_ok_at' => $source->last_ok_at?->toIso8601String(),
                 'failing' => $source->last_error !== null,

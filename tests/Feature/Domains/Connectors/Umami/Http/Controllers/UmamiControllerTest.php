@@ -159,7 +159,7 @@ describe('a project reading an Umami website', function () {
     });
 
     it('names the UTM values of a breakdown as they were named', function () {
-        UtmLabel::factory()->for($this->project->umamiConnections()->sole(), 'connection')->create(['value' => '5251806', 'label' => 'Black Friday']);
+        UtmLabel::factory()->for($this->project->umamiConnections()->sole(), 'dataSourceConnection')->create(['value' => '5251806', 'label' => 'Black Friday']);
         Http::fake([
             'umami.example.com/api/websites/site-1/stats*' => Http::response(['visitors' => 1, 'visits' => 1, 'pageviews' => 1, 'bounces' => 0, 'totaltime' => 0]),
             'umami.example.com/api/websites/site-1/active' => Http::response(['visitors' => 0]),
@@ -174,7 +174,7 @@ describe('a project reading an Umami website', function () {
     });
 
     it('asks Umami for a card\'s values containing what was searched, a UTM value also by its name', function () {
-        UtmLabel::factory()->for($this->project->umamiConnections()->sole(), 'connection')->create(['value' => '5251806', 'label' => 'Black Friday']);
+        UtmLabel::factory()->for($this->project->umamiConnections()->sole(), 'dataSourceConnection')->create(['value' => '5251806', 'label' => 'Black Friday']);
         Http::fake([
             'umami.example.com/api/websites/site-1/stats*' => Http::response(['visitors' => 1, 'visits' => 1, 'pageviews' => 1, 'bounces' => 0, 'totaltime' => 0]),
             'umami.example.com/api/websites/site-1/active' => Http::response(['visitors' => 0]),

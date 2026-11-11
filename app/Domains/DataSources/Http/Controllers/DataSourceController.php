@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domains\DataSources\Http\Controllers;
 
 use App\Domains\Connectors\Enums\Connector;
-use App\Domains\DataSources\Actions\DispatchDueDataSourceWindowsAction;
 use App\Domains\DataSources\Actions\SaveDataSourceAction;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Enums\DataSourceFormat;
@@ -15,6 +14,7 @@ use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -48,14 +48,14 @@ class DataSourceController
                 'last_ok_at' => $c->last_ok_at?->toIso8601String(),
                 'last_error' => $c->last_error,
             ])->all(),
-            'connected' => fn (): array => $project->dataSources()->whereConnected()->with(['connection:id,uuid,kind,environment,name', 'windows' => fn ($query) => $query->whereNotNull('error')->where('requested_at', '>=', now()->subMinutes(DispatchDueDataSourceWindowsAction::ACTIVE_MINUTES))->latest('id')])->orderBy('environment')->orderBy('name')->get()->map(fn (DataSource $s): array => [
+            'connected' => fn (): array => $project->dataSources()->whereConnected()->with(['dataSourceConnection:id,uuid,kind,environment,name', 'windows' => fn (HasMany $query) => $query->whereNotNull('error')->whereActive()->latest('id')])->orderBy('environment')->orderBy('name')->get()->map(fn (DataSource $s): array => [
                 'uuid' => $s->uuid,
                 'name' => $s->name,
                 'key' => $s->key,
                 'group' => $s->group_path,
-                'connection' => $s->connection?->uuid,
+                'connection' => $s->dataSourceConnection?->uuid,
                 // A service's source by its website or project, as its environment is only a key.
-                'environment' => $s->connection !== null && ! $s->connection->isFor(ConnectionKind::App) ? $s->connection->displayName() : ($s->environment !== '' ? $s->environment : null),
+                'environment' => $s->dataSourceConnection !== null && ! $s->dataSourceConnection->isFor(ConnectionKind::App) ? $s->dataSourceConnection->displayName() : ($s->environment !== '' ? $s->environment : null),
                 'shape' => $s->shape?->value,
                 'status' => match (true) {
                     $s->archived_at !== null => 'archived',
