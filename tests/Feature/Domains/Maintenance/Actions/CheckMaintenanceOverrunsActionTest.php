@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Alerts\Actions\SendProjectAlertAction;
 use App\Domains\Alerts\Data\MaintenanceOverrunAlert;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Jobs\SendMaintenanceOverrunAlert;
@@ -10,6 +11,7 @@ use App\Domains\Maintenance\Actions\CheckMaintenanceOverrunsAction;
 use App\Domains\Maintenance\Actions\EndMaintenanceWindowAction;
 use App\Domains\Maintenance\Actions\StartMaintenanceAction;
 use App\Domains\Maintenance\Models\MaintenanceWindow;
+use App\Domains\Notifications\Actions\NotifyProjectMembersAction;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Queue;
@@ -89,15 +91,14 @@ describe('an overrun', function () {
 });
 
 describe('the end of a window', function () {
-    it('still sends an overrun queued before the window ended as an overrun', function () {
+    it('drops an overrun alert that runs after the window ended, so it never follows the ended one', function () {
         $this->travel(10)->minutes();
         ($this->check)();
         $this->window->refresh()->update(['ended_at' => now()]);
+        $this->mock(SendProjectAlertAction::class)->shouldNotReceive('execute');
+        $this->mock(NotifyProjectMembersAction::class)->shouldNotReceive('execute');
 
-        $alert = new MaintenanceOverrunAlert($this->window, 'https://lumberjack.test/health', ended: false);
-
-        expect($alert->headline())->toBe('Maintenance overrun in Shop (production)')
-            ->and($alert->urgency())->toBe('high');
+        app()->call([new SendMaintenanceOverrunAlert(AlertRule::query()->whereType(AlertRuleType::MaintenanceOverrun)->firstOrFail(), $this->window, ended: false), 'handle']);
     });
 
     it('tells once more, with how long it ran over, when it was alerted on', function () {

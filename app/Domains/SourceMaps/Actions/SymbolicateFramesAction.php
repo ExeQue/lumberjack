@@ -38,7 +38,7 @@ class SymbolicateFramesAction
     /** What the decoded maps a worker keeps may take in memory; a 20 MB map takes about 40 MB. */
     public const int MAX_CACHED_BYTES = 128 * 1024 * 1024;
 
-    /** @var array<string, SourceMapDecoder|null> by id and upload time, least recently used first */
+    /** @var array<string, SourceMapDecoder> by id and upload time, least recently used first */
     private array $decoded = [];
 
     public function execute(Project $project, IssueSignal $signal): IssueSignal
@@ -133,14 +133,16 @@ class SymbolicateFramesAction
         try {
             $decoder = SourceMapDecoder::decode((string) Storage::get($map->filePath()));
         } catch (Throwable $e) {
+            // Not kept: the file may still be being written, and the next error tries again.
             report($e);
-            $decoder = null;
+
+            return null;
         }
 
         $this->decoded[$key] = $decoder;
 
         // The least recently used go first, as long as the rest is over budget.
-        while (count($this->decoded) > 1 && array_sum(array_map(fn (?SourceMapDecoder $d): int => $d?->bytes() ?? 0, $this->decoded)) > self::MAX_CACHED_BYTES) {
+        while (count($this->decoded) > 1 && array_sum(array_map(fn (SourceMapDecoder $d): int => $d->bytes(), $this->decoded)) > self::MAX_CACHED_BYTES) {
             unset($this->decoded[array_key_first($this->decoded)]);
         }
 

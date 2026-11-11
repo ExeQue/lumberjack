@@ -45,6 +45,11 @@ class SendMaintenanceOverrunAlert implements ShouldQueue
 
     public function handle(SendProjectAlertAction $action, NotifyProjectMembersAction $members): void
     {
+        // Ended before this ran: the ended message says it all, and must not be followed by "still running".
+        if (! $this->ended && $this->window->ended_at !== null) {
+            return;
+        }
+
         $project = $this->window->project;
         $alert = new MaintenanceOverrunAlert($this->window, route('health.index', $project), $this->ended);
 
