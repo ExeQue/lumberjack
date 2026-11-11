@@ -43,6 +43,8 @@ pick. A new channel is added to no rule until you pick it.
 | Health check degraded  | A health check that keeps warning or starts failing.     | On      |
 | Health check down      | A health check that keeps failing.                       | On      |
 | Health check recovered | A health check that is ok again.                         | On      |
+| Maintenance overrun    | A maintenance window still open past its expected end.   | On      |
+| Weekly summary         | Each project's past week, on the day and time you pick.  | Off     |
 | Note                   | Every note written on an issue.                          | Off     |
 | Resolved or ignored    | Every issue someone resolves or ignores.                 | Off     |
 
@@ -91,7 +93,38 @@ There is no alert rule on a project's error rate or p95. To get close:
   `lumberjack_request_duration_p95_seconds` in Prometheus or Grafana.
   See [Send metrics to Grafana](./grafana.md).
 
-## 6. Choose what you hear yourself
+## 6. Get a weekly summary
+
+Turn on the **Weekly summary** rule and set its **day** and **time** (Monday 08:00 by
+default, in the app's time zone). Each channel then gets one message a week, with every
+project's past 7 days against the 7 days before: requests, error rate, p95, new issues
+and regressions, uptime, failed jobs, missed tasks and releases.
+
+Mail and webhooks get all of it. Chat and push channels get one line per project with a
+link. Projects with nothing in the week are left out. See
+[Weekly summary](../alerts.md#weekly-summary).
+
+## 7. Keep planned work quiet
+
+Before a deploy or planned work, click **Plan maintenance** on the project's **Health**
+page and set the environment, start, planned end and a message. The Laravel library
+reports `artisan down` and `artisan up` by itself; other apps send a
+[maintenance event](../api.md#maintenance-events). See
+[Check whether a release went well](./releases.md).
+
+While the window is open:
+
+- health checks of its environment, and checks without one, send nothing;
+- queue backlogs of the project send nothing;
+- every other alert is still sent, with **[Under maintenance]** at the start of its title;
+- errors that come in are flagged **Under maintenance** in the issues list.
+
+When the window is still open past its expected end, the **Maintenance overrun** rule
+fires at once and repeats every 30 minutes until it ends. Set the repeat, and how long a
+window the app reports is expected to take, in the project's **Settings** under
+**General**. See [Maintenance windows](../health.md#maintenance-windows).
+
+## 8. Choose what you hear yourself
 
 Each person also picks their own notifications:
 
@@ -109,5 +142,5 @@ team's rules: turning a rule off stops them too.
 ## Reference
 
 - [Alerts](../alerts.md): every channel, rule, override and the webhook body.
-- [Health](../health.md): check types, thresholds and states.
+- [Health](../health.md): check types, thresholds, states and maintenance windows.
 - [Teams and accounts](../teams.md): personal notifications and the notification center.
