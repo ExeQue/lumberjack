@@ -159,6 +159,7 @@ export default defineConfig({
                         link: '/docs/administration',
                     },
                     { text: 'Ingest and API', link: '/docs/api' },
+                    { text: 'OpenTelemetry', link: '/docs/opentelemetry' },
                     { text: 'Development', link: '/docs/development' },
                 ],
             },

@@ -8,6 +8,7 @@ use App\Domains\Ingest\Http\Controllers\IngestController;
 use App\Domains\Ingest\Http\Middleware\AuthenticateProjectToken;
 use App\Domains\Metrics\Http\Controllers\MetricsApiController;
 use App\Domains\Metrics\Http\Middleware\AuthenticateMetricsCredential;
+use App\Domains\OpenTelemetry\Http\Controllers\OpenTelemetryController;
 use App\Domains\SourceMaps\Http\Controllers\SourceMapController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,13 @@ Route::middleware(AuthenticateProjectToken::class)->group(function () {
     Route::middleware('throttle:ingest')->group(function () {
         Route::post('ingest', [IngestController::class, 'store'])->name('ingest.store');
         Route::post('ingest/heartbeat', [IngestController::class, 'heartbeat'])->name('ingest.heartbeat');
+
+        // OTLP/HTTP from an OpenTelemetry SDK or collector, with this as its base endpoint. See docs/opentelemetry.md.
+        Route::prefix('v1/opentelemetry/v1')->name('opentelemetry.')->controller(OpenTelemetryController::class)->group(function () {
+            Route::post('traces', 'traces')->name('traces');
+            Route::post('logs', 'logs')->name('logs');
+            Route::post('metrics', 'metrics')->name('metrics');
+        });
     });
 
     // A build's source maps, so browser errors show the original source. See docs/api.md.

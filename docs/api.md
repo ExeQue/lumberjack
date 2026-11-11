@@ -11,12 +11,14 @@ their payloads and limits, for running Lumberjack behind a proxy or writing your
 | `POST /api/ingest/heartbeat`             | Server token                      | Counted with the batches                                  |
 | `POST /api/ingest/browser?key=`          | Public key, and an allowed origin | 30 a minute per address and key, 300 a minute per address |
 | `POST /api/ingest/sourcemaps`            | Server token                      | 120 a minute per project                                  |
+| `POST /api/v1/opentelemetry/v1/...`      | Server token                      | Counted with the batches                                  |
 | `GET /api/health`                        | Server token                      | 120 a minute per project                                  |
 | `GET` or `POST /api/health/ping/{token}` | The heartbeat check's secret URL  | 60 a minute per address                                   |
 | `/mcp`                                   | MCP token, as a bearer token      | 120 calls a minute per token                              |
 | `GET /api/v1/...`                        | Team token, or public stats key   | 120 a minute per token or key                             |
 
-See the [metrics API](./metrics-api) and [MCP](./mcp) pages for those endpoints.
+See the [metrics API](./metrics-api) and [MCP](./mcp) pages for those endpoints, and
+[OpenTelemetry](./opentelemetry) for sending OTLP from an OpenTelemetry SDK or collector.
 
 ### Responses
 
