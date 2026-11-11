@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Connectors\Casts;
 
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
+use App\Domains\Connectors\MobilePay\Data\MobilePayConfig;
 use App\Domains\Connectors\Mosparo\Data\MosparoConfig;
 use App\Domains\Connectors\Umami\Data\UmamiConfig;
 use App\Domains\DataSources\Enums\ConnectionKind;
@@ -20,14 +21,14 @@ use Illuminate\Support\Facades\Crypt;
  * Reading one saved under another APP_KEY throws DecryptException, which is said where it
  * is used rather than breaking the page.
  *
- * @implements CastsAttributes<UmamiConfig|MosparoConfig|GitHubConfig|null, UmamiConfig|MosparoConfig|GitHubConfig|null>
+ * @implements CastsAttributes<UmamiConfig|MosparoConfig|GitHubConfig|MobilePayConfig|null, UmamiConfig|MosparoConfig|GitHubConfig|MobilePayConfig|null>
  */
 class ConnectorConfigCast implements CastsAttributes
 {
     /**
      * @throws DecryptException
      */
-    public function get(Model $model, string $key, mixed $value, array $attributes): UmamiConfig|MosparoConfig|GitHubConfig|null
+    public function get(Model $model, string $key, mixed $value, array $attributes): UmamiConfig|MosparoConfig|GitHubConfig|MobilePayConfig|null
     {
         if (! is_string($value) || $value === '') {
             return null;
@@ -41,6 +42,7 @@ class ConnectorConfigCast implements CastsAttributes
             ConnectionKind::Umami => UmamiConfig::fromArray($data),
             ConnectionKind::Mosparo => MosparoConfig::fromArray($data),
             ConnectionKind::GitHub => GitHubConfig::fromArray($data),
+            ConnectionKind::MobilePay => MobilePayConfig::fromArray($data),
             default => null,
         };
     }

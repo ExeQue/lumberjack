@@ -17,6 +17,7 @@ enum ConnectionKind: string
     case Umami = 'umami';
     case Mosparo = 'mosparo';
     case GitHub = 'github';
+    case MobilePay = 'mobilepay';
 
     /** The service's name; an app's connection is named by its environment instead. */
     public function label(): ?string
@@ -26,16 +27,17 @@ enum ConnectionKind: string
             self::Umami => 'Umami',
             self::Mosparo => 'mosparo',
             self::GitHub => 'GitHub',
+            self::MobilePay => 'Vipps MobilePay',
         };
     }
 
     /**
-     * The period the service answers for in place of $period: mosparo counts whole days, so
-     * an hour is read as the day.
+     * The period the service answers for in place of $period: mosparo counts whole days and
+     * Vipps MobilePay books whole days, so an hour is read as the day.
      */
     public function period(Period $period): Period
     {
-        return $this === self::Mosparo && $period === Period::Hour ? Period::Day : $period;
+        return in_array($this, [self::Mosparo, self::MobilePay], true) && $period === Period::Hour ? Period::Day : $period;
     }
 
     /**

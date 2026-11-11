@@ -150,6 +150,16 @@ class Project extends Model
         return $this->hasMany(DataSourceConnection::class)->where('kind', ConnectionKind::GitHub)->orderBy('name')->orderBy('id');
     }
 
+    /**
+     * The Vipps MobilePay ledgers it reads, one connection each, by name.
+     *
+     * @return HasMany<DataSourceConnection, $this>
+     */
+    public function mobilePayConnections(): HasMany
+    {
+        return $this->hasMany(DataSourceConnection::class)->where('kind', ConnectionKind::MobilePay)->orderBy('name')->orderBy('id');
+    }
+
     /** @return HasMany<DataSource, $this> */
     public function dataSources(): HasMany
     {

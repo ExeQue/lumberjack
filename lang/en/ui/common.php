@@ -32,6 +32,7 @@ return [
         'umami' => 'Umami',
         'mosparo' => 'mosparo',
         'github' => 'GitHub',
+        'mobilepay' => 'Vipps MobilePay',
         'releases' => 'Releases',
         'jobs' => 'Jobs',
         'schedule' => 'Schedule',

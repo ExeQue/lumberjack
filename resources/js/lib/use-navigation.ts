@@ -27,6 +27,7 @@ import { index as routesIndex } from '@/routes/routes';
 import { index as scheduleIndex } from '@/routes/schedule';
 import { index as screensIndex } from '@/routes/screens';
 import { index as githubIndex } from '@/routes/connectors/github';
+import { index as mobilepayIndex } from '@/routes/connectors/mobilepay';
 import { index as mosparoIndex } from '@/routes/connectors/mosparo';
 import { index as umamiIndex } from '@/routes/connectors/umami';
 import { displays as teamDisplays, show as teamShow } from '@/routes/team';
@@ -86,12 +87,14 @@ export function useNavigation(
             has_umami?: boolean;
             has_mosparo?: boolean;
             has_github?: boolean;
+            has_mobilepay?: boolean;
         } | null;
     }>();
     // The routed project on a project page, so it is the one these entries are for.
     const hasUmami = page.props.sidebar_project?.has_umami === true;
     const hasMosparo = page.props.sidebar_project?.has_mosparo === true;
     const hasGitHub = page.props.sidebar_project?.has_github === true;
+    const hasMobilePay = page.props.sidebar_project?.has_mobilepay === true;
     // Without the query or a #section (the settings page keeps its section there).
     const path = page.url.split(/[?#]/)[0];
     const isAt = (href: string, exact = false) =>
@@ -129,6 +132,14 @@ export function useNavigation(
                         item(
                             t('common.nav.github'),
                             githubIndex({ project: project.uuid }).url,
+                        ),
+                    ]
+                  : []),
+              ...(hasMobilePay
+                  ? [
+                        item(
+                            t('common.nav.mobilepay'),
+                            mobilepayIndex({ project: project.uuid }).url,
                         ),
                     ]
                   : []),
@@ -290,6 +301,7 @@ const sections: Record<string, (project: string) => { url: string }> = {
     umami: (project) => umamiIndex({ project }),
     mosparo: (project) => mosparoIndex({ project }),
     github: (project) => githubIndex({ project }),
+    mobilepay: (project) => mobilepayIndex({ project }),
     releases: releasesIndex,
     jobs: jobsIndex,
     schedule: scheduleIndex,
