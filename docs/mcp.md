@@ -252,8 +252,8 @@ microseconds. **Needs** is the area and level a token needs for the tool; see
 A window covers one environment, or every environment when `environment` is left out.
 `starts_at` and `ends_at` are ISO 8601; `ends_at` is the expected end, and past it the
 maintenance overrun alert fires until the window is ended. `state` is `open` (including
-overrun), `planned`, `ended` or `all`; by default the windows not ended yet and the last
-5 that ended. How long a window the app reports is expected to take, and how often the
+overrun), `planned`, `ended` or `all`, where `ended` and `all` return the newest 50; by default the
+windows not ended yet and the last 5 that ended. How long a window the app reports is expected to take, and how often the
 overrun alert repeats, are set with `update_project`.
 
 ### Scheduled tasks
@@ -280,6 +280,9 @@ overrun alert repeats, are set with `update_project`.
 | `send_test_alert`            | `alerts: write`  | Test a channel. Sends outside Lumberjack.      | **`channel`**                                                                                                                |
 | `update_team_alert_rule`     | `alerts: manage` | Change a team rule.                            | **`type`**, `topic`, **`enabled`**, **`channels`**, `environments`, `settings`                                               |
 | `delete_alert_topic`         | `alerts: manage` | Delete a custom alert topic. Deletes.          | **`topic`**                                                                                                                  |
+
+For `weekly_summary`, `settings` is `{day, time}`: `day` 1 to 7 (1 is Monday) and
+`time` as `HH:MM`.
 
 ### Data sources
 
@@ -324,15 +327,15 @@ overrun alert repeats, are set with `update_project`.
 
 ### Project settings
 
-| Tool                    | Needs             | Does                                                     | Arguments                                                                                                                                |
-| ----------------------- | ----------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_project_overview`  | `project: read`   | Health of the project at a glance.                       | `project`, `period`, `environment`                                                                                                       |
-| `get_project_settings`  | `project: read`   | Settings without secrets.                                | `project`                                                                                                                                |
-| `update_project`        | `project: write`  | Name, slug, prefix, origins, scrubbed keys, maintenance. | `project`, `name`, `slug`, `issue_prefix`, `allowed_origins`, `scrub_keys`, `maintenance_expected_minutes`, `maintenance_repeat_minutes` |
-| `create_log_channel`    | `project: write`  | Add a log channel.                                       | `project`, **`name`**                                                                                                                    |
-| `delete_log_channel`    | `project: manage` | Delete a log channel and its lines. Deletes.             | `project`, **`channel_id`**                                                                                                              |
-| `set_project_retention` | `project: manage` | Days kept per data type. Deletes.                        | `project`, `days`, `forever`, `channels`                                                                                                 |
-| `set_public_stats`      | `project: manage` | Public stats link on or off. Can make data public.       | `project`, **`enabled`**, `include_titles`                                                                                               |
+| Tool                    | Needs             | Does                                               | Arguments                                                                                               |
+| ----------------------- | ----------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `get_project_overview`  | `project: read`   | Health of the project at a glance.                 | `project`, `period`, `environment`                                                                      |
+| `get_project_settings`  | `project: read`   | Settings without secrets.                          | `project`                                                                                               |
+| `update_project`        | `project: write`  | Name, slug, prefix, maintenance.                   | `project`, `name`, `slug`, `issue_prefix`, `maintenance_expected_minutes`, `maintenance_repeat_minutes` |
+| `create_log_channel`    | `project: write`  | Add a log channel.                                 | `project`, **`name`**                                                                                   |
+| `delete_log_channel`    | `project: manage` | Delete a log channel and its lines. Deletes.       | `project`, **`channel_id`**                                                                             |
+| `set_project_retention` | `project: manage` | Days kept per data type. Deletes.                  | `project`, `days`, `forever`, `channels`                                                                |
+| `set_public_stats`      | `project: manage` | Public stats link on or off. Can make data public. | `project`, **`enabled`**, `include_titles`                                                              |
 
 ### Team
 
