@@ -81,6 +81,15 @@ class GitHubController
             }
         }
 
+        // The branch field's suggestions, after the page; a repository GitHub does not answer for suggests none.
+        $branches = function () use ($query, $connection): array {
+            try {
+                return $connection === null ? [] : $query->branches($connection);
+            } catch (GitHubExceptionInterface|DecryptException) {
+                return [];
+            }
+        };
+
         return Inertia::render('connectors/github/index', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => ['period' => $period->value, 'environment' => null],
@@ -91,6 +100,11 @@ class GitHubController
                 'url' => $connection->url,
                 // The branch commits and CI are read from; null for the default branch.
                 'branch' => GitHubConfig::branchOf($connection->config),
+                // For the Connection tab, so only for those who may change the branch.
+                ...(Gate::allows('update', $project) ? [
+                    'default_branch' => Inertia::defer(fn (): ?string => $branches()['default_branch'] ?? null, 'branches'),
+                    'branches' => Inertia::defer(fn (): array => $branches()['branches'] ?? [], 'branches'),
+                ] : []),
             ],
             // Every repository the project reads, to switch between.
             'repositories' => $connections->map(fn (DataSourceConnection $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName()])->all(),

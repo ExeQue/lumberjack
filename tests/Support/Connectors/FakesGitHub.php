@@ -82,6 +82,7 @@ trait FakesGitHub
                     ['tag_name' => 'v1.2.0', 'name' => '', 'draft' => false, 'prerelease' => false, 'html_url' => 'https://github.com/acme/shop/releases/tag/v1.2.0', 'published_at' => '2026-11-09T10:00:00Z', 'body' => "## Fixed\n\n- The cart <script>keeps</script> its items.\n"],
                 ]),
                 '/repos/acme/shop/tags' => Http::response([['name' => 'v0.1.0']]),
+                '/repos/acme/shop/branches' => Http::response([['name' => 'main'], ['name' => 'develop']]),
                 '/repos/acme/shop/branches/main', '/repos/acme/shop/branches/develop' => Http::response(['name' => basename($path)]),
                 '/repos/acme/shop/branches/nope' => Http::response(['message' => 'Branch not found'], 404),
                 default => Http::response(['message' => 'Not Found'], 404),
