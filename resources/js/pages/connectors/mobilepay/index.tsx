@@ -351,22 +351,6 @@ function Summary({ summary }: { summary: NonNullable<Props['summary']> }) {
                 note={trend(current.transactions, previous.transactions)}
             />
             <StatCard
-                label={t('connectors.mobilepay.cards.refunds')}
-                value={money(current.refunds)}
-                tone={current.refunds > 0 ? 'warn' : undefined}
-                note={trend(current.refunds, previous.refunds)}
-            />
-            <StatCard
-                label={t('connectors.mobilepay.cards.fees')}
-                value={money(current.fees)}
-                note={trend(current.fees, previous.fees)}
-            />
-            <StatCard
-                label={t('connectors.mobilepay.cards.payouts')}
-                value={money(current.payouts)}
-                note={trend(current.payouts, previous.payouts)}
-            />
-            <StatCard
                 label={t('connectors.mobilepay.cards.average_order')}
                 value={
                     current.average_order === null
@@ -376,14 +360,30 @@ function Summary({ summary }: { summary: NonNullable<Props['summary']> }) {
                 note={trend(current.average_order, previous.average_order)}
             />
             <StatCard
+                label={t('connectors.mobilepay.cards.refunds')}
+                value={money(current.refunds)}
+                tone={current.refunds > 0 ? 'warn' : undefined}
+                note={trend(current.refunds, previous.refunds)}
+            />
+            <StatCard
                 label={t('connectors.mobilepay.cards.refund_rate')}
                 value={percent(current.refund_rate)}
                 note={trend(current.refund_rate, previous.refund_rate)}
             />
             <StatCard
+                label={t('connectors.mobilepay.cards.fees')}
+                value={money(current.fees)}
+                note={trend(current.fees, previous.fees)}
+            />
+            <StatCard
                 label={t('connectors.mobilepay.cards.fee_rate')}
                 value={percent(current.fee_rate)}
                 note={trend(current.fee_rate, previous.fee_rate)}
+            />
+            <StatCard
+                label={t('connectors.mobilepay.cards.payouts')}
+                value={money(current.payouts)}
+                note={trend(current.payouts, previous.payouts)}
             />
             <StatCard
                 label={t('connectors.mobilepay.cards.balance')}
