@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Domains\Connectors\GitHub\Http\Requests;
 
+use App\Domains\Connectors\GitHub\Enums\GitHubFigure;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
- * The branch a connected repository is read from; empty for its default branch.
+ * A connected repository's settings: the branch it is read from (empty for its default
+ * branch), and, when sent, the key figures its page shows.
  */
-class ChangeGitHubBranchRequest extends FormRequest
+class UpdateGitHubConnectionRequest extends FormRequest
 {
     /**
      * A git branch name, roughly as git-check-ref-format allows it: no spaces, none of
@@ -30,7 +33,23 @@ class ChangeGitHubBranchRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['branch' => self::BRANCH_RULES];
+        return ['branch' => self::BRANCH_RULES, 'figures' => ['sometimes', 'array'], 'figures.*' => ['string', Rule::enum(GitHubFigure::class)]];
+    }
+
+    /**
+     * The key figures to show, in their order, or null to keep them as they are.
+     *
+     * @return list<GitHubFigure>|null
+     */
+    public function figures(): ?array
+    {
+        if (! $this->has('figures')) {
+            return null;
+        }
+
+        $chosen = $this->collect('figures')->all();
+
+        return array_values(array_filter(GitHubFigure::cases(), fn (GitHubFigure $figure): bool => in_array($figure->value, $chosen, true)));
     }
 
     /** The branch asked for, or null for the default branch. */

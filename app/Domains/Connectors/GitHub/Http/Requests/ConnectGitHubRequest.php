@@ -30,7 +30,7 @@ class ConnectGitHubRequest extends FormRequest
         return [
             'repository' => ['required', 'string', 'max:200', 'regex:~^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$~'],
             'token' => ['required', 'string', 'max:255'],
-            'branch' => ChangeGitHubBranchRequest::BRANCH_RULES,
+            'branch' => UpdateGitHubConnectionRequest::BRANCH_RULES,
         ];
     }
 
@@ -46,6 +46,6 @@ class ConnectGitHubRequest extends FormRequest
 
     public function credentials(): GitHubCredentials
     {
-        return new GitHubCredentials($this->string('repository')->toString(), $this->string('token')->trim()->toString(), ChangeGitHubBranchRequest::branchOf($this));
+        return new GitHubCredentials($this->string('repository')->toString(), $this->string('token')->trim()->toString(), UpdateGitHubConnectionRequest::branchOf($this));
     }
 }

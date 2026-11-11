@@ -6,6 +6,7 @@ namespace App\Domains\Connectors\GitHub\Queries;
 
 use App\Domains\Connectors\GitHub\Actions\PullGitHubSourceAction;
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
+use App\Domains\Connectors\GitHub\Enums\GitHubFigure;
 use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubRequestFailedException;
 use App\Domains\Connectors\GitHub\Support\GitHubClient;
@@ -30,16 +31,17 @@ class GitHubDashboardQuery
      * The open pull requests and issues, stars, forks and watchers as they are now, the pull
      * requests merged, their median lead time and the runs failed over the period and the
      * period before (on the branch read, if one is chosen), the branch's latest run and the
-     * latest release.
+     * latest release, and whether the repository is private.
      *
-     * @return array{open_pull_requests: int, waiting_for_review: int, open_issues: int, stars: int, forks: int, watchers: int, merged: array{current: int, previous: int}, lead_time_hours: array{current: float|null, previous: float|null}, failed_runs: array{current: int, previous: int}, ci: array<string, mixed>|null, latest_release: array<string, mixed>|null}
+     * @return array{private: bool, open_pull_requests: int, waiting_for_review: int, open_issues: int, stars: int, forks: int, watchers: int, merged: array{current: int, previous: int}, lead_time_hours: array{current: float|null, previous: float|null}, failed_runs: array{current: int, previous: int}, ci: array<string, mixed>|null, latest_release: array<string, mixed>|null}
      *
      * @throws GitHubRequestFailedException
      * @throws DecryptException when the token was saved under another APP_KEY
      */
     public function summary(DataSourceConnection $connection, Period $period): array
     {
-        return StatisticsCache::remember('github-summary', $period, [$connection->id, $connection->url, GitHubConfig::branchOf($connection->config)], function () use ($connection, $period): array {
+        // Keyed apart from the summaries cached before they said whether the repository is private.
+        return StatisticsCache::remember('github-summary', $period, [$connection->id, $connection->url, GitHubConfig::branchOf($connection->config), 'private'], function () use ($connection, $period): array {
             $credentials = $connection->gitHubCredentials();
             $to = now();
             $from = $period->since();
@@ -52,6 +54,7 @@ class GitHubDashboardQuery
             $mergedBefore = $this->client->mergedPullRequests($credentials, $before, $from);
 
             return [
+                'private' => $repository['private'],
                 'open_pull_requests' => $open,
                 'waiting_for_review' => $this->client->waitingForReview($credentials),
                 'open_issues' => max(0, $repository['open_issues_count'] - $open),
@@ -65,6 +68,47 @@ class GitHubDashboardQuery
                 'latest_release' => $this->client->latestRelease($credentials),
             ];
         });
+    }
+
+    /**
+     * Where each key figure is on GitHub: its list, searched for the period (in UTC) and the
+     * branch read where it counts those; the CI status and the latest release link their own
+     * page. Asks GitHub nothing.
+     *
+     * @param  array{ci: array<string, mixed>|null, latest_release: array<string, mixed>|null}  $summary
+     * @return array<string, string> by GitHubFigure value
+     *
+     * @throws DecryptException
+     */
+    public function links(DataSourceConnection $connection, Period $period, array $summary): array
+    {
+        $credentials = $connection->gitHubCredentials();
+        $base = 'https://github.com/'.implode('/', array_map(rawurlencode(...), explode('/', $credentials->repository)));
+        $range = GitHubClient::range($period->since(), now());
+        $search = fn (string $path, string $key, string $q): string => $base.$path.'?'.http_build_query([$key => $q], '', '&', PHP_QUERY_RFC3986);
+        $merged = $search('/pulls', 'q', 'is:pr is:merged merged:'.$range);
+
+        return array_filter([
+            GitHubFigure::OpenPullRequests->value => $base.'/pulls',
+            GitHubFigure::WaitingForReview->value => $search('/pulls', 'q', 'is:pr is:open draft:false review:none'),
+            GitHubFigure::Merged->value => $merged,
+            GitHubFigure::LeadTime->value => $merged,
+            GitHubFigure::Commits->value => $base.'/commits'.($credentials->branch === null ? '' : '/'.implode('/', array_map(rawurlencode(...), explode('/', $credentials->branch)))),
+            GitHubFigure::Authors->value => $base.'/graphs/contributors',
+            GitHubFigure::Ci->value => is_string($summary['ci']['url'] ?? null) ? $summary['ci']['url'] : null,
+            GitHubFigure::FailedRuns->value => $search('/actions', 'query', 'is:failure'.($credentials->branch === null ? '' : ' branch:'.$credentials->branch)),
+            GitHubFigure::LatestRelease->value => is_string($summary['latest_release']['url'] ?? null) ? $summary['latest_release']['url'] : null,
+            GitHubFigure::OpenIssues->value => $base.'/issues',
+            GitHubFigure::IssuesOpened->value => $search('/issues', 'q', 'is:issue created:'.$range),
+            GitHubFigure::IssuesClosed->value => $search('/issues', 'q', 'is:issue is:closed closed:'.$range),
+            GitHubFigure::OpenBugs->value => $search('/issues', 'q', 'is:issue is:open label:bug'),
+            GitHubFigure::Stars->value => $base.'/stargazers',
+            GitHubFigure::Forks->value => $base.'/forks',
+            GitHubFigure::Watchers->value => $base.'/watchers',
+            GitHubFigure::DependabotAlerts->value => $base.'/security/dependabot',
+            GitHubFigure::CodeScanningAlerts->value => $base.'/security/code-scanning',
+            GitHubFigure::SecretScanningAlerts->value => $base.'/security/secret-scanning',
+        ], fn (?string $url): bool => $url !== null && $url !== '');
     }
 
     /**

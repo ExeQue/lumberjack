@@ -24,6 +24,7 @@ import {
     Segmented,
     Select,
     StatCard,
+    Switch,
     tableClass,
     tdClass,
     thClass,
@@ -122,35 +123,83 @@ type Props = {
         default_branch?: string | null;
         /** Deferred: the branches to suggest, the default first. */
         branches?: string[];
+        /** For those who administer the project: the key figures the token can show. */
+        figure_choices?: FigureChoice[];
     } | null;
     /** Every repository the project reads, by the uuid of its connection. */
     repositories: { uuid: string; name: string }[];
     error: string | null;
+    /** A hidden figure's values are left out. */
     summary: {
-        open_pull_requests: number;
-        waiting_for_review: number;
-        open_issues: number;
-        stars: number;
-        forks: number;
-        watchers: number;
-        merged: { current: number; previous: number };
-        lead_time_hours: { current: number | null; previous: number | null };
-        failed_runs: { current: number; previous: number };
-        ci: Run | null;
-        latest_release: Release | null;
+        open_pull_requests?: number;
+        waiting_for_review?: number;
+        open_issues?: number;
+        stars?: number;
+        forks?: number;
+        watchers?: number;
+        merged?: { current: number; previous: number };
+        lead_time_hours?: { current: number | null; previous: number | null };
+        failed_runs?: { current: number; previous: number };
+        ci?: Run | null;
+        latest_release?: Release | null;
     } | null;
     pull_requests: PullRequest[];
     runs: Run[];
     releases: Release[];
     commits: Commits | null;
-    /** Null when the token does not read issues. */
+    /** Null when the token does not read issues or none of their figures shows. */
     issues: {
-        opened: { current: number; previous: number };
-        closed: { current: number; previous: number };
-        open_bugs: number;
+        opened?: { current: number; previous: number };
+        closed?: { current: number; previous: number };
+        open_bugs?: number;
     } | null;
     security: SecurityKind[];
     permissions: Permission[];
+    /** The key figures shown, in order. */
+    figures: Figure[];
+    /** Where each figure shown is on GitHub. */
+    links: Partial<Record<Figure, string>>;
+};
+
+type Figure =
+    | 'open_pull_requests'
+    | 'waiting_for_review'
+    | 'merged'
+    | 'lead_time'
+    | 'commits'
+    | 'authors'
+    | 'ci'
+    | 'failed_runs'
+    | 'latest_release'
+    | 'open_issues'
+    | 'issues_opened'
+    | 'issues_closed'
+    | 'open_bugs'
+    | 'stars'
+    | 'forks'
+    | 'watchers'
+    | 'dependabot_alerts'
+    | 'code_scanning_alerts'
+    | 'secret_scanning_alerts';
+
+const FIGURE_GROUPS = [
+    'pull_requests',
+    'code',
+    'issues',
+    'community',
+    'security',
+] as const;
+
+type FigureChoice = {
+    key: Figure;
+    group: (typeof FIGURE_GROUPS)[number];
+};
+
+/** The security figures, by the kind of alert the security list names them. */
+const SECURITY_FIGURES: Partial<Record<Figure, string>> = {
+    dependabot_alerts: 'vulnerability_alerts',
+    code_scanning_alerts: 'security_events',
+    secret_scanning_alerts: 'secret_scanning_alerts',
 };
 
 const PERIODS: Period[] = ['1h', '24h', '7d', '30d'];
@@ -227,6 +276,8 @@ export default function GitHubIndex({
     issues,
     security,
     permissions,
+    figures,
+    links,
 }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
@@ -346,6 +397,9 @@ export default function GitHubIndex({
                                 summary={summary}
                                 commits={commits}
                                 issues={issues}
+                                security={security}
+                                figures={figures}
+                                links={links}
                             />
                         )}
                         <ConnectorTabs<Tab>
@@ -438,6 +492,7 @@ export default function GitHubIndex({
                                     project={project.uuid}
                                     connection={connection}
                                     permissions={permissions}
+                                    figures={figures}
                                 />
                             </ConnectorPanel>
                         )}
@@ -448,52 +503,85 @@ export default function GitHubIndex({
     );
 }
 
+/** The key figures shown, each linking to its page on GitHub. */
 function Summary({
     summary,
     commits,
     issues,
+    security,
+    figures,
+    links,
 }: {
     summary: NonNullable<Props['summary']>;
     commits: Commits | null;
     issues: Props['issues'];
+    security: SecurityKind[];
+    figures: Figure[];
+    links: Props['links'];
 }) {
     const t = useT();
     const trend = useTrend();
-    const { ci, latest_release: release } = summary;
+    const { ci, latest_release: release, lead_time_hours: lead } = summary;
     const ciTone = ci ? resultTone(ci.result) : 'neutral';
-    const lead = summary.lead_time_hours;
 
-    return (
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,160px),1fr))] gap-4">
-            <StatCard
-                label={t('connectors.github.cards.open_pull_requests')}
-                value={formatNumber(summary.open_pull_requests)}
-            />
-            <StatCard
-                label={t('connectors.github.cards.waiting_for_review')}
-                value={formatNumber(summary.waiting_for_review)}
-                tone={summary.waiting_for_review > 0 ? 'warn' : undefined}
-            />
-            <StatCard
-                label={t('connectors.github.cards.merged')}
-                value={formatNumber(summary.merged.current)}
-                tone="ok"
-                note={trend(summary.merged.current, summary.merged.previous)}
-            />
-            <StatCard
-                label={t('connectors.github.cards.lead_time')}
-                value={
-                    lead.current === null
-                        ? '-'
-                        : t('connectors.github.cards.hours', {
-                              hours: formatNumber(lead.current, 1),
-                          })
-                }
-                note={trend(lead.current, lead.previous)}
-            />
-            {commits && (
-                <>
+    /** Each figure's card, or null when it has nothing to show. */
+    const card = (figure: Figure): ReactNode => {
+        const link = {
+            href: links[figure],
+            hrefLabel: t('connectors.github.cards.opens_github'),
+        };
+
+        switch (figure) {
+            case 'open_pull_requests':
+            case 'waiting_for_review':
+            case 'open_issues': {
+                const value = summary[figure];
+
+                return value === undefined ? null : (
                     <StatCard
+                        {...link}
+                        label={t(`connectors.github.cards.${figure}`)}
+                        value={formatNumber(value)}
+                        tone={
+                            figure === 'waiting_for_review' && value > 0
+                                ? 'warn'
+                                : undefined
+                        }
+                    />
+                );
+            }
+            case 'merged':
+                return summary.merged ? (
+                    <StatCard
+                        {...link}
+                        label={t('connectors.github.cards.merged')}
+                        value={formatNumber(summary.merged.current)}
+                        tone="ok"
+                        note={trend(
+                            summary.merged.current,
+                            summary.merged.previous,
+                        )}
+                    />
+                ) : null;
+            case 'lead_time':
+                return lead ? (
+                    <StatCard
+                        {...link}
+                        label={t('connectors.github.cards.lead_time')}
+                        value={
+                            lead.current === null
+                                ? '-'
+                                : t('connectors.github.cards.hours', {
+                                      hours: formatNumber(lead.current, 1),
+                                  })
+                        }
+                        note={trend(lead.current, lead.previous)}
+                    />
+                ) : null;
+            case 'commits':
+                return commits ? (
+                    <StatCard
+                        {...link}
                         label={t('connectors.github.cards.commits')}
                         value={formatNumber(commits.count.current)}
                         note={trend(
@@ -501,96 +589,141 @@ function Summary({
                             commits.count.previous,
                         )}
                     />
+                ) : null;
+            case 'authors':
+                return commits ? (
                     <StatCard
+                        {...link}
                         label={t('connectors.github.cards.authors')}
                         value={formatNumber(commits.authors)}
                     />
-                </>
-            )}
-            <StatCard
-                label={t('connectors.github.cards.failed_runs')}
-                value={formatNumber(summary.failed_runs.current)}
-                tone={summary.failed_runs.current > 0 ? 'err' : undefined}
-                note={trend(
-                    summary.failed_runs.current,
-                    summary.failed_runs.previous,
-                )}
-            />
-            <StatCard
-                label={t('connectors.github.cards.open_issues')}
-                value={formatNumber(summary.open_issues)}
-            />
-            {issues && (
-                <>
+                ) : null;
+            case 'ci':
+                return ci === undefined ? null : (
                     <StatCard
-                        label={t('connectors.github.cards.issues_opened')}
-                        value={formatNumber(issues.opened.current)}
+                        {...link}
+                        label={
+                            ci
+                                ? t('connectors.github.cards.ci', {
+                                      branch: ci.branch,
+                                  })
+                                : t('connectors.github.cards.ci_none')
+                        }
+                        value={
+                            <span className="text-base">
+                                {ci
+                                    ? ci.result_label
+                                    : t('connectors.github.never')}
+                            </span>
+                        }
+                        tone={
+                            ciTone === 'ok' ||
+                            ciTone === 'err' ||
+                            ciTone === 'warn'
+                                ? ciTone
+                                : undefined
+                        }
+                        note={ci?.name ?? ''}
+                    />
+                );
+            case 'failed_runs':
+                return summary.failed_runs ? (
+                    <StatCard
+                        {...link}
+                        label={t('connectors.github.cards.failed_runs')}
+                        value={formatNumber(summary.failed_runs.current)}
+                        tone={
+                            summary.failed_runs.current > 0 ? 'err' : undefined
+                        }
                         note={trend(
-                            issues.opened.current,
-                            issues.opened.previous,
+                            summary.failed_runs.current,
+                            summary.failed_runs.previous,
                         )}
                     />
+                ) : null;
+            case 'latest_release':
+                return release === undefined ? null : (
                     <StatCard
-                        label={t('connectors.github.cards.issues_closed')}
-                        value={formatNumber(issues.closed.current)}
-                        tone="ok"
-                        note={trend(
-                            issues.closed.current,
-                            issues.closed.previous,
-                        )}
+                        {...link}
+                        label={t('connectors.github.cards.latest_release')}
+                        value={
+                            <span className="text-base">
+                                {release
+                                    ? release.name
+                                    : t('connectors.github.never')}
+                            </span>
+                        }
+                        note={
+                            release?.published_at
+                                ? formatRelative(release.published_at)
+                                : ''
+                        }
                     />
+                );
+            case 'issues_opened':
+            case 'issues_closed': {
+                const value =
+                    figure === 'issues_opened'
+                        ? issues?.opened
+                        : issues?.closed;
+
+                return value ? (
                     <StatCard
+                        {...link}
+                        label={t(`connectors.github.cards.${figure}`)}
+                        value={formatNumber(value.current)}
+                        tone={figure === 'issues_closed' ? 'ok' : undefined}
+                        note={trend(value.current, value.previous)}
+                    />
+                ) : null;
+            }
+            case 'open_bugs':
+                return issues?.open_bugs === undefined ? null : (
+                    <StatCard
+                        {...link}
                         label={t('connectors.github.cards.open_bugs')}
                         value={formatNumber(issues.open_bugs)}
                         tone={issues.open_bugs > 0 ? 'warn' : undefined}
                     />
-                </>
-            )}
-            <StatCard
-                label={
-                    ci
-                        ? t('connectors.github.cards.ci', { branch: ci.branch })
-                        : t('connectors.github.cards.ci_none')
-                }
-                value={
-                    <span className="text-base">
-                        {ci ? ci.result_label : t('connectors.github.never')}
-                    </span>
-                }
-                tone={
-                    ciTone === 'ok' || ciTone === 'err' || ciTone === 'warn'
-                        ? ciTone
-                        : undefined
-                }
-                note={ci ? <External href={ci.url}>{ci.name}</External> : ''}
-            />
-            <StatCard
-                label={t('connectors.github.cards.latest_release')}
-                value={
-                    <span className="text-base">
-                        {release ? (
-                            <External href={release.url}>
-                                {release.name}
-                            </External>
-                        ) : (
-                            t('connectors.github.never')
-                        )}
-                    </span>
-                }
-                note={
-                    release?.published_at
-                        ? formatRelative(release.published_at)
-                        : ''
-                }
-            />
-            <StatCard
-                label={t('connectors.github.cards.stars')}
-                value={formatNumber(summary.stars)}
-                note={t('connectors.github.cards.forks_watchers', {
-                    forks: formatNumber(summary.forks),
-                    watchers: formatNumber(summary.watchers),
-                })}
-            />
+                );
+            case 'stars':
+            case 'forks':
+            case 'watchers': {
+                const value = summary[figure];
+
+                return value === undefined ? null : (
+                    <StatCard
+                        {...link}
+                        label={t(`connectors.github.cards.${figure}`)}
+                        value={formatNumber(value)}
+                    />
+                );
+            }
+            default: {
+                const kind = security.find(
+                    (k) => k.kind === SECURITY_FIGURES[figure],
+                );
+
+                return kind ? (
+                    <StatCard
+                        {...link}
+                        label={t(`connectors.github.cards.${figure}`)}
+                        value={
+                            kind.count === null ? '-' : formatNumber(kind.count)
+                        }
+                        tone={kind.count ? 'warn' : undefined}
+                        note={kind.error ?? ''}
+                    />
+                ) : null;
+            }
+        }
+    };
+
+    return (
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,160px),1fr))] gap-4">
+            {figures.map((figure) => (
+                <Fragment key={figure}>{card(figure)}</Fragment>
+            ))}
         </div>
     );
 }
@@ -1230,12 +1363,15 @@ function Connection({
     project,
     connection,
     permissions,
+    figures,
 }: {
     project: string;
     connection: NonNullable<Props['connection']>;
     permissions: Permission[];
+    figures: Figure[];
 }) {
     const t = useT();
+    const [shown, setShown] = useState<Figure[]>(figures);
 
     return (
         <ConnectionCard
@@ -1255,7 +1391,9 @@ function Connection({
             <Form
                 {...connectionUpdate.form([project, connection.uuid])}
                 options={{ preserveScroll: true }}
-                className="flex flex-wrap items-end gap-2"
+                // The toggles are not form fields; the figures switched on go along, an empty set included.
+                transform={(data) => ({ ...data, figures: shown })}
+                className="flex flex-col items-start gap-4"
             >
                 {({ errors, processing }) => (
                     <>
@@ -1286,12 +1424,85 @@ function Connection({
                                 ))}
                             </datalist>
                         </Field>
+                        <fieldset className="flex flex-col gap-3">
+                            <legend className="text-sm font-medium">
+                                {t('connectors.github.settings.figures')}
+                            </legend>
+                            <p className="text-xs text-ink-3">
+                                {t('connectors.github.settings.figures_hint')}
+                            </p>
+                            {FIGURE_GROUPS.map((group) => {
+                                const choices = (
+                                    connection.figure_choices ?? []
+                                ).filter((c) => c.group === group);
+
+                                return choices.length === 0 ? null : (
+                                    <fieldset key={group}>
+                                        <legend className="text-xs text-ink-2">
+                                            {t(
+                                                `connectors.github.groups.${group}`,
+                                            )}
+                                        </legend>
+                                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                                            {choices.map(({ key }) => {
+                                                const name =
+                                                    key === 'ci'
+                                                        ? t(
+                                                              'connectors.github.cards.ci_none',
+                                                          )
+                                                        : t(
+                                                              `connectors.github.cards.${key}`,
+                                                          );
+
+                                                return (
+                                                    <label
+                                                        key={key}
+                                                        className="flex items-center gap-2 text-sm"
+                                                    >
+                                                        <Switch
+                                                            small
+                                                            checked={shown.includes(
+                                                                key,
+                                                            )}
+                                                            onChange={(on) =>
+                                                                setShown(
+                                                                    (keys) =>
+                                                                        on
+                                                                            ? [
+                                                                                  ...keys,
+                                                                                  key,
+                                                                              ]
+                                                                            : keys.filter(
+                                                                                  (
+                                                                                      k,
+                                                                                  ) =>
+                                                                                      k !==
+                                                                                      key,
+                                                                              ),
+                                                                )
+                                                            }
+                                                            label={name}
+                                                        />
+                                                        {name}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </fieldset>
+                                );
+                            })}
+                            {errors.figures && (
+                                <p className="text-xs text-err">
+                                    {errors.figures}
+                                </p>
+                            )}
+                        </fieldset>
                         <Button
                             type="submit"
                             variant="primary"
                             disabled={processing}
                         >
-                            {t('connectors.github.settings.save_branch')}
+                            {t('connectors.github.settings.save')}
                         </Button>
                     </>
                 )}

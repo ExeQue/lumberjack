@@ -2,30 +2,34 @@
 
 declare(strict_types=1);
 
-use App\Domains\Connectors\GitHub\Actions\ChangeGitHubBranchAction;
 use App\Domains\Connectors\GitHub\Actions\ConnectGitHubAction;
+use App\Domains\Connectors\GitHub\Actions\UpdateGitHubConnectionAction;
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
+use App\Domains\Connectors\GitHub\Enums\GitHubFigure;
 use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubRequestFailedException;
 use App\Domains\Connectors\GitHub\Http\Controllers\GitHubConnectionController;
 use App\Domains\Connectors\GitHub\Http\Controllers\GitHubController;
-use App\Domains\Connectors\GitHub\Http\Requests\ChangeGitHubBranchRequest;
 use App\Domains\Connectors\GitHub\Http\Requests\ConnectGitHubRequest;
+use App\Domains\Connectors\GitHub\Http\Requests\UpdateGitHubConnectionRequest;
 use App\Domains\Connectors\GitHub\Queries\GitHubDashboardQuery;
 use App\Domains\Connectors\GitHub\Support\GitHubClient;
+use App\Domains\DataSources\Actions\SyncDataSourceConnectionAction;
 use App\Domains\DataSources\Enums\ConnectionKind;
+use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Connectors\FakesGitHub;
 
-covers(GitHubController::class, GitHubConnectionController::class, ConnectGitHubRequest::class, ChangeGitHubBranchRequest::class, ConnectGitHubAction::class, ChangeGitHubBranchAction::class, GitHubDashboardQuery::class);
+covers(GitHubController::class, GitHubConnectionController::class, ConnectGitHubRequest::class, UpdateGitHubConnectionRequest::class, ConnectGitHubAction::class, UpdateGitHubConnectionAction::class, GitHubDashboardQuery::class, GitHubFigure::class, GitHubConfig::class);
 
 uses(FakesGitHub::class);
 
@@ -123,7 +127,7 @@ describe('the GitHub page', function () {
     });
 
     it('shows the key figures against the period before, and the pull requests, runs and releases', function () {
-        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', figures: collect(GitHubFigure::cases())->mapWithKeys(fn (GitHubFigure $figure): array => [$figure->value => true])->all())]);
 
         $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
             ->assertInertia(fn (Assert $page) => $page
@@ -143,7 +147,7 @@ describe('the GitHub page', function () {
     });
 
     it('shows commits, lead time, stars, issues and security alerts', function () {
-        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', GitHubPermission::cases())]);
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', GitHubPermission::cases(), figures: collect(GitHubFigure::cases())->mapWithKeys(fn (GitHubFigure $figure): array => [$figure->value => true])->all())]);
 
         $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
             ->assertInertia(fn (Assert $page) => $page
@@ -191,6 +195,30 @@ describe('the GitHub page', function () {
 
         $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
             ->assertInertia(fn (Assert $page) => $page->where('releases.0.body', "## Fixed\n\n- The cart <script>keeps</script> its items."));
+    });
+
+    it('links each figure to its page on GitHub, searched for the period and the branch read', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', GitHubPermission::cases(), 'develop', collect(GitHubFigure::cases())->mapWithKeys(fn (GitHubFigure $figure): array => [$figure->value => true])->all())]);
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('links.open_pull_requests', 'https://github.com/acme/shop/pulls')
+                ->where('links.merged', 'https://github.com/acme/shop/pulls?q=is%3Apr%20is%3Amerged%20merged%3A2026-11-03T12%3A00%3A00Z..2026-11-10T12%3A00%3A00Z')
+                ->where('links.commits', 'https://github.com/acme/shop/commits/develop')
+                ->where('links.failed_runs', 'https://github.com/acme/shop/actions?query=is%3Afailure%20branch%3Adevelop')
+                ->where('links.ci', 'https://github.com/acme/shop/actions/runs/1')
+                ->where('links.latest_release', 'https://github.com/acme/shop/releases/tag/v1.2.0')
+                ->where('links.issues_closed', 'https://github.com/acme/shop/issues?q=is%3Aissue%20is%3Aclosed%20closed%3A2026-11-03T12%3A00%3A00Z..2026-11-10T12%3A00%3A00Z')
+                ->where('links.dependabot_alerts', 'https://github.com/acme/shop/security/dependabot'));
+    });
+
+    it('searches failed runs on every branch when none is chosen', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', figures: ['failed_runs' => true])]);
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('links.failed_runs', 'https://github.com/acme/shop/actions?query=is%3Afailure')
+                ->where('links.commits', 'https://github.com/acme/shop/commits'));
     });
 
     it('knows no repository on another kind of connection', function () {
@@ -343,6 +371,174 @@ describe('the branch read', function () {
 
         $this->actingAs($this->admin)->put(route('connectors.github.connection.update', [$this->project, DataSourceConnection::factory()->mosparo()->for($this->project)->create()]), ['branch' => 'develop'])->assertNotFound();
         $this->put(route('connectors.github.connection.update', [$this->project, $other]), ['branch' => 'develop'])->assertNotFound();
+    });
+});
+
+describe('the key figures shown', function () {
+    it('shows by default all but lead time, authors, failed runs and the latest release, stars for a public repository', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', GitHubPermission::cases())]);
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('figures', fn ($figures): bool => $figures->all() === ['open_pull_requests', 'waiting_for_review', 'merged', 'commits', 'ci', 'open_issues', 'issues_opened', 'issues_closed', 'open_bugs', 'stars', 'dependabot_alerts', 'code_scanning_alerts', 'secret_scanning_alerts'])
+                ->where('summary.stars', 42)
+                ->missing('summary.lead_time_hours')
+                ->missing('summary.failed_runs')
+                ->missing('summary.latest_release')
+                ->missing('links.failed_runs')
+                ->where('links.stars', 'https://github.com/acme/shop/stargazers'));
+    });
+
+    it('shows forks and watchers as cards of their own once switched on, off by default', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+
+        $this->actingAs($this->admin)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('figures', fn ($figures): bool => $figures->contains('stars') && $figures->intersect(['forks', 'watchers'])->isEmpty())
+                ->missing('summary.forks')
+                ->missing('summary.watchers')
+                ->where('connection.figure_choices', fn ($choices): bool => collect($choices)->where('group', 'community')->pluck('key')->all() === ['stars', 'forks', 'watchers']));
+
+        $this->put(route('connectors.github.connection.update', [$this->project, $connection]), ['figures' => ['stars', 'forks', 'watchers']])->assertSessionHasNoErrors();
+        expect($connection->refresh()->config->figures)->toMatchArray(['forks' => true, 'watchers' => true])->not->toHaveKey('stars');
+
+        $this->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('figures', ['stars', 'forks', 'watchers'])
+                ->where('summary.stars', 42)
+                ->where('summary.forks', 5)
+                ->where('summary.watchers', 3)
+                ->where('links.forks', 'https://github.com/acme/shop/forks')
+                ->where('links.watchers', 'https://github.com/acme/shop/watchers'));
+    });
+
+    it('hides the stars of a private repository by default', function () {
+        $this->gitHubAnswers = ['/repos/acme/shop' => [['full_name' => 'acme/shop', 'default_branch' => 'main', 'private' => true, 'stargazers_count' => 42]]];
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('figures', fn ($figures): bool => ! in_array('stars', $figures->all(), true))
+                ->missing('summary.stars')
+                ->missing('summary.forks')
+                ->missing('links.stars'));
+    });
+
+    it('never shows a figure whose permission the token lacks, and asks nothing for the issues it hides', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', [GitHubPermission::Issues], figures: ['dependabot_alerts' => true, 'issues_opened' => false, 'issues_closed' => false, 'open_bugs' => false, 'open_pull_requests' => false])]);
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('figures', fn ($figures): bool => $figures->intersect(['dependabot_alerts', 'issues_opened', 'issues_closed', 'open_bugs', 'open_pull_requests'])->isEmpty() && $figures->contains('open_issues'))
+                ->where('issues', null)
+                ->missing('summary.open_pull_requests')
+                ->where('summary.open_issues', 3));
+
+        Http::assertNotSent(fn ($request): bool => str_contains(urldecode($request->url()), 'is:issue'));
+    });
+
+    it('remembers only the figures switched otherwise than by default, keeping the branch and the data sources', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', branch: 'develop'), 'next_check_at' => now()->addHour()]);
+        app(SyncDataSourceConnectionAction::class)->execute($connection->id);
+        $sources = DataSource::query()->where('data_source_connection_id', $connection->id)->pluck('key')->sort()->values()->all();
+
+        $this->actingAs($this->admin)->put(route('connectors.github.connection.update', [$this->project, $connection]), ['branch' => 'develop', 'figures' => ['failed_runs', 'open_pull_requests', 'merged', 'commits', 'ci', 'open_issues']])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', __('connectors.github.settings_saved'));
+
+        $connection->refresh();
+        expect($connection->config->figures)->toEqual(['waiting_for_review' => false, 'failed_runs' => true, 'stars' => false])
+            ->and(GitHubConfig::branchOf($connection->config))->toBe('develop')
+            ->and($connection->next_check_at)->not->toBeNull();
+
+        app(SyncDataSourceConnectionAction::class)->execute($connection->id);
+        expect(DataSource::query()->where('data_source_connection_id', $connection->id)->pluck('key')->sort()->values()->all())->toBe($sources)
+            ->and($sources)->toContain('stars', 'failed_runs', 'lead_time');
+
+        $this->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('figures', ['open_pull_requests', 'merged', 'commits', 'ci', 'failed_runs', 'open_issues'])
+                ->where('summary.failed_runs', ['current' => 2, 'previous' => 2])
+                ->missing('summary.stars')
+                ->missing('summary.waiting_for_review'));
+    });
+
+    it('shows the figures of a permission granted after a save, as by default', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+        $this->actingAs($this->admin)->put(route('connectors.github.connection.update', [$this->project, $connection]), ['figures' => ['open_pull_requests']])->assertSessionHasNoErrors();
+
+        $config = $connection->refresh()->config;
+        $connection->update(['config' => new GitHubConfig('acme/shop', 'github_pat_test', [GitHubPermission::Issues], figures: $config->figures)]);
+
+        $this->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page->where('figures', ['open_pull_requests', 'issues_opened', 'issues_closed', 'open_bugs']));
+    });
+
+    it('shows the stars of a repository made public after a save, unless they were switched off', function () {
+        $private = ['/repos/acme/shop' => [['full_name' => 'acme/shop', 'default_branch' => 'main', 'private' => true, 'stargazers_count' => 42]]];
+        $this->gitHubAnswers = $private;
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+        $this->actingAs($this->admin)->put(route('connectors.github.connection.update', [$this->project, $connection]), ['figures' => ['open_pull_requests']])->assertSessionHasNoErrors();
+
+        expect($connection->refresh()->config->figures)->not->toHaveKey('stars');
+
+        $this->gitHubAnswers = [];
+        Cache::flush();
+        $this->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page->where('figures', ['open_pull_requests', 'stars'])->where('summary.stars', 42));
+
+        // Switched off while public, they stay off.
+        $this->put(route('connectors.github.connection.update', [$this->project, $connection]), ['figures' => ['open_pull_requests']])->assertSessionHasNoErrors();
+        expect($connection->refresh()->config->figures)->toMatchArray(['stars' => false]);
+
+        Cache::flush();
+        $this->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page->where('figures', ['open_pull_requests'])->missing('summary.stars'));
+    });
+
+    it('saves every figure switched off, and keeps the figures when none are sent', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+        $this->actingAs($this->admin);
+
+        $this->put(route('connectors.github.connection.update', [$this->project, $connection]), ['figures' => []])->assertSessionHasNoErrors();
+        $off = ['open_pull_requests' => false, 'waiting_for_review' => false, 'merged' => false, 'commits' => false, 'ci' => false, 'open_issues' => false, 'stars' => false];
+        expect($connection->refresh()->config->figures)->toEqual($off);
+
+        $this->put(route('connectors.github.connection.update', [$this->project, $connection]), ['branch' => ''])->assertSessionHasNoErrors();
+        expect($connection->refresh()->config->figures)->toEqual($off);
+
+        $this->get(route('connectors.github.index', [$this->project, $connection]))->assertInertia(fn (Assert $page) => $page->where('figures', []));
+    });
+
+    it('refuses a figure it does not know', function (mixed $figures) {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+
+        $this->actingAs($this->admin)->put(route('connectors.github.connection.update', [$this->project, $connection]), ['figures' => $figures])
+            ->assertSessionHasErrors();
+
+        expect($connection->refresh()->config->figures)->toBe([]);
+    })->with([
+        'an unknown key' => [['stars', 'nope']],
+        'not a list' => ['stars'],
+    ]);
+
+    it('is changed only by those who administer the project', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+
+        $this->actingAs($this->member)->put(route('connectors.github.connection.update', [$this->project, $connection]), ['figures' => ['stars']])->assertForbidden();
+
+        expect($connection->refresh()->config->figures)->toBe([]);
+    });
+
+    it('offers the figures the token can show to those who administer the project only', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', [GitHubPermission::SecretScanningAlerts])]);
+
+        $this->actingAs($this->admin)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('connection.figure_choices', fn ($choices): bool => collect($choices)->pluck('key')->doesntContain('issues_opened') && collect($choices)->contains(['key' => 'secret_scanning_alerts', 'group' => 'security'])));
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page->missing('connection.figure_choices'));
     });
 });
 
