@@ -1,5 +1,7 @@
 import { Form } from '@inertiajs/react';
-import { Button, Field, Input } from '@/components/lj/ui';
+import { ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { Button, buttonClass, Field, Input } from '@/components/lj/ui';
 import {
     Dialog,
     DialogContent,
@@ -23,6 +25,25 @@ export function GitHubConnectDialog({
     onClose: () => void;
 }) {
     const t = useT();
+    const [repository, setRepository] = useState('');
+
+    // GitHub pre-fills a fine-grained token from these query parameters. GitHub has no
+    // parameter for the repository itself, so it still has to be picked under
+    // "Repository access"; the owner (target_name) is taken from what was typed.
+    const name = repositoryName(repository);
+    const newTokenUrl = `https://github.com/settings/personal-access-tokens/new?${new URLSearchParams(
+        {
+            name: `Lumberjack ${name ?? project}`.slice(0, 40),
+            description: t('connectors.github.connect.token_description', {
+                repository: name ?? '-',
+            }),
+            ...(name !== null ? { target_name: name.split('/')[0] } : {}),
+            expires_in: '90',
+            contents: 'read',
+            pull_requests: 'read',
+            actions: 'read',
+        },
+    ).toString()}`;
 
     return (
         <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -62,6 +83,10 @@ export function GitHubConnectDialog({
                                     placeholder="acme/shop"
                                     className="font-mono"
                                     autoComplete="off"
+                                    value={repository}
+                                    onChange={(event) =>
+                                        setRepository(event.target.value)
+                                    }
                                 />
                             </Field>
                             <Field
@@ -82,6 +107,25 @@ export function GitHubConnectDialog({
                                     data-lpignore="true"
                                     data-bwignore
                                 />
+                                <a
+                                    href={newTokenUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`${buttonClass('default')} self-start`}
+                                >
+                                    <ExternalLink
+                                        className="size-3.5"
+                                        aria-hidden="true"
+                                    />
+                                    {t(
+                                        'connectors.github.connect.create_token',
+                                    )}
+                                    <span className="sr-only">
+                                        {t(
+                                            'connectors.github.connect.opens_new_tab',
+                                        )}
+                                    </span>
+                                </a>
                             </Field>
                             <DialogFooter>
                                 <Button type="button" onClick={onClose}>
@@ -101,4 +145,15 @@ export function GitHubConnectDialog({
             </DialogContent>
         </Dialog>
     );
+}
+
+/** owner/name from what was typed: owner/name itself, or any address on github.com under the repository. */
+function repositoryName(value: string): string | null {
+    const match = value
+        .trim()
+        .match(
+            /^(?:(?:https?:\/\/)?(?:www\.)?github\.com\/)?([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:[/?#].*)?$/i,
+        );
+
+    return match ? `${match[1]}/${match[2]}` : null;
 }

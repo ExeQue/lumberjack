@@ -52,6 +52,21 @@ describe('connecting a repository', function () {
             ->and($this->project->gitHubConnections()->sole()->gitHubCredentials()->token)->toBe('renewed');
     });
 
+    it('takes any address under the repository', function (string $address) {
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), [...$this->input, 'repository' => $address])
+            ->assertSessionHasNoErrors();
+
+        expect($this->project->gitHubConnections()->sole()->name)->toBe('acme/shop');
+    })->with([
+        'the repository itself' => ['https://github.com/acme/shop'],
+        'a trailing slash' => ['https://github.com/acme/shop/'],
+        'without the scheme' => ['github.com/acme/shop'],
+        'a file on a branch' => ['https://github.com/acme/shop/blob/main/src/app.ts'],
+        'a pull request' => ['https://github.com/acme/shop/pull/12'],
+        'a query string' => ['https://github.com/acme/shop?tab=readme-ov-file'],
+        'surrounding spaces' => ['  https://www.github.com/acme/shop/issues  '],
+    ]);
+
     it('says on the token which permission it lacks, saving nothing', function () {
         $this->gitHubAnswers = ['/repos/acme/shop/actions/runs' => [['message' => 'Resource not accessible by personal access token'], 403]];
 

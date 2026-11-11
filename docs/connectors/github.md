@@ -13,9 +13,13 @@ has a token of its own.
 Team owners and admins connect GitHub from **Data sources**, under **Connectors**, or from
 the **GitHub** page of a project that has none yet.
 
-1. On GitHub, open **Settings**, **Developer settings**, **Personal access tokens**,
-   **Fine-grained tokens**, and generate a token whose **Repository access** includes the
-   repository, with these repository permissions, each **Read-only**:
+1. In Lumberjack, choose **Connect** and give the **Repository** as `owner/name`, such as
+   `acme/shop`, or any address on github.com under it, such as
+   `https://github.com/acme/shop/pull/12`.
+2. **Create token on GitHub** opens GitHub with the name, owner, expiry (90 days) and the
+   permissions below filled in. Under **Repository access**, choose **Only select
+   repositories** and pick the repository; GitHub has no way to fill that in. The token
+   needs these repository permissions, each **Read-only**:
 
     | Permission        | What it reads                                    |
     | ----------------- | ------------------------------------------------ |
@@ -27,10 +31,8 @@ the **GitHub** page of a project that has none yet.
     Give it no write permission. A token for an organization's repository may need the
     organization's approval first.
 
-2. In Lumberjack, choose **Connect** and give the **Repository** as `owner/name`, such as
-   `acme/shop`, or its address on github.com, and the **Token**.
-3. Choose **Connect**. Lumberjack asks GitHub once for each permission, and says on the token
-   which one it lacks.
+3. Paste the token under **Token** and choose **Connect**. Lumberjack asks GitHub once for
+   each permission, and says on the token which one it lacks.
 
 The token is stored encrypted, never shown again, and only ever sent to `api.github.com`.
 
