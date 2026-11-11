@@ -39,9 +39,10 @@ class StoreSourceMapAction
             report($e);
         }
 
-        // A row without its file would fail every frame it should map.
+        // A row without its file would fail every frame it should map. One a concurrent upload
+        // of the same map wrote the file for is kept.
         if ($stored === false) {
-            if ($map->wasRecentlyCreated) {
+            if ($map->wasRecentlyCreated && ! Storage::exists($map->filePath())) {
                 $map->delete();
             }
 

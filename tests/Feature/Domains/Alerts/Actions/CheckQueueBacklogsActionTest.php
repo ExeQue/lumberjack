@@ -92,5 +92,12 @@ describe('queue backlog alerts', function () {
         $this->actingAs($owner)->put(route('alerts.rules.update', $rule), [
             'enabled' => true, 'channels' => [], 'settings' => ['size' => null, 'age_minutes' => null, 'sustain_minutes' => 5],
         ])->assertSessionHasErrors('settings.size');
+
+        // Another type's settings are refused, not taken as defaults.
+        $this->actingAs($owner)->put(route('alerts.rules.update', $rule), [
+            'enabled' => true, 'channels' => [], 'settings' => ['day' => 1, 'time' => '08:00'],
+        ])->assertSessionHasErrors('settings');
+
+        expect($rule->refresh()->settings)->toBe(['size' => 5000, 'age_minutes' => null, 'sustain_minutes' => 15]);
     });
 });

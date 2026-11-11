@@ -56,6 +56,14 @@ describe('planning a window', function () {
         expect($window->refresh()->ended_at?->getTimestamp())->toBe(now()->getTimestamp());
     });
 
+    it('records a window planned wholly in the past as ended, not overrun', function () {
+        $this->actingAs($this->admin)->post(route('maintenance.store', $this->project), [
+            'environment' => 'staging', 'starts_at' => '2026-11-10T08:00:00+00:00', 'ends_at' => '2026-11-10T09:00:00+00:00',
+        ])->assertSessionHasNoErrors();
+
+        expect(MaintenanceWindow::query()->where('environment', 'staging')->sole()->ended_at?->toIso8601String())->toBe('2026-11-10T09:00:00+00:00');
+    });
+
     it('ends a window that has not started where it would have started', function () {
         $this->actingAs($this->admin)->post(route('maintenance.end', [$this->project, $this->planned]))->assertRedirect();
 

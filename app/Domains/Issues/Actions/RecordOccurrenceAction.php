@@ -16,7 +16,6 @@ use App\Domains\Live\Actions\BroadcastProjectChangeAction;
 use App\Domains\Maintenance\Models\MaintenanceWindow;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Database\UniqueConstraintViolationException;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -25,12 +24,6 @@ use Illuminate\Support\Facades\DB;
  */
 class RecordOccurrenceAction
 {
-    /** How far back a window may have ended and still cover an occurrence coming in late. */
-    public const int MAINTENANCE_LOOKBACK_HOURS = 24;
-
-    /** @var array<int, Collection<int, MaintenanceWindow>> by project id, read once per instance (one ingest batch) */
-    private array $windows = [];
-
     public function __construct(
         private readonly Fingerprinter $fingerprinter,
         private readonly DetectEscalationAction $detectEscalation,
@@ -43,7 +36,8 @@ class RecordOccurrenceAction
     public function execute(Project $project, IssueSignal $signal): Occurrence
     {
         $fingerprint = $this->fingerprinter->fingerprint($signal);
-        $underMaintenance = $this->underMaintenance($project, $signal);
+        // Asked per occurrence, not per batch: a maintenance event in the same batch changes the answer.
+        $underMaintenance = MaintenanceWindow::openFor($project, $signal->environment, $signal->occurredAt) !== null;
 
         try {
             $occurrence = $this->record($project, $signal, $fingerprint, $underMaintenance);
@@ -59,19 +53,6 @@ class RecordOccurrenceAction
         }
 
         return $occurrence;
-    }
-
-    /**
-     * ponytail: the project's windows are read at the first occurrence of the batch, so a window
-     * started later in the same batch does not flag the occurrences after it; read per occurrence
-     * if that matters.
-     */
-    private function underMaintenance(Project $project, IssueSignal $signal): bool
-    {
-        $this->windows[$project->id] ??= MaintenanceWindow::query()->whereProject($project)
-            ->whereOverlaps(now()->subHours(self::MAINTENANCE_LOOKBACK_HOURS))->get();
-
-        return $this->windows[$project->id]->contains(fn (MaintenanceWindow $window): bool => $window->covers($signal->environment, $signal->occurredAt));
     }
 
     private function record(Project $project, IssueSignal $signal, string $fingerprint, bool $underMaintenance): Occurrence

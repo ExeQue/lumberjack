@@ -55,7 +55,7 @@ class HealthChecksQuery
             ->where(fn ($q) => $q->whereNull('ended_at')->orWhere('ended_at', '>=', $period->since()))
             ->get()
             ->groupBy('health_check_id');
-        $windows = MaintenanceWindow::query()->where('project_id', $project->id)->whereOverlaps($period->since())->get();
+        $windows = MaintenanceWindow::query()->whereProject($project)->whereOverlaps($period->since())->get();
 
         return array_values($checks->map(fn (HealthCheck $check): array => $this->row($check, $period, $outages->get($check->id, collect()), self::windowsOf($check, $windows)))->all());
     }

@@ -8,16 +8,21 @@ use App\Domains\Ingest\Data\Envelope;
 use App\Domains\Maintenance\Models\MaintenanceWindow;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 
 /**
  * A maintenance event from ingest: start opens (or keeps) the environment's window, end
- * closes it. An end with no window open does nothing.
+ * closes it. The agent may hold a start back past the end that followed it, so each end's
+ * time is remembered for a day, and a start older than it is ignored.
  */
 class RecordMaintenanceEventAction
 {
     /** The longest an app may say it will take, a week. */
     public const int MAX_EXPECTED_MINUTES = 10_080;
+
+    /** How long an end's time is kept for a start held back behind it. */
+    public const int LAST_END_HOURS = 24;
 
     public function __construct(
         private readonly StartMaintenanceAction $startMaintenanceAction,
@@ -33,16 +38,25 @@ class RecordMaintenanceEventAction
         $at = Envelope::time($event['timestamp'] ?? null)->min(now());
         $environment = $envelope->environment ?? '';
 
-        // A start held back by the agent can come after the end that followed it: an end at or
-        // after it already closed what it opened, and an end only closes what started before it.
+        $lastEnd = 'maintenance-last-end:'.$project->id.':'.$environment;
+
+        // An end only closes what started before it, and a start older than the last end was
+        // held back behind it: what it opened is over already.
         match ($event['state'] ?? null) {
-            'start' => MaintenanceWindow::query()->whereProject($project)->whereEnvironment($environment)->whereEndedSince($at)->exists()
+            'start' => (float) Cache::get($lastEnd, 0) > (float) $at->format('U.u')
                 ? null
                 : $this->startMaintenanceAction->execute($project, $environment, Envelope::short($event['message'] ?? null, 500), $this->expectedEnd($event, $at), $at),
-            'end' => MaintenanceWindow::query()->whereProject($project)->whereEnvironment($environment)->whereOpen($at)->whereNotEnded()->get()
-                ->each(fn (MaintenanceWindow $window) => $this->endMaintenanceWindowAction->execute($window, $at)),
+            'end' => $this->end($project, $environment, $at, $lastEnd),
             default => throw new InvalidArgumentException('A maintenance event is either start or end.'),
         };
+    }
+
+    private function end(Project $project, string $environment, CarbonImmutable $at, string $lastEnd): void
+    {
+        Cache::put($lastEnd, max((float) Cache::get($lastEnd, 0), (float) $at->format('U.u')), now()->addHours(self::LAST_END_HOURS));
+
+        MaintenanceWindow::query()->whereProject($project)->whereEnvironment($environment)->whereOpen($at)->whereNotEnded()->get()
+            ->each(fn (MaintenanceWindow $window) => $this->endMaintenanceWindowAction->execute($window, $at));
     }
 
     /**

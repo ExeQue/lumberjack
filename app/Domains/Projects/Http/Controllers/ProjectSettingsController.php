@@ -40,6 +40,9 @@ use Inertia\Response;
 
 class ProjectSettingsController
 {
+    /** Source maps listed, newest first. */
+    public const int SOURCE_MAPS_SHOWN = 100;
+
     public function edit(Request $request, Project $project, ProjectPresenter $presenter, ResolveRetentionDaysAction $retention, AgentMetricsQuery $agentMetrics, RetentionPresenter $retentionRows, MeasureRetentionAction $measure): Response
     {
         Gate::authorize('update', $project);
@@ -83,7 +86,9 @@ class ProjectSettingsController
                 'lines_24h' => (int) ($channelCounts[$c->id] ?? 0),
                 'retention_days' => $policies->first(fn (RetentionPolicy $p): bool => $p->log_channel_id === $c->id)?->days,
             ])->all(),
-            'source_maps' => $project->sourceMaps()->latest('updated_at')->get()->map(fn (SourceMap $m): array => [
+            // The newest only: a build of many chunks kept for 10 releases is thousands of maps.
+            'source_maps_total' => $project->sourceMaps()->count(),
+            'source_maps' => $project->sourceMaps()->latest('updated_at')->limit(self::SOURCE_MAPS_SHOWN)->get()->map(fn (SourceMap $m): array => [
                 'id' => $m->id, 'path' => $m->path, 'release' => $m->release, 'size' => $m->size, 'uploaded_at' => $m->updated_at->toIso8601String(),
             ])->all(),
             'unknown_channels' => DB::table('log_entries')->where('project_id', $project->id)->where('occurred_at', '>=', now()->subDays(7))

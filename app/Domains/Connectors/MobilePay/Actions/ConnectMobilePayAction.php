@@ -12,6 +12,7 @@ use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Connects a project to the Vipps MobilePay ledger a sales unit settles to, once its keys
@@ -21,6 +22,9 @@ use Illuminate\Contracts\Encryption\DecryptException;
  */
 class ConnectMobilePayAction
 {
+    /** How long a connect holds its ledger, and how long another waits for it. */
+    public const int LOCK_SECONDS = 10;
+
     public function __construct(
         private readonly MobilePayClient $client,
     ) {
@@ -33,6 +37,16 @@ class ConnectMobilePayAction
     {
         $ledger = $this->client->ledger($credentials);
 
+        // Two connects of the same ledger at once would both find none and add two.
+        return Cache::lock('connect-mobilepay:'.$project->id.':'.$ledger['ledger_id'], self::LOCK_SECONDS)
+            ->block(self::LOCK_SECONDS, fn (): DataSourceConnection => $this->store($project, $credentials, $ledger, $timezone));
+    }
+
+    /**
+     * @param  array{ledger_id: string, currency: string, name: string}  $ledger
+     */
+    private function store(Project $project, MobilePayCredentials $credentials, array $ledger, string $timezone): DataSourceConnection
+    {
         $name = mb_substr($ledger['name'], 0, 200);
         $connections = $project->mobilePayConnections()->get();
 

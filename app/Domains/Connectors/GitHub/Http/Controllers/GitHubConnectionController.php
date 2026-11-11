@@ -49,9 +49,8 @@ class GitHubConnectionController
         abort_unless($dataSourceConnection->isFor(ConnectionKind::GitHub), 404);
         Gate::authorize('update', $dataSourceConnection);
         $branch = UpdateGitHubConnectionRequest::branchOf($request);
-        $changesBranch = GitHubConfig::branchOf($dataSourceConnection->config) !== $branch;
-
         try {
+            $changesBranch = GitHubConfig::branchOf($dataSourceConnection->gitHubConfig()) !== $branch;
             $action->execute($dataSourceConnection, $branch, $request->figures());
         } catch (GitHubExceptionInterface $e) {
             throw ValidationException::withMessages(['branch' => $e->getMessage()]);

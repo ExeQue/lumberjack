@@ -54,7 +54,7 @@ class UpdateTeamAlertRule extends Tool
             return $refused;
         }
 
-        $input = $request->validate(UpdateAlertRuleRequest::fieldRules());
+        $input = $request->validate(UpdateAlertRuleRequest::fieldRules($rule->type));
         $rule = $this->update->execute($rule, (bool) $input['enabled'], array_values(array_map(intval(...), $input['channels'])), $input['environments'] ?? null, $input['settings'] ?? null);
 
         return Response::json(['rule' => $this->presentRule($rule)]);

@@ -11,6 +11,7 @@ use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
 use InvalidArgumentException;
+use Override;
 
 class StoreSourceMapRequest extends FormRequest
 {
@@ -25,6 +26,7 @@ class StoreSourceMapRequest extends FormRequest
     /**
      * The path as it is stored, so its length is checked against the column.
      */
+    #[Override]
     protected function prepareForValidation(): void
     {
         if (is_string($this->input('path')) && $this->input('path') !== '') {

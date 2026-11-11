@@ -228,6 +228,18 @@ describe('the GitHub page', function () {
             ->assertInertia(fn (Assert $page) => $page->where('error', __('connectors.github.errors.unauthorized'))->where('summary', null));
     });
 
+    it('says the token cannot be read when the config was saved under another APP_KEY', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+        DB::table('data_source_connections')->where('id', $connection->id)->update(['config' => 'not-decryptable']);
+
+        $this->actingAs($this->admin)->get(route('connectors.github.index', $this->project))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('error', __('connectors.github.errors.secret_unreadable'))->where('connection.branch', null));
+
+        $this->put(route('connectors.github.connection.update', [$this->project, $connection]), ['branch' => 'develop'])
+            ->assertSessionHasErrors(['branch' => __('connectors.github.errors.secret_unreadable')]);
+    });
+
     it('sends each release\'s notes as written', function () {
         $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
 

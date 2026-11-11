@@ -157,6 +157,8 @@ type Props = {
     settings: Settings;
     agents: Agent[];
     source_maps: SourceMap[];
+    /** All of the project's maps; source_maps holds only the newest. */
+    source_maps_total: number;
     channels: Channel[];
     labels: (IssueLabel & { issues: number })[];
     unknown_channels: string[];
@@ -1262,7 +1264,12 @@ function AgentsSection({ project, agents }: Props) {
     );
 }
 
-function SourceMapsSection({ project, settings, source_maps }: Props) {
+function SourceMapsSection({
+    project,
+    settings,
+    source_maps,
+    source_maps_total,
+}: Props) {
     const t = useT();
 
     return (
@@ -1372,6 +1379,14 @@ function SourceMapsSection({ project, settings, source_maps }: Props) {
                             ))}
                         </tbody>
                     </table>
+                    {source_maps_total > source_maps.length && (
+                        <p className="mt-2 text-xs text-ink-3">
+                            {t('settings.sourcemaps.newest', {
+                                shown: source_maps.length,
+                                total: source_maps_total,
+                            })}
+                        </p>
+                    )}
                 </div>
             )}
         </Section>

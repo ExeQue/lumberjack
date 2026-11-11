@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domains\Ingest\Actions\ProcessIngestBatchAction;
 use App\Domains\Ingest\Http\Requests\IngestBatchRequest;
+use App\Domains\Maintenance\Actions\EndMaintenanceWindowAction;
 use App\Domains\Maintenance\Actions\RecordMaintenanceEventAction;
 use App\Domains\Maintenance\Actions\StartMaintenanceAction;
 use App\Domains\Maintenance\Enums\MaintenanceSource;
@@ -87,6 +88,33 @@ describe('an end event', function () {
         ($this->send)(['state' => 'start', 'timestamp' => $startedAt]);
 
         expect(MaintenanceWindow::query()->whereNotEnded()->count())->toBe(0);
+    });
+
+    it('ignores the only start when the agent delivers it after its end', function () {
+        $startedAt = now()->getTimestamp();
+        $this->travel(5)->minutes();
+        ($this->send)(['state' => 'end']);
+
+        ($this->send)(['state' => 'start', 'timestamp' => $startedAt]);
+
+        expect(MaintenanceWindow::query()->count())->toBe(0);
+    });
+
+    it('opens a window although a planned one was cancelled for later', function () {
+        $planned = MaintenanceWindow::factory()->of($this->project)->planned()->create();
+        app(EndMaintenanceWindowAction::class)->execute($planned);
+
+        ($this->send)(['state' => 'start']);
+
+        expect(MaintenanceWindow::query()->whereNotEnded()->count())->toBe(1);
+    });
+
+    it('takes a new start after an end in the same second', function () {
+        ($this->send)(['state' => 'start', 'timestamp' => now()->getTimestamp()]);
+        ($this->send)(['state' => 'end', 'timestamp' => now()->getTimestamp() + 0.2]);
+        ($this->send)(['state' => 'start', 'timestamp' => now()->getTimestamp() + 0.4]);
+
+        expect(MaintenanceWindow::query()->whereNotEnded()->count())->toBe(1);
     });
 
     it('leaves open a window that started after the end', function () {

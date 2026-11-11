@@ -35,6 +35,20 @@ describe('errors during maintenance', function () {
             ->and($occurrence->issue->refresh()->under_maintenance)->toBeTrue();
     });
 
+    it('sees a window end between two occurrences recorded by the same instance, as in one batch', function () {
+        $window = MaintenanceWindow::factory()->of($this->project)->create();
+        $action = app(RecordOccurrenceAction::class);
+        $signal = fn (): IssueSignal => new IssueSignal(IssueSource::Server, 'RuntimeException', 'Boom', 'app/Foo.php', 12, [], [], now()->toImmutable(), environment: 'production');
+
+        $during = $action->execute($this->project, $signal());
+        app(EndMaintenanceWindowAction::class)->execute($window);
+        $this->travel(1)->minutes();
+        $after = $action->execute($this->project, $signal());
+
+        expect($during->under_maintenance)->toBeTrue()
+            ->and($after->under_maintenance)->toBeFalse();
+    });
+
     it('keeps the issue flagged while every occurrence came in during a window', function () {
         MaintenanceWindow::factory()->of($this->project, '')->create();
 

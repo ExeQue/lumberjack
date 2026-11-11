@@ -209,6 +209,7 @@ environment of the project when it has none. It comes from one of two places:
 - **Planned**: **Plan maintenance** on the Health page, with the environment, start,
   planned end and an optional message, or over [MCP](./mcp). Planned windows can be
   changed and ended early there too. Planning one needs the right to change the project.
+  A window planned wholly in the past is saved as ended, a record of maintenance that was.
 - **Reported by the app**: a `maintenance` event with `state` `start` or `end`, see
   [Ingest](./api#maintenance-events). The Laravel library sends them on `artisan down`
   and `artisan up` with no setup.
