@@ -173,6 +173,31 @@ class GitHubDashboardQuery
     }
 
     /**
+     * The repository's default branch, and its branches with the default first and the rest
+     * alphabetically, for the branch field. Cached as the lists are.
+     *
+     * @return array{default_branch: string, branches: list<string>}
+     *
+     * @throws GitHubRequestFailedException
+     * @throws DecryptException
+     */
+    public function branches(DataSourceConnection $connection): array
+    {
+        return StatisticsCache::remember('github-branches', Period::Day, [$connection->id, $connection->url], function () use ($connection): array {
+            $credentials = $connection->gitHubCredentials();
+            $default = $this->client->repository($credentials)['default_branch'];
+
+            return [
+                'default_branch' => $default,
+                'branches' => [$default, ...collect($this->client->branches($credentials))
+                    ->reject(fn (string $name): bool => $name === $default)
+                    ->sort(strnatcasecmp(...))
+                    ->all()],
+            ];
+        });
+    }
+
+    /**
      * Each optional permission, whether the token had it when last connected, and what it adds.
      *
      * @return list<array{key: string, label: string, unlocks: string, granted: bool}>

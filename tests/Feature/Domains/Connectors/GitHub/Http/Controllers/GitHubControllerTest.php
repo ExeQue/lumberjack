@@ -12,6 +12,7 @@ use App\Domains\Connectors\GitHub\Http\Controllers\GitHubController;
 use App\Domains\Connectors\GitHub\Http\Requests\ChangeGitHubBranchRequest;
 use App\Domains\Connectors\GitHub\Http\Requests\ConnectGitHubRequest;
 use App\Domains\Connectors\GitHub\Queries\GitHubDashboardQuery;
+use App\Domains\Connectors\GitHub\Support\GitHubClient;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
@@ -342,6 +343,52 @@ describe('the branch read', function () {
 
         $this->actingAs($this->admin)->put(route('connectors.github.connection.update', [$this->project, DataSourceConnection::factory()->mosparo()->for($this->project)->create()]), ['branch' => 'develop'])->assertNotFound();
         $this->put(route('connectors.github.connection.update', [$this->project, $other]), ['branch' => 'develop'])->assertNotFound();
+    });
+});
+
+describe('the branch field\'s suggestions', function () {
+    beforeEach(function () {
+        $this->connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+    });
+
+    it('loads the default branch and the branches after the page, the default first', function () {
+        $this->gitHubAnswers['/repos/acme/shop/branches'] = [[['name' => 'zeta'], ['name' => 'main'], ['name' => 'Alpha'], ['name' => 'develop']]];
+
+        $this->actingAs($this->admin)->get(route('connectors.github.index', [$this->project, $this->connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->missing('connection.default_branch')
+                ->missing('connection.branches')
+                ->loadDeferredProps('branches', fn (Assert $reload) => $reload
+                    ->where('connection.default_branch', 'main')
+                    ->where('connection.branches', ['main', 'Alpha', 'develop', 'zeta'])));
+    });
+
+    it('is not sent to members, who cannot change the branch', function () {
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $this->connection]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->missing('connection.default_branch')
+                ->missing('connection.branches')
+                ->reload(only: ['connection.default_branch', 'connection.branches'], callback: fn (Assert $reload) => $reload
+                    ->missing('connection.default_branch')
+                    ->missing('connection.branches')));
+    });
+
+    it('reads at most three pages of branches', function () {
+        $this->gitHubAnswers['/repos/acme/shop/branches'] = [[['name' => 'main']], 200, ['Link' => '<https://api.github.com/repos/acme/shop/branches?per_page=100&page=2>; rel="next"']];
+
+        $this->actingAs($this->admin)->get(route('connectors.github.index', [$this->project, $this->connection]))
+            ->assertInertia(fn (Assert $page) => $page->loadDeferredProps('branches', fn (Assert $reload) => $reload->where('connection.default_branch', 'main')));
+
+        expect(Http::recorded(fn (Request $request): bool => str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/branches')))->toHaveCount(GitHubClient::BRANCH_PAGES);
+    });
+
+    it('suggests nothing when GitHub cannot be read', function () {
+        $this->gitHubAnswers['/repos/acme/shop/branches'] = [['message' => 'Server error'], 500];
+
+        $this->actingAs($this->admin)->get(route('connectors.github.index', [$this->project, $this->connection]))
+            ->assertInertia(fn (Assert $page) => $page->loadDeferredProps('branches', fn (Assert $reload) => $reload
+                ->where('connection.default_branch', null)
+                ->where('connection.branches', [])));
     });
 });
 

@@ -118,6 +118,10 @@ type Props = {
         url: string;
         /** The branch commits and CI are read from; null for the default branch. */
         branch: string | null;
+        /** Deferred, for those who administer the project; null when GitHub did not answer. */
+        default_branch?: string | null;
+        /** Deferred: the branches to suggest, the default first. */
+        branches?: string[];
     } | null;
     /** Every repository the project reads, by the uuid of its connection. */
     repositories: { uuid: string; name: string }[];
@@ -1266,12 +1270,21 @@ function Connection({
                                 name="branch"
                                 maxLength={255}
                                 defaultValue={connection.branch ?? ''}
-                                placeholder={t(
-                                    'connectors.github.connect.branch_placeholder',
-                                )}
+                                placeholder={
+                                    connection.default_branch ??
+                                    t(
+                                        'connectors.github.connect.branch_placeholder',
+                                    )
+                                }
+                                list="github-settings-branches"
                                 className="font-mono"
                                 autoComplete="off"
                             />
+                            <datalist id="github-settings-branches">
+                                {connection.branches?.map((name) => (
+                                    <option key={name} value={name} />
+                                ))}
+                            </datalist>
                         </Field>
                         <Button
                             type="submit"

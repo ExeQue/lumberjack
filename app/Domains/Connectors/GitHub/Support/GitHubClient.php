@@ -47,6 +47,14 @@ class GitHubClient
      */
     public const int MAX_PAGES = 10;
 
+    /**
+     * Pages of branches read, for the branch field's suggestions.
+     *
+     * ponytail: 3 pages, so at most 300 branches are suggested; a name past them is still
+     * typed and checked on save. Search GitHub as the name is typed if that falls short.
+     */
+    public const int BRANCH_PAGES = 3;
+
     /** The severities a Dependabot alert has, the worst first. */
     public const array SEVERITIES = ['critical', 'high', 'medium', 'low'];
 
@@ -132,6 +140,21 @@ class GitHubClient
     public function branch(GitHubCredentials $credentials): string
     {
         return $credentials->branch ?? $this->repository($credentials)['default_branch'];
+    }
+
+    /**
+     * The repository's branch names, as GitHub lists them, up to BRANCH_PAGES pages.
+     *
+     * @return list<string>
+     *
+     * @throws GitHubRequestFailedException
+     */
+    public function branches(GitHubCredentials $credentials): array
+    {
+        return array_values(collect($this->pages($credentials, '/repos/'.$credentials->repository.'/branches', ['per_page' => self::PER_PAGE], 'Contents', maxPages: self::BRANCH_PAGES))
+            ->map(fn (array $branch): string => self::text($branch['name'] ?? null))
+            ->filter()
+            ->all());
     }
 
     /**
@@ -477,18 +500,18 @@ class GitHubClient
     }
 
     /**
-     * The items of a list, page by page as GitHub links them, up to MAX_PAGES pages.
+     * The items of a list, page by page as GitHub links them, up to MAX_PAGES pages or as many as asked.
      *
      * @param  array<string, int|string>  $query
      * @return list<array<mixed>>
      *
      * @throws GitHubRequestFailedException
      */
-    private function pages(GitHubCredentials $credentials, string $path, array $query, string $permission, bool $maybeOff = false): array
+    private function pages(GitHubCredentials $credentials, string $path, array $query, string $permission, bool $maybeOff = false, int $maxPages = self::MAX_PAGES): array
     {
         $items = [];
 
-        for ($page = 0; $path !== null && $page < self::MAX_PAGES; $page++) {
+        for ($page = 0; $path !== null && $page < $maxPages; $page++) {
             $response = $this->send($credentials, $path, $query, $permission, $maybeOff);
             $items = [...$items, ...self::listOf($response->json())];
             // The next page's address carries the query along.
