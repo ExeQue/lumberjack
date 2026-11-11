@@ -90,6 +90,19 @@ class IssueBuilder extends Builder
     }
 
     /**
+     * Every occurrence so far came in during a maintenance window.
+     */
+    public function whereUnderMaintenance(): self
+    {
+        return $this->where('under_maintenance', true);
+    }
+
+    public function orWhereUnderMaintenance(): self
+    {
+        return $this->orWhere('under_maintenance', true);
+    }
+
+    /**
      * Issues that surfaced (created or regressed) after a cursor position.
      */
     public function whereHasLabel(string $name): self

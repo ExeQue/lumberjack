@@ -130,7 +130,7 @@ class DiscordDriver implements ChannelDriver
         $this->post($channel, array_filter([
             ...$this->sender($channel),
             'embeds' => [array_filter([
-                'title' => mb_substr($message->alert->title, 0, 256),
+                'title' => mb_substr($message->headline(), 0, 256),
                 'url' => $message->titleUrl(),
                 'color' => $message->level()->color(),
                 'description' => mb_substr(implode("\n\n", array_filter([$message->alert->message !== null ? self::escape($message->alert->message) : null, ...$tables])), 0, 4000),

@@ -56,13 +56,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $ignore_until_escalation
  * @property CarbonImmutable|null $returned_at
  * @property CarbonImmutable|null $ignored_at
+ * @property bool $under_maintenance every occurrence so far came in during a maintenance window
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
 #[Fillable([
     'project_id', 'number', 'fingerprint', 'source', 'status', 'title', 'message', 'file', 'line', 'log_channel',
     'last_release', 'first_release', 'first_environment', 'external_issue_provider', 'external_issue_url', 'occurrences_count', 'users_count', 'assigned_user_id', 'first_seen_at', 'last_seen_at', 'surfaced_at',
-    'regressed_at', 'in_progress_at', 'escalated_at', 'ignore_until_at', 'ignore_until_count', 'ignore_until_escalation', 'returned_at', 'resolved_at', 'ignored_at',
+    'regressed_at', 'in_progress_at', 'escalated_at', 'ignore_until_at', 'ignore_until_count', 'ignore_until_escalation', 'returned_at', 'resolved_at', 'ignored_at', 'under_maintenance',
 ])]
 #[UseEloquentBuilder(IssueBuilder::class)]
 #[UseFactory(IssueFactory::class)]
@@ -99,6 +100,7 @@ class Issue extends Model
             'ignore_until_escalation' => 'boolean',
             'returned_at' => 'datetime',
             'ignored_at' => 'datetime',
+            'under_maintenance' => 'boolean',
         ];
     }
 

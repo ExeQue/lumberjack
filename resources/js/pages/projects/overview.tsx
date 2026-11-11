@@ -10,8 +10,10 @@ import {
     Card,
     CardHeader,
     EmptyState,
+    MaintenanceLegend,
     PageTitle,
     StatCard,
+    useMaintenanceShades,
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
 import { SampleNote } from '@/components/lj/sample-note';
@@ -113,6 +115,7 @@ function LatencyChart({
     period: Period;
 }) {
     const t = useT();
+    const shades = useMaintenanceShades(series.map((p) => p.t));
     const width = 800;
     const height = 140;
     const max = Math.max(1, ...series.map((p) => p.p95 ?? 0));
@@ -173,6 +176,7 @@ function LatencyChart({
                                 {t('overview.charts.no_requests')}
                             </span>
                         )}
+                        <MaintenanceLegend shades={shades} />
                     </span>
                 }
             />
@@ -206,6 +210,23 @@ function LatencyChart({
                                             height={height}
                                             fill="var(--lj-line)"
                                             opacity={0.5}
+                                        />
+                                    ),
+                            )}
+                            {series.map(
+                                (p, i) =>
+                                    shades[i] && (
+                                        <rect
+                                            key={`maintenance-${p.t}`}
+                                            x={x(i) - gapWidth / 2}
+                                            width={gapWidth}
+                                            y={0}
+                                            height={height}
+                                            className={
+                                                shades[i] === 'overrun'
+                                                    ? 'fill-warn-bg'
+                                                    : 'fill-info-bg'
+                                            }
                                         />
                                     ),
                             )}

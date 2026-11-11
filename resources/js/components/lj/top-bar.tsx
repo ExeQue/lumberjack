@@ -1,11 +1,15 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
-import { Segmented, Select } from '@/components/lj/ui';
+import { Badge, Segmented, Select } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useSectionTabs } from '@/lib/use-navigation';
-import type { DashboardFilters, Period } from '@/types/lumberjack';
+import type {
+    DashboardFilters,
+    Period,
+    ProjectHeader,
+} from '@/types/lumberjack';
 
 export type Crumb = {
     label: string;
@@ -23,6 +27,14 @@ export function TopBar({
 }) {
     const t = useT();
     const tabs = useSectionTabs();
+    const { project } = usePage<{ project?: ProjectHeader }>().props;
+    const states = (project?.maintenance ?? []).map((w) => w.state);
+    // An overrun window is the one to show when two are open.
+    const maintenance = states.includes('overrun')
+        ? 'overrun'
+        : states.includes('open')
+          ? 'open'
+          : null;
 
     return (
         <>
@@ -67,6 +79,13 @@ export function TopBar({
                             </Fragment>
                         );
                     })}
+                    {maintenance && (
+                        <Badge
+                            tone={maintenance === 'overrun' ? 'warn' : 'info'}
+                        >
+                            {t(`common.maintenance.${maintenance}`)}
+                        </Badge>
+                    )}
                 </nav>
                 {children}
             </header>

@@ -16,7 +16,7 @@ class IngestBatchRequest extends FormRequest
 
     public const int MAX_EVENTS = 5000;
 
-    public const array TYPES = ['request', 'query', 'exception', 'job', 'log', 'schedule', 'command', 'span', 'health', 'request_counts', 'alert'];
+    public const array TYPES = ['request', 'query', 'exception', 'job', 'log', 'schedule', 'command', 'span', 'health', 'request_counts', 'alert', 'maintenance'];
 
     public function authorize(): bool
     {

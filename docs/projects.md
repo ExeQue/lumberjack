@@ -49,7 +49,12 @@ open at a time; the address names the open section (such as `#agents`).
 
 - **General:** the name, the **slug**, the issue prefix, allowed origins and extra
   secret fields. The slug is used in URLs and as the project argument in MCP. It takes
-  letters, digits, `-` and `_`, and is unique in the team.
+  letters, digits, `-` and `_`, and is unique in the team. Also the two
+  [maintenance](./health#expected-end-and-overrun) settings: **Default maintenance
+  length**, how long a window the app reports without an expected end is expected to
+  take (30 minutes, at most a week), and **Repeat overrun alert**, how often the
+  maintenance overrun alert repeats while a window stays open past its expected end
+  (every 30 minutes, 5 to 1440).
 - **Installation:** what to install and set.
 - **Keys:** the server token for the agent, the public key for browser errors, and
   public stats. Public stats is a secret URL that serves the project's figures on the

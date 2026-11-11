@@ -17,6 +17,7 @@ enum AlertRuleType: string
     case HealthDegraded = 'health_degraded';
     case HealthDown = 'health_down';
     case HealthRecovered = 'health_recovered';
+    case MaintenanceOverrun = 'maintenance_overrun';
 
     /**
      * Notes and status changes go to shared channels only when someone turns that on.

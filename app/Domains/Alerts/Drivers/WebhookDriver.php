@@ -10,8 +10,10 @@ use App\Domains\Alerts\Data\BulkStatusChangeAlert;
 use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\IssueAlert;
+use App\Domains\Alerts\Data\MaintenanceOverrunAlert;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
+use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Shared\Rules\PublicUrl;
@@ -58,7 +60,7 @@ class WebhookDriver implements ChannelDriver
                     'occurred_at' => $custom->occurred_at->toIso8601String(),
                     ...$custom->content,
                 ],
-            ]);
+            ], $alert);
 
             return;
         }
@@ -77,7 +79,7 @@ class WebhookDriver implements ChannelDriver
                     'url' => $alert->url,
                 ],
                 'thresholds' => $alert->settings->toArray(),
-            ]);
+            ], $alert);
 
             return;
         }
@@ -102,7 +104,26 @@ class WebhookDriver implements ChannelDriver
                     'since' => $alert->since->toIso8601String(),
                     'url' => $alert->url,
                 ],
-            ]);
+            ], $alert);
+
+            return;
+        }
+
+        if ($alert instanceof MaintenanceOverrunAlert) {
+            $window = $alert->window;
+
+            $this->post($channel, [
+                'event' => AlertRuleType::MaintenanceOverrun->value,
+                'project' => ['id' => $window->project->uuid, 'slug' => $window->project->slug, 'name' => $window->project->name],
+                'environment' => $window->environment !== '' ? $window->environment : null,
+                'window' => [
+                    ...$window->toSummary(),
+                    // overrun while it is open, ended once the end came after an overrun alert.
+                    'state' => $alert->ended() ? 'ended' : 'overrun',
+                    'overrun_minutes' => $alert->overrunMinutes(),
+                    'url' => $alert->url,
+                ],
+            ], $alert);
 
             return;
         }
@@ -119,7 +140,7 @@ class WebhookDriver implements ChannelDriver
                     'title' => $issue->title,
                 ], $alert->issues),
                 'url' => $alert->url,
-            ]);
+            ], $alert);
 
             return;
         }
@@ -150,7 +171,7 @@ class WebhookDriver implements ChannelDriver
             'burst' => $alert->burst,
             'status_change' => $alert->statusChange !== null ? ['status' => $alert->statusChange->value, 'by' => $alert->actor] : null,
             'note' => $alert->note !== null ? ['by' => $alert->noteAuthor(), 'body' => $alert->noteBody()] : null,
-        ]);
+        ], $alert);
     }
 
     #[Override]
@@ -160,13 +181,31 @@ class WebhookDriver implements ChannelDriver
     }
 
     /**
-     * @param  array<string, mixed>  $payload
+     * The window an alert was sent during, null outside one.
+     *
+     * @return array{id: string, started_at: string, message: string|null}|null
      */
-    private function post(NotificationChannel $channel, array $payload): void
+    public static function maintenance(Alert $alert): ?array
+    {
+        $window = $alert->maintenance();
+
+        return $window === null ? null : ['id' => $window->uuid, 'started_at' => $window->starts_at->toIso8601String(), 'message' => $window->message];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  Alert|null  $alert  the alert it carries, for its maintenance object; none on a test
+     */
+    private function post(NotificationChannel $channel, array $payload, ?Alert $alert = null): void
     {
         $url = (string) ($channel->config['url'] ?? '');
 
-        $body = (string) json_encode(['version' => self::VERSION, 'sent_at' => now()->toIso8601String(), ...$payload], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $body = (string) json_encode([
+            'version' => self::VERSION,
+            'sent_at' => now()->toIso8601String(),
+            ...$payload,
+            ...($alert !== null ? ['maintenance' => self::maintenance($alert)] : []),
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $timestamp = (string) now()->getTimestamp();
 
         // Checked again on every send, and pinned: the host may resolve somewhere else by now.

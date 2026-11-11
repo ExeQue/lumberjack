@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Data;
 
 use App\Domains\Alerts\Contracts\Alert;
+use App\Domains\Alerts\Data\Concerns\LabelsMaintenance;
 use App\Domains\Projects\Models\Project;
 use Override;
 
@@ -13,6 +14,8 @@ use Override;
  */
 final readonly class ReleaseAlert implements Alert
 {
+    use LabelsMaintenance;
+
     public function __construct(
         public Project $project,
         public string $release,
@@ -31,7 +34,7 @@ final readonly class ReleaseAlert implements Alert
     #[Override]
     public function headline(): string
     {
-        return (string) __('alerts.messages.new_release', ['project' => $this->project->name]);
+        return $this->marked((string) __('alerts.messages.new_release', ['project' => $this->project->name]));
     }
 
     #[Override]
@@ -57,5 +60,11 @@ final readonly class ReleaseAlert implements Alert
     public function urgency(): string
     {
         return 'low';
+    }
+
+    #[Override]
+    protected function maintenanceScope(): array
+    {
+        return [$this->project->id, $this->environment];
     }
 }

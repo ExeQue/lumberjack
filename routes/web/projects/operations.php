@@ -7,11 +7,12 @@ use App\Domains\Commands\Http\Controllers\CommandController;
 use App\Domains\Health\Http\Controllers\HealthController;
 use App\Domains\Jobs\Http\Controllers\JobController;
 use App\Domains\Logs\Http\Controllers\LogController;
+use App\Domains\Maintenance\Http\Controllers\MaintenanceWindowController;
 use App\Domains\Schedule\Http\Controllers\ScheduleController;
 use Illuminate\Support\Facades\Route;
 
 /*
- * A project's jobs, queue alert, schedule, commands, logs and health checks. Loaded inside the project group.
+ * A project's jobs, queue alert, schedule, commands, logs, health checks and maintenance windows. Loaded inside the project group.
  */
 
 Route::get('jobs', JobController::class)->name('jobs.index');
@@ -25,3 +26,6 @@ Route::post('health', [HealthController::class, 'store'])->name('health.store');
 Route::put('health/{healthCheck}', [HealthController::class, 'update'])->name('health.update');
 Route::put('health/{healthCheck}/archive', [HealthController::class, 'archive'])->name('health.archive');
 Route::delete('health/{healthCheck}', [HealthController::class, 'destroy'])->name('health.destroy');
+Route::post('health/maintenance', [MaintenanceWindowController::class, 'store'])->name('maintenance.store');
+Route::put('health/maintenance/{maintenanceWindow}', [MaintenanceWindowController::class, 'update'])->name('maintenance.update');
+Route::post('health/maintenance/{maintenanceWindow}/end', [MaintenanceWindowController::class, 'end'])->name('maintenance.end');

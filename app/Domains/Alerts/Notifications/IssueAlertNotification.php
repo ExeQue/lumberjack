@@ -6,6 +6,7 @@ namespace App\Domains\Alerts\Notifications;
 
 use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Enums\AlertRuleType;
+use App\Domains\Alerts\Notifications\Concerns\MarksMaintenance;
 use App\Domains\Issues\Actions\DetectEscalationAction;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Shared\Mail\MailCard;
@@ -22,6 +23,7 @@ use Illuminate\Notifications\Notification;
  */
 class IssueAlertNotification extends Notification
 {
+    use MarksMaintenance;
     use SendsMailCards;
 
     /**
@@ -41,7 +43,7 @@ class IssueAlertNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return $this->cardMail($this->card(), ($this->reasons[0] ?? null)?->isPersonal() ?? false);
+        return $this->markMaintenance($this->cardMail($this->card(), ($this->reasons[0] ?? null)?->isPersonal() ?? false), $this->alert);
     }
 
     public function card(): MailCard

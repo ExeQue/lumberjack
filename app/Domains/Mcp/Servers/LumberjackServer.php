@@ -46,6 +46,10 @@ use App\Domains\Mcp\Tools\Issues\TriageInbox;
 use App\Domains\Mcp\Tools\Issues\UnwatchIssue;
 use App\Domains\Mcp\Tools\Issues\UpdateLabel;
 use App\Domains\Mcp\Tools\Issues\WatchIssue;
+use App\Domains\Mcp\Tools\Maintenance\CreateMaintenanceWindow;
+use App\Domains\Mcp\Tools\Maintenance\EndMaintenanceWindow;
+use App\Domains\Mcp\Tools\Maintenance\ListMaintenanceWindows;
+use App\Domains\Mcp\Tools\Maintenance\UpdateMaintenanceWindow;
 use App\Domains\Mcp\Tools\Projects\CreateLogChannel;
 use App\Domains\Mcp\Tools\Projects\DeleteLogChannel;
 use App\Domains\Mcp\Tools\Projects\GetProjectOverview;
@@ -159,6 +163,11 @@ class LumberjackServer extends Server
         RunHealthCheck::class,
         ArchiveHealthCheck::class,
         DeleteHealthCheck::class,
+        // Maintenance windows
+        ListMaintenanceWindows::class,
+        CreateMaintenanceWindow::class,
+        UpdateMaintenanceWindow::class,
+        EndMaintenanceWindow::class,
         // Scheduled tasks
         ListScheduledTasks::class,
         GetScheduledTask::class,

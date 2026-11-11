@@ -12,6 +12,7 @@ use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Label;
 use App\Domains\Logs\Models\LogChannel;
+use App\Domains\Maintenance\Models\MaintenanceWindow;
 use App\Domains\Repositories\Models\ProjectRepository;
 use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Schedule\Models\ScheduledTask;
@@ -44,10 +45,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property list<string>|null $scrub_keys
  * @property string|null $stats_key
  * @property bool $stats_include_titles
+ * @property int $maintenance_expected_minutes how long a reported window without an expected end is expected to take
+ * @property int $maintenance_repeat_minutes how often the overrun alert repeats
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'name', 'slug', 'issue_prefix', 'token_hash', 'token_last_four', 'public_key', 'allowed_origins', 'scrub_keys', 'stats_key', 'stats_include_titles'])]
+#[Fillable(['team_id', 'name', 'slug', 'issue_prefix', 'token_hash', 'token_last_four', 'public_key', 'allowed_origins', 'scrub_keys', 'stats_key', 'stats_include_titles', 'maintenance_expected_minutes', 'maintenance_repeat_minutes'])]
 #[Hidden(['token_hash'])]
 #[UseFactory(ProjectFactory::class)]
 class Project extends Model
@@ -55,6 +58,9 @@ class Project extends Model
     /** @use HasFactory<ProjectFactory> */
     use HasFactory;
     use HasUuids;
+
+    /** The columns' defaults, so a project created in this request knows them too. */
+    protected $attributes = ['maintenance_expected_minutes' => 30, 'maintenance_repeat_minutes' => 30];
 
     /** @return list<string> */
     public function uniqueIds(): array
@@ -112,6 +118,12 @@ class Project extends Model
     public function healthChecks(): HasMany
     {
         return $this->hasMany(HealthCheck::class);
+    }
+
+    /** @return HasMany<MaintenanceWindow, $this> */
+    public function maintenanceWindows(): HasMany
+    {
+        return $this->hasMany(MaintenanceWindow::class);
     }
 
     /** @return HasMany<DataSourceConnection, $this> */

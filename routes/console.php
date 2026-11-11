@@ -11,6 +11,7 @@ use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Issues\Console\Commands\ReturnIgnoredIssuesCommand;
 use App\Domains\Issues\Console\Commands\SendWatchDigestsCommand;
 use App\Domains\Jobs\Console\Commands\MarkStuckJobsCommand;
+use App\Domains\Maintenance\Console\Commands\CheckMaintenanceOverrunsCommand;
 use App\Domains\Projects\Console\Commands\NotifyOfflineAgentsCommand;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Retention\Console\Commands\PruneTelemetryCommand;
@@ -22,6 +23,7 @@ Schedule::command(MarkMissedScheduledTasksCommand::class)->everyMinute()->withou
 Schedule::command(ReturnIgnoredIssuesCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(SendWatchDigestsCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(CheckQueueBacklogsCommand::class)->everyMinute()->withoutOverlapping();
+Schedule::command(CheckMaintenanceOverrunsCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(RunHealthChecksCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(FetchDataSourcesCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(NotifyOfflineAgentsCommand::class)->everyMinute()->withoutOverlapping();

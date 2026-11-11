@@ -37,7 +37,7 @@ class PushoverDriver implements ChannelDriver
         if ($alert instanceof CustomAlertMessage) {
             // Pushover takes one link; the others go in the text.
             $this->post($channel, array_filter([
-                'title' => mb_substr($alert->alert->title, 0, 250),
+                'title' => mb_substr($alert->headline(), 0, 250),
                 'message' => mb_substr(implode("\n", [...$alert->plainLines(), ...array_map(fn (array $link): string => $link['label'].': '.$link['url'], array_slice($alert->links(), 1))]), 0, 1024),
                 'url' => $alert->links()[0]['url'] ?? $alert->titleUrl(),
                 'url_title' => $alert->links()[0]['label'] ?? null,

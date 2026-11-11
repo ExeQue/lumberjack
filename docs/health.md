@@ -170,7 +170,9 @@ long the check took. Restore an archived check from the **Archived** list.
 **Uptime** is the share of the period, picked at the top of the page, in which the
 check was not down, counted from when the check was added. Degraded time counts as up;
 recovering time counts as part of the outage. The strip on each row has one segment per
-part of the period, colored by the worst status in it.
+part of the period, colored by the worst status in it. Down time inside a
+[maintenance window](#maintenance-windows) does not count, up to the window's expected
+end; the outage is still listed, marked **Maintenance**.
 
 ### On the overview and sidebar
 
@@ -195,7 +197,52 @@ recovered alerts are still sent.
 
 Each step for the worse is sent at once: ok to degraded, and degraded to down. Going
 from recovering back to degraded or down is not a new alert. Muted and archived checks
-send no alerts. See [Alerts](./alerts#webhooks) for the webhook body.
+send no alerts. See [Alerts](./alerts#webhooks) for the webhook body. During a
+[maintenance window](#maintenance-windows) checks are treated as muted.
+
+## Maintenance windows
+
+A maintenance window tells Lumberjack that an environment of the project is down on
+purpose, for a deploy or planned work. A window covers one environment, or every
+environment of the project when it has none. It comes from one of two places:
+
+- **Planned**: **Plan maintenance** on the Health page, with the environment, start,
+  planned end and an optional message, or over [MCP](./mcp). Planned windows can be
+  changed and ended early there too. Planning one needs the right to change the project.
+- **Reported by the app**: a `maintenance` event with `state` `start` or `end`, see
+  [Ingest](./api#maintenance-events). The Laravel library sends them on `artisan down`
+  and `artisan up` with no setup.
+
+Only an `end` event or **End now** closes a window. Requests, heartbeats and good
+results never do, and a window never closes on its own.
+
+While a window is open:
+
+- Health checks of its environment, and checks without an environment, are treated as
+  muted: no degraded, down or recovered alerts. On the first result after the window
+  ends they alert as usual, so a check still down then sends its down alert.
+- Queue backlogs of the project send nothing: queues report no environment, so any
+  window of the project mutes them.
+- Every other alert is still sent, marked as sent during maintenance, see
+  [Alerts](./alerts#maintenance).
+- Errors that come in are flagged **Under maintenance**, see [Issues](./issues#the-issues-list).
+- Down time does not count against uptime or the SLO widget, up to the expected end.
+
+### Expected end and overrun
+
+Each window has an expected end: a planned window's end, or for one the app reports,
+its `expected_minutes` or `expected_until`, else the project's **Default maintenance
+length** (30 minutes, in the project's [settings](./projects#settings)).
+
+Once the expected end passes and the window is still open, it shows as **Overrun** and
+the **Maintenance overrun** [alert rule](./alerts#rules) fires at once, with no grace
+period. It repeats every **Repeat overrun alert** minutes (30 by default, in the
+project's settings) until the window ends. Down time after the expected end counts
+against uptime again. When the window ends after an overrun alert, one more message
+says how long it ran over.
+
+The windows show as bands on the project's charts, on the Releases page and in the
+health history, and screens show **In maintenance** on the health and overview widgets.
 
 ## Reading states from the app
 

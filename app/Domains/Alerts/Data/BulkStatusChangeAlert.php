@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Data;
 
 use App\Domains\Alerts\Contracts\Alert;
+use App\Domains\Alerts\Data\Concerns\LabelsMaintenance;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Projects\Models\Project;
+use Override;
 
 /**
  * Someone resolved or ignored several issues at once: one message for all of them.
  */
 final readonly class BulkStatusChangeAlert implements Alert
 {
+    use LabelsMaintenance;
+
     /** Issues named in the message; the rest are counted. Webhooks get them all. */
     public const int LISTED = 10;
 
@@ -38,7 +42,7 @@ final readonly class BulkStatusChangeAlert implements Alert
 
     public function headline(): string
     {
-        return trans_choice('alerts.messages.bulk_status.'.$this->status->value, count($this->issues), ['actor' => $this->actor, 'project' => $this->project->name]);
+        return $this->marked(trans_choice('alerts.messages.bulk_status.'.$this->status->value, count($this->issues), ['actor' => $this->actor, 'project' => $this->project->name]));
     }
 
     public function summary(): array
@@ -69,5 +73,11 @@ final readonly class BulkStatusChangeAlert implements Alert
     public function urgency(): string
     {
         return 'low';
+    }
+
+    #[Override]
+    protected function maintenanceScope(): array
+    {
+        return [$this->project->id, null];
     }
 }

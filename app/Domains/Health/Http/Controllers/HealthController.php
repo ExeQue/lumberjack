@@ -16,6 +16,7 @@ use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Models\HealthCheckResult;
 use App\Domains\Health\Models\HealthOutage;
 use App\Domains\Health\Queries\HealthChecksQuery;
+use App\Domains\Maintenance\Models\MaintenanceWindow;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Shared\Enums\Period;
@@ -59,14 +60,7 @@ class HealthController
                     'metrics' => $r->metrics ?? [],
                     'checked_at' => $r->checked_at->toIso8601String(),
                 ])->all(),
-                'outages' => $selected->outages()->latest('started_at')->limit(self::RECENT_OUTAGES)->get()->map(fn (HealthOutage $o): array => [
-                    'id' => $o->id,
-                    'status' => $o->status->value,
-                    'first_message' => $o->first_message,
-                    'started_at' => $o->started_at->toIso8601String(),
-                    'ended_at' => $o->ended_at?->toIso8601String(),
-                    'duration_s' => (int) $o->started_at->diffInSeconds($o->ended_at ?? now()),
-                ])->all(),
+                'outages' => $this->outages($selected),
                 'latency_series' => TimeSeries::count(DB::table('health_check_results')->where('health_check_id', $selected->id), $period, 'checked_at', 'AVG(duration_us)'),
             ],
             'types' => array_map(fn (HealthCheckType $t): string => $t->value, HealthCheckType::cases()),
@@ -80,6 +74,28 @@ class HealthController
                     'periods' => $s->dataSourceConnection !== null ? array_map(fn (Period $p): string => $p->value, $s->dataSourceConnection->kind->periods()) : null,
                 ])->all(),
         ]);
+    }
+
+    /**
+     * The check's latest outages, each marked when a maintenance window covering the check
+     * excused it: listed still, but left out of uptime up to the window's expected end.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function outages(HealthCheck $check): array
+    {
+        $outages = $check->outages()->latest('started_at')->limit(self::RECENT_OUTAGES)->get();
+        $windows = $outages->isEmpty() ? collect() : HealthChecksQuery::windowsOf($check, $check->project->maintenanceWindows()->whereOverlaps($outages->min('started_at'))->get());
+
+        return array_values($outages->map(fn (HealthOutage $o): array => [
+            'id' => $o->id,
+            'status' => $o->status->value,
+            'first_message' => $o->first_message,
+            'started_at' => $o->started_at->toIso8601String(),
+            'ended_at' => $o->ended_at?->toIso8601String(),
+            'duration_s' => (int) $o->started_at->diffInSeconds($o->ended_at ?? now()),
+            'maintenance' => $windows->contains(fn (MaintenanceWindow $w): bool => $w->starts_at->lessThanOrEqualTo($o->ended_at ?? now()) && $w->excusedUntil()->greaterThanOrEqualTo($o->started_at)),
+        ])->all());
     }
 
     public function store(SaveHealthCheckRequest $request, Project $project, SaveHealthCheckAction $action): RedirectResponse

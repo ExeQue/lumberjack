@@ -9,8 +9,10 @@ use App\Domains\Health\Enums\HealthStatus;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Models\HealthCheckHost;
 use App\Domains\Health\Models\HealthOutage;
+use App\Domains\Maintenance\Models\MaintenanceWindow;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Enums\Period;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -53,8 +55,9 @@ class HealthChecksQuery
             ->where(fn ($q) => $q->whereNull('ended_at')->orWhere('ended_at', '>=', $period->since()))
             ->get()
             ->groupBy('health_check_id');
+        $windows = MaintenanceWindow::query()->where('project_id', $project->id)->whereOverlaps($period->since())->get();
 
-        return array_values($checks->map(fn (HealthCheck $check): array => $this->row($check, $period, $outages->get($check->id, collect())))->all());
+        return array_values($checks->map(fn (HealthCheck $check): array => $this->row($check, $period, $outages->get($check->id, collect()), self::windowsOf($check, $windows)))->all());
     }
 
     /**
@@ -180,10 +183,23 @@ class HealthChecksQuery
     }
 
     /**
+     * The windows that cover a check: those of its environment and those of the whole
+     * project; a check without an environment is covered by all of them.
+     *
+     * @param  Collection<int, MaintenanceWindow>  $windows
+     * @return Collection<int, MaintenanceWindow>
+     */
+    public static function windowsOf(HealthCheck $check, Collection $windows): Collection
+    {
+        return $windows->filter(fn (MaintenanceWindow $w): bool => $check->environment === '' || $w->environment === '' || $w->environment === $check->environment)->values();
+    }
+
+    /**
      * @param  Collection<int, HealthOutage>  $outages
+     * @param  Collection<int, MaintenanceWindow>  $windows
      * @return array<string, mixed>
      */
-    private function row(HealthCheck $check, Period $period, Collection $outages): array
+    private function row(HealthCheck $check, Period $period, Collection $outages, Collection $windows): array
     {
         $latest = $check->hosts->sortByDesc('last_result_at')->first();
 
@@ -211,8 +227,8 @@ class HealthChecksQuery
             'last_message' => $latest?->last_message,
             'duration_us' => $latest?->last_duration_us,
             'metrics' => $latest->last_metrics ?? [],
-            'uptime' => $check->isStale() ? null : $this->uptime($check, $period, $outages),
-            'uptime_live' => $check->isStale() ? null : $this->uptimeBasis($check, $period, $outages),
+            'uptime' => $check->isStale() ? null : $this->uptime($check, $period, $outages, $windows),
+            'uptime_live' => $check->isStale() ? null : $this->uptimeBasis($check, $period, $outages, $windows),
             'strip' => $this->strip($check, $period, $outages),
             'hosts' => $check->isReported() ? $check->hosts->map(fn (HealthCheckHost $h): array => [
                 'host' => $h->host !== '' ? $h->host : null,
@@ -229,12 +245,15 @@ class HealthChecksQuery
     /**
      * The share of the period the check was not down: degraded counts as up, as on a
      * status page. Counted from when the check existed; an outage of a check that went
-     * quiet ends at its last result.
+     * quiet ends at its last result. Down time inside a maintenance window, up to its
+     * expected end, is left out; an overrun counts again.
      *
      * @param  Collection<int, HealthOutage>  $outages
+     * @param  Collection<int, MaintenanceWindow>|null  $windows  those covering the check
      */
-    public function uptime(HealthCheck $check, Period $period, Collection $outages): ?float
+    public function uptime(HealthCheck $check, Period $period, Collection $outages, ?Collection $windows = null): ?float
     {
+        $excused = self::excused($windows);
         $now = now()->toImmutable();
         $start = $period->since()->max($check->created_at ?? $period->since());
         $total = $start->diffInSeconds($now);
@@ -248,7 +267,7 @@ class HealthChecksQuery
         foreach ($outages->where('status', HealthStatus::Down) as $outage) {
             $from = $outage->started_at->max($start);
             $to = ($outage->ended_at ?? $check->last_result_at ?? $now)->min($now);
-            $down += max(0, $from->diffInSeconds($to, false));
+            $down += max(0, $from->diffInSeconds($to, false) - self::overlap($from, $to, $excused));
         }
 
         return round(max(0, 1 - $down / $total), 5);
@@ -259,10 +278,12 @@ class HealthChecksQuery
      * start, the down time of outages that ended, and since when it is down now.
      *
      * @param  Collection<int, HealthOutage>  $outages
+     * @param  Collection<int, MaintenanceWindow>|null  $windows  those covering the check
      * @return array{from: string, down_s: float, down_since: ?string}
      */
-    public function uptimeBasis(HealthCheck $check, Period $period, Collection $outages): array
+    public function uptimeBasis(HealthCheck $check, Period $period, Collection $outages, ?Collection $windows = null): array
     {
+        $excused = self::excused($windows);
         $now = now()->toImmutable();
         $start = $period->since()->max($check->created_at ?? $period->since());
         $down = 0.0;
@@ -273,14 +294,61 @@ class HealthChecksQuery
 
             if ($outage->ended_at === null) {
                 $downSince = $from;
+                // The page counts from down_since on; the excused part so far comes off here.
+                $down -= self::overlap($from, $now, $excused);
 
                 continue;
             }
 
-            $down += max(0, $from->diffInSeconds($outage->ended_at->min($now), false));
+            $down += max(0, $from->diffInSeconds($outage->ended_at->min($now), false) - self::overlap($from, $outage->ended_at->min($now), $excused));
         }
 
         return ['from' => $start->toIso8601String(), 'down_s' => $down, 'down_since' => $downSince?->toIso8601String()];
+    }
+
+    /**
+     * The stretches of time windows excuse, from their start to their expected end (or
+     * their end when sooner), merged where they overlap, as unix seconds.
+     *
+     * @param  Collection<int, MaintenanceWindow>|null  $windows
+     * @return list<array{int, int}>
+     */
+    private static function excused(?Collection $windows): array
+    {
+        $spans = ($windows ?? collect())
+            ->map(fn (MaintenanceWindow $w): array => [$w->starts_at->getTimestamp(), $w->excusedUntil()->getTimestamp()])
+            ->filter(fn (array $span): bool => $span[1] > $span[0])
+            ->sortBy(fn (array $span): int => $span[0])
+            ->values();
+        $merged = [];
+
+        foreach ($spans as [$from, $to]) {
+            $last = count($merged) - 1;
+
+            if ($last >= 0 && $from <= $merged[$last][1]) {
+                $merged[$last][1] = max($merged[$last][1], $to);
+            } else {
+                $merged[] = [$from, $to];
+            }
+        }
+
+        return $merged;
+    }
+
+    /**
+     * Seconds of $from to $to inside the excused stretches.
+     *
+     * @param  list<array{int, int}>  $excused
+     */
+    private static function overlap(CarbonInterface $from, CarbonInterface $to, array $excused): int
+    {
+        $seconds = 0;
+
+        foreach ($excused as [$start, $end]) {
+            $seconds += max(0, min($end, $to->getTimestamp()) - max($start, $from->getTimestamp()));
+        }
+
+        return $seconds;
     }
 
     /**

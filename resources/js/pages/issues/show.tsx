@@ -888,6 +888,11 @@ export default function IssueShow({
                                     {t('common.flags.returned')}
                                 </Badge>
                             )}
+                            {issue.under_maintenance && (
+                                <Badge tone="info">
+                                    {t('common.flags.maintenance')}
+                                </Badge>
+                            )}
                             {issue.ignore_until && (
                                 <span className="text-xs text-ink-3">
                                     {issue.ignore_until.at
@@ -1304,6 +1309,16 @@ export default function IssueShow({
                                                             true,
                                                         )}
                                                     </time>
+                                                    {o.under_maintenance && (
+                                                        <Badge
+                                                            tone="info"
+                                                            className="ml-2 font-sans"
+                                                        >
+                                                            {t(
+                                                                'common.flags.maintenance',
+                                                            )}
+                                                        </Badge>
+                                                    )}
                                                 </td>
                                                 <td
                                                     className={`${tdClass} font-mono text-xs`}

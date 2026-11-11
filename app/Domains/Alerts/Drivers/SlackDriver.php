@@ -56,11 +56,11 @@ class SlackDriver implements ChannelDriver
     private function sendCustom(NotificationChannel $channel, CustomAlertMessage $message): void
     {
         $alert = $message->alert;
-        $title = self::escape($alert->title);
+        $title = self::escape($message->headline());
         $section = fn (string $text): array => ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_substr($text, 0, 3000)]];
 
         $this->post($channel, [
-            'text' => $alert->title,
+            'text' => $message->headline(),
             'attachments' => [[
                 'color' => $message->level()->hexColor(),
                 'blocks' => [

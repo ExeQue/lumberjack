@@ -71,6 +71,34 @@ return [
     'no_data' => 'No data',
     'ongoing' => 'Ongoing',
     'hosts_label' => 'Hosts',
+    'maintenance' => [
+        'title' => 'Maintenance',
+        'hint' => 'Down time inside a window does not count against uptime, up to its expected end, and alerts stay quiet.',
+        'empty' => 'No maintenance in the last 30 days.',
+        // Button
+        'plan' => 'Plan maintenance',
+        // Button
+        'edit' => 'Edit',
+        // Button
+        'end' => 'End now',
+        'end_question' => 'End this maintenance window now?',
+        'every_environment' => 'Every environment',
+        'columns' => ['environment' => 'Environment', 'message' => 'Message', 'starts' => 'Starts', 'expected_end' => 'Expected end', 'ended' => 'Ended', 'status' => 'Status', 'actions' => 'Actions'],
+        'states' => ['planned' => 'Planned', 'open' => 'In maintenance', 'overrun' => 'Overrun', 'ended' => 'Ended'],
+        'sources' => ['planned' => 'Planned', 'reported' => 'Reported by the app'],
+        'form' => [
+            'plan_title' => 'Plan maintenance',
+            'edit_title' => 'Edit maintenance',
+            'description' => 'Times are in your browser\'s time zone.',
+            'environment' => 'Environment',
+            'starts_at' => 'Starts',
+            'ends_at' => 'Ends',
+            'message' => 'Message',
+            'message_hint' => 'Optional, shown with the window and in alerts.',
+            // Button
+            'save' => 'Save',
+        ],
+    ],
     'detail' => [
         'edit' => 'Edit',
         'archive' => 'Archive',

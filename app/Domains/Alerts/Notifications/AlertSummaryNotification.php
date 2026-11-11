@@ -9,6 +9,7 @@ use App\Domains\Alerts\Data\BulkStatusChangeAlert;
 use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
+use App\Domains\Alerts\Notifications\Concerns\MarksMaintenance;
 use App\Domains\Issues\Enums\IssueStatus;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Shared\Mail\MailCard;
@@ -24,6 +25,7 @@ use Illuminate\Support\HtmlString;
  */
 class AlertSummaryNotification extends Notification
 {
+    use MarksMaintenance;
     use SendsMailCards;
 
     /**
@@ -43,7 +45,7 @@ class AlertSummaryNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return $this->cardMail($this->card(), ($this->reasons[0] ?? null)?->isPersonal() ?? false);
+        return $this->markMaintenance($this->cardMail($this->card(), ($this->reasons[0] ?? null)?->isPersonal() ?? false), $this->alert);
     }
 
     public function card(): MailCard
