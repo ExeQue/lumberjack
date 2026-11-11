@@ -111,7 +111,8 @@ final class SourceMapDecoder
             }
         }
 
-        if ($found === null || ! isset($this->sources[$found[1]])) {
+        // A null source is no file to show; the minified frame stays.
+        if ($found === null || ($this->sources[$found[1]] ?? '') === '') {
             return null;
         }
 

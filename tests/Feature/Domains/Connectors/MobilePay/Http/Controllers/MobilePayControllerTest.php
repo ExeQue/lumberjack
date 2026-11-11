@@ -55,12 +55,22 @@ describe('connecting a ledger', function () {
         expect($this->project->mobilePayConnections()->sole()->mobilePayConfig()->credentials->clientSecret)->toBe('renewed');
     });
 
-    it('connects while another connection of the project cannot be read under this APP_KEY', function () {
+    it('renews a connection of the ledger whose keys cannot be read under this APP_KEY', function () {
         $this->actingAs($this->admin);
         $this->post(route('connectors.mobilepay.connection.store', $this->project), $this->keys);
         DB::table('data_source_connections')->update(['config' => 'not-decryptable']);
 
         $this->post(route('connectors.mobilepay.connection.store', $this->project), $this->keys)->assertSessionHasNoErrors()->assertRedirect();
+
+        expect($this->project->mobilePayConnections()->sole()->mobilePayConfig()->ledgerId)->toBe('302321');
+    });
+
+    it('connects beside another connection that cannot be read and is not this ledger', function () {
+        $this->actingAs($this->admin);
+        $this->post(route('connectors.mobilepay.connection.store', $this->project), $this->keys);
+        DB::table('data_source_connections')->update(['config' => 'not-decryptable', 'name' => 'Another ledger']);
+
+        $this->post(route('connectors.mobilepay.connection.store', $this->project), $this->keys)->assertSessionHasNoErrors();
 
         expect($this->project->mobilePayConnections()->count())->toBe(2);
     });

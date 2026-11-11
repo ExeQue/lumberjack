@@ -32,9 +32,7 @@ final readonly class MaintenanceOverrunAlert implements Alert
      */
     public function overrunMinutes(): int
     {
-        $until = $this->ended ? ($this->window->ended_at ?? now()) : now();
-
-        return max(1, (int) round($this->window->expected_end_at->diffInMinutes($until)));
+        return max(1, (int) round($this->window->expected_end_at->diffInMinutes($this->window->ended_at ?? now())));
     }
 
     #[Override]

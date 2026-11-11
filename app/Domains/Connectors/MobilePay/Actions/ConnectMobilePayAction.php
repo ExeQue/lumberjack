@@ -16,7 +16,8 @@ use Illuminate\Contracts\Encryption\DecryptException;
 /**
  * Connects a project to the Vipps MobilePay ledger a sales unit settles to, once its keys
  * find it. A project reads as many ledgers as it likes, one connection each; connecting a
- * ledger it already reads renews that connection's keys.
+ * ledger it already reads renews that connection's keys, also one whose keys can no longer
+ * be read (another APP_KEY) when its name is the ledger's.
  */
 class ConnectMobilePayAction
 {
@@ -32,7 +33,12 @@ class ConnectMobilePayAction
     {
         $ledger = $this->client->ledger($credentials);
 
-        $connection = $project->mobilePayConnections()->get()->first(fn (DataSourceConnection $c): bool => $this->readsLedger($c, $ledger['ledger_id']))
+        $name = mb_substr($ledger['name'], 0, 200);
+        $connections = $project->mobilePayConnections()->get();
+
+        // One saved under another APP_KEY cannot say its ledger; one of the same name is renewed.
+        $connection = $connections->first(fn (DataSourceConnection $c): bool => $this->readsLedger($c, $ledger['ledger_id']) === true)
+            ?? $connections->first(fn (DataSourceConnection $c): bool => $this->readsLedger($c, $ledger['ledger_id']) === null && $c->name === $name)
             ?? new DataSourceConnection([
                 'project_id' => $project->id,
                 'kind' => ConnectionKind::MobilePay,
@@ -41,7 +47,7 @@ class ConnectMobilePayAction
 
         $connection->fill([
             'url' => MobilePayClient::API,
-            'name' => mb_substr($ledger['name'], 0, 200),
+            'name' => $name,
             'config' => new MobilePayConfig($credentials, $ledger['ledger_id'], $ledger['currency']),
             'timezone' => $timezone,
             'last_error' => null,
@@ -53,15 +59,15 @@ class ConnectMobilePayAction
     }
 
     /**
-     * A connection whose keys were saved under another APP_KEY cannot say its ledger, and
-     * is not taken for this one; connecting again is how such a connection is fixed.
+     * Whether the connection reads the ledger; null when its keys were saved under another
+     * APP_KEY and cannot say.
      */
-    private function readsLedger(DataSourceConnection $connection, string $ledgerId): bool
+    private function readsLedger(DataSourceConnection $connection, string $ledgerId): ?bool
     {
         try {
             return $connection->mobilePayConfig()->ledgerId === $ledgerId;
         } catch (DecryptException) {
-            return false;
+            return null;
         }
     }
 }

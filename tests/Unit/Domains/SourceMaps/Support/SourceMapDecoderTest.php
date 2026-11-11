@@ -34,6 +34,12 @@ it('keeps the place of a null source, which mappings point at by index', functio
     expect($map->lookup(1, 1))->toBe(['source' => 'b.js', 'line' => 1, 'column' => 1, 'name' => 'b', 'content' => 'const b = 1;']);
 });
 
+it('finds nothing in a null source, so the minified frame stays', function () {
+    $map = SourceMapDecoder::decode('{"version": 3, "sources": [null], "mappings": "AAAA"}');
+
+    expect($map->lookup(1, 1))->toBeNull();
+});
+
 it('refuses what is not a version 3 source map', function (string $json) {
     SourceMapDecoder::decode($json);
 })->with([
