@@ -1,6 +1,8 @@
-import { Head, router } from '@inertiajs/react';
-import { ExternalLink } from 'lucide-react';
-import { useState } from 'react';
+import { Deferred, Head, router } from '@inertiajs/react';
+import { ChevronRight, ExternalLink } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
+import Markdown from 'react-markdown';
 import { LogMark } from '@/components/lj/logo';
 import { Relative } from '@/components/lj/relative';
 import { TopBar } from '@/components/lj/top-bar';
@@ -16,6 +18,8 @@ type Props = {
     release_url: string | null;
     changelog_url: string;
     docs_url: string;
+    /** The changelog this build carries, newest first; deferred. */
+    changelog?: Release[];
     /** The last check for a newer release; for system administrators, unless checks are off. */
     update: {
         latest: { version: string; checked_at: string } | null;
@@ -26,6 +30,8 @@ type Props = {
     system: Record<string, string | null> | null;
 };
 
+type Release = { version: string; date: string | null; notes: string };
+
 /** Which Lumberjack this is and where to read about it. */
 export default function About({
     version,
@@ -33,6 +39,7 @@ export default function About({
     release_url: releaseUrl,
     changelog_url: changelogUrl,
     docs_url: docsUrl,
+    changelog,
     update,
     system,
 }: Props) {
@@ -164,6 +171,22 @@ export default function About({
                         </div>
                     )}
                 </Card>
+                <Deferred
+                    data="changelog"
+                    fallback={
+                        <Card>
+                            <div className="flex flex-col gap-3 p-5">
+                                <div className="h-4 w-40 animate-pulse rounded bg-panel-2" />
+                                <div className="h-24 animate-pulse rounded bg-panel-2" />
+                            </div>
+                        </Card>
+                    }
+                >
+                    <ReleaseNotes
+                        releases={changelog ?? []}
+                        running={version.replace(/^v/, '')}
+                    />
+                </Deferred>
                 {system && (
                     <Card>
                         <CardHeader
@@ -186,5 +209,195 @@ export default function About({
                 )}
             </PageBody>
         </>
+    );
+}
+
+/** Releases with a chip before the rest are asked for. */
+const CHIPS = 5;
+
+const anchor = (version: string) =>
+    `release-${version.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+
+/**
+ * The changelog by release: the versions to jump to on top, then each release folded,
+ * the running one and anything unreleased out.
+ */
+function ReleaseNotes({
+    releases,
+    running,
+}: {
+    releases: Release[];
+    running: string;
+}) {
+    const t = useT();
+    const [allChips, setAllChips] = useState(false);
+    // Unreleased and the five newest releases; the rest behind a button.
+    const shownChips = CHIPS + (releases[0]?.version === 'Unreleased' ? 1 : 0);
+    const chips = allChips ? releases : releases.slice(0, shownChips);
+    const hidden = releases.length - chips.length;
+    const nav = useRef<HTMLElement>(null);
+    // Opens the release and brings it up just below the sticky row, however many lines that wraps to.
+    const reveal = useCallback((id: string, smooth: boolean): boolean => {
+        const target = document.getElementById(id);
+
+        if (!(target instanceof HTMLDetailsElement)) {
+            return false;
+        }
+
+        target.open = true;
+        // Below the row and whatever it sticks under (the phone's header).
+        const row = nav.current;
+        const stuckAt = row ? parseFloat(getComputedStyle(row).top) || 0 : 0;
+        target.style.scrollMarginTop = `${stuckAt + (row?.offsetHeight ?? 0) + 8}px`;
+        target.scrollIntoView({
+            behavior:
+                smooth &&
+                !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                    ? 'smooth'
+                    : 'auto',
+            block: 'start',
+        });
+
+        return true;
+    }, []);
+    // The address keeps the anchor, so it can be shared.
+    const jump = (event: MouseEvent, release: Release) => {
+        if (reveal(anchor(release.version), true)) {
+            event.preventDefault();
+            // Into the release, so the keyboard and a screen reader go on from there.
+            document
+                .getElementById(anchor(release.version))
+                ?.querySelector('summary')
+                ?.focus({ preventScroll: true });
+            history.replaceState(
+                history.state,
+                '',
+                `#${anchor(release.version)}`,
+            );
+        }
+    };
+
+    // The button goes once clicked: the first chip it showed takes the focus, not the page.
+    useEffect(() => {
+        if (allChips) {
+            nav.current
+                ?.querySelectorAll<HTMLAnchorElement>('a')
+                [shownChips]?.focus();
+        }
+    }, [allChips, shownChips]);
+
+    // An address with a release's anchor opens it once the changelog is there.
+    useEffect(() => {
+        if (window.location.hash.startsWith('#release-')) {
+            reveal(window.location.hash.slice(1), false);
+        }
+    }, [reveal]);
+    const name = (release: Release) =>
+        release.version === 'Unreleased'
+            ? t('about.notes.unreleased')
+            : release.version;
+
+    return (
+        <Card>
+            <CardHeader
+                title={t('about.notes.title')}
+                description={t('about.notes.description')}
+            />
+            {releases.length === 0 ? (
+                <p className="p-5 text-sm text-ink-3">
+                    {t('about.notes.empty')}
+                </p>
+            ) : (
+                <>
+                    <nav
+                        ref={nav}
+                        aria-label={t('about.notes.jump')}
+                        className="sticky top-12 z-10 flex flex-wrap gap-1.5 border-b border-line bg-panel px-5 py-3 lg:top-0"
+                    >
+                        {chips.map((release) => (
+                            <a
+                                key={release.version}
+                                href={`#${anchor(release.version)}`}
+                                onClick={(event) => jump(event, release)}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-line px-2 py-0.5 font-mono text-xs text-ink-2 hover:border-amber hover:text-ink"
+                            >
+                                {release.version === running && (
+                                    <span
+                                        aria-hidden="true"
+                                        className="size-1.5 rounded-full bg-amber"
+                                    />
+                                )}
+                                {name(release)}
+                                {release.version === running && (
+                                    <span className="sr-only">
+                                        {t('about.notes.running')}
+                                    </span>
+                                )}
+                            </a>
+                        ))}
+                        {hidden > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setAllChips(true)}
+                                className="cursor-pointer rounded-md px-2 py-0.5 text-xs text-amber hover:underline"
+                            >
+                                {t('about.notes.more', { count: hidden })}
+                            </button>
+                        )}
+                    </nav>
+                    <div className="flex flex-col divide-y divide-line">
+                        {releases.map((release) => (
+                            <details
+                                key={release.version}
+                                id={anchor(release.version)}
+                                open={
+                                    release.version === 'Unreleased' ||
+                                    release.version === running
+                                }
+                                className="group"
+                            >
+                                <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-3 hover:bg-panel-2 [&::-webkit-details-marker]:hidden">
+                                    <ChevronRight
+                                        className="size-3 text-ink-3 transition-transform group-open:rotate-90"
+                                        aria-hidden="true"
+                                    />
+                                    <span className="font-mono font-medium">
+                                        {name(release)}
+                                    </span>
+                                    {release.version === running && (
+                                        <span className="rounded bg-amber/15 px-1.5 text-xs text-amber">
+                                            {t('about.notes.running')}
+                                        </span>
+                                    )}
+                                    {release.date && (
+                                        <span className="ml-auto font-mono text-xs text-ink-3">
+                                            {release.date}
+                                        </span>
+                                    )}
+                                </summary>
+                                <div className="flex flex-col gap-2 px-5 pb-4 text-sm text-ink-2 [&_code]:rounded [&_code]:bg-panel-2 [&_code]:px-1 [&_code]:font-mono [&_code]:text-xs [&_h3]:mt-2 [&_h3]:text-xs [&_h3]:font-medium [&_h3]:tracking-wide [&_h3]:text-ink-3 [&_h3]:uppercase [&_li]:ml-4 [&_li]:list-disc [&_strong]:text-ink [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-1">
+                                    <Markdown
+                                        components={{
+                                            a: ({ href, children }) => (
+                                                <a
+                                                    href={href}
+                                                    className="text-amber hover:underline"
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                >
+                                                    {children}
+                                                </a>
+                                            ),
+                                        }}
+                                    >
+                                        {release.notes}
+                                    </Markdown>
+                                </div>
+                            </details>
+                        ))}
+                    </div>
+                </>
+            )}
+        </Card>
     );
 }

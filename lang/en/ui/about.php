@@ -8,6 +8,16 @@ return [
     'revision' => 'Built from :revision',
     'release_notes' => 'Release notes',
     'changelog' => 'Changelog',
+    'notes' => [
+        'title' => 'What\'s new',
+        'description' => 'The changelog this version was built with, newest first.',
+        'jump' => 'Releases',
+        'unreleased' => 'Unreleased',
+        'running' => 'running',
+        // A button after the release chips.
+        'more' => 'Show :count more',
+        'empty' => 'This build has no changelog.',
+    ],
     'docs' => 'Documentation',
     'update' => [
         'current' => 'You are on the latest release.',

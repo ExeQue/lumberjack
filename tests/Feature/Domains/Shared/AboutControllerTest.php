@@ -23,6 +23,13 @@ describe('the about page', function () {
                 ->where('system', null));
     });
 
+    it('loads the changelog the build carries after the page', function () {
+        $this->actingAs(User::factory()->inTeam()->create())->get(route('about'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->missing('changelog')
+                ->loadDeferredProps(fn (Assert $reload) => $reload->where('changelog.0.version', fn (string $version): bool => $version !== '')));
+    });
+
     it('links no release notes for a build between releases', function () {
         config(['lumberjack.version' => 'v0.1.4-298-g9885421']);
 

@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- **About** shows the changelog the install was built with, by release, with a sticky row of versions to jump to.
+
 ### Changed
 
 - A grouped sidebar entry folds its pages out from a chevron beside it, not on hover, so the sidebar no longer changes height under the mouse.

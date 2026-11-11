@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Shared\Http\Controllers;
 
 use App\Domains\Shared\Support\AppVersion;
+use App\Domains\Shared\Support\Changelog;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,7 @@ class AboutController
             'release_url' => AppVersion::isRelease() ? AppVersion::releaseUrl($version) : null,
             'changelog_url' => 'https://github.com/ExeQue/lumberjack/blob/main/CHANGELOG.md',
             'docs_url' => config('lumberjack.docs_url'),
+            'changelog' => Inertia::defer(fn (): array => Changelog::releases()),
             'update' => $request->user()?->isAdmin() && config('lumberjack.update_check') ? [
                 'latest' => $latest,
                 'url' => $latest !== null ? AppVersion::releaseUrl($latest['version']) : null,

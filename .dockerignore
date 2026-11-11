@@ -23,4 +23,6 @@ Dockerfile
 .claude
 .agents
 *.md
+# The About page shows it.
+!CHANGELOG.md
 .vitepress
