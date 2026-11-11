@@ -23,6 +23,7 @@ import {
     tableClass,
     tdClass,
     thClass,
+    TimeBars,
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
 import { PageBody } from '@/layouts/lumberjack-layout';
@@ -63,6 +64,42 @@ type PullRequest = {
     created_at: string | null;
 };
 
+type Commit = {
+    sha: string;
+    message: string;
+    author: string;
+    url: string;
+    committed_at: string;
+};
+
+type Commits = {
+    count: { current: number; previous: number };
+    authors: number;
+    series: { t: string; commits: number }[];
+    contributors: { author: string; commits: number }[];
+    latest: Commit[];
+    /** Whether the period has more commits than are read. */
+    capped: boolean;
+};
+
+type SecurityKind = {
+    kind: string;
+    label: string;
+    /** Whether the token had the permission when it was connected. */
+    granted: boolean;
+    count: number | null;
+    by_severity: Record<string, number> | null;
+    /** Why there is no count, such as the feature being off. */
+    error: string | null;
+};
+
+type Permission = {
+    key: string;
+    label: string;
+    unlocks: string;
+    granted: boolean;
+};
+
 type Props = {
     project: ProjectHeader;
     filters: { period: Period };
@@ -74,7 +111,11 @@ type Props = {
         open_pull_requests: number;
         waiting_for_review: number;
         open_issues: number;
+        stars: number;
+        forks: number;
+        watchers: number;
         merged: { current: number; previous: number };
+        lead_time_hours: { current: number | null; previous: number | null };
         failed_runs: { current: number; previous: number };
         ci: Run | null;
         latest_release: Release | null;
@@ -82,14 +123,39 @@ type Props = {
     pull_requests: PullRequest[];
     runs: Run[];
     releases: Release[];
+    commits: Commits | null;
+    /** Null when the token does not read issues. */
+    issues: {
+        opened: { current: number; previous: number };
+        closed: { current: number; previous: number };
+        open_bugs: number;
+    } | null;
+    security: SecurityKind[];
+    permissions: Permission[];
 };
 
 const PERIODS: Period[] = ['1h', '24h', '7d', '30d'];
 
-const TABS = ['pull_requests', 'actions', 'releases', 'connection'] as const;
+const TABS = [
+    'pull_requests',
+    'commits',
+    'actions',
+    'releases',
+    'security',
+    'connection',
+] as const;
 
 /** Members see the repository but not where it is connected. */
-const MEMBER_TABS = ['pull_requests', 'actions', 'releases'] as const;
+const MEMBER_TABS = [
+    'pull_requests',
+    'commits',
+    'actions',
+    'releases',
+    'security',
+] as const;
+
+/** Dependabot severities, the worst first. */
+const SEVERITIES = ['critical', 'high', 'medium', 'low'] as const;
 
 type Tab = (typeof TABS)[number];
 
@@ -120,6 +186,10 @@ export default function GitHubIndex({
     pull_requests,
     runs,
     releases,
+    commits,
+    issues,
+    security,
+    permissions,
 }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
@@ -202,7 +272,11 @@ export default function GitHubIndex({
                 ) : (
                     <>
                         {summary && error === null && (
-                            <Summary summary={summary} />
+                            <Summary
+                                summary={summary}
+                                commits={commits}
+                                issues={issues}
+                            />
                         )}
                         <ConnectorTabs<Tab>
                             id="github"
@@ -234,6 +308,18 @@ export default function GitHubIndex({
                         </ConnectorPanel>
                         <ConnectorPanel
                             id="github"
+                            name="commits"
+                            current={tab}
+                        >
+                            {error === null && commits && (
+                                <CommitsPanel
+                                    commits={commits}
+                                    period={filters.period}
+                                />
+                            )}
+                        </ConnectorPanel>
+                        <ConnectorPanel
+                            id="github"
                             name="actions"
                             current={tab}
                         >
@@ -246,6 +332,13 @@ export default function GitHubIndex({
                         >
                             {error === null && <Releases releases={releases} />}
                         </ConnectorPanel>
+                        <ConnectorPanel
+                            id="github"
+                            name="security"
+                            current={tab}
+                        >
+                            {error === null && <Security kinds={security} />}
+                        </ConnectorPanel>
                         {project.can_administer && (
                             <ConnectorPanel
                                 id="github"
@@ -255,6 +348,7 @@ export default function GitHubIndex({
                                 <Connection
                                     project={project.uuid}
                                     connection={connection}
+                                    permissions={permissions}
                                 />
                             </ConnectorPanel>
                         )}
@@ -265,11 +359,20 @@ export default function GitHubIndex({
     );
 }
 
-function Summary({ summary }: { summary: NonNullable<Props['summary']> }) {
+function Summary({
+    summary,
+    commits,
+    issues,
+}: {
+    summary: NonNullable<Props['summary']>;
+    commits: Commits | null;
+    issues: Props['issues'];
+}) {
     const t = useT();
     const trend = useTrend();
     const { ci, latest_release: release } = summary;
     const ciTone = ci ? resultTone(ci.result) : 'neutral';
+    const lead = summary.lead_time_hours;
 
     return (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,160px),1fr))] gap-4">
@@ -289,6 +392,33 @@ function Summary({ summary }: { summary: NonNullable<Props['summary']> }) {
                 note={trend(summary.merged.current, summary.merged.previous)}
             />
             <StatCard
+                label={t('connectors.github.cards.lead_time')}
+                value={
+                    lead.current === null
+                        ? '-'
+                        : t('connectors.github.cards.hours', {
+                              hours: formatNumber(lead.current, 1),
+                          })
+                }
+                note={trend(lead.current, lead.previous)}
+            />
+            {commits && (
+                <>
+                    <StatCard
+                        label={t('connectors.github.cards.commits')}
+                        value={formatNumber(commits.count.current)}
+                        note={trend(
+                            commits.count.current,
+                            commits.count.previous,
+                        )}
+                    />
+                    <StatCard
+                        label={t('connectors.github.cards.authors')}
+                        value={formatNumber(commits.authors)}
+                    />
+                </>
+            )}
+            <StatCard
                 label={t('connectors.github.cards.failed_runs')}
                 value={formatNumber(summary.failed_runs.current)}
                 tone={summary.failed_runs.current > 0 ? 'err' : undefined}
@@ -301,6 +431,32 @@ function Summary({ summary }: { summary: NonNullable<Props['summary']> }) {
                 label={t('connectors.github.cards.open_issues')}
                 value={formatNumber(summary.open_issues)}
             />
+            {issues && (
+                <>
+                    <StatCard
+                        label={t('connectors.github.cards.issues_opened')}
+                        value={formatNumber(issues.opened.current)}
+                        note={trend(
+                            issues.opened.current,
+                            issues.opened.previous,
+                        )}
+                    />
+                    <StatCard
+                        label={t('connectors.github.cards.issues_closed')}
+                        value={formatNumber(issues.closed.current)}
+                        tone="ok"
+                        note={trend(
+                            issues.closed.current,
+                            issues.closed.previous,
+                        )}
+                    />
+                    <StatCard
+                        label={t('connectors.github.cards.open_bugs')}
+                        value={formatNumber(issues.open_bugs)}
+                        tone={issues.open_bugs > 0 ? 'warn' : undefined}
+                    />
+                </>
+            )}
             <StatCard
                 label={
                     ci
@@ -338,7 +494,210 @@ function Summary({ summary }: { summary: NonNullable<Props['summary']> }) {
                         : ''
                 }
             />
+            <StatCard
+                label={t('connectors.github.cards.stars')}
+                value={formatNumber(summary.stars)}
+                note={t('connectors.github.cards.forks_watchers', {
+                    forks: formatNumber(summary.forks),
+                    watchers: formatNumber(summary.watchers),
+                })}
+            />
         </div>
+    );
+}
+
+/** Commits over the period, who made the most, and the latest. */
+function CommitsPanel({
+    commits,
+    period,
+}: {
+    commits: Commits;
+    period: Period;
+}) {
+    const t = useT();
+
+    return (
+        <div className="flex flex-col gap-4">
+            <Card aria-labelledby="github-commits">
+                <CardHeader
+                    id="github-commits"
+                    title={t('connectors.github.commits.title')}
+                    description={
+                        commits.capped
+                            ? `${t('connectors.github.commits.description')} ${t(
+                                  'connectors.github.commits.capped',
+                                  { max: formatNumber(commits.count.current) },
+                              )}`
+                            : t('connectors.github.commits.description')
+                    }
+                />
+                <div className="p-4">
+                    <TimeBars
+                        series={commits.series.map((point) => ({
+                            t: point.t,
+                            v: point.commits,
+                        }))}
+                        period={period}
+                        height={140}
+                        formatValue={(v) => formatNumber(v)}
+                        label={t('connectors.github.commits.summary', {
+                            commits: formatNumber(commits.count.current),
+                            authors: formatNumber(commits.authors),
+                        })}
+                    />
+                </div>
+            </Card>
+            <Card aria-labelledby="github-contributors">
+                <CardHeader
+                    id="github-contributors"
+                    title={t('connectors.github.commits.contributors')}
+                    description={t(
+                        'connectors.github.commits.contributors_description',
+                    )}
+                />
+                {commits.contributors.length === 0 ? (
+                    <EmptyState title={t('connectors.github.commits.empty')} />
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className={tableClass}>
+                            <thead>
+                                <tr>
+                                    <th className={thClass}>
+                                        {t('connectors.github.commits.author')}
+                                    </th>
+                                    <th className={`${thClass} text-right`}>
+                                        {t('connectors.github.commits.count')}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {commits.contributors.map((row) => (
+                                    <tr key={row.author}>
+                                        <td className={`${tdClass} font-mono`}>
+                                            {row.author}
+                                        </td>
+                                        <td
+                                            className={`${tdClass} text-right tabular-nums`}
+                                        >
+                                            {formatNumber(row.commits)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+            <Card aria-labelledby="github-latest-commits">
+                <CardHeader
+                    id="github-latest-commits"
+                    title={t('connectors.github.commits.latest')}
+                    description={t(
+                        'connectors.github.commits.latest_description',
+                    )}
+                />
+                {commits.latest.length === 0 ? (
+                    <EmptyState title={t('connectors.github.commits.empty')} />
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className={tableClass}>
+                            <thead>
+                                <tr>
+                                    <th className={thClass}>
+                                        {t('connectors.github.commits.commit')}
+                                    </th>
+                                    <th className={thClass}>
+                                        {t('connectors.github.commits.author')}
+                                    </th>
+                                    <th className={thClass}>
+                                        {t(
+                                            'connectors.github.commits.committed',
+                                        )}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {commits.latest.map((commit) => (
+                                    <tr key={commit.sha}>
+                                        <td className={tdClass}>
+                                            <External href={commit.url}>
+                                                <span className="font-mono text-ink-3">
+                                                    {commit.sha.slice(0, 7)}
+                                                </span>{' '}
+                                                {commit.message}
+                                            </External>
+                                        </td>
+                                        <td className={`${tdClass} font-mono`}>
+                                            {commit.author}
+                                        </td>
+                                        <td
+                                            className={`${tdClass} whitespace-nowrap`}
+                                        >
+                                            {formatRelative(
+                                                commit.committed_at,
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+        </div>
+    );
+}
+
+/** Open alerts of each security feature, or why there is no count. */
+function Security({ kinds }: { kinds: SecurityKind[] }) {
+    const t = useT();
+
+    return (
+        <Card aria-labelledby="github-security">
+            <CardHeader
+                id="github-security"
+                title={t('connectors.github.security.title')}
+                description={t('connectors.github.security.description')}
+            />
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-4 p-4">
+                {kinds.map((kind) => (
+                    <StatCard
+                        key={kind.kind}
+                        label={t(
+                            `connectors.github.security.kinds.${kind.kind}`,
+                        )}
+                        value={
+                            kind.count === null ? (
+                                <span className="text-base">-</span>
+                            ) : (
+                                formatNumber(kind.count)
+                            )
+                        }
+                        tone={
+                            kind.count !== null && kind.count > 0
+                                ? 'err'
+                                : undefined
+                        }
+                        note={
+                            !kind.granted
+                                ? t(
+                                      'connectors.github.security.no_permission',
+                                      {
+                                          permission: kind.label,
+                                      },
+                                  )
+                                : (kind.error ??
+                                  (kind.by_severity
+                                      ? SEVERITIES.map(
+                                            (severity) =>
+                                                `${t(`connectors.github.security.severities.${severity}`)} ${formatNumber(kind.by_severity?.[severity] ?? 0)}`,
+                                        ).join(', ')
+                                      : ''))
+                        }
+                    />
+                ))}
+            </div>
+        </Card>
     );
 }
 
@@ -606,9 +965,11 @@ function NotConnected({ project }: { project: ProjectHeader }) {
 function Connection({
     project,
     connection,
+    permissions,
 }: {
     project: string;
     connection: NonNullable<Props['connection']>;
+    permissions: Permission[];
 }) {
     const t = useT();
 
@@ -626,6 +987,35 @@ function Connection({
             dialog={(onClose) => (
                 <GitHubConnectDialog project={project} onClose={onClose} />
             )}
-        />
+        >
+            <section aria-labelledby="github-permissions">
+                <h3 id="github-permissions" className="text-sm font-medium">
+                    {t('connectors.github.settings.optional')}
+                </h3>
+                <p className="text-xs text-ink-3">
+                    {t('connectors.github.settings.optional_hint')}
+                </p>
+                <ul className="mt-2 flex flex-col gap-2">
+                    {permissions.map((permission) => (
+                        <li
+                            key={permission.key}
+                            className="flex flex-wrap items-center gap-2 text-sm"
+                        >
+                            <Badge tone={permission.granted ? 'ok' : 'warn'}>
+                                {permission.granted
+                                    ? t('connectors.github.settings.granted')
+                                    : t('connectors.github.settings.missing')}
+                            </Badge>
+                            <span className="font-medium">
+                                {permission.label}
+                            </span>
+                            <span className="text-ink-3">
+                                {permission.unlocks}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            </section>
+        </ConnectionCard>
     );
 }

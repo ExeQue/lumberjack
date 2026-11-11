@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domains\Connectors\GitHub\Queries;
 
 use App\Domains\Connectors\GitHub\Actions\PullGitHubSourceAction;
+use App\Domains\Connectors\GitHub\Data\GitHubConfig;
+use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubRequestFailedException;
 use App\Domains\Connectors\GitHub\Support\GitHubClient;
 use App\Domains\DataSources\Models\DataSourceConnection;
@@ -25,11 +27,11 @@ class GitHubDashboardQuery
     }
 
     /**
-     * The open pull requests and issues as they are now, the pull requests merged and the
-     * runs failed over the period and the period before, the default branch's latest run
-     * and the latest release.
+     * The open pull requests and issues, stars, forks and watchers as they are now, the pull
+     * requests merged, their median lead time and the runs failed over the period and the
+     * period before, the default branch's latest run and the latest release.
      *
-     * @return array{open_pull_requests: int, waiting_for_review: int, open_issues: int, merged: array{current: int, previous: int}, failed_runs: array{current: int, previous: int}, ci: array<string, mixed>|null, latest_release: array<string, mixed>|null}
+     * @return array{open_pull_requests: int, waiting_for_review: int, open_issues: int, stars: int, forks: int, watchers: int, merged: array{current: int, previous: int}, lead_time_hours: array{current: float|null, previous: float|null}, failed_runs: array{current: int, previous: int}, ci: array<string, mixed>|null, latest_release: array<string, mixed>|null}
      *
      * @throws GitHubRequestFailedException
      * @throws DecryptException when the token was saved under another APP_KEY
@@ -44,17 +46,136 @@ class GitHubDashboardQuery
             $from = $period->since();
             $before = $from->subSeconds($to->getTimestamp() - $from->getTimestamp());
             $run = $this->client->defaultBranchRun($credentials, $repository['default_branch']);
+            $merged = $this->client->mergedPullRequests($credentials, $from, $to);
+            $mergedBefore = $this->client->mergedPullRequests($credentials, $before, $from);
 
             return [
                 'open_pull_requests' => $open,
                 'waiting_for_review' => $this->client->waitingForReview($credentials),
                 'open_issues' => max(0, $repository['open_issues_count'] - $open),
-                'merged' => ['current' => $this->client->merged($credentials, $from, $to), 'previous' => $this->client->merged($credentials, $before, $from)],
+                'stars' => $repository['stars'],
+                'forks' => $repository['forks'],
+                'watchers' => $repository['watchers'],
+                'merged' => ['current' => $merged['total'], 'previous' => $mergedBefore['total']],
+                'lead_time_hours' => ['current' => $merged['lead_time_hours'], 'previous' => $mergedBefore['lead_time_hours']],
                 'failed_runs' => ['current' => $this->client->failedRuns($credentials, $from, $to), 'previous' => $this->client->failedRuns($credentials, $before, $from)],
                 'ci' => $run === null ? null : [...$run, 'result_label' => PullGitHubSourceAction::result($run['result'])],
                 'latest_release' => $this->client->latestRelease($credentials),
             ];
         });
+    }
+
+    /**
+     * The default branch's commits over the period: how many against the period before, the
+     * distinct authors, a count per bucket of the period, the authors with the most commits
+     * and the latest commits. One list of the period's commits answers all but the count
+     * before, which is asked on its own.
+     *
+     * @return array{count: array{current: int, previous: int}, authors: int, series: list<array{t: string, commits: int}>, contributors: list<array{author: string, commits: int}>, latest: list<array{sha: string, message: string, author: string, url: string, committed_at: string}>, capped: bool}
+     *
+     * @throws GitHubRequestFailedException
+     * @throws DecryptException
+     */
+    public function commits(DataSourceConnection $connection, Period $period): array
+    {
+        return StatisticsCache::remember('github-commits', $period, [$connection->id, $connection->url], function () use ($connection, $period): array {
+            $credentials = $connection->gitHubCredentials();
+            $branch = $this->client->repository($credentials)['default_branch'];
+            $to = now();
+            $from = $period->since();
+            $before = $from->subSeconds($to->getTimestamp() - $from->getTimestamp());
+            $commits = $this->client->commits($credentials, $branch, $from, $to);
+            $contributors = PullGitHubSourceAction::contributors($commits);
+            $series = PullGitHubSourceAction::perBucket($commits, $from, $to, $period->bucketSeconds(), $connection->timezone);
+
+            return [
+                'count' => ['current' => count($commits), 'previous' => $this->client->commitCount($credentials, $branch, $before, $from)],
+                'authors' => count($contributors),
+                'series' => array_map(fn (int $at, int $count): array => ['t' => gmdate('Y-m-d\TH:i:s\Z', $at), 'commits' => $count], array_keys($series), $series),
+                'contributors' => array_map(fn (string $author, int $count): array => ['author' => $author, 'commits' => $count], array_keys($top = array_slice($contributors, 0, PullGitHubSourceAction::LIST_ROWS, true)), $top),
+                'latest' => array_slice($commits, 0, GitHubClient::ROWS),
+                'capped' => count($commits) >= GitHubClient::MAX_PAGES * GitHubClient::PER_PAGE,
+            ];
+        });
+    }
+
+    /**
+     * Issues opened and closed over the period against the period before, and the open bugs;
+     * null when the token does not read issues.
+     *
+     * @return array{opened: array{current: int, previous: int}, closed: array{current: int, previous: int}, open_bugs: int}|null
+     *
+     * @throws GitHubRequestFailedException
+     * @throws DecryptException
+     */
+    public function issues(DataSourceConnection $connection, Period $period): ?array
+    {
+        if (! in_array(GitHubPermission::Issues, GitHubConfig::grantedBy($connection->config), true)) {
+            return null;
+        }
+
+        return StatisticsCache::remember('github-issues', $period, [$connection->id, $connection->url], function () use ($connection, $period): array {
+            $credentials = $connection->gitHubCredentials();
+            $to = now();
+            $from = $period->since();
+            $before = $from->subSeconds($to->getTimestamp() - $from->getTimestamp());
+
+            return [
+                'opened' => ['current' => $this->client->issues($credentials, 'created', $from, $to), 'previous' => $this->client->issues($credentials, 'created', $before, $from)],
+                'closed' => ['current' => $this->client->issues($credentials, 'closed', $from, $to), 'previous' => $this->client->issues($credentials, 'closed', $before, $from)],
+                'open_bugs' => $this->client->openBugs($credentials),
+            ];
+        });
+    }
+
+    /**
+     * The open alerts of each security feature the token reads: a count, Dependabot's also
+     * by severity, or why there is none, so a feature turned off does not fail the page.
+     *
+     * @return list<array{kind: string, label: string, granted: bool, count: int|null, by_severity: array<string, int>|null, error: string|null}>
+     *
+     * @throws DecryptException
+     */
+    public function security(DataSourceConnection $connection): array
+    {
+        return StatisticsCache::remember('github-security', Period::Day, [$connection->id, $connection->url, ...array_map(fn (GitHubPermission $p): string => $p->value, GitHubConfig::grantedBy($connection->config))], function () use ($connection): array {
+            $credentials = $connection->gitHubCredentials();
+            $granted = GitHubConfig::grantedBy($connection->config);
+            $kinds = [];
+
+            foreach ([GitHubPermission::DependabotAlerts, GitHubPermission::CodeScanningAlerts, GitHubPermission::SecretScanningAlerts] as $kind) {
+                $row = ['kind' => $kind->value, 'label' => $kind->label(), 'granted' => in_array($kind, $granted, true), 'count' => null, 'by_severity' => null, 'error' => null];
+
+                if ($row['granted']) {
+                    try {
+                        $alerts = $this->client->openAlerts($credentials, $kind);
+                        $row['count'] = count($alerts);
+                        $row['by_severity'] = $kind === GitHubPermission::DependabotAlerts ? GitHubClient::bySeverity($alerts) : null;
+                    } catch (GitHubRequestFailedException $e) {
+                        $row['error'] = $e->getMessage();
+                    }
+                }
+
+                $kinds[] = $row;
+            }
+
+            return $kinds;
+        });
+    }
+
+    /**
+     * Each optional permission, whether the token had it when last connected, and what it adds.
+     *
+     * @return list<array{key: string, label: string, unlocks: string, granted: bool}>
+     */
+    public function permissions(DataSourceConnection $connection): array
+    {
+        return array_map(fn (GitHubPermission $permission): array => [
+            'key' => $permission->value,
+            'label' => $permission->label(),
+            'unlocks' => $permission->unlocks(),
+            'granted' => in_array($permission, GitHubConfig::grantedBy($connection->config), true),
+        ], GitHubPermission::cases());
     }
 
     /**

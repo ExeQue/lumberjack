@@ -30,6 +30,21 @@ return [
     'github' => [
         // Flash message after connecting.
         'connected' => 'GitHub connected: :name. Its sources show up under Data sources within a minute.',
+        'connected_missing' => 'GitHub connected: :name. Its sources show up under Data sources within a minute. The token cannot read :permissions, so their sources are left out; the Connection tab says what they add.',
+
+        // The optional read permissions a token may have, as GitHub's token form names them, and what each adds.
+        'permissions' => [
+            'issues' => 'Issues',
+            'vulnerability_alerts' => 'Dependabot alerts',
+            'security_events' => 'Code scanning alerts',
+            'secret_scanning_alerts' => 'Secret scanning alerts',
+            'unlocks' => [
+                'issues' => 'Issues opened and closed, and open bugs.',
+                'vulnerability_alerts' => 'Open Dependabot alerts, by severity.',
+                'security_events' => 'Open code scanning alerts.',
+                'secret_scanning_alerts' => 'Open secret scanning alerts.',
+            ],
+        ],
 
         // The data sources a GitHub repository offers screens.
         'sources' => [
@@ -40,7 +55,35 @@ return [
             'open_issues' => 'Open issues',
             'ci_status' => 'CI on the default branch',
             'latest_release' => 'Latest release',
+            'commits' => 'Commits',
+            'commits_series' => 'Commits over time',
+            'authors' => 'Commit authors',
+            'latest_commits' => 'Latest commits',
+            'top_contributors' => 'Top contributors',
+            'pull_request_list' => 'Newest open pull requests',
+            'lead_time' => 'Pull request lead time (hours)',
+            'stars' => 'Stars',
+            'forks' => 'Forks',
+            'watchers' => 'Watchers',
+            'issues_opened' => 'Issues opened',
+            'issues_closed' => 'Issues closed',
+            'open_bugs' => 'Open bugs',
+            'dependabot_alerts' => 'Open Dependabot alerts',
+            'dependabot_by_severity' => 'Dependabot alerts by severity',
+            'code_scanning_alerts' => 'Open code scanning alerts',
+            'secret_scanning_alerts' => 'Open secret scanning alerts',
         ],
+
+        // A Dependabot alert's severity, as a row of "Dependabot alerts by severity".
+        'severities' => [
+            'critical' => 'Critical',
+            'high' => 'High',
+            'medium' => 'Medium',
+            'low' => 'Low',
+        ],
+
+        // Marks a draft in the list of open pull requests, after its author: "#11 Try a theme (bo, draft)".
+        'draft' => 'draft',
 
         // What a workflow run came to, or how far it got while it runs.
         'results' => [
@@ -69,6 +112,8 @@ return [
             'status' => 'GitHub answered with HTTP :status.',
             'unreachable' => 'GitHub could not be reached.',
             'unknown_source' => 'GitHub has no such source.',
+            // A security feature the repository has turned off, or a token without its permission; GitHub answers both alike.
+            'unavailable' => ':permission are not enabled for the repository, or the token cannot read them.',
             'secret_unreadable' => 'The GitHub token cannot be decrypted (was APP_KEY changed?). Connect GitHub again.',
         ],
     ],

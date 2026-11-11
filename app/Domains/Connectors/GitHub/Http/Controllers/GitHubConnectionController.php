@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domains\Connectors\GitHub\Http\Controllers;
 
 use App\Domains\Connectors\GitHub\Actions\ConnectGitHubAction;
+use App\Domains\Connectors\GitHub\Data\GitHubConfig;
+use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubExceptionInterface;
 use App\Domains\Connectors\GitHub\Http\Requests\ConnectGitHubRequest;
 use App\Domains\Projects\Models\Project;
@@ -24,7 +26,11 @@ class GitHubConnectionController
             throw ValidationException::withMessages(['token' => $e->getMessage()]);
         }
 
+        $missing = array_filter(GitHubPermission::cases(), fn (GitHubPermission $permission): bool => ! in_array($permission, GitHubConfig::grantedBy($connection->config), true));
+
         return to_route('connectors.github.index', [$project, $connection])
-            ->with('status', __('connectors.github.connected', ['name' => $connection->name]));
+            ->with('status', $missing === []
+                ? __('connectors.github.connected', ['name' => $connection->name])
+                : __('connectors.github.connected_missing', ['name' => $connection->name, 'permissions' => implode(', ', array_map(fn (GitHubPermission $permission): string => $permission->label(), $missing))]));
     }
 }

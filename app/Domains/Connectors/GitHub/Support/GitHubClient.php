@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Domains\Connectors\GitHub\Support;
 
 use App\Domains\Connectors\GitHub\Data\GitHubCredentials;
+use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubRequestFailedException;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -26,11 +28,25 @@ class GitHubClient
     /** Rows a list on the page shows. */
     public const int ROWS = 20;
 
+    /** Items GitHub lists a page at most. */
+    public const int PER_PAGE = 100;
+
+    /**
+     * Pages read for one list, such as a range's commits or the open alerts.
+     *
+     * ponytail: 10 pages, so a list counts at most 1000 commits or alerts; read more pages,
+     * or count elsewhere, if a repository commits more than that in 30 days.
+     */
+    public const int MAX_PAGES = 10;
+
+    /** The severities a Dependabot alert has, the worst first. */
+    public const array SEVERITIES = ['critical', 'high', 'medium', 'low'];
+
     /**
      * The repository as GitHub names it, its default branch, and its open issues (pull
      * requests included, as GitHub counts them). Reading it needs Metadata only.
      *
-     * @return array{full_name: string, default_branch: string, open_issues_count: int}
+     * @return array{full_name: string, default_branch: string, open_issues_count: int, stars: int, forks: int, watchers: int}
      *
      * @throws GitHubRequestFailedException
      */
@@ -46,6 +62,10 @@ class GitHubClient
             'full_name' => $data['full_name'],
             'default_branch' => is_string($data['default_branch'] ?? null) ? $data['default_branch'] : 'main',
             'open_issues_count' => is_int($data['open_issues_count'] ?? null) ? $data['open_issues_count'] : 0,
+            'stars' => is_int($data['stargazers_count'] ?? null) ? $data['stargazers_count'] : 0,
+            'forks' => is_int($data['forks_count'] ?? null) ? $data['forks_count'] : 0,
+            // Who watches it; GitHub's watchers_count is the stars again.
+            'watchers' => is_int($data['subscribers_count'] ?? null) ? $data['subscribers_count'] : 0,
         ];
     }
 
@@ -53,7 +73,7 @@ class GitHubClient
      * Whether the token reads the repository and everything the connector shows: one call
      * for each permission, so a missing one is named.
      *
-     * @return array{full_name: string, default_branch: string, open_issues_count: int}
+     * @return array{full_name: string, default_branch: string, open_issues_count: int, stars: int, forks: int, watchers: int}
      *
      * @throws GitHubRequestFailedException
      */
@@ -70,14 +90,44 @@ class GitHubClient
     }
 
     /**
+     * The optional permissions the token has. A 403 or 404 that does not say the token lacks
+     * the permission is a feature the repository has turned off, such as Dependabot alerts:
+     * the token may read it, and its sources say it is off.
+     *
+     * @return list<GitHubPermission>
+     *
+     * @throws GitHubRequestFailedException when GitHub cannot be reached
+     */
+    public function grantedPermissions(GitHubCredentials $credentials): array
+    {
+        $granted = [];
+
+        foreach (GitHubPermission::cases() as $permission) {
+            try {
+                $response = $this->http($credentials)->get('/repos/'.$credentials->repository.$permission->path(), ['per_page' => 1]);
+            } catch (ConnectionException $e) {
+                throw new GitHubRequestFailedException(__('connectors.github.errors.unreachable'), previous: $e);
+            }
+
+            $refused = in_array($response->status(), [401, 403, 404], true) && ($response->status() === 401 || str_contains((string) $response->json('message'), 'not accessible'));
+
+            if ($response->status() === 200 || (! $refused && in_array($response->status(), [403, 404], true))) {
+                $granted[] = $permission;
+            }
+        }
+
+        return $granted;
+    }
+
+    /**
      * How many issues and pull requests of the repository match a search, such as
      * "is:pr is:open".
      *
      * @throws GitHubRequestFailedException
      */
-    public function count(GitHubCredentials $credentials, string $query): int
+    public function count(GitHubCredentials $credentials, string $query, string $permission = 'Pull requests'): int
     {
-        $data = $this->get($credentials, '/search/issues', ['q' => 'repo:'.$credentials->repository.' '.$query, 'per_page' => 1], 'Pull requests');
+        $data = $this->get($credentials, '/search/issues', ['q' => 'repo:'.$credentials->repository.' '.$query, 'per_page' => 1], $permission);
 
         return is_int($data['total_count'] ?? null) ? $data['total_count'] : 0;
     }
@@ -103,7 +153,96 @@ class GitHubClient
     /** @throws GitHubRequestFailedException */
     public function merged(GitHubCredentials $credentials, CarbonImmutable $from, CarbonImmutable $to): int
     {
-        return $this->count($credentials, 'is:pr is:merged merged:'.self::range($from, $to));
+        return $this->mergedPullRequests($credentials, $from, $to)['total'];
+    }
+
+    /**
+     * Pull requests merged in the range, and the median hours from opened to merged.
+     *
+     * ponytail: the median is of the first 100 the search lists, so one call answers both;
+     * read more pages if a repository merges more than 100 in 30 days.
+     *
+     * @return array{total: int, lead_time_hours: float|null}
+     *
+     * @throws GitHubRequestFailedException
+     */
+    public function mergedPullRequests(GitHubCredentials $credentials, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $data = $this->get($credentials, '/search/issues', ['q' => 'repo:'.$credentials->repository.' is:pr is:merged merged:'.self::range($from, $to), 'per_page' => self::PER_PAGE], 'Pull requests');
+        $hours = [];
+
+        foreach (self::listOf($data['items'] ?? null) as $pull) {
+            $merged = is_array($pull['pull_request'] ?? null) && is_string($pull['pull_request']['merged_at'] ?? null) ? $pull['pull_request']['merged_at'] : ($pull['closed_at'] ?? null);
+
+            if (is_string($pull['created_at'] ?? null) && is_string($merged)) {
+                $hours[] = (CarbonImmutable::parse($merged)->getTimestamp() - CarbonImmutable::parse($pull['created_at'])->getTimestamp()) / 3600;
+            }
+        }
+
+        sort($hours);
+        $middle = intdiv(count($hours), 2);
+        $median = match (true) {
+            $hours === [] => null,
+            count($hours) % 2 === 1 => $hours[$middle],
+            default => ($hours[$middle - 1] + $hours[$middle]) / 2,
+        };
+
+        return [
+            'total' => is_int($data['total_count'] ?? null) ? $data['total_count'] : count($hours),
+            'lead_time_hours' => $median === null ? null : round($median, 1),
+        ];
+    }
+
+    /**
+     * Issues opened, or closed, in the range; pull requests not counted.
+     *
+     * @param  'created'|'closed'  $event
+     *
+     * @throws GitHubRequestFailedException
+     */
+    public function issues(GitHubCredentials $credentials, string $event, CarbonImmutable $from, CarbonImmutable $to): int
+    {
+        return $this->count($credentials, 'is:issue '.$event.':'.self::range($from, $to), GitHubPermission::Issues->label());
+    }
+
+    /** @throws GitHubRequestFailedException */
+    public function openBugs(GitHubCredentials $credentials): int
+    {
+        return $this->count($credentials, 'is:issue is:open label:bug', GitHubPermission::Issues->label());
+    }
+
+    /**
+     * The open alerts of one kind, up to MAX_PAGES pages. A repository with the feature off
+     * says so, as does a token without the permission.
+     *
+     * @return list<array<mixed>>
+     *
+     * @throws GitHubRequestFailedException
+     */
+    public function openAlerts(GitHubCredentials $credentials, GitHubPermission $kind): array
+    {
+        return $this->pages($credentials, '/repos/'.$credentials->repository.$kind->path(), ['state' => 'open', 'per_page' => self::PER_PAGE], $kind->label(), maybeOff: true);
+    }
+
+    /**
+     * Open Dependabot alerts by severity, the worst first, each severity there.
+     *
+     * @param  list<array<mixed>>  $alerts
+     * @return array<string, int>
+     */
+    public static function bySeverity(array $alerts): array
+    {
+        $counts = array_fill_keys(self::SEVERITIES, 0);
+
+        foreach ($alerts as $alert) {
+            $severity = $alert['security_vulnerability']['severity'] ?? $alert['security_advisory']['severity'] ?? null;
+
+            if (is_string($severity) && isset($counts[$severity])) {
+                $counts[$severity]++;
+            }
+        }
+
+        return $counts;
     }
 
     /**
@@ -251,6 +390,84 @@ class GitHubClient
     }
 
     /**
+     * Commits on a branch whose committer date falls in the range, the newest first, up to
+     * MAX_PAGES pages. The author is the GitHub
+     * account, or else the name (or email) written in the commit.
+     *
+     * @return list<array{sha: string, message: string, author: string, url: string, committed_at: string}>
+     *
+     * @throws GitHubRequestFailedException
+     */
+    public function commits(GitHubCredentials $credentials, string $branch, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $commits = [];
+
+        foreach ($this->pages($credentials, '/repos/'.$credentials->repository.'/commits', [...self::commitRange($branch, $from, $to), 'per_page' => self::PER_PAGE], 'Contents') as $commit) {
+            $written = is_array($commit['commit'] ?? null) ? $commit['commit'] : [];
+            $author = is_array($written['author'] ?? null) ? $written['author'] : [];
+            $committedAt = is_array($written['committer'] ?? null) && is_string($written['committer']['date'] ?? null) ? $written['committer']['date'] : null;
+
+            if ($committedAt === null) {
+                continue;
+            }
+
+            $commits[] = [
+                'sha' => self::text($commit['sha'] ?? null),
+                'message' => trim(explode("\n", self::text($written['message'] ?? null), 2)[0]),
+                'author' => match (true) {
+                    is_array($commit['author'] ?? null) && self::text($commit['author']['login'] ?? null) !== '' => self::text($commit['author']['login']),
+                    self::text($author['name'] ?? null) !== '' => self::text($author['name']),
+                    default => self::text($author['email'] ?? null),
+                },
+                'url' => self::text($commit['html_url'] ?? null),
+                'committed_at' => $committedAt,
+            ];
+        }
+
+        return $commits;
+    }
+
+    /**
+     * The items of a list, page by page as GitHub links them, up to MAX_PAGES pages.
+     *
+     * @param  array<string, int|string>  $query
+     * @return list<array<mixed>>
+     *
+     * @throws GitHubRequestFailedException
+     */
+    private function pages(GitHubCredentials $credentials, string $path, array $query, string $permission, bool $maybeOff = false): array
+    {
+        $items = [];
+
+        for ($page = 0; $path !== null && $page < self::MAX_PAGES; $page++) {
+            $response = $this->send($credentials, $path, $query, $permission, $maybeOff);
+            $items = [...$items, ...self::listOf($response->json())];
+            // The next page's address carries the query along.
+            $path = self::link($response, 'next');
+            $query = [];
+        }
+
+        return $items;
+    }
+
+    /**
+     * How many commits on a branch fall in the range, in one call: one commit a page, so the
+     * last page's number is the count. Held to the ceiling commits() reads, so a range
+     * compares with one counted that way.
+     *
+     * @throws GitHubRequestFailedException
+     */
+    public function commitCount(GitHubCredentials $credentials, string $branch, CarbonImmutable $from, CarbonImmutable $to): int
+    {
+        $response = $this->send($credentials, '/repos/'.$credentials->repository.'/commits', [...self::commitRange($branch, $from, $to), 'per_page' => 1], 'Contents');
+        $last = self::link($response, 'last');
+        parse_str((string) parse_url((string) $last, PHP_URL_QUERY), $query);
+        $count = $last === null ? count(self::listOf($response->json())) : (int) ($query['page'] ?? 0);
+
+        return min($count, self::MAX_PAGES * self::PER_PAGE);
+    }
+
+    /**
      * @param  array<string, int|string>  $query
      * @param  string|null  $permission  the token permission the call needs, named when it is refused
      * @return array<mixed>
@@ -259,8 +476,25 @@ class GitHubClient
      */
     private function get(GitHubCredentials $credentials, string $path, array $query = [], ?string $permission = null): array
     {
+        $data = $this->send($credentials, $path, $query, $permission)->json();
+
+        return is_array($data) ? $data : throw new GitHubRequestFailedException(__('connectors.github.errors.status', ['status' => 200]));
+    }
+
+    /**
+     * A 200 from GitHub, or why there is none.
+     *
+     * @param  array<string, int|string>  $query
+     * @param  string|null  $permission  the token permission the call needs, named when it is refused
+     * @param  bool  $maybeOff  whether a 403 or 404 may be a feature the repository has turned off
+     *
+     * @throws GitHubRequestFailedException
+     */
+    private function send(GitHubCredentials $credentials, string $path, array $query = [], ?string $permission = null, bool $maybeOff = false): Response
+    {
         try {
-            $response = $this->http($credentials)->get($path, $query);
+            // A query, even an empty one, replaces the one a next page's address carries.
+            $response = $query === [] ? $this->http($credentials)->get($path) : $this->http($credentials)->get($path, $query);
         } catch (ConnectionException $e) {
             throw new GitHubRequestFailedException(__('connectors.github.errors.unreachable'), previous: $e);
         }
@@ -268,9 +502,7 @@ class GitHubClient
         $status = $response->status();
 
         if ($status === 200) {
-            $data = $response->json();
-
-            return is_array($data) ? $data : throw new GitHubRequestFailedException(__('connectors.github.errors.status', ['status' => $status]));
+            return $response;
         }
 
         // A rate limit is a 403 or 429 that says so in its headers.
@@ -282,6 +514,7 @@ class GitHubClient
         // and a search the token cannot run is a 422.
         throw new GitHubRequestFailedException(match (true) {
             $status === 401 => __('connectors.github.errors.unauthorized'),
+            in_array($status, [403, 404], true) && $maybeOff => __('connectors.github.errors.unavailable', ['permission' => $permission]),
             in_array($status, [403, 404, 422], true) && $permission !== null => __('connectors.github.errors.permission', ['permission' => $permission]),
             in_array($status, [403, 404], true) => __('connectors.github.errors.not_found', ['repository' => $credentials->repository]),
             default => __('connectors.github.errors.status', ['status' => $status]),
@@ -305,6 +538,25 @@ class GitHubClient
     private static function range(CarbonImmutable $from, CarbonImmutable $to): string
     {
         return $from->utc()->format('Y-m-d\TH:i:s\Z').'..'.$to->utc()->format('Y-m-d\TH:i:s\Z');
+    }
+
+    /**
+     * The commits list's filter: a branch, and committer dates in UTC to the second.
+     *
+     * @return array{sha: string, since: string, until: string}
+     */
+    private static function commitRange(string $branch, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        return ['sha' => $branch, 'since' => $from->utc()->format('Y-m-d\TH:i:s\Z'), 'until' => $to->utc()->format('Y-m-d\TH:i:s\Z')];
+    }
+
+    /**
+     * The address of a page the Link header names, such as rel="next"; only one on GitHub's
+     * API, so the token goes nowhere else.
+     */
+    private static function link(Response $response, string $rel): ?string
+    {
+        return preg_match('/<([^>]+)>;\s*rel="'.$rel.'"/', $response->header('Link'), $match) === 1 && str_starts_with($match[1], self::API.'/') ? $match[1] : null;
     }
 
     /**

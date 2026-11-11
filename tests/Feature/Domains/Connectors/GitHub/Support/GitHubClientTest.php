@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Connectors\GitHub\Data\GitHubCredentials;
+use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubRequestFailedException;
 use App\Domains\Connectors\GitHub\Support\GitHubClient;
 use Carbon\CarbonImmutable;
@@ -69,6 +70,99 @@ describe('asking GitHub', function () {
         $this->gitHubAnswers = ['/repos/acme/shop/releases' => [[]]];
 
         expect($this->client->latestRelease($this->credentials))->toMatchArray(['name' => 'v0.1.0', 'published_at' => null]);
+    });
+});
+
+describe('reading commits', function () {
+    beforeEach(function () {
+        $this->from = CarbonImmutable::parse('2026-11-03 12:00:00');
+        $this->to = CarbonImmutable::parse('2026-11-10 12:00:00');
+    });
+
+    it('reads the range\'s commits on the branch page by page as the Link header says', function () {
+        $commits = $this->client->commits($this->credentials, 'main', $this->from, $this->to);
+
+        expect($commits)->toHaveCount(3)
+            ->and(array_column($commits, 'author'))->toBe(['ana', 'Bo', 'ana'])
+            ->and($commits[0])->toMatchArray(['sha' => 'a1', 'message' => 'Add a cart', 'committed_at' => '2026-11-10T09:00:00Z']);
+
+        Http::assertSentCount(2);
+        Http::assertSent(fn (Request $request): bool => str_contains(urldecode($request->url()), '/commits?sha=main&since=2026-11-03T12:00:00Z&until=2026-11-10T12:00:00Z&per_page=100'));
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.github.com/repos/acme/shop/commits?per_page=100&page=2');
+    });
+
+    it('stops at the page ceiling', function () {
+        $this->gitHubAnswers = ['/repos/acme/shop/commits' => [[FakesGitHub::commit('x', 'ana', 'Ana', '2026-11-10T09:00:00Z')], 200, ['Link' => '<https://api.github.com/repos/acme/shop/commits?page=2>; rel="next"']]];
+
+        expect($this->client->commits($this->credentials, 'main', $this->from, $this->to))->toHaveCount(GitHubClient::MAX_PAGES);
+
+        Http::assertSentCount(GitHubClient::MAX_PAGES);
+    });
+
+    it('follows no link away from GitHub\'s API', function () {
+        $this->gitHubAnswers = ['/repos/acme/shop/commits' => [[FakesGitHub::commit('x', 'ana', 'Ana', '2026-11-10T09:00:00Z')], 200, ['Link' => '<https://evil.example/commits?page=2>; rel="next"']]];
+
+        expect($this->client->commits($this->credentials, 'main', $this->from, $this->to))->toHaveCount(1);
+
+        Http::assertSentCount(1);
+    });
+
+    it('counts a range\'s commits from the last page\'s number, held to the ceiling', function (string $link, int $count) {
+        $this->gitHubAnswers = ['/repos/acme/shop/commits' => [[FakesGitHub::commit('x', 'ana', 'Ana', '2026-11-10T09:00:00Z')], 200, $link === '' ? [] : ['Link' => $link]]];
+
+        expect($this->client->commitCount($this->credentials, 'main', $this->from, $this->to))->toBe($count);
+    })->with([
+        'many pages' => ['<https://api.github.com/repos/acme/shop/commits?per_page=1&page=17>; rel="last"', 17],
+        'past the ceiling' => ['<https://api.github.com/repos/acme/shop/commits?per_page=1&page=5000>; rel="last"', 1000],
+        'one page' => ['', 1],
+    ]);
+});
+
+describe('pull requests, issues and the repository', function () {
+    it('takes the median lead time from the merged pull requests', function () {
+        expect($this->client->mergedPullRequests($this->credentials, CarbonImmutable::parse('2026-11-03 12:00:00'), CarbonImmutable::parse('2026-11-10 12:00:00')))
+            ->toBe(['total' => 3, 'lead_time_hours' => 4.0]);
+    });
+
+    it('counts issues opened, closed and open bugs', function () {
+        $from = CarbonImmutable::parse('2026-11-03 12:00:00');
+        $to = CarbonImmutable::parse('2026-11-10 12:00:00');
+
+        expect($this->client->issues($this->credentials, 'created', $from, $to))->toBe(6)
+            ->and($this->client->issues($this->credentials, 'closed', $from, $to))->toBe(2)
+            ->and($this->client->openBugs($this->credentials))->toBe(1);
+
+        Http::assertSent(fn (Request $request): bool => str_contains(urldecode($request->url()), 'q=repo:acme/shop is:issue closed:2026-11-03T12:00:00Z..2026-11-10T12:00:00Z'));
+    });
+
+    it('reads stars, forks and watchers', function () {
+        expect($this->client->repository($this->credentials))->toMatchArray(['stars' => 42, 'forks' => 5, 'watchers' => 3]);
+    });
+});
+
+describe('security alerts and optional permissions', function () {
+    it('reads the open Dependabot alerts by severity', function () {
+        $alerts = $this->client->openAlerts($this->credentials, GitHubPermission::DependabotAlerts);
+
+        expect($alerts)->toHaveCount(3)
+            ->and(GitHubClient::bySeverity($alerts))->toBe(['critical' => 1, 'high' => 2, 'medium' => 0, 'low' => 0]);
+
+        Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/dependabot/alerts?state=open&per_page=100'));
+    });
+
+    it('says a feature is off rather than the repository unreadable', function () {
+        expect(fn () => $this->client->openAlerts($this->credentials, GitHubPermission::CodeScanningAlerts))
+            ->toThrow(GitHubRequestFailedException::class, __('connectors.github.errors.unavailable', ['permission' => 'Code scanning alerts']));
+    });
+
+    it('finds the optional permissions the token has, a feature turned off counting as had', function () {
+        expect($this->client->grantedPermissions($this->credentials))->toBe(GitHubPermission::cases());
+    });
+
+    it('leaves out a permission the token lacks', function () {
+        $this->gitHubAnswers = ['/repos/acme/shop/issues' => [['message' => 'Resource not accessible by personal access token'], 403]];
+
+        expect($this->client->grantedPermissions($this->credentials))->not->toContain(GitHubPermission::Issues)->toHaveCount(3);
     });
 });
 
