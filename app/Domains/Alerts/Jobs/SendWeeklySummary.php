@@ -50,7 +50,7 @@ class SendWeeklySummary implements ShouldQueue
     {
         $projects = Project::query()->whereKey(array_keys($this->rules))->with('team')->orderBy('name')->get();
         // ponytail: a project routed to several channels is summed up once per channel; cache it per run if teams grow many.
-        $summaries = array_values(array_filter($projects->map(fn (Project $project): ?array => $query->get($project))->all()));
+        $summaries = array_values($projects->map(fn (Project $project): ?array => $query->get($project))->filter()->all());
 
         if ($summaries === []) {
             return;

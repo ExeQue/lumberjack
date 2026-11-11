@@ -47,7 +47,7 @@ class SymbolicateFramesAction
 
     private function symbolicate(Project $project, IssueSignal $signal): IssueSignal
     {
-        $paths = array_values(array_unique(array_filter(array_map(fn (array $frame): ?string => $this->bundlePath($frame), $signal->stacktrace))));
+        $paths = collect($signal->stacktrace)->map(fn (array $frame): ?string => $this->bundlePath($frame))->filter()->unique()->values()->all();
 
         if ($paths === []) {
             return $signal;
