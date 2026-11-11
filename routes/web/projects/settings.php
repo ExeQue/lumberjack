@@ -10,6 +10,7 @@ use App\Domains\Projects\Http\Controllers\ProjectSettingsController;
 use App\Domains\Repositories\Http\Controllers\RepositoryController;
 use App\Domains\Retention\Http\Controllers\RetentionController;
 use App\Domains\Search\Http\Controllers\SearchController;
+use App\Domains\SourceMaps\Http\Controllers\SourceMapController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,6 +27,7 @@ Route::put('settings/public-stats', [ProjectSettingsController::class, 'updatePu
 Route::post('settings/public-stats/key', [ProjectSettingsController::class, 'rotateStatsKey'])->name('projects.rotate-stats-key');
 Route::post('settings/log-channels', [LogChannelController::class, 'store'])->name('log-channels.store');
 Route::delete('settings/log-channels/{logChannel}', [LogChannelController::class, 'destroy'])->name('log-channels.destroy');
+Route::delete('settings/source-maps/{sourceMap}', [SourceMapController::class, 'destroy'])->name('source-maps.destroy');
 Route::delete('settings/agents/{agent}', [ProjectAgentController::class, 'destroy'])->name('agents.destroy');
 Route::put('settings/labels/{label}', [LabelController::class, 'update'])->name('labels.update');
 Route::delete('settings/labels/{label}', [LabelController::class, 'destroy'])->name('labels.destroy');

@@ -106,6 +106,8 @@ return [
         'show_vendor' => '{1} Show 1 vendor frame|[0,*] Show :count vendor frames',
         // Button
         'hide_vendor' => '{1} Hide 1 vendor frame|[0,*] Hide :count vendor frames',
+        // Toggle button: browser frames as they were in the bundle, before the source map.
+        'show_minified' => 'Show minified frames',
     ],
     'occurrences' => [
         'request' => 'Request',

@@ -11,6 +11,7 @@ use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Ingest\Data\Envelope;
 use App\Domains\Ingest\Support\SignalFactory;
 use App\Domains\Issues\Actions\RecordOccurrenceAction;
+use App\Domains\Issues\Data\IssueSignal;
 use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Jobs\Actions\RecordJobEventAction;
 use App\Domains\Live\Actions\BroadcastProjectChangeAction;
@@ -25,6 +26,7 @@ use App\Domains\Releases\Actions\RecordReleaseAction;
 use App\Domains\Releases\Actions\RecordReleaseEnvironmentAction;
 use App\Domains\Schedule\Actions\RecordScheduleEventAction;
 use App\Domains\Shared\Support\Scrubber;
+use App\Domains\SourceMaps\Actions\SymbolicateFramesAction;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Throwable;
@@ -57,6 +59,7 @@ class ProcessIngestBatchAction
         private readonly RecordReleaseAction $recordReleaseAction,
         private readonly RecordCustomAlertAction $recordCustomAlertAction,
         private readonly RecordReleaseEnvironmentAction $recordReleaseEnvironmentAction,
+        private readonly SymbolicateFramesAction $symbolicateFramesAction,
     ) {
     }
 
@@ -94,7 +97,7 @@ class ProcessIngestBatchAction
                     'span' => $spans[] = $this->spanRow($project, $event, $envelope),
                     'vital' => $vitals[] = $this->vitalRow($project, $event, $envelope),
                     'request_counts' => $counts[] = $event,
-                    'exception' => $this->recordOccurrenceAction->execute($project, $this->signalFactory->fromException($event, $envelope, $fromBrowser ? IssueSource::Browser : IssueSource::Server, $project->scrub_keys ?? [])),
+                    'exception' => $this->recordOccurrenceAction->execute($project, $this->exceptionSignal($project, $event, $envelope, $fromBrowser)),
                     'job' => $this->recordJobEventAction->execute($project, $event, $envelope),
                     'log' => $this->recordLogLineAction->execute($project, $event, $envelope),
                     'schedule' => $this->recordScheduleEventAction->execute($project, $event, $envelope),
@@ -141,6 +144,18 @@ class ProcessIngestBatchAction
         }
 
         $this->broadcastChanges($project, $touched);
+    }
+
+    /**
+     * A browser's frames go through its source maps first, so the issue groups on the original source.
+     *
+     * @param  array<string, mixed>  $event
+     */
+    private function exceptionSignal(Project $project, array $event, Envelope $envelope, bool $fromBrowser): IssueSignal
+    {
+        $signal = $this->signalFactory->fromException($event, $envelope, $fromBrowser ? IssueSource::Browser : IssueSource::Server, $project->scrub_keys ?? []);
+
+        return $fromBrowser ? $this->symbolicateFramesAction->execute($project, $signal) : $signal;
     }
 
     /**

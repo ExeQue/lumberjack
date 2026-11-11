@@ -31,6 +31,11 @@ class IngestServiceProvider extends ServiceProvider
 
     public const int HEALTH_STATES_PER_MINUTE = 120;
 
+    /**
+     * Source map uploads per minute per project: a build uploads one per bundle, each up to 20 MB.
+     */
+    public const int SOURCEMAPS_PER_MINUTE = 120;
+
     #[Override]
     public function register(): void
     {
@@ -49,6 +54,12 @@ class IngestServiceProvider extends ServiceProvider
             $project = $request->attributes->get('project');
 
             return Limit::perMinute(self::HEALTH_STATES_PER_MINUTE)->by('health-states:'.($project instanceof Project ? $project->id : $request->ip()));
+        });
+
+        RateLimiter::for('sourcemaps', function (Request $request): Limit {
+            $project = $request->attributes->get('project');
+
+            return Limit::perMinute(self::SOURCEMAPS_PER_MINUTE)->by('sourcemaps:'.($project instanceof Project ? $project->id : $request->ip()));
         });
 
         // Per key and IP, and per IP whatever the key: a made-up key per request gets no fresh bucket.

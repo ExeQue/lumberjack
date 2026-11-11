@@ -8,6 +8,7 @@ use App\Domains\Projects\Http\Controllers\ProjectSettingsController;
 use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
+use App\Domains\SourceMaps\Models\SourceMap;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -132,6 +133,24 @@ describe('agents', function () {
 
         expect($this->queriesRunBy($page))->toBe($one);
         $page()->assertInertia(fn (Assert $page) => $page->where('agents.3.metrics.load_series', fn ($series) => max($series->all()) == 0.8));
+    });
+});
+
+describe('source maps', function () {
+    it('lists the project\'s uploads, newest first', function () {
+        ['user' => $user, 'project' => $project] = $this->memberWithProject(TeamRole::Admin);
+        SourceMap::factory()->for($project)->create(['path' => '/build/assets/old.js', 'updated_at' => now()->subDay()]);
+        SourceMap::factory()->for($project)->create(['path' => '/build/assets/new.js', 'release' => 'v2', 'size' => 2048]);
+        SourceMap::factory()->create(['path' => '/build/assets/elsewhere.js']);
+
+        $this->actingAs($user)->get(route('projects.settings', $project))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('source_maps', 2)
+                ->where('source_maps.0.path', '/build/assets/new.js')
+                ->where('source_maps.0.release', 'v2')
+                ->where('source_maps.0.size', 2048)
+                ->where('source_maps.1.path', '/build/assets/old.js')
+                ->where('settings.sourcemaps_url', url('/api/ingest/sourcemaps')));
     });
 });
 

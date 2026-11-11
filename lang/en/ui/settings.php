@@ -33,7 +33,21 @@ return [
         'health' => ['label' => 'Health checks', 'description' => 'A check turns degraded or down, and when it is ok again. Muted checks stay quiet.'],
         'queue_backlogs' => ['label' => 'Queue backlogs', 'description' => 'A queue stays over its thresholds, and when it is back under. Muted queues stay quiet.'],
         'scheduled_tasks' => ['label' => 'Scheduled tasks', 'description' => 'A scheduled task fails or is missed. Told here instead of under new issues.'],
-        'agents' => ['label' => 'Agents', 'description' => 'An agent stops sending its heartbeat.'],
+        'sourcemaps' => [
+        'title' => 'Source maps',
+        'description' => 'Browser errors from a bundle with an uploaded map show the original file, line and source. Upload the maps after each build, with the server token. Kept 90 days, and as long as they belong to one of the last 10 releases.',
+        'upload_url' => 'Upload URL',
+        'empty' => 'No source maps uploaded yet.',
+        'path' => 'Bundle',
+        'release' => 'Release',
+        'size' => 'Size',
+        'uploaded_at' => 'Uploaded',
+        'actions' => 'Actions',
+        // Button
+        'delete' => 'Delete',
+        'delete_question' => 'Delete the map of :path? Its errors from now on stay minified.',
+    ],
+    'agents' => ['label' => 'Agents', 'description' => 'An agent stops sending its heartbeat.'],
         'releases' => ['label' => 'Releases', 'description' => 'A server reports a release for the first time.'],
     ],
     'push' => [

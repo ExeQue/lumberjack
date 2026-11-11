@@ -54,6 +54,13 @@ export type StackFrame = {
     class?: string;
     in_app?: boolean;
     code?: { start: number; lines: string[] };
+    /** The position in the bundle, on a browser frame a source map turned back into the original. */
+    minified?: {
+        file?: string;
+        line?: number;
+        column?: number;
+        function?: string;
+    };
 };
 
 export type Occurrence = {

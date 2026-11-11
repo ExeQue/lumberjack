@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../node_modules/tiny-lib/index.js", "../../resources/js/app.js"],
+  "sourcesContent": ["export function explode(value) {\n    throw new TypeError('Cannot read ' + value);\n}\n", "import { explode } from 'tiny-lib';\n\nfunction saveOrder(order) {\n    const total = order.lines.reduce((sum, line) => sum + line.price, 0);\n\n    if (total > 100) {\n        explode(order.id);\n    }\n\n    return total;\n}\n\nwindow.saveOrder = saveOrder;\n"],
+  "mappings": "MAAO,SAASA,EAAQC,EAAO,CAC3B,MAAM,IAAI,UAAU,eAAiBA,CAAK,CAC9C,CCAA,SAASC,EAAUC,EAAO,CACtB,IAAMC,EAAQD,EAAM,MAAM,OAAO,CAACE,EAAKC,IAASD,EAAMC,EAAK,MAAO,CAAC,EAEnE,OAAIF,EAAQ,KACRG,EAAQJ,EAAM,EAAE,EAGbC,CACX,CAEA,OAAO,UAAYF",
+  "names": ["explode", "value", "saveOrder", "order", "total", "sum", "line", "explode"]
+}

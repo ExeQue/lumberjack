@@ -67,6 +67,8 @@ open at a time; the address names the open section (such as `#agents`).
     - `*` is a wildcard in the key name: `card_*`.
     - A dotted pattern matches the full path: `session.checkout.*`.
 - **Agents:** the servers that send data, see [Agents](#agents).
+- **Source maps:** the uploaded maps, with their release, size and upload time. Delete
+  one here. See [Source maps](#source-maps).
 - **Alerts:** the project's [own channels, and its rules](./alerts#team-rules-and-project-overrides): the team's by default, or customized for the project.
 - **Log channels:** the channels the project's log lines go to, with the lines of the
   last 24 hours and each channel's own [retention](#retention). Names are kebab-case.
@@ -169,6 +171,27 @@ The script ignores common noise: "Script error.", "ResizeObserver loop",
 "Non-Error promise rejection captured", "Uncaught (in promise)", and errors that come
 only from browser extensions.
 
+### Source maps
+
+Upload the source maps of a build, and browser errors show the original file, line,
+function and source instead of the minified bundle. Issues then group on the original
+source, so a deploy does not split an error into a new issue.
+
+Upload each `.map` file after the build, with the server token and the public path of
+the bundle it belongs to. With Vite, that is every map in `public/build/assets`. See
+[the API](./api#source-maps) for the request. Then delete the maps from the build, so
+your source is not served to everyone.
+
+- A frame is matched to a map by the bundle's path. Vite puts a hash in the file name,
+  so the path alone is enough. When the same path was uploaded more than once, the map
+  of the page's `data-release` wins, then the newest.
+- Uploading the same path and release again replaces the map.
+- Errors received before the map was uploaded keep their minified frames.
+- A map is deleted when it is older than 90 days and belongs to none of the project's
+  last 10 releases, and when the project is deleted.
+- The maps are stored on the default filesystem disk, not served publicly: in Docker
+  under `data/storage`.
+
 ## Retention
 
 Retention sets how long each kind of data is kept, on three levels. Each level is the
@@ -253,5 +276,6 @@ name. Deleting the data can take several minutes.
 | Extra secret fields              | 50, 64 characters |
 | Log channel name                 | 64 characters     |
 | Browser errors per page view     | 100               |
+| Source map file                  | 20 MB             |
 | Same browser error per page view | 5                 |
 | Retention value                  | 1 to 3650 days    |

@@ -723,6 +723,8 @@ export default function IssueShow({
     const appFrames = frames.filter((f) => f.in_app);
     const vendorCount = frames.length - appFrames.length;
     const [showVendor, setShowVendor] = useState(appFrames.length === 0);
+    const hasMinified = frames.some((f) => f.minified !== undefined);
+    const [showMinified, setShowMinified] = useState(false);
     const [creatingRepoIssue, setCreatingRepoIssue] = useState(false);
     const note = useForm({ body: '' });
     const key = [project.uuid, issue.id] as [string, string];
@@ -830,7 +832,9 @@ export default function IssueShow({
                   period: t(`issue.series.in.${period}`),
               });
 
-    const visibleFrames = showVendor ? frames : appFrames;
+    const visibleFrames = (showVendor ? frames : appFrames).map((f) =>
+        showMinified && f.minified ? { ...f.minified, in_app: f.in_app } : f,
+    );
     const tabCounts: Record<Tab, number | null> = {
         stacktrace: null,
         occurrences: occurrences.length,
@@ -1221,6 +1225,18 @@ export default function IssueShow({
                                                       )}
                                             </button>
                                         )}
+                                    {hasMinified && (
+                                        <button
+                                            type="button"
+                                            aria-pressed={showMinified}
+                                            onClick={() =>
+                                                setShowMinified((v) => !v)
+                                            }
+                                            className="w-full cursor-pointer border-t border-line px-4 py-3 text-left text-ink-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-amber"
+                                        >
+                                            {t('issue.stack.show_minified')}
+                                        </button>
+                                    )}
                                 </>
                             )}
                         </div>

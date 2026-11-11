@@ -15,6 +15,7 @@ use App\Domains\Logs\Models\LogChannel;
 use App\Domains\Repositories\Models\ProjectRepository;
 use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Schedule\Models\ScheduledTask;
+use App\Domains\SourceMaps\Models\SourceMap;
 use App\Domains\Teams\Models\Team;
 use Carbon\CarbonImmutable;
 use Database\Factories\ProjectFactory;
@@ -149,6 +150,12 @@ class Project extends Model
     public function agents(): HasMany
     {
         return $this->hasMany(ProjectAgent::class);
+    }
+
+    /** @return HasMany<SourceMap, $this> */
+    public function sourceMaps(): HasMany
+    {
+        return $this->hasMany(SourceMap::class);
     }
 
     /** @return HasOne<ProjectRepository, $this> */

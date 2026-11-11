@@ -34,6 +34,31 @@ final readonly class IssueSignal
     ) {
     }
 
+    /**
+     * The same signal with other frames, e.g. once a source map has turned them back into the original source.
+     *
+     * @param  list<array<string, mixed>>  $stacktrace
+     */
+    public function withFrames(array $stacktrace, ?string $file, ?int $line): self
+    {
+        return new self(
+            source: $this->source,
+            title: $this->title,
+            message: $this->message,
+            file: $file,
+            line: $line,
+            stacktrace: $stacktrace,
+            context: $this->context,
+            occurredAt: $this->occurredAt,
+            traceId: $this->traceId,
+            environment: $this->environment,
+            release: $this->release,
+            host: $this->host,
+            logChannel: $this->logChannel,
+            customFingerprint: $this->customFingerprint,
+        );
+    }
+
     /** The signed-in user the error happened to, as the SDK reported them. */
     public function userId(): ?string
     {
