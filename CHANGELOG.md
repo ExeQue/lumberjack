@@ -4,6 +4,11 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Changed
+
+- A grouped sidebar entry folds its pages out from a chevron beside it, not on hover, so the sidebar no longer changes height under the mouse.
+- With a single connector, the sidebar shows it as its own entry instead of under **Connectors**.
+
 ## [0.6.1] - 2026-11-10
 
 ### Changed

@@ -9,7 +9,8 @@ import {
     Search,
     UserCog,
 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { NotificationBell } from '@/components/lj/notification-bell';
 import {
     openCommandPalette,
@@ -75,36 +76,76 @@ function NavLink({ item }: { item: NavItem }) {
         return link;
     }
 
-    // A group's pages fold out below it on hover or focus, and stay out while one is open.
+    return <NavGroup item={item} tabs={item.tabs} link={link} />;
+}
+
+/**
+ * A group's pages fold out below it from the chevron beside it, and are out while one
+ * of them is open; hovering leaves the sidebar's height alone.
+ */
+function NavGroup({
+    item,
+    tabs,
+    link,
+}: {
+    item: NavItem;
+    tabs: NavItem[];
+    link: ReactNode;
+}) {
+    const t = useT();
+    const id = useId();
+    const [open, setOpen] = useState(item.active);
+    const [wasActive, setWasActive] = useState(item.active);
+
+    // Opening one of its pages folds it out, even when it was folded in by hand.
+    if (item.active !== wasActive) {
+        setWasActive(item.active);
+        setOpen(open || item.active);
+    }
+
     return (
-        <div className="group/nav flex flex-col">
-            {link}
-            <div
-                className={cn(
-                    'grid grid-rows-[0fr] transition-[grid-template-rows] duration-150 group-focus-within/nav:grid-rows-[1fr] group-hover/nav:grid-rows-[1fr]',
-                    item.active && 'grid-rows-[1fr]',
-                )}
-            >
-                <div className="flex flex-col gap-0.5 overflow-hidden pl-3">
-                    {item.tabs.map((tab) => (
-                        <Link
-                            key={tab.href}
-                            href={tab.href}
-                            aria-current={tab.active ? 'page' : undefined}
-                            className={cn(
-                                'mt-0.5 flex h-7 items-center justify-between rounded-md px-2.5 text-xs text-ink-3 hover:bg-panel-2 hover:text-ink',
-                                tab.active && 'text-ink',
-                            )}
-                        >
-                            {tab.label}
-                            {tab.count !== undefined && tab.count > 0 && (
-                                <span className="font-mono text-[11px] text-err">
-                                    {tab.count > 99 ? '99+' : tab.count}
-                                </span>
-                            )}
-                        </Link>
-                    ))}
-                </div>
+        <div className="flex flex-col">
+            <div className="flex items-center gap-0.5">
+                <div className="min-w-0 flex-1">{link}</div>
+                <button
+                    type="button"
+                    onClick={() => setOpen(!open)}
+                    aria-expanded={open}
+                    aria-controls={id}
+                    aria-label={t('common.nav.toggle_group', {
+                        group: item.label,
+                    })}
+                    className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-ink-3 hover:bg-panel-2 hover:text-ink"
+                >
+                    <ChevronRight
+                        className={cn(
+                            'size-3 transition-transform',
+                            open && 'rotate-90',
+                        )}
+                        aria-hidden="true"
+                    />
+                </button>
+            </div>
+            {/* Always there, so the chevron's aria-controls has something to point at. */}
+            <div id={id} hidden={!open} className="flex flex-col gap-0.5 pl-3">
+                {tabs.map((tab) => (
+                    <Link
+                        key={tab.href}
+                        href={tab.href}
+                        aria-current={tab.active ? 'page' : undefined}
+                        className={cn(
+                            'mt-0.5 flex h-7 items-center justify-between rounded-md px-2.5 text-xs text-ink-3 hover:bg-panel-2 hover:text-ink',
+                            tab.active && 'text-ink',
+                        )}
+                    >
+                        {tab.label}
+                        {tab.count !== undefined && tab.count > 0 && (
+                            <span className="font-mono text-[11px] text-err">
+                                {tab.count > 99 ? '99+' : tab.count}
+                            </span>
+                        )}
+                    </Link>
+                ))}
             </div>
         </div>
     );

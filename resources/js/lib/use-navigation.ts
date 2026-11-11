@@ -160,7 +160,9 @@ export function useNavigation(
               }),
               item(t('common.nav.releases'), releasesIndex(project.uuid).url),
               // The services the project reads, last before its settings; connected under Data sources.
-              ...(connectors.length > 0
+              // One connector is its own entry; more fold out under Connectors.
+              ...(connectors.length === 1 ? connectors : []),
+              ...(connectors.length > 1
                   ? [
                         {
                             ...group(

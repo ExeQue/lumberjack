@@ -12,7 +12,11 @@ Some sidebar entries group related pages, shown as tabs under the top bar:
 
 The project's Overview, Issues, Requests, Database, Browser, Jobs, Logs, Health and
 Releases, and the team's Projects and Alerts, are pages of their own. An entry's badge
-adds up its tabs' counts.
+adds up its tabs' counts. The chevron beside a grouped entry folds its pages out below
+it; they are out by themselves while one of them is open.
+
+A project with connected services lists them under **Connectors**, after Releases. With
+only one, its page is an entry of its own instead.
 
 **Settings**, last in the project's list, opens the project's settings, whose menu also
 lists the **Data sources**. Members, who cannot change settings, see **Data sources**
