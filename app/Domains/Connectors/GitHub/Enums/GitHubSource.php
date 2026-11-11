@@ -36,9 +36,12 @@ enum GitHubSource: string
     case CodeScanningAlerts = 'code_scanning_alerts';
     case SecretScanningAlerts = 'secret_scanning_alerts';
 
-    public function label(): string
+    /** Its name; the CI status names a chosen branch. */
+    public function label(?string $branch = null): string
     {
-        return __('connectors.github.sources.'.str_replace('.', '_', $this->value));
+        return $this === self::CiStatus && $branch !== null
+            ? __('connectors.github.sources.ci_status_branch', ['branch' => $branch])
+            : __('connectors.github.sources.'.str_replace('.', '_', $this->value));
     }
 
     /** The optional permission it needs, if any; the catalog leaves it out without. */
@@ -53,7 +56,7 @@ enum GitHubSource: string
         };
     }
 
-    /** Whether it is read from the default branch's commits in the range. */
+    /** Whether it is read from the commits in the range of the branch read. */
     public function readsCommits(): bool
     {
         return in_array($this, [self::Commits, self::CommitsSeries, self::Authors, self::LatestCommits, self::TopContributors], true);

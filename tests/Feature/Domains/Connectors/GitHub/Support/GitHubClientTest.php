@@ -7,6 +7,7 @@ use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubRequestFailedException;
 use App\Domains\Connectors\GitHub\Support\GitHubClient;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\Connectors\FakesGitHub;
@@ -50,7 +51,7 @@ describe('asking GitHub', function () {
     });
 
     it('reads the latest run on the default branch', function () {
-        expect($this->client->defaultBranchRun($this->credentials))->toMatchArray(['name' => 'CI', 'branch' => 'main', 'conclusion' => 'failure', 'result' => 'failure']);
+        expect($this->client->branchRun($this->credentials))->toMatchArray(['name' => 'CI', 'branch' => 'main', 'conclusion' => 'failure', 'result' => 'failure']);
 
         Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/actions/runs?branch=main&exclude_pull_requests=true&per_page=1'));
     });
@@ -192,4 +193,23 @@ describe('what GitHub refuses', function () {
 
         $this->client->repository($this->credentials);
     })->throws(GitHubRequestFailedException::class, 'GitHub asks to slow down');
+});
+
+describe('asking several calls at once', function () {
+    it('asks a call whose connection failed again on its own, keeping the others\' answers', function () {
+        $tries = 0;
+        Http::swap(new Factory());
+        Http::fake(function (Request $request) use (&$tries) {
+            return match ((string) parse_url($request->url(), PHP_URL_PATH)) {
+                '/repos/acme/shop' => ++$tries === 1 ? Http::failedConnection() : Http::response(['full_name' => 'acme/shop', 'default_branch' => 'main']),
+                default => Http::response(['total_count' => 4, 'items' => []]),
+            };
+        });
+
+        $this->client->prefetch($this->credentials, GitHubClient::summaryCalls($this->credentials, CarbonImmutable::parse('2026-10-27 12:00:00'), CarbonImmutable::parse('2026-11-03 12:00:00'), CarbonImmutable::parse('2026-11-10 12:00:00')));
+
+        expect($this->client->repository($this->credentials)['full_name'])->toBe('acme/shop')
+            ->and($this->client->openPullRequests($this->credentials))->toBe(4)
+            ->and($tries)->toBe(2);
+    });
 });

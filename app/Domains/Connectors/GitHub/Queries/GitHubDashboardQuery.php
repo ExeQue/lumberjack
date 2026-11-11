@@ -29,7 +29,8 @@ class GitHubDashboardQuery
     /**
      * The open pull requests and issues, stars, forks and watchers as they are now, the pull
      * requests merged, their median lead time and the runs failed over the period and the
-     * period before, the default branch's latest run and the latest release.
+     * period before (on the branch read, if one is chosen), the branch's latest run and the
+     * latest release.
      *
      * @return array{open_pull_requests: int, waiting_for_review: int, open_issues: int, stars: int, forks: int, watchers: int, merged: array{current: int, previous: int}, lead_time_hours: array{current: float|null, previous: float|null}, failed_runs: array{current: int, previous: int}, ci: array<string, mixed>|null, latest_release: array<string, mixed>|null}
      *
@@ -38,14 +39,15 @@ class GitHubDashboardQuery
      */
     public function summary(DataSourceConnection $connection, Period $period): array
     {
-        return StatisticsCache::remember('github-summary', $period, [$connection->id, $connection->url], function () use ($connection, $period): array {
+        return StatisticsCache::remember('github-summary', $period, [$connection->id, $connection->url, GitHubConfig::branchOf($connection->config)], function () use ($connection, $period): array {
             $credentials = $connection->gitHubCredentials();
-            $repository = $this->client->repository($credentials);
-            $open = $this->client->openPullRequests($credentials);
             $to = now();
             $from = $period->since();
             $before = $from->subSeconds($to->getTimestamp() - $from->getTimestamp());
-            $run = $this->client->defaultBranchRun($credentials, $repository['default_branch']);
+            $this->client->prefetch($credentials, GitHubClient::summaryCalls($credentials, $before, $from, $to));
+            $repository = $this->client->repository($credentials);
+            $open = $this->client->openPullRequests($credentials);
+            $run = $this->client->branchRun($credentials, $credentials->branch ?? $repository['default_branch']);
             $merged = $this->client->mergedPullRequests($credentials, $from, $to);
             $mergedBefore = $this->client->mergedPullRequests($credentials, $before, $from);
 
@@ -66,7 +68,7 @@ class GitHubDashboardQuery
     }
 
     /**
-     * The default branch's commits over the period: how many against the period before, the
+     * The commits over the period on the branch read (the chosen one, or the default branch): how many against the period before, the
      * distinct authors, a count per bucket of the period, the authors with the most commits
      * and the latest commits. One list of the period's commits answers all but the count
      * before, which is asked on its own. It is cached whole, so showing more of either list
@@ -79,12 +81,13 @@ class GitHubDashboardQuery
      */
     public function commits(DataSourceConnection $connection, Period $period, int $latest = GitHubClient::ROWS, int $contributors = PullGitHubSourceAction::LIST_ROWS): array
     {
-        $commits = StatisticsCache::remember('github-commits', $period, [$connection->id, $connection->url], function () use ($connection, $period): array {
+        $commits = StatisticsCache::remember('github-commits', $period, [$connection->id, $connection->url, GitHubConfig::branchOf($connection->config)], function () use ($connection, $period): array {
             $credentials = $connection->gitHubCredentials();
-            $branch = $this->client->repository($credentials)['default_branch'];
+            $branch = $this->client->branch($credentials);
             $to = now();
             $from = $period->since();
             $before = $from->subSeconds($to->getTimestamp() - $from->getTimestamp());
+            $this->client->prefetch($credentials, GitHubClient::commitCalls($credentials, $branch, $before, $from, $to));
             $commits = $this->client->commits($credentials, $branch, $from, $to);
             $contributors = PullGitHubSourceAction::contributors($commits);
             $series = PullGitHubSourceAction::perBucket($commits, $from, $to, $period->bucketSeconds(), $connection->timezone);
@@ -122,6 +125,7 @@ class GitHubDashboardQuery
             $to = now();
             $from = $period->since();
             $before = $from->subSeconds($to->getTimestamp() - $from->getTimestamp());
+            $this->client->prefetch($credentials, GitHubClient::issueCalls($credentials, $before, $from, $to));
 
             return [
                 'opened' => ['current' => $this->client->issues($credentials, 'created', $from, $to), 'previous' => $this->client->issues($credentials, 'created', $before, $from)],
@@ -144,9 +148,11 @@ class GitHubDashboardQuery
         return StatisticsCache::remember('github-security', Period::Day, [$connection->id, $connection->url, ...array_map(fn (GitHubPermission $p): string => $p->value, GitHubConfig::grantedBy($connection->config))], function () use ($connection): array {
             $credentials = $connection->gitHubCredentials();
             $granted = GitHubConfig::grantedBy($connection->config);
+            $all = [GitHubPermission::DependabotAlerts, GitHubPermission::CodeScanningAlerts, GitHubPermission::SecretScanningAlerts];
             $kinds = [];
+            $this->client->prefetch($credentials, GitHubClient::alertCalls($credentials, array_filter($all, fn (GitHubPermission $kind): bool => in_array($kind, $granted, true))));
 
-            foreach ([GitHubPermission::DependabotAlerts, GitHubPermission::CodeScanningAlerts, GitHubPermission::SecretScanningAlerts] as $kind) {
+            foreach ($all as $kind) {
                 $row = ['kind' => $kind->value, 'label' => $kind->label(), 'granted' => in_array($kind, $granted, true), 'count' => null, 'by_severity' => null, 'error' => null];
 
                 if ($row['granted']) {

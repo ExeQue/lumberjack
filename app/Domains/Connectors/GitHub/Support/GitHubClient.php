@@ -6,10 +6,12 @@ namespace App\Domains\Connectors\GitHub\Support;
 
 use App\Domains\Connectors\GitHub\Data\GitHubCredentials;
 use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
+use App\Domains\Connectors\GitHub\Exceptions\GitHubBranchNotFoundException;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubRequestFailedException;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -48,6 +50,17 @@ class GitHubClient
     /** The severities a Dependabot alert has, the worst first. */
     public const array SEVERITIES = ['critical', 'high', 'medium', 'low'];
 
+    /** Releases read for the latest, so a few drafts before it do not hide it. */
+    private const int LATEST_RELEASES = 5;
+
+    /**
+     * Answers asked together by prefetch(), by call, each read once by the call that asks
+     * for it next. Never more than one prefetch's calls, so it cannot grow.
+     *
+     * @var array<string, Response>
+     */
+    private array $prefetched = [];
+
     /**
      * The repository as GitHub names it, its default branch, and its open issues (pull
      * requests included, as GitHub counts them). Reading it needs Metadata only.
@@ -58,7 +71,7 @@ class GitHubClient
      */
     public function repository(GitHubCredentials $credentials): array
     {
-        $data = $this->get($credentials, '/repos/'.$credentials->repository);
+        $data = $this->get($credentials, ...self::repositoryCall($credentials));
 
         if (! is_string($data['full_name'] ?? null)) {
             throw new GitHubRequestFailedException(__('connectors.github.errors.not_found', ['repository' => $credentials->repository]));
@@ -85,14 +98,40 @@ class GitHubClient
      */
     public function verify(GitHubCredentials $credentials): array
     {
-        $repository = $this->repository($credentials);
         $path = '/repos/'.$credentials->repository;
+        // Asked at once, and read in this order, so the first refusal is the one named.
+        $this->prefetch($credentials, [self::repositoryCall($credentials), [$path.'/pulls', ['per_page' => 1]], [$path.'/actions/runs', ['per_page' => 1]], [$path.'/releases', ['per_page' => 1]]]);
+        $repository = $this->repository($credentials);
 
         $this->get($credentials, $path.'/pulls', ['per_page' => 1], 'Pull requests');
         $this->get($credentials, $path.'/actions/runs', ['per_page' => 1], 'Actions');
         $this->get($credentials, $path.'/releases', ['per_page' => 1], 'Contents');
 
         return $repository;
+    }
+
+    /**
+     * Whether the repository has the branch; reading it needs Contents (or Metadata) only.
+     *
+     * @throws GitHubBranchNotFoundException
+     * @throws GitHubRequestFailedException
+     */
+    public function verifyBranch(GitHubCredentials $credentials, string $branch): void
+    {
+        // A branch's slashes stay path separators, as GitHub reads them.
+        $path = '/repos/'.$credentials->repository.'/branches/'.implode('/', array_map(rawurlencode(...), explode('/', $branch)));
+        $this->send($credentials, $path, [], 'Contents', notFound: new GitHubBranchNotFoundException(__('connectors.github.errors.branch_not_found', ['branch' => $branch, 'repository' => $credentials->repository])));
+    }
+
+    /**
+     * The branch commits and CI are read from: the one chosen, or else the default branch,
+     * asked of GitHub.
+     *
+     * @throws GitHubRequestFailedException
+     */
+    public function branch(GitHubCredentials $credentials): string
+    {
+        return $credentials->branch ?? $this->repository($credentials)['default_branch'];
     }
 
     /**
@@ -107,13 +146,10 @@ class GitHubClient
     public function grantedPermissions(GitHubCredentials $credentials): array
     {
         $granted = [];
+        $this->prefetch($credentials, array_map(fn (GitHubPermission $permission): array => ['/repos/'.$credentials->repository.$permission->path(), ['per_page' => 1]], GitHubPermission::cases()));
 
         foreach (GitHubPermission::cases() as $permission) {
-            try {
-                $response = $this->http($credentials)->get('/repos/'.$credentials->repository.$permission->path(), ['per_page' => 1]);
-            } catch (ConnectionException $e) {
-                throw new GitHubRequestFailedException(__('connectors.github.errors.unreachable'), previous: $e);
-            }
+            $response = $this->fetch($credentials, '/repos/'.$credentials->repository.$permission->path(), ['per_page' => 1]);
 
             $refused = in_array($response->status(), [401, 403, 404], true) && ($response->status() === 401 || str_contains((string) $response->json('message'), 'not accessible'));
 
@@ -133,7 +169,7 @@ class GitHubClient
      */
     public function count(GitHubCredentials $credentials, string $query, string $permission = 'Pull requests'): int
     {
-        $data = $this->get($credentials, '/search/issues', ['q' => 'repo:'.$credentials->repository.' '.$query, 'per_page' => 1], $permission);
+        $data = $this->get($credentials, ...[...self::searchCall($credentials, $query), $permission]);
 
         return is_int($data['total_count'] ?? null) ? $data['total_count'] : 0;
     }
@@ -174,7 +210,7 @@ class GitHubClient
      */
     public function mergedPullRequests(GitHubCredentials $credentials, CarbonImmutable $from, CarbonImmutable $to): array
     {
-        $data = $this->get($credentials, '/search/issues', ['q' => 'repo:'.$credentials->repository.' is:pr is:merged merged:'.self::range($from, $to), 'per_page' => self::PER_PAGE], 'Pull requests');
+        $data = $this->get($credentials, ...[...self::searchCall($credentials, self::mergedQuery($from, $to), self::PER_PAGE), 'Pull requests']);
         $hours = [];
 
         foreach (self::listOf($data['items'] ?? null) as $pull) {
@@ -208,7 +244,7 @@ class GitHubClient
      */
     public function issues(GitHubCredentials $credentials, string $event, CarbonImmutable $from, CarbonImmutable $to): int
     {
-        return $this->count($credentials, 'is:issue '.$event.':'.self::range($from, $to), GitHubPermission::Issues->label());
+        return $this->count($credentials, self::issuesQuery($event, $from, $to), GitHubPermission::Issues->label());
     }
 
     /** @throws GitHubRequestFailedException */
@@ -227,7 +263,7 @@ class GitHubClient
      */
     public function openAlerts(GitHubCredentials $credentials, GitHubPermission $kind): array
     {
-        return $this->pages($credentials, '/repos/'.$credentials->repository.$kind->path(), ['state' => 'open', 'per_page' => self::PER_PAGE], $kind->label(), maybeOff: true);
+        return $this->pages($credentials, ...[...self::alertsCall($credentials, $kind), $kind->label(), true]);
     }
 
     /**
@@ -262,25 +298,30 @@ class GitHubClient
         return max(0, $this->repository($credentials)['open_issues_count'] - ($openPullRequests ?? $this->openPullRequests($credentials)));
     }
 
-    /** @throws GitHubRequestFailedException */
+    /**
+     * Workflow runs failed in the range: on the chosen branch, or on every branch when none
+     * is chosen.
+     *
+     * @throws GitHubRequestFailedException
+     */
     public function failedRuns(GitHubCredentials $credentials, CarbonImmutable $from, CarbonImmutable $to): int
     {
-        return $this->runs($credentials, ['status' => 'failure', 'created' => self::range($from, $to)], 1)['total'];
+        return $this->runs($credentials, self::failedFilters($credentials, $from, $to), 1)['total'];
     }
 
     /**
-     * The latest workflow run on the default branch, from a push or otherwise; the branch
-     * is asked of GitHub unless given.
+     * The latest workflow run on the branch read (the chosen one, or the default branch),
+     * from a push or otherwise; the default branch is asked of GitHub unless given.
      *
      * @return array{name: string, title: string, branch: string, event: string, status: string, conclusion: string|null, result: string, url: string, created_at: string|null}|null
      *
      * @throws GitHubRequestFailedException
      */
-    public function defaultBranchRun(GitHubCredentials $credentials, ?string $branch = null): ?array
+    public function branchRun(GitHubCredentials $credentials, ?string $branch = null): ?array
     {
-        $branch ??= $this->repository($credentials)['default_branch'];
+        $branch ??= $this->branch($credentials);
 
-        return $this->runs($credentials, ['branch' => $branch, 'exclude_pull_requests' => 'true'], 1)['runs'][0] ?? null;
+        return $this->runs($credentials, self::branchRunFilters($branch), 1)['runs'][0] ?? null;
     }
 
     /**
@@ -293,7 +334,7 @@ class GitHubClient
      */
     public function runs(GitHubCredentials $credentials, array $filters = [], int $rows = self::ROWS): array
     {
-        $data = $this->get($credentials, '/repos/'.$credentials->repository.'/actions/runs', [...$filters, 'per_page' => $rows], 'Actions');
+        $data = $this->get($credentials, ...[...self::runsCall($credentials, $filters, $rows), 'Actions']);
         $runs = [];
 
         foreach (self::listOf($data['workflow_runs'] ?? null) as $run) {
@@ -347,7 +388,7 @@ class GitHubClient
      */
     public function releases(GitHubCredentials $credentials, int $rows = self::ROWS): array
     {
-        $data = $this->get($credentials, '/repos/'.$credentials->repository.'/releases', ['per_page' => $rows], 'Contents');
+        $data = $this->get($credentials, ...[...self::releasesCall($credentials, $rows), 'Contents']);
         $releases = [];
 
         foreach (self::listOf($data) as $release) {
@@ -378,7 +419,7 @@ class GitHubClient
      */
     public function latestRelease(GitHubCredentials $credentials): ?array
     {
-        $release = $this->releases($credentials, 5)[0] ?? null;
+        $release = $this->releases($credentials, self::LATEST_RELEASES)[0] ?? null;
 
         if ($release !== null) {
             return $release;
@@ -410,7 +451,7 @@ class GitHubClient
     {
         $commits = [];
 
-        foreach ($this->pages($credentials, '/repos/'.$credentials->repository.'/commits', [...self::commitRange($branch, $from, $to), 'per_page' => self::PER_PAGE], 'Contents') as $commit) {
+        foreach ($this->pages($credentials, ...[...self::commitsCall($credentials, $branch, $from, $to, self::PER_PAGE), 'Contents']) as $commit) {
             $written = is_array($commit['commit'] ?? null) ? $commit['commit'] : [];
             $author = is_array($written['author'] ?? null) ? $written['author'] : [];
             $committedAt = is_array($written['committer'] ?? null) && is_string($written['committer']['date'] ?? null) ? $written['committer']['date'] : null;
@@ -467,7 +508,7 @@ class GitHubClient
      */
     public function commitCount(GitHubCredentials $credentials, string $branch, CarbonImmutable $from, CarbonImmutable $to): int
     {
-        $response = $this->send($credentials, '/repos/'.$credentials->repository.'/commits', [...self::commitRange($branch, $from, $to), 'per_page' => 1], 'Contents');
+        $response = $this->send($credentials, ...[...self::commitsCall($credentials, $branch, $from, $to, 1), 'Contents']);
         $last = self::link($response, 'last');
         parse_str((string) parse_url((string) $last, PHP_URL_QUERY), $query);
         $count = $last === null ? count(self::listOf($response->json())) : (int) ($query['page'] ?? 0);
@@ -495,18 +536,14 @@ class GitHubClient
      * @param  array<string, int|string>  $query
      * @param  string|null  $permission  the token permission the call needs, named when it is refused
      * @param  bool  $maybeOff  whether a 403 or 404 may be a feature the repository has turned off
+     * @param  GitHubBranchNotFoundException|null  $notFound  what a 404 means, when it is not a permission the token lacks
      *
+     * @throws GitHubBranchNotFoundException
      * @throws GitHubRequestFailedException
      */
-    private function send(GitHubCredentials $credentials, string $path, array $query = [], ?string $permission = null, bool $maybeOff = false): Response
+    private function send(GitHubCredentials $credentials, string $path, array $query = [], ?string $permission = null, bool $maybeOff = false, ?GitHubBranchNotFoundException $notFound = null): Response
     {
-        try {
-            // A query, even an empty one, replaces the one a next page's address carries.
-            $response = $query === [] ? $this->http($credentials)->get($path) : $this->http($credentials)->get($path, $query);
-        } catch (ConnectionException $e) {
-            throw new GitHubRequestFailedException(__('connectors.github.errors.unreachable'), previous: $e);
-        }
-
+        $response = $this->fetch($credentials, $path, $query);
         $status = $response->status();
 
         if ($status === 200) {
@@ -516,6 +553,10 @@ class GitHubClient
         // A rate limit is a 403 or 429 that says so in its headers.
         if ($status === 429 || ($status === 403 && ($response->header('x-ratelimit-remaining') === '0' || $response->header('retry-after') !== ''))) {
             throw new GitHubRequestFailedException(__('connectors.github.errors.rate_limited'));
+        }
+
+        if ($status === 404 && $notFound !== null) {
+            throw $notFound;
         }
 
         // GitHub hides what a token may not read: a missing permission is a 403 or a 404,
@@ -529,17 +570,211 @@ class GitHubClient
         });
     }
 
+    /**
+     * Asks GitHub for several calls at once (each a path and its query), so the methods
+     * that make them next read the answers rather than asking one after another. Each
+     * answer is then read, and refused, by its own call as if asked alone; one the
+     * connection failed for is asked again then, with the retries. Pages after the first
+     * still follow one another.
+     *
+     * @param  list<array{0: string, 1: array<string, int|string>}>  $calls
+     */
+    public function prefetch(GitHubCredentials $credentials, array $calls): void
+    {
+        $this->prefetched = [];
+        $responses = Http::pool(function (Pool $pool) use ($credentials, $calls): void {
+            foreach ($calls as [$path, $query]) {
+                // Pooled requests do not retry; a failed one is asked again by fetch().
+                self::configure($pool->as(self::callKey($credentials, $path, $query)), $credentials)->get($path, $query);
+            }
+        });
+
+        foreach ($responses as $key => $response) {
+            if ($response instanceof Response) {
+                $this->prefetched[(string) $key] = $response;
+            }
+        }
+    }
+
+    /**
+     * The calls the summary makes that do not wait on one another: the repository, the
+     * search counts, the failed runs, the releases, and the branch's latest run when the
+     * branch is known without asking.
+     *
+     * @return list<array{0: string, 1: array<string, int|string>}>
+     */
+    public static function summaryCalls(GitHubCredentials $credentials, CarbonImmutable $before, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        return [
+            self::repositoryCall($credentials),
+            self::searchCall($credentials, 'is:pr is:open'),
+            self::searchCall($credentials, 'is:pr is:open draft:false review:none'),
+            self::searchCall($credentials, self::mergedQuery($from, $to), self::PER_PAGE),
+            self::searchCall($credentials, self::mergedQuery($before, $from), self::PER_PAGE),
+            self::runsCall($credentials, self::failedFilters($credentials, $from, $to), 1),
+            self::runsCall($credentials, self::failedFilters($credentials, $before, $from), 1),
+            self::releasesCall($credentials, self::LATEST_RELEASES),
+            ...($credentials->branch === null ? [] : [self::runsCall($credentials, self::branchRunFilters($credentials->branch), 1)]),
+        ];
+    }
+
+    /**
+     * The issue counts: opened and closed in the range and the one before, and the open bugs.
+     *
+     * @return list<array{0: string, 1: array<string, int|string>}>
+     */
+    public static function issueCalls(GitHubCredentials $credentials, CarbonImmutable $before, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        return [
+            self::searchCall($credentials, self::issuesQuery('created', $from, $to)),
+            self::searchCall($credentials, self::issuesQuery('created', $before, $from)),
+            self::searchCall($credentials, self::issuesQuery('closed', $from, $to)),
+            self::searchCall($credentials, self::issuesQuery('closed', $before, $from)),
+            self::searchCall($credentials, 'is:issue is:open label:bug'),
+        ];
+    }
+
+    /**
+     * The first page of the range's commits on a branch, and the count of the range before.
+     *
+     * @return list<array{0: string, 1: array<string, int|string>}>
+     */
+    public static function commitCalls(GitHubCredentials $credentials, string $branch, CarbonImmutable $before, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        return [self::commitsCall($credentials, $branch, $from, $to, self::PER_PAGE), self::commitsCall($credentials, $branch, $before, $from, 1)];
+    }
+
+    /**
+     * The first page of each kind's open alerts.
+     *
+     * @param  array<GitHubPermission>  $kinds
+     * @return list<array{0: string, 1: array<string, int|string>}>
+     */
+    public static function alertCalls(GitHubCredentials $credentials, array $kinds): array
+    {
+        return array_values(array_map(fn (GitHubPermission $kind): array => self::alertsCall($credentials, $kind), $kinds));
+    }
+
+    /**
+     * GitHub's answer to a call: the one prefetched, or else asked now.
+     *
+     * @param  array<string, int|string>  $query
+     *
+     * @throws GitHubRequestFailedException when GitHub cannot be reached
+     */
+    private function fetch(GitHubCredentials $credentials, string $path, array $query): Response
+    {
+        $key = self::callKey($credentials, $path, $query);
+
+        if (isset($this->prefetched[$key])) {
+            $response = $this->prefetched[$key];
+            unset($this->prefetched[$key]);
+
+            return $response;
+        }
+
+        try {
+            // A query, even an empty one, replaces the one a next page's address carries.
+            return $query === [] ? $this->http($credentials)->get($path) : $this->http($credentials)->get($path, $query);
+        } catch (ConnectionException $e) {
+            throw new GitHubRequestFailedException(__('connectors.github.errors.unreachable'), previous: $e);
+        }
+    }
+
     private function http(GitHubCredentials $credentials): PendingRequest
     {
-        return Http::retry(
+        return self::configure(Http::retry(
             times: 3,
             sleepMilliseconds: 200,
             when: fn (?Throwable $e): bool => $e instanceof ConnectionException,
             throw: false,
-        )->baseUrl(self::API)->withToken($credentials->token)->acceptJson()
+        ), $credentials);
+    }
+
+    /** What every call to GitHub carries, pooled or not. */
+    private static function configure(PendingRequest $request, GitHubCredentials $credentials): PendingRequest
+    {
+        return $request->baseUrl(self::API)->withToken($credentials->token)->acceptJson()
             ->withHeaders(['X-GitHub-Api-Version' => '2022-11-28'])
             ->withUserAgent('Lumberjack-github/1')
             ->timeout(self::TIMEOUT_S)->connectTimeout(5);
+    }
+
+    /**
+     * A call as prefetch() keeps its answer: the token's, so another connection's answer is
+     * never read.
+     *
+     * @param  array<string, int|string>  $query
+     */
+    private static function callKey(GitHubCredentials $credentials, string $path, array $query): string
+    {
+        return hash('xxh128', $credentials->token."\n".$path."\n".http_build_query($query));
+    }
+
+    /** @return array{0: string, 1: array<string, int|string>} */
+    private static function repositoryCall(GitHubCredentials $credentials): array
+    {
+        return ['/repos/'.$credentials->repository, []];
+    }
+
+    /** @return array{0: string, 1: array<string, int|string>} */
+    private static function searchCall(GitHubCredentials $credentials, string $query, int $perPage = 1): array
+    {
+        return ['/search/issues', ['q' => 'repo:'.$credentials->repository.' '.$query, 'per_page' => $perPage]];
+    }
+
+    /**
+     * @param  array<string, string>  $filters
+     * @return array{0: string, 1: array<string, int|string>}
+     */
+    private static function runsCall(GitHubCredentials $credentials, array $filters, int $rows): array
+    {
+        return ['/repos/'.$credentials->repository.'/actions/runs', [...$filters, 'per_page' => $rows]];
+    }
+
+    /** @return array{0: string, 1: array<string, int|string>} */
+    private static function releasesCall(GitHubCredentials $credentials, int $rows): array
+    {
+        return ['/repos/'.$credentials->repository.'/releases', ['per_page' => $rows]];
+    }
+
+    /** @return array{0: string, 1: array<string, int|string>} */
+    private static function commitsCall(GitHubCredentials $credentials, string $branch, CarbonImmutable $from, CarbonImmutable $to, int $perPage): array
+    {
+        return ['/repos/'.$credentials->repository.'/commits', [...self::commitRange($branch, $from, $to), 'per_page' => $perPage]];
+    }
+
+    /** @return array{0: string, 1: array<string, int|string>} */
+    private static function alertsCall(GitHubCredentials $credentials, GitHubPermission $kind): array
+    {
+        return ['/repos/'.$credentials->repository.$kind->path(), ['state' => 'open', 'per_page' => self::PER_PAGE]];
+    }
+
+    /**
+     * Failed runs in the range: on the chosen branch, or on every branch when none is chosen.
+     *
+     * @return array<string, string>
+     */
+    private static function failedFilters(GitHubCredentials $credentials, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        return ['status' => 'failure', 'created' => self::range($from, $to), ...($credentials->branch === null ? [] : ['branch' => $credentials->branch])];
+    }
+
+    /** @return array<string, string> */
+    private static function branchRunFilters(string $branch): array
+    {
+        return ['branch' => $branch, 'exclude_pull_requests' => 'true'];
+    }
+
+    private static function mergedQuery(CarbonImmutable $from, CarbonImmutable $to): string
+    {
+        return 'is:pr is:merged merged:'.self::range($from, $to);
+    }
+
+    /** @param  'created'|'closed'  $event */
+    private static function issuesQuery(string $event, CarbonImmutable $from, CarbonImmutable $to): string
+    {
+        return 'is:issue '.$event.':'.self::range($from, $to);
     }
 
     /** A range as GitHub's search reads it, in UTC to the second. */
