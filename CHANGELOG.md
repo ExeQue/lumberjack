@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-11
+
 ### Added
 
 - **OpenTelemetry**: apps with an OpenTelemetry SDK, and the OpenTelemetry Collector's `otlphttp` exporter, send traces and logs over OTLP/HTTP to `/api/v1/opentelemetry` with the project's server token, in protobuf or JSON, plain or gzip. Server spans become requests, consumer spans job runs, database spans queries, outgoing HTTP and Redis spans spans of the trace, `exception` span events issues with frames read from the stack trace, and log records log lines (at error and above also issues); the resource's environment, `service.version` and `host.name` set the environment, release and host. Same limits as the agent's batches, except at most 2 MB once inflated, and at most 5000 events an export; metrics are taken and dropped. See the new OpenTelemetry docs page.
@@ -234,7 +236,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/ExeQue/lumberjack/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/ExeQue/lumberjack/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/ExeQue/lumberjack/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ExeQue/lumberjack/compare/v0.5.1...v0.6.0
