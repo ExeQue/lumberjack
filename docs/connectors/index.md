@@ -5,10 +5,11 @@ connectors. Connect one to a project, and it gets a page of its own under
 **Connectors** in the project's sidebar and offers its figures to screen
 [widgets](../widgets.md) as [data sources](../data-sources.md).
 
-| Connector               | What it reads                                             |
-| ----------------------- | --------------------------------------------------------- |
-| [Umami](./umami.md)     | The visitors of a website, from Umami's API.              |
-| [mosparo](./mosparo.md) | The valid and spam form submissions of a mosparo project. |
+| Connector               | What it reads                                                  |
+| ----------------------- | -------------------------------------------------------------- |
+| [Umami](./umami.md)     | The visitors of a website, from Umami's API.                   |
+| [mosparo](./mosparo.md) | The valid and spam form submissions of a mosparo project.      |
+| [GitHub](./github.md)   | The pull requests, workflow runs and releases of a repository. |
 
 ## Connecting
 
@@ -17,8 +18,8 @@ from the connector's page in a project that has none yet. Credentials are stored
 never shown again, and only ever sent to the address given, over https. A private address is
 refused unless `LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE=true`.
 
-A connector can be connected as often as needed, such as one Umami website or one mosparo
-project each time. With more than one, a picker beside the page's title switches between them.
+A connector can be connected as often as needed, such as one Umami website, one mosparo
+project or one GitHub repository each time. With more than one, a picker beside the page's title switches between them.
 
 ## The connector's page
 

@@ -8,6 +8,10 @@ return [
 
     // The catalog of services a project can connect to, on the data sources page.
     'catalog' => [
+        'github' => [
+            'label' => 'GitHub',
+            'description' => 'Pull requests, workflow runs and releases of a GitHub repository, on a page of their own and as data sources for screens.',
+        ],
         'mosparo' => [
             'label' => 'mosparo',
             'description' => 'Valid and spam form submissions of a mosparo project, on a page of their own and as data sources for screens.',
@@ -15,6 +19,53 @@ return [
         'umami' => [
             'label' => 'Umami',
             'description' => 'Visitors, pages, sources and events of an Umami website, on a page of their own and as data sources for screens.',
+        ],
+    ],
+
+    // GitHub: a repository's pull requests, workflow runs and releases, read through GitHub's REST API.
+    'github' => [
+        // Flash message after connecting.
+        'connected' => 'GitHub connected: :name. Its sources show up under Data sources within a minute.',
+
+        // The data sources a GitHub repository offers screens.
+        'sources' => [
+            'open_pull_requests' => 'Open pull requests',
+            'waiting_for_review' => 'Pull requests waiting for review',
+            'merged' => 'Pull requests merged',
+            'failed_runs' => 'Failed workflow runs',
+            'open_issues' => 'Open issues',
+            'ci_status' => 'CI on the default branch',
+            'latest_release' => 'Latest release',
+        ],
+
+        // What a workflow run came to, or how far it got while it runs.
+        'results' => [
+            'success' => 'Passed',
+            'failure' => 'Failed',
+            'cancelled' => 'Cancelled',
+            'skipped' => 'Skipped',
+            'timed_out' => 'Timed out',
+            'action_required' => 'Action required',
+            'neutral' => 'Neutral',
+            'stale' => 'Stale',
+            'startup_failure' => 'Failed to start',
+            'queued' => 'Queued',
+            'in_progress' => 'Running',
+            'waiting' => 'Waiting',
+            'pending' => 'Pending',
+            'requested' => 'Requested',
+        ],
+
+        // Why asking GitHub failed, shown in the connect dialog, on the connection, its sources and the GitHub page.
+        'errors' => [
+            'unauthorized' => 'GitHub refused the token. Check it has not expired or been revoked.',
+            'not_found' => 'The token cannot read :repository. Check the name, and that the token\'s repository access includes it.',
+            'permission' => 'The token cannot read the repository\'s :permission. Give it :permission: read-only.',
+            'rate_limited' => 'GitHub asks to slow down. It is asked again shortly.',
+            'status' => 'GitHub answered with HTTP :status.',
+            'unreachable' => 'GitHub could not be reached.',
+            'unknown_source' => 'GitHub has no such source.',
+            'secret_unreadable' => 'The GitHub token cannot be decrypted (was APP_KEY changed?). Connect GitHub again.',
         ],
     ],
 

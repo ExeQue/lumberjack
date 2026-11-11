@@ -31,6 +31,7 @@ return [
         'toggle_group' => 'Show or hide the pages under :group',
         'umami' => 'Umami',
         'mosparo' => 'mosparo',
+        'github' => 'GitHub',
         'releases' => 'Releases',
         'jobs' => 'Jobs',
         'schedule' => 'Schedule',

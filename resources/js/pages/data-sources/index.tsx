@@ -1,6 +1,7 @@
 import { Form, Head, router, usePage } from '@inertiajs/react';
 import { Fragment, useState } from 'react';
 import type { ReactNode } from 'react';
+import { GitHubConnectDialog } from '@/components/lj/connectors/github/connect';
 import { MosparoConnectDialog } from '@/components/lj/connectors/mosparo/connect';
 import { UmamiConnectDialog } from '@/components/lj/connectors/umami/connect';
 import { ConfirmButton } from '@/components/lj/confirm-button';
@@ -51,6 +52,7 @@ import {
     settings as projectSettings,
     show as projectShow,
 } from '@/routes/projects';
+import { index as githubIndex } from '@/routes/connectors/github';
 import { index as mosparoIndex } from '@/routes/connectors/mosparo';
 import { index as umamiIndex } from '@/routes/connectors/umami';
 import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
@@ -90,7 +92,7 @@ type ConnectedRow = {
 type ConnectionRow = {
     uuid: string;
     /** An app pulled by signature, or a service read through its API. */
-    kind: 'app' | 'umami' | 'mosparo';
+    kind: 'app' | 'umami' | 'mosparo' | 'github';
     /** A service's website or project, as it is shown. */
     name: string | null;
     environment: string;
@@ -349,12 +351,14 @@ const CONNECT_DIALOGS: Record<
 > = {
     umami: UmamiConnectDialog,
     mosparo: MosparoConnectDialog,
+    github: GitHubConnectDialog,
 };
 
 /** The page of each service a connection reads, opened at that connection. */
 const SERVICE_PAGES = {
     umami: umamiIndex,
     mosparo: mosparoIndex,
+    github: githubIndex,
 };
 
 /** Changing an app's address and rotating its pull token; an Umami connection has neither. */

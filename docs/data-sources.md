@@ -108,7 +108,7 @@ See [retention](./projects#retention), under **Data source history**.
 
 ## Connectors
 
-Lumberjack can also read outside services itself, such as Umami and mosparo. See
+Lumberjack can also read outside services itself, such as Umami, mosparo and GitHub. See
 [Connectors](./connectors/).
 
 ## Connected sources
