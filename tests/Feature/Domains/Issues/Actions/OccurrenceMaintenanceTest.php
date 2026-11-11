@@ -19,7 +19,8 @@ beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-11-11 12:00:00'));
     Queue::fake([SendIssueAlerts::class]);
     $this->project = Project::factory()->create();
-    $this->record = fn (string $environment = 'production', ?CarbonImmutable $at = null): Occurrence => app(RecordOccurrenceAction::class)->execute(
+    // Each its own job, as the action reads a project's windows once per job.
+    $this->record = fn (string $environment = 'production', ?CarbonImmutable $at = null): Occurrence => tap(app(), fn ($app) => $app->forgetScopedInstances())->make(RecordOccurrenceAction::class)->execute(
         $this->project,
         new IssueSignal(IssueSource::Server, 'RuntimeException', 'Boom', 'app/Foo.php', 12, [], [], $at ?? now()->toImmutable(), environment: $environment),
     );
@@ -33,20 +34,6 @@ describe('errors during maintenance', function () {
 
         expect($occurrence->under_maintenance)->toBeTrue()
             ->and($occurrence->issue->refresh()->under_maintenance)->toBeTrue();
-    });
-
-    it('sees a window end between two occurrences recorded by the same instance, as in one batch', function () {
-        $window = MaintenanceWindow::factory()->of($this->project)->create();
-        $action = app(RecordOccurrenceAction::class);
-        $signal = fn (): IssueSignal => new IssueSignal(IssueSource::Server, 'RuntimeException', 'Boom', 'app/Foo.php', 12, [], [], now()->toImmutable(), environment: 'production');
-
-        $during = $action->execute($this->project, $signal());
-        app(EndMaintenanceWindowAction::class)->execute($window);
-        $this->travel(1)->minutes();
-        $after = $action->execute($this->project, $signal());
-
-        expect($during->under_maintenance)->toBeTrue()
-            ->and($after->under_maintenance)->toBeFalse();
     });
 
     it('keeps the issue flagged while every occurrence came in during a window', function () {

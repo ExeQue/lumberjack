@@ -6,9 +6,10 @@ namespace App\Domains\SourceMaps\Actions;
 
 use App\Domains\Issues\Data\IssueSignal;
 use App\Domains\Projects\Models\Project;
-use App\Domains\Shared\Support\LruCache;
 use App\Domains\SourceMaps\Models\SourceMap;
 use App\Domains\SourceMaps\Support\SourceMapDecoder;
+use Illuminate\Container\Attributes\Singleton;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -16,7 +17,10 @@ use Throwable;
  * Turns a browser error's minified frames back into the original source, before it is
  * grouped, so an issue stays one issue across builds. Each frame keeps its minified
  * position. A frame without a map, or with a broken one, stays as it came.
+ *
+ * One instance per worker, so a decoded map serves every batch after the first.
  */
+#[Singleton]
 class SymbolicateFramesAction
 {
     /** Lines of source shown around a frame, like the server SDK sends. */
@@ -26,24 +30,16 @@ class SymbolicateFramesAction
     public const int MAX_MAPS_PER_ERROR = 4;
 
     /**
-     * Maps decoded per instance, which is one ingest batch: a map can be 20 MB, and the
+     * Maps a project may have decoded a minute: a map takes about a second, and the
      * browser key that sends errors is public. Past it frames stay minified.
      */
-    public const int MAX_DECODES = 20;
+    public const int MAX_DECODES_PER_MINUTE = 20;
 
-    /**
-     * Decoded maps by id and upload time. A map can be 20 MB, so only a few.
-     *
-     * @var LruCache<SourceMapDecoder|null>
-     */
-    private LruCache $decoded;
+    /** What the decoded maps a worker keeps may take in memory; a 20 MB map takes about 40 MB. */
+    public const int MAX_CACHED_BYTES = 128 * 1024 * 1024;
 
-    private int $decodes = 0;
-
-    public function __construct()
-    {
-        $this->decoded = new LruCache(self::MAX_MAPS_PER_ERROR);
-    }
+    /** @var array<string, SourceMapDecoder|null> by id and upload time, least recently used first */
+    private array $decoded = [];
 
     public function execute(Project $project, IssueSignal $signal): IssueSignal
     {
@@ -79,7 +75,7 @@ class SymbolicateFramesAction
             $map = $maps->get((string) $this->bundlePath($frame));
 
             if ($map !== null && is_int($frame['line'] ?? null) && is_int($frame['column'] ?? null)) {
-                $positions[$i] = $this->decode($map)?->lookup($frame['line'], $frame['column']);
+                $positions[$i] = $this->decode($project, $map)?->lookup($frame['line'], $frame['column']);
             }
         }
 
@@ -118,21 +114,37 @@ class SymbolicateFramesAction
         return is_string($frame['file'] ?? null) && $frame['file'] !== '' ? SourceMap::normalizePath($frame['file']) : null;
     }
 
-    private function decode(SourceMap $map): ?SourceMapDecoder
+    private function decode(Project $project, SourceMap $map): ?SourceMapDecoder
     {
-        return $this->decoded->remember($map->id.':'.$map->updated_at->getTimestamp(), function () use ($map): ?SourceMapDecoder {
-            if (++$this->decodes > self::MAX_DECODES) {
-                return null;
-            }
+        $key = $map->id.':'.$map->updated_at->getTimestamp();
 
-            try {
-                return SourceMapDecoder::decode((string) Storage::get($map->filePath()));
-            } catch (Throwable $e) {
-                report($e);
+        if (array_key_exists($key, $this->decoded)) {
+            $decoder = $this->decoded[$key];
+            // The most recently used goes last.
+            unset($this->decoded[$key]);
 
-                return null;
-            }
-        });
+            return $this->decoded[$key] = $decoder;
+        }
+
+        if (! RateLimiter::attempt('sourcemap-decodes:'.$project->id, self::MAX_DECODES_PER_MINUTE, fn (): bool => true)) {
+            return null;
+        }
+
+        try {
+            $decoder = SourceMapDecoder::decode((string) Storage::get($map->filePath()));
+        } catch (Throwable $e) {
+            report($e);
+            $decoder = null;
+        }
+
+        $this->decoded[$key] = $decoder;
+
+        // The least recently used go first, as long as the rest is over budget.
+        while (count($this->decoded) > 1 && array_sum(array_map(fn (?SourceMapDecoder $d): int => $d?->bytes() ?? 0, $this->decoded)) > self::MAX_CACHED_BYTES) {
+            unset($this->decoded[array_key_first($this->decoded)]);
+        }
+
+        return $decoder;
     }
 
     /**

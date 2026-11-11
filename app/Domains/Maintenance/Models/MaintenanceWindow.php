@@ -8,6 +8,7 @@ use App\Domains\Maintenance\Eloquent\Builders\MaintenanceWindowBuilder;
 use App\Domains\Maintenance\Enums\MaintenanceSource;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Database\Factories\MaintenanceWindowFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
@@ -96,6 +97,16 @@ class MaintenanceWindow extends Model
         if ($this->expected_end_at->greaterThan(now())) {
             $this->overrun_alerted_at = null;
         }
+    }
+
+    /**
+     * Whether it was open at the moment for the environment, as whereOpen() and whereCovers() ask.
+     */
+    public function covers(?string $environment, CarbonInterface $at): bool
+    {
+        return $this->starts_at->lessThanOrEqualTo($at)
+            && ($this->ended_at === null || $this->ended_at->greaterThan($at))
+            && ($environment === null || $environment === '' || in_array($this->environment, [$environment, ''], true));
     }
 
     public function isOpen(): bool

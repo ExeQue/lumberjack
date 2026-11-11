@@ -11,6 +11,7 @@ use Database\Factories\SourceMapFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +35,18 @@ class SourceMap extends Model
 {
     /** @use HasFactory<SourceMapFactory> */
     use HasFactory;
+    use HasUuids;
+
+    /** @return list<string> */
+    public function uniqueIds(): array
+    {
+        return ['uuid'];
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
 
     /** @return BelongsTo<Project, $this> */
     public function project(): BelongsTo

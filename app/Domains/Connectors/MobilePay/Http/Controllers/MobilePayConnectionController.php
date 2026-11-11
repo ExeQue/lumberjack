@@ -8,6 +8,7 @@ use App\Domains\Connectors\MobilePay\Actions\ConnectMobilePayAction;
 use App\Domains\Connectors\MobilePay\Exceptions\MobilePayExceptionInterface;
 use App\Domains\Connectors\MobilePay\Http\Requests\ConnectMobilePayRequest;
 use App\Domains\Projects\Models\Project;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 
@@ -22,6 +23,8 @@ class MobilePayConnectionController
             $connection = $action->execute($project, $request->credentials(), $request->string('timezone', 'UTC')->toString());
         } catch (MobilePayExceptionInterface $e) {
             throw ValidationException::withMessages(['client_secret' => $e->getMessage()]);
+        } catch (LockTimeoutException) {
+            throw ValidationException::withMessages(['client_secret' => __('connectors.mobilepay.errors.busy')]);
         }
 
         return to_route('connectors.mobilepay.index', [$project, $connection])

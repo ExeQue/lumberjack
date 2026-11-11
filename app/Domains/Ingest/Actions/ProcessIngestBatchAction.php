@@ -106,7 +106,7 @@ class ProcessIngestBatchAction
                     'command' => $this->recordCommandEventAction->execute($project, $event, $envelope),
                     'health' => $this->recordReportedHealthAction->execute($project, $event, $envelope),
                     'alert' => $this->recordCustomAlertAction->execute($project, $event, $envelope),
-                    'maintenance' => $this->recordMaintenanceEventAction->execute($project, $event, $envelope),
+                    'maintenance' => $this->recordMaintenance($project, $event, $envelope),
                     default => null,
                 };
             } catch (Throwable $e) {
@@ -147,6 +147,17 @@ class ProcessIngestBatchAction
         }
 
         $this->broadcastChanges($project, $touched);
+    }
+
+    /**
+     * The errors after it in the batch see the window it opened or closed.
+     *
+     * @param  array<string, mixed>  $event
+     */
+    private function recordMaintenance(Project $project, array $event, Envelope $envelope): void
+    {
+        $this->recordMaintenanceEventAction->execute($project, $event, $envelope);
+        $this->recordOccurrenceAction->forgetMaintenance($project);
     }
 
     /**

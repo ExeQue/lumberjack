@@ -8,14 +8,17 @@ use InvalidArgumentException;
 
 /**
  * Reads a version 3 source map and finds where a position in the bundle came from.
- * The mappings are decoded once into one packed string per generated line, 20 bytes
- * a segment, so a large map stays a few megabytes in memory.
+ * The mappings are read in one pass, without splitting them into arrays, into one packed
+ * string per generated line, 20 bytes a segment: some four times the mappings' size, so a
+ * 20 MB map can take 80 MB. bytes() says how much, for whoever keeps decoded maps around.
  */
 final class SourceMapDecoder
 {
     private const string BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
     private const int SEGMENT_BYTES = 20;
+
+    private ?int $bytes = null;
 
     /**
      * @param  list<string>  $lines  per generated line: column, source, line, column, name (-1 for none)
@@ -46,42 +49,77 @@ final class SourceMapDecoder
         $names = array_map(fn ($n): string => is_string($n) ? $n : '', array_values((array) ($map['names'] ?? [])));
 
         $digits = array_flip(str_split(self::BASE64));
+        $mappings = $map['mappings'];
+        unset($map);
         $source = $line = $column = $name = 0;
         $lines = [];
+        $packed = '';
+        $generated = 0;
+        $fields = [];
+        $value = $shift = 0;
 
-        foreach (explode(';', $map['mappings']) as $segments) {
-            $generated = 0;
-            $packed = '';
+        // One character at a time: an explode() of a large map's segments costs hundreds of megabytes.
+        for ($i = 0, $length = strlen($mappings); $i <= $length; $i++) {
+            $char = $i < $length ? $mappings[$i] : ';';
 
-            foreach (explode(',', $segments) as $segment) {
-                if ($segment === '') {
+            if ($char !== ',' && $char !== ';') {
+                $digit = $digits[$char] ?? throw new InvalidArgumentException('Invalid character in the mappings.');
+                $value += ($digit & 31) << $shift;
+
+                if (($digit & 32) !== 0) {
+                    $shift += 5;
+
                     continue;
                 }
 
-                $fields = self::vlq($segment, $digits);
-                $generated += $fields[0] ?? throw new InvalidArgumentException('An unfinished segment in the mappings.');
+                $fields[] = ($value & 1) === 1 ? -($value >> 1) : $value >> 1;
+                $value = $shift = 0;
+
+                continue;
+            }
+
+            if ($shift !== 0) {
+                throw new InvalidArgumentException('An unfinished segment in the mappings.');
+            }
+
+            if ($fields !== []) {
+                $generated += $fields[0];
 
                 if (count($fields) < 4) {
                     $packed .= pack('l5', $generated, -1, 0, 0, -1);
+                } else {
+                    $source += $fields[1];
+                    $line += $fields[2];
+                    $column += $fields[3];
 
-                    continue;
+                    if (isset($fields[4])) {
+                        $name += $fields[4];
+                    }
+
+                    $packed .= pack('l5', $generated, $source, $line, $column, isset($fields[4]) ? $name : -1);
                 }
 
-                $source += $fields[1];
-                $line += $fields[2];
-                $column += $fields[3];
-
-                if (isset($fields[4])) {
-                    $name += $fields[4];
-                }
-
-                $packed .= pack('l5', $generated, $source, $line, $column, isset($fields[4]) ? $name : -1);
+                $fields = [];
             }
 
-            $lines[] = $packed;
+            if ($char === ';') {
+                $lines[] = $packed;
+                $packed = '';
+                $generated = 0;
+            }
         }
 
         return new self($lines, $sources, $contents, $names);
+    }
+
+    /**
+     * Roughly what it holds in memory, in bytes.
+     */
+    public function bytes(): int
+    {
+        return $this->bytes ??= array_sum(array_map(strlen(...), $this->lines))
+            + array_sum(array_map(fn (?string $content): int => strlen((string) $content), $this->contents))
+            + array_sum(array_map(strlen(...), $this->names));
     }
 
     /**
@@ -123,35 +161,5 @@ final class SourceMapDecoder
             'name' => $this->names[$found[4]] ?? null,
             'content' => $this->contents[$found[1]] ?? null,
         ];
-    }
-
-    /**
-     * One segment's Base64 VLQ fields, each relative to the segment before it.
-     *
-     * @param  array<int|string, int>  $digits  digit characters become int keys
-     * @return list<int>
-     */
-    private static function vlq(string $segment, array $digits): array
-    {
-        $fields = [];
-        $value = 0;
-        $shift = 0;
-
-        for ($i = 0, $length = strlen($segment); $i < $length; $i++) {
-            $digit = $digits[$segment[$i]] ?? throw new InvalidArgumentException('Invalid character in the mappings.');
-            $value += ($digit & 31) << $shift;
-
-            if (($digit & 32) !== 0) {
-                $shift += 5;
-
-                continue;
-            }
-
-            $fields[] = ($value & 1) === 1 ? -($value >> 1) : $value >> 1;
-            $value = 0;
-            $shift = 0;
-        }
-
-        return $fields;
     }
 }

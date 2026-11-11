@@ -180,6 +180,7 @@ return [
 
         // Why asking Vipps MobilePay failed, shown in the connect dialog, on the connection, its sources and the Vipps MobilePay page.
         'errors' => [
+            'busy' => 'This ledger is being connected already. Try again in a moment.',
             'unauthorized' => 'Vipps MobilePay refused the API keys. Check the client ID, client secret, subscription key and merchant serial number in the business portal.',
             'forbidden' => 'The API keys may not read the Report API. Check the sales unit\'s access in the business portal.',
             'not_found' => 'Vipps MobilePay no longer finds the ledger. Connect it again.',

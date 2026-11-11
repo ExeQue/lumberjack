@@ -137,7 +137,7 @@ type Channel = {
     retention_days: number | null;
 };
 type SourceMap = {
-    id: number;
+    uuid: string;
     path: string;
     release: string | null;
     size: number;
@@ -1311,7 +1311,7 @@ function SourceMapsSection({
                         </thead>
                         <tbody>
                             {source_maps.map((map) => (
-                                <tr key={map.id}>
+                                <tr key={map.uuid}>
                                     <td
                                         className={cn(
                                             tdClass,
@@ -1357,7 +1357,7 @@ function SourceMapsSection({
                                                     router.delete(
                                                         sourceMapDestroy([
                                                             project.uuid,
-                                                            map.id,
+                                                            map.uuid,
                                                         ]).url,
                                                         {
                                                             preserveScroll: true,
