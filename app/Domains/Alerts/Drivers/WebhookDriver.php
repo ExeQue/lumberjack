@@ -12,6 +12,7 @@ use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\IssueAlert;
 use App\Domains\Alerts\Data\MaintenanceOverrunAlert;
 use App\Domains\Alerts\Data\QueueBacklogAlert;
+use App\Domains\Alerts\Data\WeeklySummaryAlert;
 use App\Domains\Alerts\Drivers\Concerns\SendsHttp;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\NotificationChannel;
@@ -123,6 +124,17 @@ class WebhookDriver implements ChannelDriver
                     'overrun_minutes' => $alert->overrunMinutes(),
                     'url' => $alert->url,
                 ],
+            ], $alert);
+
+            return;
+        }
+
+        if ($alert instanceof WeeklySummaryAlert) {
+            $this->post($channel, [
+                'event' => AlertRuleType::WeeklySummary->value,
+                'period' => ['from' => $alert->from->toIso8601String(), 'to' => $alert->to->toIso8601String()],
+                'projects' => $alert->projects,
+                'url' => $alert->url,
             ], $alert);
 
             return;

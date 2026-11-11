@@ -18,13 +18,14 @@ enum AlertRuleType: string
     case HealthDown = 'health_down';
     case HealthRecovered = 'health_recovered';
     case MaintenanceOverrun = 'maintenance_overrun';
+    case WeeklySummary = 'weekly_summary';
 
     /**
-     * Notes and status changes go to shared channels only when someone turns that on.
+     * Notes, status changes and the weekly summary go to shared channels only when someone turns that on.
      */
     public function enabledByDefault(): bool
     {
-        return $this !== self::Note && $this !== self::StatusChange;
+        return $this !== self::Note && $this !== self::StatusChange && $this !== self::WeeklySummary;
     }
 
     /**

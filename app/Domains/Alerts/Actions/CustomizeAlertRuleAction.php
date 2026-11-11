@@ -33,6 +33,8 @@ class CustomizeAlertRuleAction
                 'enabled' => $team->enabled ?? $type->enabledByDefault(),
                 'environments' => $team?->environments,
                 'settings' => $team?->settings,
+                // So a weekly summary the team's rule just sent is not sent again.
+                'last_sent_at' => $team?->last_sent_at,
             ]);
             // The channels it sent to keep getting it: the team's and the project's add-ons,
             // which the project's own rule now holds instead.

@@ -57,6 +57,22 @@ class SendProjectAlertAction
         return $sent;
     }
 
+    /**
+     * One channel, outside any rule: a message built for that channel alone, such as a
+     * weekly summary of the projects routed to it.
+     *
+     * @param  list<MailReason>  $reasons  why a mail channel gets it, for the footer
+     * @return int 1 when it reached the channel
+     */
+    public function sendTo(NotificationChannel $channel, Alert $alert, array $reasons = []): int
+    {
+        $driver = $this->drivers->for($channel->type);
+
+        return $this->record($channel, fn () => $driver instanceof MailDriver && $reasons !== []
+            ? $driver->sendWithReasons($channel, $alert, $reasons)
+            : $driver->send($channel, $alert));
+    }
+
     private function record(NotificationChannel $channel, Closure $send): int
     {
         $error = null;

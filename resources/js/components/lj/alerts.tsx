@@ -12,6 +12,7 @@ import {
     EmptyState,
     Field,
     Input,
+    Select,
     Switch,
 } from '@/components/lj/ui';
 import { useT } from '@/lib/i18n';
@@ -36,7 +37,12 @@ import {
     reset as ruleReset,
     update as ruleUpdate,
 } from '@/routes/alerts/rules';
-import type { AlertRule, ProjectAlertRule } from '@/types/lumberjack';
+import type {
+    AlertRule,
+    ProjectAlertRule,
+    QueueBacklogSettings,
+    WeeklySummarySettings,
+} from '@/types/lumberjack';
 
 export type Channel = {
     id: number;
@@ -756,11 +762,23 @@ export function RuleRow({
     const [environments, setEnvironments] = useState(
         rule.environments.join(', '),
     );
+    const queue =
+        rule.type === 'queue_backlog'
+            ? (rule.settings as QueueBacklogSettings | null)
+            : null;
+    const weekly =
+        rule.type === 'weekly_summary'
+            ? (rule.settings as WeeklySummarySettings | null)
+            : null;
     // Number inputs as typed; empty means the threshold is off.
     const [thresholds, setThresholds] = useState({
-        size: String(rule.settings?.size ?? ''),
-        age_minutes: String(rule.settings?.age_minutes ?? ''),
-        sustain_minutes: String(rule.settings?.sustain_minutes ?? ''),
+        size: String(queue?.size ?? ''),
+        age_minutes: String(queue?.age_minutes ?? ''),
+        sustain_minutes: String(queue?.sustain_minutes ?? ''),
+    });
+    const [schedule, setSchedule] = useState({
+        day: weekly?.day ?? 1,
+        time: weekly?.time ?? '08:00',
     });
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -777,7 +795,8 @@ export function RuleRow({
                 enabled,
                 channels: selected,
                 environments: envs.length > 0 ? envs : null,
-                ...(rule.settings && {
+                ...(weekly && { settings: schedule }),
+                ...(queue && {
                     settings: Object.fromEntries(
                         Object.entries(thresholds).map(([key, value]) => [
                             key,
@@ -803,10 +822,12 @@ export function RuleRow({
         selected.length !== rule.channels.length ||
         selected.some((id) => !rule.channels.includes(id)) ||
         environments !== rule.environments.join(', ') ||
-        (rule.settings !== null &&
+        (queue !== null &&
             (['size', 'age_minutes', 'sustain_minutes'] as const).some(
-                (key) => thresholds[key] !== String(rule.settings?.[key] ?? ''),
-            ));
+                (key) => thresholds[key] !== String(queue[key] ?? ''),
+            )) ||
+        (weekly !== null &&
+            (schedule.day !== weekly.day || schedule.time !== weekly.time));
 
     return (
         <form
@@ -861,7 +882,65 @@ export function RuleRow({
                         </p>
                     )}
             </fieldset>
-            {rule.settings ? (
+            {weekly ? (
+                <fieldset
+                    className="flex flex-[1_1_180px] flex-col gap-2"
+                    disabled={disabled}
+                >
+                    <legend className="mb-1 text-xs text-ink-3">
+                        {t('alerts.rules.weekly.title')}
+                    </legend>
+                    <Field
+                        label={
+                            <span className="text-xs font-normal text-ink-3">
+                                {t('alerts.rules.weekly.day')}
+                            </span>
+                        }
+                        htmlFor={`rule-day-${rule.id}`}
+                    >
+                        <Select
+                            id={`rule-day-${rule.id}`}
+                            value={schedule.day}
+                            onChange={(e) =>
+                                setSchedule({
+                                    ...schedule,
+                                    day: Number(e.target.value),
+                                })
+                            }
+                        >
+                            {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+                                <option key={day} value={day}>
+                                    {t(`alerts.rules.weekly.days.${day}`)}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
+                    <Field
+                        label={
+                            <span className="text-xs font-normal text-ink-3">
+                                {t('alerts.rules.weekly.time')}
+                            </span>
+                        }
+                        htmlFor={`rule-time-${rule.id}`}
+                    >
+                        <Input
+                            id={`rule-time-${rule.id}`}
+                            type="time"
+                            className="font-mono"
+                            value={schedule.time}
+                            onChange={(e) =>
+                                setSchedule({
+                                    ...schedule,
+                                    time: e.target.value,
+                                })
+                            }
+                        />
+                    </Field>
+                    <p className="text-xs text-ink-3">
+                        {t('alerts.rules.weekly.hint')}
+                    </p>
+                </fieldset>
+            ) : queue ? (
                 <fieldset
                     className="flex flex-[1_1_180px] flex-col gap-2"
                     disabled={disabled}

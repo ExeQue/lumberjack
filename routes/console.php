@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domains\Administration\Console\Commands\CheckForUpdateCommand;
 use App\Domains\Alerts\Console\Commands\CheckQueueBacklogsCommand;
+use App\Domains\Alerts\Console\Commands\SendWeeklySummariesCommand;
 use App\Domains\DataSources\Console\Commands\FetchDataSourcesCommand;
 use App\Domains\Health\Console\Commands\ArchiveSilentHealthChecksCommand;
 use App\Domains\Health\Console\Commands\RunHealthChecksCommand;
@@ -24,6 +25,7 @@ Schedule::command(ReturnIgnoredIssuesCommand::class)->everyMinute()->withoutOver
 Schedule::command(SendWatchDigestsCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(CheckQueueBacklogsCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(CheckMaintenanceOverrunsCommand::class)->everyMinute()->withoutOverlapping();
+Schedule::command(SendWeeklySummariesCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(RunHealthChecksCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(FetchDataSourcesCommand::class)->everyMinute()->withoutOverlapping();
 Schedule::command(NotifyOfflineAgentsCommand::class)->everyMinute()->withoutOverlapping();

@@ -26,7 +26,11 @@ class AlertRulePresenter
             'enabled' => $rule->enabled,
             'channels' => $rule->channels->modelKeys(),
             'environments' => $rule->environments ?? [],
-            'settings' => $rule->type === AlertRuleType::QueueBacklog ? $rule->queueBacklogSettings()->toArray() : null,
+            'settings' => match ($rule->type) {
+                AlertRuleType::QueueBacklog => $rule->queueBacklogSettings()->toArray(),
+                AlertRuleType::WeeklySummary => $rule->weeklySummarySettings()->toArray(),
+                default => null,
+            },
         ];
     }
 
