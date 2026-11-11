@@ -262,9 +262,17 @@ describe('what it refuses', function () {
             ->assertBadRequest();
     });
 
-    it('rejects a body that is too large, before or after gzip', function (bool $gzip) {
-        $this->otlp('traces', str_repeat("\0", $gzip ? OtlpExportRequest::MAX_INFLATED_BYTES + 1 : IngestBatchRequest::MAX_BYTES + 1), gzip: $gzip)->assertStatus(413);
-    })->with(['plain' => [false], 'gzip' => [true]]);
+    it('rejects a body that is too large', function () {
+        $this->otlp('traces', str_repeat("\0", IngestBatchRequest::MAX_BYTES + 1))->assertStatus(413);
+    });
+
+    it('rejects a gzip body that says it inflates past the limit, before inflating it', function () {
+        // A small body whose trailer claims too much: what the check reads, without 20 MB in memory.
+        $body = substr(gzencode('{}'), 0, -4).pack('V', OtlpExportRequest::MAX_INFLATED_BYTES + 1);
+
+        $this->call('POST', '/api/v1/opentelemetry/v1/traces', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_CONTENT_ENCODING' => 'gzip', 'HTTP_AUTHORIZATION' => 'Bearer lj_srv_test-token'], $body)
+            ->assertStatus(413);
+    });
 
     it('rejects another content type', function () {
         $this->call('POST', '/api/v1/opentelemetry/v1/logs', [], [], [], ['CONTENT_TYPE' => 'text/plain', 'HTTP_AUTHORIZATION' => 'Bearer lj_srv_test-token'], 'hello')
