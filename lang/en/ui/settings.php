@@ -33,21 +33,7 @@ return [
         'health' => ['label' => 'Health checks', 'description' => 'A check turns degraded or down, and when it is ok again. Muted checks stay quiet.'],
         'queue_backlogs' => ['label' => 'Queue backlogs', 'description' => 'A queue stays over its thresholds, and when it is back under. Muted queues stay quiet.'],
         'scheduled_tasks' => ['label' => 'Scheduled tasks', 'description' => 'A scheduled task fails or is missed. Told here instead of under new issues.'],
-        'sourcemaps' => [
-        'title' => 'Source maps',
-        'description' => 'Browser errors from a bundle with an uploaded map show the original file, line and source. Upload the maps after each build, with the server token. Kept 90 days, and as long as they belong to one of the last 10 releases.',
-        'upload_url' => 'Upload URL',
-        'empty' => 'No source maps uploaded yet.',
-        'path' => 'Bundle',
-        'release' => 'Release',
-        'size' => 'Size',
-        'uploaded_at' => 'Uploaded',
-        'actions' => 'Actions',
-        // Button
-        'delete' => 'Delete',
-        'delete_question' => 'Delete the map of :path? Its errors from now on stay minified.',
-    ],
-    'agents' => ['label' => 'Agents', 'description' => 'An agent stops sending its heartbeat.'],
+        'agents' => ['label' => 'Agents', 'description' => 'An agent stops sending its heartbeat.'],
         'releases' => ['label' => 'Releases', 'description' => 'A server reports a release for the first time.'],
     ],
     'push' => [
@@ -187,6 +173,20 @@ return [
         'local_title' => 'Or triage now, in a local session',
         'local_hint' => 'Set :secret to an MCP token in your shell first, e.g. export :secret=lj_mcp_...; Claude Code then has Lumberjack\'s tools for this session.',
         'hint' => 'CLAUDE_CODE_OAUTH_TOKEN runs on a Claude subscription; create it with claude setup-token. To pay per use instead, use ANTHROPIC_API_KEY as the workflow describes. GitHub has to reach this Lumberjack, so it must be on a public URL. The agent never resolves an issue. When it is sure of a small fix, it opens a draft pull request on a lumberjack/<issue> branch; it never pushes to the default branch or merges.',
+    ],
+    'sourcemaps' => [
+        'title' => 'Source maps',
+        'description' => 'Browser errors from a bundle with an uploaded map show the original file, line and source. Upload the maps after each build, with the server token. Kept 90 days, and as long as they belong to one of the last 10 releases.',
+        'upload_url' => 'Upload URL',
+        'empty' => 'No source maps uploaded yet.',
+        'path' => 'Bundle',
+        'release' => 'Release',
+        'size' => 'Size',
+        'uploaded_at' => 'Uploaded',
+        'actions' => 'Actions',
+        // Button
+        'delete' => 'Delete',
+        'delete_question' => 'Delete the map of :path? Its errors from now on stay minified.',
     ],
     'labels' => [
         'title' => 'Labels',
