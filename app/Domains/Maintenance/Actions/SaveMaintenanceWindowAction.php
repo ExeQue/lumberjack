@@ -30,10 +30,12 @@ class SaveMaintenanceWindowAction
             'starts_at' => $startsAt,
             'message' => $message,
         ]);
+        $isNew = ! $window->exists;
         $window->expectTo($endsAt);
 
         // Planned wholly in the past it is a record of maintenance that happened, not an overrun.
-        if ($window->ended_at === null && $endsAt->lessThanOrEqualTo(now())) {
+        // Only a new one: an open window is ended by EndMaintenanceWindowAction, which tells who heard of its overrun.
+        if ($isNew && $endsAt->lessThanOrEqualTo(now())) {
             $window->ended_at = $window->expected_end_at;
         }
 

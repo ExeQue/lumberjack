@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domains\Ingest\Actions\ProcessIngestBatchAction;
 use App\Domains\Ingest\Http\Requests\IngestBatchRequest;
+use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Maintenance\Actions\EndMaintenanceWindowAction;
 use App\Domains\Maintenance\Actions\RecordMaintenanceEventAction;
 use App\Domains\Maintenance\Actions\StartMaintenanceAction;
@@ -122,6 +123,26 @@ describe('an end event', function () {
         ($this->send)(['state' => 'end', 'timestamp' => now()->subMinute()->getTimestamp()]);
 
         expect(MaintenanceWindow::query()->sole()->ended_at)->toBeNull();
+    });
+
+    it('flags the errors of one batch by the window as it is at each, an end in between included', function () {
+        ($this->send)(['state' => 'start']);
+        $this->travel(1)->minutes();
+        $at = now()->getTimestamp();
+
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'exception', 'timestamp' => $at, 'class' => 'RuntimeException', 'message' => 'During', 'file' => 'app/A.php', 'line' => 1],
+            ['type' => 'maintenance', 'state' => 'end', 'timestamp' => $at + 1],
+            ['type' => 'exception', 'timestamp' => $at + 2, 'class' => 'RuntimeException', 'message' => 'After', 'file' => 'app/B.php', 'line' => 1],
+        ]), ['Authorization' => 'Bearer lj_srv_test-token'])->assertStatus(202);
+
+        expect(Occurrence::query()->orderBy('id')->pluck('under_maintenance')->all())->toBe([true, false]);
+    });
+
+    it('caps how long an app may say it takes at a week', function () {
+        ($this->send)(['state' => 'start', 'expected_until' => '2099-01-01T00:00:00+00:00']);
+
+        expect(MaintenanceWindow::query()->sole()->expected_end_at->getTimestamp())->toBe(now()->addMinutes(RecordMaintenanceEventAction::MAX_EXPECTED_MINUTES)->getTimestamp());
     });
 
     it('does nothing with no window open', function () {

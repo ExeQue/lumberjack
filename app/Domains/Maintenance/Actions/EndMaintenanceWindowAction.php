@@ -30,8 +30,12 @@ class EndMaintenanceWindowAction
         }
 
         // A planned window ended before it began never happened; it ends where it would have started.
-        $window->ended_at = ($at ?? now())->min(now())->max($window->starts_at);
-        $window->save();
+        // Ended only if still open, then read again: an overrun alert claimed meanwhile is told it ended.
+        if (MaintenanceWindow::query()->whereKey($window->id)->whereNotEnded()->update(['ended_at' => ($at ?? now())->min(now())->max($window->starts_at)]) === 0) {
+            return;
+        }
+
+        $window->refresh();
 
         if ($window->overrun_alerted_at !== null) {
             $rule = AlertRule::query()->whereEffectiveFor($window->project)->whereType(AlertRuleType::MaintenanceOverrun)->whereEnabled()->first();

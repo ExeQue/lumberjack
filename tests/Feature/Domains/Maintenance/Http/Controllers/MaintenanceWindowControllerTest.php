@@ -64,6 +64,16 @@ describe('planning a window', function () {
         expect(MaintenanceWindow::query()->where('environment', 'staging')->sole()->ended_at?->toIso8601String())->toBe('2026-11-10T09:00:00+00:00');
     });
 
+    it('keeps an overrun window open when only its message is changed', function () {
+        $window = MaintenanceWindow::factory()->of($this->project)->overrun()->create(['source' => MaintenanceSource::Planned]);
+
+        $this->actingAs($this->admin)->put(route('maintenance.update', [$this->project, $window]), [
+            'environment' => 'production', 'starts_at' => $window->starts_at->toIso8601String(), 'ends_at' => $window->expected_end_at->toIso8601String(), 'message' => 'Still at it',
+        ])->assertSessionHasNoErrors();
+
+        expect($window->refresh())->message->toBe('Still at it')->ended_at->toBeNull();
+    });
+
     it('ends a window that has not started where it would have started', function () {
         $this->actingAs($this->admin)->post(route('maintenance.end', [$this->project, $this->planned]))->assertRedirect();
 

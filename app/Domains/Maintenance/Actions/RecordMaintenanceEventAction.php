@@ -65,7 +65,7 @@ class RecordMaintenanceEventAction
     private function expectedEnd(array $event, CarbonImmutable $at): ?CarbonImmutable
     {
         if (is_string($event['expected_until'] ?? null) && $event['expected_until'] !== '') {
-            return Envelope::time($event['expected_until'])->max($at);
+            return Envelope::time($event['expected_until'])->max($at)->min($at->addMinutes(self::MAX_EXPECTED_MINUTES));
         }
 
         if (is_numeric($event['expected_minutes'] ?? null)) {

@@ -44,9 +44,12 @@ class CheckMaintenanceOverrunsAction
                 return;
             }
 
-            $window->overrun_alerted_at = now();
-            $window->save();
-            SendMaintenanceOverrunAlert::dispatch($rule, $window, ended: false);
+            // Only while still open: an end in between closed it, and then nothing ran over.
+            if (MaintenanceWindow::query()->whereKey($window->id)->whereNotEnded()->update(['overrun_alerted_at' => now()]) === 0) {
+                return;
+            }
+
+            SendMaintenanceOverrunAlert::dispatch($rule, $window->refresh(), ended: false);
             $queued++;
         });
 

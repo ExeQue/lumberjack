@@ -13,6 +13,7 @@ return new class () extends Migration {
         // The maps themselves are files on the default disk, under sourcemaps/{project id}/.
         Schema::create('source_maps', function (Blueprint $table): void {
             $table->id();
+            $table->uuid()->unique();
             $table->foreignIdFor(Project::class)->constrained()->cascadeOnDelete();
             $table->string('path', 500);
             $table->string('release', 64)->nullable();

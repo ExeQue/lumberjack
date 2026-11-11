@@ -8,6 +8,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\SourceMaps\Actions\SymbolicateFramesAction;
 use App\Domains\SourceMaps\Models\SourceMap;
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\Ingest\BuildsIngestPayloads;
 
@@ -61,10 +62,20 @@ describe('browser frames with an uploaded map', function () {
             ->toBe([...array_fill(0, SymbolicateFramesAction::MAX_MAPS_PER_ERROR, true), false, false]);
     });
 
-    it('decodes no more maps than its budget for one batch, and leaves the rest minified', function () {
+    it('decodes a map once for every batch after it, in the same worker', function () {
+        SourceMap::factory()->for($this->project)->withFile($this->map)->create(['path' => '/build/assets/app-BxQ3kZ9a.js']);
+
+        ($this->sendBrowserError)($this->minifiedBrowserError());
+        ($this->sendBrowserError)([...$this->minifiedBrowserError(), 'message' => 'Another']);
+
+        expect(RateLimiter::attempts('sourcemap-decodes:'.$this->project->id))->toBe(1)
+            ->and(Occurrence::query()->get()->every(fn (Occurrence $o): bool => isset($o->stacktrace[0]['minified'])))->toBeTrue();
+    });
+
+    it('decodes no more maps a minute than its budget for a project, and leaves the rest minified', function () {
         $events = [];
 
-        foreach (range(1, SymbolicateFramesAction::MAX_DECODES + 1) as $n) {
+        foreach (range(1, SymbolicateFramesAction::MAX_DECODES_PER_MINUTE + 1) as $n) {
             $bundle = "https://app.example.test/build/assets/chunk-{$n}.js";
             SourceMap::factory()->for($this->project)->withFile($this->map)->create(['path' => parse_url($bundle, PHP_URL_PATH)]);
             $events[] = [...$this->minifiedBrowserError($bundle), 'message' => "Error {$n}"];
@@ -72,7 +83,7 @@ describe('browser frames with an uploaded map', function () {
 
         $this->postJson('/api/ingest/browser?key='.$this->project->public_key, [...$this->batch($events), 'release' => 'a1f3c9e'], ['Origin' => 'https://app.example.test'])->assertStatus(202);
 
-        expect(Occurrence::query()->get()->filter(fn (Occurrence $o): bool => isset($o->stacktrace[0]['minified']))->count())->toBe(SymbolicateFramesAction::MAX_DECODES);
+        expect(Occurrence::query()->get()->filter(fn (Occurrence $o): bool => isset($o->stacktrace[0]['minified']))->count())->toBe(SymbolicateFramesAction::MAX_DECODES_PER_MINUTE);
     });
 
     it('groups the same error from two builds on one issue', function () {

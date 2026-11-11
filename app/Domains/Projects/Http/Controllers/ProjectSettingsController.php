@@ -89,7 +89,7 @@ class ProjectSettingsController
             // The newest only: a build of many chunks kept for 10 releases is thousands of maps.
             'source_maps_total' => $project->sourceMaps()->count(),
             'source_maps' => $project->sourceMaps()->latest('updated_at')->limit(self::SOURCE_MAPS_SHOWN)->get()->map(fn (SourceMap $m): array => [
-                'id' => $m->id, 'path' => $m->path, 'release' => $m->release, 'size' => $m->size, 'uploaded_at' => $m->updated_at->toIso8601String(),
+                'uuid' => $m->uuid, 'path' => $m->path, 'release' => $m->release, 'size' => $m->size, 'uploaded_at' => $m->updated_at->toIso8601String(),
             ])->all(),
             'unknown_channels' => DB::table('log_entries')->where('project_id', $project->id)->where('occurred_at', '>=', now()->subDays(7))
                 ->whereNotNull('sent_channel')->distinct()->limit(10)->pluck('sent_channel'),
