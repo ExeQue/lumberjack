@@ -34,6 +34,8 @@ class SendWeeklySummariesAction
             $projects = $rule->project !== null ? [$rule->project] : Project::query()
                 ->where('team_id', $rule->team_id)
                 ->whereDoesntHave('alertRules', fn (Builder $own) => $own->where('type', AlertRuleType::WeeklySummary->value))
+                // The message's sections follow this order.
+                ->orderBy('name')
                 ->get();
 
             foreach ($projects as $project) {
