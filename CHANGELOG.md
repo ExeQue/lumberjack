@@ -6,6 +6,7 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ### Added
 
+- **Source maps** for browser errors: upload a bundle's map to `POST /api/ingest/sourcemaps` (with `php artisan lumberjack:sourcemaps` from the Laravel library, or curl), and browser stack traces show the original files, lines and code. Issues group on the original frames, so they stay the same across builds. The minified frames are a toggle away on the issue page; maps are listed under the project's settings and kept 90 days, or longer while they belong to one of the last 10 releases.
 - **GitHub** connector: one repository per connection, read with its own read-only fine-grained token (Metadata, Pull requests, Actions, Contents), which connecting checks permission by permission. Its page shows open pull requests, those waiting for review, pull requests merged and workflow runs failed against the period before, open issues, CI on the default branch and the latest release, with tabs for pull requests, Actions and releases. The same figures are data sources for screens.
 
 ## [0.7.0] - 2026-11-11
