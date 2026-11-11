@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Models;
 
 use App\Domains\Alerts\Data\QueueBacklogSettings;
+use App\Domains\Alerts\Data\WeeklySummarySettings;
 use App\Domains\Alerts\Eloquent\Builders\AlertRuleBuilder;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Models\Team;
+use Carbon\CarbonImmutable;
 use Database\Factories\AlertRuleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
@@ -32,8 +34,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property list<string>|null $environments
  * @property array<string, mixed>|null $settings
  * @property string $topic  a custom alert rule's topic; empty on every other rule
+ * @property CarbonImmutable|null $last_sent_at  when a weekly summary rule last sent
  */
-#[Fillable(['team_id', 'project_id', 'type', 'topic', 'enabled', 'environments', 'settings'])]
+#[Fillable(['team_id', 'project_id', 'type', 'topic', 'enabled', 'environments', 'settings', 'last_sent_at'])]
 #[UseFactory(AlertRuleFactory::class)]
 #[UseEloquentBuilder(AlertRuleBuilder::class)]
 class AlertRule extends Model
@@ -56,6 +59,7 @@ class AlertRule extends Model
             'enabled' => 'boolean',
             'environments' => 'array',
             'settings' => 'array',
+            'last_sent_at' => 'datetime',
         ];
     }
 
@@ -110,6 +114,11 @@ class AlertRule extends Model
     public function queueBacklogSettings(): QueueBacklogSettings
     {
         return QueueBacklogSettings::fromArray($this->settings);
+    }
+
+    public function weeklySummarySettings(): WeeklySummarySettings
+    {
+        return WeeklySummarySettings::fromArray($this->settings);
     }
 
     public function appliesToEnvironment(?string $environment): bool

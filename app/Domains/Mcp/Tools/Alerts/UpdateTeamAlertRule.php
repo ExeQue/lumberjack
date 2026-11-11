@@ -38,7 +38,7 @@ class UpdateTeamAlertRule extends Tool
             'enabled' => $schema->boolean()->required(),
             'channels' => $schema->array()->items($schema->integer())->description('The team\'s shared channel ids. Others are dropped.')->required(),
             'environments' => $schema->array()->items($schema->string())->description('Empty or omitted: every environment.'),
-            'settings' => $schema->object()->description('Only for queue_backlog: {size, age_minutes, sustain_minutes}. Omit to keep them.'),
+            'settings' => $schema->object()->description('Only for queue_backlog: {size, age_minutes, sustain_minutes}; for weekly_summary: {day (1 is Monday, 7 Sunday), time (HH:MM, in the app time zone)}. Omit to keep them.'),
         ];
     }
 

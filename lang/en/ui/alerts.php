@@ -71,6 +71,13 @@ return [
             'off' => 'Off',
             'hint' => 'Leave one of the first two empty to turn it off. Sent once when it starts and once when the queue is back under, at most once every 30 minutes.',
         ],
+        'weekly' => [
+            'title' => 'Send it',
+            'day' => 'On',
+            'time' => 'At',
+            'days' => [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday', 7 => 'Sunday'],
+            'hint' => 'In the app\'s time zone. Covers the 7 days before it is sent.',
+        ],
         'empty' => 'This project has no rules.',
         'team_description' => 'Every project uses these unless it customizes a rule in its settings. Team rules send to the shared channels above.',
         'project_description' => 'A rule marked team default follows the team\'s Alerts page. Customize one to change it for this project only, with its own channels too.',

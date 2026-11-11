@@ -66,6 +66,7 @@ environments (comma separated, empty for all). There is one rule per type:
 | Health check down      | A health check that keeps failing.                                      | On      |
 | Health check recovered | A health check that is ok again.                                        | On      |
 | Maintenance overrun    | A [maintenance window](./health#expected-end-and-overrun) past its end. | On      |
+| Weekly summary         | Each project's past week, at the day and time you pick.                 | Off     |
 
 Alerts your own code sends have their own topics, see [Custom alerts](#custom-alerts).
 
@@ -146,6 +147,37 @@ alert** minutes (30 by default) until the window ends. When it ends, one more me
 says how long it ran over. Like the other rules it is a team rule with project
 overrides, and its environments limit it to windows of those environments.
 
+### Weekly summary
+
+Sends the past 7 days of each project against the 7 days before, once a week on the
+**day** and at the **time** set on the rule, in the app's time zone (Monday 08:00 by
+default). Like the other rules it is a team rule with project overrides; the
+environments setting does not apply to it.
+
+Each channel gets one message, with a section for every project whose rule sends there:
+a project whose own rule sends to other channels is in their message instead, sent at
+its own rule's day and time. Projects with nothing in the week (no requests, errors,
+jobs, scheduled task runs, health results, outages or maintenance) are left out, and a
+channel left with none gets nothing.
+
+Per project it covers:
+
+- requests, error rate, p95 and Apdex;
+- new issues and regressions, and the 5 issues that happened most;
+- the 5 of the busiest routes whose p95 grew most;
+- uptime per health check, and outages;
+- maintenance windows, and how long each ran over;
+- failed jobs and missed scheduled tasks;
+- the releases first seen in the week, and which of them brought the most new issues.
+
+Mail gets all of it. Slack, Teams, Discord, Telegram, ntfy and Pushover get one line
+per project with a link to Lumberjack. Webhooks get all of it as JSON, see
+[Webhooks](#webhooks).
+
+A summary is sent at most once in six days, so moving the day or time after one went out
+waits for the next week. One missed because the scheduler was down is sent when it is
+back, up to a day late.
+
 ### Maintenance
 
 Alerts are still sent while a maintenance window covers their environment, and
@@ -215,7 +247,7 @@ A webhook channel POSTs JSON to your endpoint.
 
 `new_issue`, `regression`, `escalation`, `status_change`, `note`, `bulk_status_change`,
 `queue_backlog`, `health_degraded`, `health_down`, `health_recovered`,
-`maintenance_overrun`.
+`maintenance_overrun`, `weekly_summary`.
 
 Every body also has `maintenance`: the window the alert was sent during, or `null`
 outside one.
@@ -333,6 +365,96 @@ and `ended` on the message sent when it ends; `overrun_minutes` is how long it r
 }
 ```
 
+A weekly summary carries every project of the message, as in the mail. Durations are
+in milliseconds and rates a share of 1; each figure has the week (`current`) and the
+week before (`previous`), and is `null` where there was nothing to measure:
+
+```json
+{
+    "version": "1",
+    "sent_at": "2026-11-09T08:00:00+00:00",
+    "event": "weekly_summary",
+    "period": {
+        "from": "2026-11-02T08:00:00+00:00",
+        "to": "2026-11-09T08:00:00+00:00"
+    },
+    "projects": [
+        {
+            "project": {
+                "id": "...",
+                "slug": "shop",
+                "name": "Shop",
+                "url": "https://lumberjack.example.com/projects/..."
+            },
+            "requests": { "current": 120345, "previous": 114210 },
+            "error_rate": { "current": 0.0042, "previous": 0.0051 },
+            "p95_ms": { "current": 231.0, "previous": 219.5 },
+            "apdex": { "current": 0.97, "previous": 0.98 },
+            "new_issues": { "current": 3, "previous": 5 },
+            "regressions": { "current": 1, "previous": 0 },
+            "top_issues": [
+                {
+                    "reference": "SHOP-42",
+                    "title": "Illuminate\\Database\\QueryException",
+                    "occurrences": 310,
+                    "url": "..."
+                }
+            ],
+            "slower_routes": [
+                {
+                    "method": "GET",
+                    "route": "/orders/{order}",
+                    "p95_ms": 412.0,
+                    "previous_p95_ms": 280.0
+                }
+            ],
+            "failed_jobs": { "current": 4, "previous": 9 },
+            "missed_tasks": { "current": 0, "previous": 1 },
+            "health_checks": [
+                { "name": "Website", "environment": null, "uptime": 0.9995 }
+            ],
+            "outages": {
+                "current": 1,
+                "previous": 0,
+                "down": 1,
+                "listed": [
+                    {
+                        "check": "Website",
+                        "status": "down",
+                        "started_at": "...",
+                        "ended_at": "..."
+                    }
+                ]
+            },
+            "maintenance": [
+                {
+                    "id": "...",
+                    "environment": "production",
+                    "source": "reported",
+                    "message": "Upgrading the database",
+                    "starts_at": "...",
+                    "expected_end_at": "...",
+                    "ended_at": "...",
+                    "state": "ended",
+                    "overrun_minutes": 12
+                }
+            ],
+            "releases": [
+                {
+                    "release": "a1f3c9e",
+                    "first_seen_at": "...",
+                    "new_issues": 2,
+                    "regressions": 1
+                }
+            ],
+            "most_new_issues": { "release": "a1f3c9e", "new_issues": 2 }
+        }
+    ],
+    "url": "https://lumberjack.example.com/projects",
+    "maintenance": null
+}
+```
+
 Every request is signed with the channel's secret, shown once when the channel is
 created:
 
@@ -351,6 +473,8 @@ An SDK may verify these for you; see its docs.
 | New issue and Escalation messages      | 1 per issue, rule and channel every 30 minutes |
 | Queue backlog messages                 | 1 new backlog per queue every 30 minutes       |
 | Maintenance overrun messages           | 1 per window every 30 minutes, per project     |
+| Weekly summary messages                | 1 per channel and rule a week                  |
+| Issues, routes and outages per summary | 5 each, per project                            |
 | Issues named in a bulk summary message | 10                                             |
 | Custom alerts sent                     | 60 a minute per project, the rest only listed  |
 | Discord sender name                    | 80 characters                                  |

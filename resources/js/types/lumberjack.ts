@@ -358,6 +358,12 @@ export type QueueBacklogSettings = {
     sustain_minutes: number;
 };
 
+/** When a weekly summary rule sends: ISO day of the week (1 is Monday) and HH:MM. */
+export type WeeklySummarySettings = {
+    day: number;
+    time: string;
+};
+
 /** A team's alert rule, or a project's own that overrides the team's of that type. */
 export type AlertRule = {
     id: number;
@@ -367,8 +373,8 @@ export type AlertRule = {
     enabled: boolean;
     channels: number[];
     environments: string[];
-    /** A queue backlog rule's thresholds; null for other rules. */
-    settings: QueueBacklogSettings | null;
+    /** A queue backlog rule's thresholds or a weekly summary's day and time; null for other rules. */
+    settings: QueueBacklogSettings | WeeklySummarySettings | null;
 };
 
 /** One type on a project: the team's rule, and the project's own when it customized it. */
