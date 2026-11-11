@@ -39,7 +39,7 @@ describe('the catalog', function () {
     it('puts the connected ones first, each group by name, with links to their connections', function () {
         $ledger = DataSourceConnection::factory()->for($this->project)->mobilePay()->create(['name' => 'Oslo']);
         DataSourceConnection::factory()->for($this->project)->umami()->create(['name' => 'Shop']);
-        $blog = DataSourceConnection::factory()->for($this->project)->umami()->create(['name' => 'Blog']);
+        $blog = DataSourceConnection::factory()->for($this->project)->umami()->create(['name' => 'Blog', 'environment' => 'umami-blog']);
         // Another project's, and an app's, are not counted.
         DataSourceConnection::factory()->github()->create();
         DataSourceConnection::factory()->for($this->project)->create();
@@ -53,9 +53,37 @@ describe('the catalog', function () {
                     'uuid' => $blog->uuid,
                     'name' => 'Blog',
                     'url' => route('connectors.umami.index', [$this->project, $blog]),
+                    'environment' => 'umami-blog',
+                    'last_ok_at' => null,
+                    'last_checked_at' => null,
+                    'last_error' => null,
                 ])
                 ->where('connectors.1.connections.0.url', route('connectors.mobilepay.index', [$this->project, $ledger]))
                 ->where('connectors.2.connections', []));
+    });
+
+    it('tells how each connection\'s checks went', function () {
+        $this->freezeSecond();
+        DataSourceConnection::factory()->for($this->project)->github()->create([
+            'name' => 'acme/shop',
+            'last_checked_at' => now(),
+            'last_ok_at' => now()->subHour(),
+            'last_error' => 'Bad credentials',
+        ]);
+        DataSourceConnection::factory()->for($this->project)->github()->create([
+            'name' => 'acme/api',
+            'last_checked_at' => now(),
+            'last_ok_at' => now(),
+        ]);
+
+        $this->actingAs($this->member)->get(route('connectors.index', $this->project))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('connectors.0.connections', fn ($rows): bool => collect($rows)->pluck('name')->all() === ['acme/api', 'acme/shop'])
+                ->where('connectors.0.connections.0.last_ok_at', now()->toIso8601String())
+                ->where('connectors.0.connections.0.last_checked_at', now()->toIso8601String())
+                ->where('connectors.0.connections.0.last_error', null)
+                ->where('connectors.0.connections.1.last_ok_at', now()->subHour()->toIso8601String())
+                ->where('connectors.0.connections.1.last_error', 'Bad credentials'));
     });
 
     it('answers for the tags of every connector', function (Connector $connector) {
