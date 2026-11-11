@@ -118,7 +118,7 @@ describe('connecting a repository', function () {
 describe('the GitHub page', function () {
     it('offers to connect one, and keeps it out of the sidebar', function () {
         $this->actingAs($this->member)->get(route('connectors.github.index', $this->project))
-            ->assertInertia(fn (Assert $page) => $page->component('connectors/github/index')->where('connection', null)->where('sidebar_project.has_github', false));
+            ->assertInertia(fn (Assert $page) => $page->component('connectors/github/index')->where('connection', null)->where('sidebar_project.connectors', []));
     });
 
     it('shows the key figures against the period before, and the pull requests, runs and releases', function () {
@@ -138,7 +138,7 @@ describe('the GitHub page', function () {
                 ->has('pull_requests', 2)
                 ->has('runs', 1)
                 ->has('releases', 1)
-                ->where('sidebar_project.has_github', true));
+                ->has('sidebar_project.connectors.github', 1));
     });
 
     it('shows commits, lead time, stars, issues and security alerts', function () {

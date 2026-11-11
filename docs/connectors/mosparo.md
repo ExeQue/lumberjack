@@ -11,7 +11,7 @@ far back as Lumberjack sees.
 
 ## Connecting
 
-Team owners and admins connect mosparo from **Data sources**, under **Connectors**, or from
+Team owners and admins connect mosparo from the project's **Connectors** page, or from
 the **mosparo** page of a project that has none yet.
 
 1. In mosparo, open the project's **Settings**, **General settings**, and find **API keys**.

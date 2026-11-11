@@ -27,6 +27,8 @@ return [
         'browser' => 'Browser',
         // The group of the services a project reads, such as Umami and mosparo.
         'connectors' => 'Connectors',
+        // A connector with several connections, one entry each, such as GitHub (acme/shop).
+        'connector_connection' => ':connector (:connection)',
         // The chevron beside a group in the sidebar, read out by a screen reader.
         'toggle_group' => 'Show or hide the pages under :group',
         'umami' => 'Umami',

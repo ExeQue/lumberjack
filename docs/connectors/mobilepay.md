@@ -28,7 +28,7 @@ unit and a balance; no customer's personal data.
 
 ## Connecting
 
-Team owners and admins connect Vipps MobilePay from **Data sources**, under **Connectors**, or
+Team owners and admins connect Vipps MobilePay from the project's **Connectors** page, or
 from the **Vipps MobilePay** page of a project that has none yet.
 
 1. In the business portal, choose **For developers**,

@@ -85,7 +85,7 @@ describe('connecting a mosparo project', function () {
 describe('the mosparo page', function () {
     it('offers to connect one, and keeps it out of the sidebar', function () {
         $this->actingAs($this->member)->get(route('connectors.mosparo.index', $this->project))
-            ->assertInertia(fn (Assert $page) => $page->component('connectors/mosparo/index')->where('connection', null)->where('sidebar_project.has_mosparo', false));
+            ->assertInertia(fn (Assert $page) => $page->component('connectors/mosparo/index')->where('connection', null)->where('sidebar_project.connectors', []));
     });
 
     it('shows a week\'s submissions against the week before, and each day of it', function () {
@@ -100,7 +100,7 @@ describe('the mosparo page', function () {
                 ->has('series', 7)
                 ->where('series.0.t', '2026-11-04T00:00:00+00:00')
                 ->where('series.6', ['t' => '2026-11-10T00:00:00+00:00', 'valid' => 2, 'spam' => 0])
-                ->where('sidebar_project.has_mosparo', true));
+                ->has('sidebar_project.connectors.mosparo', 1));
     });
 
     it('shows today, each day of a month, and nothing finer than a day', function (string $period, string $shown, int $days) {

@@ -11,7 +11,7 @@ has a token of its own.
 
 ## Connecting
 
-Team owners and admins connect GitHub from **Data sources**, under **Connectors**, or from
+Team owners and admins connect GitHub from the project's **Connectors** page, or from
 the **GitHub** page of a project that has none yet.
 
 1. In Lumberjack, choose **Connect** and give the **Repository** as `owner/name`, such as

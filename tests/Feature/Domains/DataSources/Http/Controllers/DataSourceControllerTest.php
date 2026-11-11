@@ -40,6 +40,12 @@ beforeEach(function () {
 });
 
 describe('the page', function () {
+    it('leaves the connectors to their own page', function () {
+        $this->actingAs($this->admin)->get(route('data-sources.index', $this->project))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->missing('connectors'));
+    });
+
     it('tells the page what group a connected source is in', function () {
         DataSource::factory()->for($this->project)->connected()->inGroup('Events > Storage')->create();
 

@@ -3,6 +3,36 @@
 declare(strict_types=1);
 
 return [
+    // The Connectors page: every connector, and what the project has connected of each.
+    'index' => [
+        'title' => 'Connectors',
+        'description' => 'Connect the services this project uses. Each gets a page of its own, and its figures can go on your screens.',
+        'search' => 'Search connectors',
+        'search_placeholder' => 'Search by name, description or tag',
+        // The group of tag chips; each chip filters on its tag.
+        'tags' => 'Tags',
+        // Read out after the list changes.
+        'results' => '{0} No connectors match|{1} 1 connector|[2,*] :count connectors',
+        'connected' => 'Connected',
+        'not_connected' => 'Not connected',
+        // Before the names of the connected websites, repositories or ledgers, which link to them.
+        'connections' => '{1} 1 connection|[2,*] :count connections',
+        // Buttons.
+        'connect' => 'Connect',
+        'connect_another' => 'Connect another',
+        'open' => 'Open',
+        'open_label' => 'Open :connector',
+        'connect_label' => 'Connect :connector',
+        'connect_another_label' => 'Connect another :connector',
+        'empty_title' => 'No connectors match',
+        'clear' => 'Clear filters',
+        // The pointer below the list, as in docs/connectors/index.md, followed by two links.
+        'missing' => 'Missing a service? Ask for it, or build it.',
+        // Links to the issues and the pull requests on GitHub.
+        'missing_issue' => 'Open an issue',
+        'missing_pull' => 'Submit a pull request',
+    ],
+
     // The Connection card and tab every connector page has.
     'connection' => [
         'title' => 'Connection',

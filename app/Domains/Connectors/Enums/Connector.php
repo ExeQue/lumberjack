@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Connectors\Enums;
 
 use App\Domains\DataSources\Enums\ConnectionKind;
+use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
 
 /**
@@ -51,31 +52,31 @@ enum Connector: string
         return null;
     }
 
-    public function url(Project $project): string
+    /**
+     * What it is about, to find it by on the Connectors page.
+     *
+     * @return list<ConnectorTag>
+     */
+    public function tags(): array
     {
         return match ($this) {
-            self::Umami => route('connectors.umami.index', $project),
-            self::Mosparo => route('connectors.mosparo.index', $project),
-            self::GitHub => route('connectors.github.index', $project),
-            self::MobilePay => route('connectors.mobilepay.index', $project),
+            self::Umami => [ConnectorTag::Analytics],
+            self::Mosparo => [ConnectorTag::Forms, ConnectorTag::Security],
+            self::GitHub => [ConnectorTag::Development, ConnectorTag::Security],
+            self::MobilePay => [ConnectorTag::Payments, ConnectorTag::Commerce],
         };
     }
 
-    /**
-     * The catalog as a page shows it, with how many of each the project has connected.
-     *
-     * @return list<array{key: string, label: string, description: string, connections: int, url: string}>
-     */
-    public static function catalog(Project $project): array
+    /** Its page, opened at one of its connections when given. */
+    public function url(Project $project, ?DataSourceConnection $connection = null): string
     {
-        $connected = $project->dataSourceConnections()->toBase()->selectRaw('kind, count(*) as connections')->groupBy('kind')->pluck('connections', 'kind')->all();
+        $route = match ($this) {
+            self::Umami => 'connectors.umami.index',
+            self::Mosparo => 'connectors.mosparo.index',
+            self::GitHub => 'connectors.github.index',
+            self::MobilePay => 'connectors.mobilepay.index',
+        };
 
-        return array_map(fn (self $connector): array => [
-            'key' => $connector->value,
-            'label' => $connector->label(),
-            'description' => $connector->description(),
-            'connections' => (int) ($connected[$connector->kind()->value] ?? 0),
-            'url' => $connector->url($project),
-        ], self::cases());
+        return route($route, $connection === null ? [$project] : [$project, $connection]);
     }
 }

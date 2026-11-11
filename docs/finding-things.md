@@ -15,8 +15,9 @@ Releases, and the team's Projects and Alerts, are pages of their own. An entry's
 adds up its tabs' counts. The chevron beside a grouped entry folds its pages out below
 it; they are out by themselves while one of them is open.
 
-A project with connected services lists them under **Connectors**, after Releases. With
-only one, its page is an entry of its own instead.
+**Connectors**, after Releases, opens the project's [Connectors](./connectors/index.md)
+page. The chevron beside it folds out the services the project has connected; a service
+connected more than once has an entry per connection, such as **GitHub (acme/shop)**.
 
 **Settings**, last in the project's list, opens the project's settings, whose menu also
 lists the **Data sources**. Members, who cannot change settings, see **Data sources**

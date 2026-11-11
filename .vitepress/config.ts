@@ -142,7 +142,54 @@ export default defineConfig({
                     { text: 'Status screens', link: '/docs/screens' },
                     { text: 'Widgets', link: '/docs/widgets' },
                     { text: 'Data sources', link: '/docs/data-sources' },
-                    { text: 'Connectors', link: '/docs/connectors/' },
+                    {
+                        text: 'Connectors',
+                        collapsed: true,
+                        // Grouped by each connector's first tag, as the Connector enum has them.
+                        items: [
+                            { text: 'Overview', link: '/docs/connectors/' },
+                            {
+                                text: 'Analytics',
+                                collapsed: true,
+                                items: [
+                                    {
+                                        text: 'Umami',
+                                        link: '/docs/connectors/umami',
+                                    },
+                                ],
+                            },
+                            {
+                                text: 'Development',
+                                collapsed: true,
+                                items: [
+                                    {
+                                        text: 'GitHub',
+                                        link: '/docs/connectors/github',
+                                    },
+                                ],
+                            },
+                            {
+                                text: 'Forms',
+                                collapsed: true,
+                                items: [
+                                    {
+                                        text: 'mosparo',
+                                        link: '/docs/connectors/mosparo',
+                                    },
+                                ],
+                            },
+                            {
+                                text: 'Payments',
+                                collapsed: true,
+                                items: [
+                                    {
+                                        text: 'Vipps MobilePay',
+                                        link: '/docs/connectors/mobilepay',
+                                    },
+                                ],
+                            },
+                        ],
+                    },
                     { text: 'Finding things', link: '/docs/finding-things' },
                     { text: 'MCP', link: '/docs/mcp' },
                     {

@@ -11,13 +11,11 @@ return [
     'empty_title' => 'No data sources yet',
     'empty_body' => 'Add a JSON or Prometheus endpoint to show its figures on a screen: a stat, a gauge, a chart or a list.',
     'formats' => ['json' => 'JSON', 'prometheus' => 'Prometheus', 'ical' => 'iCalendar (.ics)', 'connected' => 'Connected'],
+    // Where the Connectors card was: a pointer to the Connectors page.
     'connectors' => [
-        'title' => 'Connectors',
-        'hint' => 'Services Lumberjack reads for this project. Each has a page of its own, and offers its figures to screens as data sources.',
-        'connected' => ':count connected',
-        // Buttons.
-        'connect' => 'Connect',
-        'open' => 'Open',
+        'moved' => 'Services such as Umami and GitHub are connected on their own page.',
+        // Link.
+        'open' => 'Open Connectors',
     ],
     'connected' => [
         // Opens the list of sources a connection offers.

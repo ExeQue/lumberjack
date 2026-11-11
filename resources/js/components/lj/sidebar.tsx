@@ -72,7 +72,8 @@ function NavLink({ item }: { item: NavItem }) {
         </Link>
     );
 
-    if (!item.tabs || item.tabs.length < 2) {
+    // A sidebar-only group (Connectors) folds out even one page; a page with tabs needs two.
+    if (!item.tabs || item.tabs.length < (item.sidebarOnly ? 1 : 2)) {
         return link;
     }
 
