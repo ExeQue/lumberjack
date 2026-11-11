@@ -8,6 +8,7 @@ use App\Domains\Ingest\Http\Controllers\IngestController;
 use App\Domains\Ingest\Http\Middleware\AuthenticateProjectToken;
 use App\Domains\Metrics\Http\Controllers\MetricsApiController;
 use App\Domains\Metrics\Http\Middleware\AuthenticateMetricsCredential;
+use App\Domains\SourceMaps\Http\Controllers\SourceMapController;
 use Illuminate\Support\Facades\Route;
 
 // Everything an app calls with its project's server token.
@@ -16,6 +17,9 @@ Route::middleware(AuthenticateProjectToken::class)->group(function () {
         Route::post('ingest', [IngestController::class, 'store'])->name('ingest.store');
         Route::post('ingest/heartbeat', [IngestController::class, 'heartbeat'])->name('ingest.heartbeat');
     });
+
+    // A build's source maps, so browser errors show the original source. See docs/api.md.
+    Route::post('ingest/sourcemaps', [SourceMapController::class, 'store'])->middleware('throttle:sourcemaps')->name('ingest.sourcemaps');
 
     // The app reads its health check states back, e.g. when its agent is not running.
     Route::get('health', HealthStatesController::class)->middleware('throttle:health-states')->name('health.states');

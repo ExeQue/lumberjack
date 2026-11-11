@@ -19,6 +19,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { destroy as agentDestroy } from '@/routes/agents';
+import { destroy as sourceMapDestroy } from '@/routes/source-maps';
 import { LABEL_COLORS, LabelChip } from '@/components/lj/labels';
 import type { IssueLabel } from '@/components/lj/labels';
 import { TopBar } from '@/components/lj/top-bar';
@@ -95,6 +96,7 @@ type Settings = {
     public_key: string;
     ingest_url: string;
     browser_sdk_url: string;
+    sourcemaps_url: string;
     server_url: string;
     /** The metrics API under the public stats key; null while public stats are off. */
     stats_url: string | null;
@@ -132,6 +134,13 @@ type Channel = {
     lines_24h: number;
     retention_days: number | null;
 };
+type SourceMap = {
+    id: number;
+    path: string;
+    release: string | null;
+    size: number;
+    uploaded_at: string;
+};
 type JobOverride = { job_class: string; days: number };
 type Repository = {
     provider: string;
@@ -145,6 +154,7 @@ type Props = {
     project: ProjectHeader;
     settings: Settings;
     agents: Agent[];
+    source_maps: SourceMap[];
     channels: Channel[];
     labels: (IssueLabel & { issues: number })[];
     unknown_channels: string[];
@@ -185,6 +195,7 @@ const SECTIONS = [
     'install',
     'keys',
     'agents',
+    'sourcemaps',
     'channels',
     'labels',
     'retention',
@@ -428,6 +439,9 @@ export default function ProjectSettings(props: Props) {
                         {active === 'install' && <InstallSection {...props} />}
                         {active === 'keys' && <KeysSection {...props} />}
                         {active === 'agents' && <AgentsSection {...props} />}
+                        {active === 'sourcemaps' && (
+                            <SourceMapsSection {...props} />
+                        )}
                         {active === 'channels' && (
                             <ChannelsSection {...props} />
                         )}
@@ -1201,6 +1215,122 @@ function AgentsSection({ project, agents }: Props) {
                                                 <span className="sr-only">
                                                     {' '}
                                                     {agent.host}
+                                                </span>
+                                            </ConfirmButton>
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </Section>
+    );
+}
+
+function SourceMapsSection({ project, settings, source_maps }: Props) {
+    const t = useT();
+
+    return (
+        <Section
+            id="sourcemaps"
+            title={t('settings.sourcemaps.title')}
+            description={t('settings.sourcemaps.description')}
+        >
+            <Code label={t('settings.sourcemaps.upload_url')}>
+                {settings.sourcemaps_url}
+            </Code>
+            {source_maps.length === 0 ? (
+                <EmptyState title={t('settings.sourcemaps.empty')} />
+            ) : (
+                <div className="overflow-x-auto">
+                    <table className={tableClass}>
+                        <thead>
+                            <tr>
+                                <th className={thClass}>
+                                    {t('settings.sourcemaps.path')}
+                                </th>
+                                <th className={thClass}>
+                                    {t('settings.sourcemaps.release')}
+                                </th>
+                                <th className={cn(thClass, numClass)}>
+                                    {t('settings.sourcemaps.size')}
+                                </th>
+                                <th className={thClass}>
+                                    {t('settings.sourcemaps.uploaded_at')}
+                                </th>
+                                {project.can_administer && (
+                                    <th className={thClass}>
+                                        <span className="sr-only">
+                                            {t('settings.sourcemaps.actions')}
+                                        </span>
+                                    </th>
+                                )}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {source_maps.map((map) => (
+                                <tr key={map.id}>
+                                    <td
+                                        className={cn(
+                                            tdClass,
+                                            'font-mono text-xs break-all',
+                                        )}
+                                    >
+                                        {map.path}
+                                    </td>
+                                    <td
+                                        className={cn(
+                                            tdClass,
+                                            'font-mono text-xs',
+                                        )}
+                                    >
+                                        {map.release ?? (
+                                            <span className="text-ink-3">
+                                                -
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className={cn(tdClass, numClass)}>
+                                        {formatBytes(map.size)}
+                                    </td>
+                                    <td className={tdClass}>
+                                        <Relative iso={map.uploaded_at} />
+                                    </td>
+                                    {project.can_administer && (
+                                        <td
+                                            className={cn(
+                                                tdClass,
+                                                'text-right',
+                                            )}
+                                        >
+                                            <ConfirmButton
+                                                question={t(
+                                                    'settings.sourcemaps.delete_question',
+                                                    { path: map.path },
+                                                )}
+                                                confirmLabel={t(
+                                                    'settings.sourcemaps.delete',
+                                                )}
+                                                onConfirm={() =>
+                                                    router.delete(
+                                                        sourceMapDestroy([
+                                                            project.uuid,
+                                                            map.id,
+                                                        ]).url,
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    )
+                                                }
+                                            >
+                                                {t(
+                                                    'settings.sourcemaps.delete',
+                                                )}
+                                                <span className="sr-only">
+                                                    {' '}
+                                                    {map.path}
                                                 </span>
                                             </ConfirmButton>
                                         </td>

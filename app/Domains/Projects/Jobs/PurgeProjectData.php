@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace App\Domains\Projects\Jobs;
 
 use App\Domains\Shared\Support\ChunkedDeleter;
+use App\Domains\SourceMaps\Models\SourceMap;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Deletes the high-volume rows of a deleted project. They carry no foreign
  * keys on purpose, so nothing cascades and nothing locks a table for long.
+ * Its source map files go too; their rows went with the project.
  */
 class PurgeProjectData implements ShouldQueue
 {
@@ -33,5 +36,7 @@ class PurgeProjectData implements ShouldQueue
         foreach (self::TABLES as $table) {
             $deleter->delete($table, fn ($query) => $query->where('project_id', $this->projectId));
         }
+
+        Storage::deleteDirectory(SourceMap::directory($this->projectId));
     }
 }

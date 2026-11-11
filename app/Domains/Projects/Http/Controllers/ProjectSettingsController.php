@@ -30,6 +30,7 @@ use App\Domains\Retention\Enums\RetentionCategory;
 use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Retention\Presenters\RetentionPresenter;
 use App\Domains\Shared\Support\Scrubber;
+use App\Domains\SourceMaps\Models\SourceMap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -63,6 +64,7 @@ class ProjectSettingsController
                 'public_key' => $project->public_key,
                 'ingest_url' => url('/api/ingest'),
                 'browser_sdk_url' => url('/sdk/v1.js'),
+                'sourcemaps_url' => url('/api/ingest/sourcemaps'),
                 'server_url' => url('/'),
                 'stats_url' => $project->stats_key !== null ? url('/api/v1/public/'.$project->stats_key) : null,
                 'stats_include_titles' => $project->stats_include_titles,
@@ -78,6 +80,9 @@ class ProjectSettingsController
                 'is_default' => $c->isDefault(),
                 'lines_24h' => (int) ($channelCounts[$c->id] ?? 0),
                 'retention_days' => $policies->first(fn (RetentionPolicy $p): bool => $p->log_channel_id === $c->id)?->days,
+            ])->all(),
+            'source_maps' => $project->sourceMaps()->latest('updated_at')->get()->map(fn (SourceMap $m): array => [
+                'id' => $m->id, 'path' => $m->path, 'release' => $m->release, 'size' => $m->size, 'uploaded_at' => $m->updated_at->toIso8601String(),
             ])->all(),
             'unknown_channels' => DB::table('log_entries')->where('project_id', $project->id)->where('occurred_at', '>=', now()->subDays(7))
                 ->whereNotNull('sent_channel')->distinct()->limit(10)->pluck('sent_channel'),

@@ -16,6 +16,12 @@ IDs and numbers in messages are ignored, so `Order 4711 not found` and
 `Order 4712 not found` are one issue. A fingerprint sent by the SDK overrides all of
 this.
 
+A bundler puts a hash in the bundle's file name, so the top frame of a browser error
+changes with every build. With the build's [source maps](./projects#source-maps)
+uploaded, the frames are turned back into the original source before grouping, and the
+same error stays one issue across deploys. Errors received before their map was
+uploaded keep their minified frames.
+
 Only log lines of level **error** and above become issues. A line whose context carries
 an exception becomes a Server issue; any other becomes a Log issue titled
 `<channel>: <message>`, cut to 200 characters.
@@ -66,6 +72,11 @@ cannot reach Lumberjack over [MCP](./mcp.md).
 
 Each frame shows the lines around it, highlighted as PHP, JavaScript or TypeScript, with
 the line that threw marked. Vendor frames are folded until you show them.
+
+A browser frame turned back into the original source by a
+[source map](./projects#source-maps) shows the original file, line and function, and
+the source lines when the map has them. Files under `node_modules` count as vendor.
+**Show minified frames** shows the frames as they were in the bundle.
 
 ## Users affected
 

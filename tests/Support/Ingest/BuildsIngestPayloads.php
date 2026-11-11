@@ -35,4 +35,26 @@ trait BuildsIngestPayloads
             'context' => ['request' => ['method' => 'POST', 'headers' => ['Authorization' => 'Bearer secret']], 'user' => ['id' => 7]],
         ];
     }
+
+    /**
+     * A browser error thrown in the minified bundle of tests/Fixtures/SourceMaps/app.js.map,
+     * at the positions of its throw and of the call that led to it.
+     *
+     * @return array<string, mixed>
+     */
+    public function minifiedBrowserError(string $bundleUrl = 'https://app.example.test/build/assets/app-BxQ3kZ9a.js'): array
+    {
+        return [
+            'type' => 'exception',
+            'timestamp' => now()->getTimestamp(),
+            'class' => 'TypeError',
+            'message' => 'Cannot read 42',
+            'file' => $bundleUrl,
+            'line' => 1,
+            'stacktrace' => [
+                ['file' => $bundleUrl, 'line' => 1, 'column' => 21, 'function' => 'o', 'in_app' => true],
+                ['file' => $bundleUrl, 'line' => 1, 'column' => 128, 'function' => 'i', 'in_app' => true],
+            ],
+        ];
+    }
 }

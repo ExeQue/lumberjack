@@ -10,6 +10,7 @@ their payloads and limits, for running Lumberjack behind a proxy or writing your
 | `POST /api/ingest`                       | Server token, as a bearer token   | 600 batches a minute per project                          |
 | `POST /api/ingest/heartbeat`             | Server token                      | Counted with the batches                                  |
 | `POST /api/ingest/browser?key=`          | Public key, and an allowed origin | 30 a minute per address and key, 300 a minute per address |
+| `POST /api/ingest/sourcemaps`            | Server token                      | 120 a minute per project                                  |
 | `GET /api/health`                        | Server token                      | 120 a minute per project                                  |
 | `GET` or `POST /api/health/ping/{token}` | The heartbeat check's secret URL  | 60 a minute per address                                   |
 | `/mcp`                                   | MCP token, as a bearer token      | 120 calls a minute per token                              |
@@ -182,6 +183,31 @@ it with `sendBeacon` as `text/plain`. A batch holds at most 50 events of type
 The request's `Origin` must be one of the project's
 [allowed origins](./projects#settings), which get a CORS preflight answer. Requests from crawlers and automated browsers are accepted and dropped.
 
+## Source maps
+
+`POST /api/ingest/sourcemaps` takes one source map as a multipart upload, with the
+server token. See [Source maps](./projects#source-maps) for what they do.
+
+| Field     | Holds                                                                          |
+| --------- | ------------------------------------------------------------------------------ |
+| `file`    | The `.map` file, a version 3 source map of at most 20 MB.                      |
+| `path`    | The public path of the bundle it belongs to, e.g. `/build/assets/app-3f9a.js`. |
+| `release` | Optional. The release, as the browser script's `data-release` sends it.        |
+
+```bash
+for map in public/build/assets/*.js.map; do
+    curl -fsS https://lumberjack.example/api/ingest/sourcemaps \
+        -H "Authorization: Bearer $LUMBERJACK_TOKEN" \
+        -F "file=@$map" \
+        -F "path=/build/assets/$(basename "$map" .map)" \
+        -F "release=$(git rev-parse --short HEAD)"
+done
+rm public/build/assets/*.map
+```
+
+The answer is `201` with the stored `path`, `release` and `size`. The same path and
+release uploaded again replaces the map. A file that is not a source map gets a `422`.
+
 ## Limits
 
 | What                                | Limit |
@@ -190,5 +216,6 @@ The request's `Origin` must be one of the project's
 | Events per batch                    | 5,000 |
 | Rows per `request_counts` event     | 501   |
 | Events per browser batch            | 50    |
+| Source map file                     | 20 MB |
 | Queues per heartbeat                | 50    |
 | Unknown tokens per address a minute | 30    |
