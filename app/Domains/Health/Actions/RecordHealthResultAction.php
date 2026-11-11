@@ -18,6 +18,7 @@ use App\Domains\Health\Models\HealthOutage;
 use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Live\Actions\BroadcastProjectChangeAction;
 use App\Domains\Live\Enums\ChangeKind;
+use App\Domains\Maintenance\Models\MaintenanceWindow;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -182,6 +183,12 @@ class RecordHealthResultAction
     {
         // Recovering is not news; only reaching ok again is.
         if ($check->muted || $check->archived_at !== null || $status === null || $status === HealthStatus::Recovering) {
+            return null;
+        }
+
+        // During maintenance a check is as good as muted: nothing is told, nor remembered as
+        // told, so one still down once the window ends alerts on its next result.
+        if (($status !== HealthStatus::Ok || $check->alerted_status !== null) && MaintenanceWindow::openFor($check->project_id, $check->environment !== '' ? $check->environment : null) !== null) {
             return null;
         }
 

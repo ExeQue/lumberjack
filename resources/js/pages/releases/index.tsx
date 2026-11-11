@@ -149,6 +149,7 @@ export default function ReleasesIndex({
                                 {releases.map((r) => {
                                     const active =
                                         r.release === filters.release;
+                                    const first = Date.parse(r.first_seen_at);
 
                                     return (
                                         <tr
@@ -189,6 +190,28 @@ export default function ReleasesIndex({
                                                         iso={r.first_seen_at}
                                                     />
                                                 </time>
+                                                {/* Deployed during maintenance. */}
+                                                {project.maintenance.some(
+                                                    (w) =>
+                                                        Date.parse(
+                                                            w.starts_at,
+                                                        ) <= first &&
+                                                        (w.ended_at
+                                                            ? Date.parse(
+                                                                  w.ended_at,
+                                                              )
+                                                            : Date.now()) >=
+                                                            first,
+                                                ) && (
+                                                    <Badge
+                                                        tone="info"
+                                                        className="ml-2"
+                                                    >
+                                                        {t(
+                                                            'health.maintenance.title',
+                                                        )}
+                                                    </Badge>
+                                                )}
                                             </td>
                                             <td
                                                 className={`${tdClass} whitespace-nowrap text-ink-2`}

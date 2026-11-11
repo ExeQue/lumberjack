@@ -1,5 +1,11 @@
 import { Relative } from '@/components/lj/relative';
-import { Check, Eye, MessageSquare, SlidersHorizontal } from 'lucide-react';
+import {
+    Check,
+    Construction,
+    Eye,
+    MessageSquare,
+    SlidersHorizontal,
+} from 'lucide-react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { TopBar } from '@/components/lj/top-bar';
@@ -68,6 +74,7 @@ type Filters = {
     sort: string;
     label: string;
     watching: boolean;
+    maintenance: boolean;
 };
 
 type BulkStatus = 'resolved' | 'ignored' | 'open';
@@ -124,6 +131,7 @@ export default function IssuesIndex({
         filters.assigned,
         filters.label,
         filters.watching,
+        filters.maintenance,
         filters.sort !== 'last_seen',
     ].filter(Boolean).length;
 
@@ -344,6 +352,26 @@ export default function IssuesIndex({
                             )}
                             {t('issues.watching')}
                         </Button>
+                        <Button
+                            aria-pressed={filters.maintenance}
+                            className="aria-pressed:border-amber aria-pressed:bg-amber/15"
+                            onClick={() =>
+                                apply({ maintenance: !filters.maintenance })
+                            }
+                        >
+                            {filters.maintenance ? (
+                                <Check
+                                    className="size-3.5"
+                                    aria-hidden="true"
+                                />
+                            ) : (
+                                <Construction
+                                    className="size-3.5"
+                                    aria-hidden="true"
+                                />
+                            )}
+                            {t('common.flags.maintenance')}
+                        </Button>
                         {labels.length > 0 && (
                             <>
                                 <label
@@ -531,6 +559,13 @@ export default function IssuesIndex({
                                                         <Badge tone="warn">
                                                             {t(
                                                                 'common.flags.returned',
+                                                            )}
+                                                        </Badge>
+                                                    )}
+                                                    {issue.under_maintenance && (
+                                                        <Badge tone="info">
+                                                            {t(
+                                                                'common.flags.maintenance',
                                                             )}
                                                         </Badge>
                                                     )}

@@ -101,6 +101,8 @@ type Settings = {
     /** The metrics API under the public stats key; null while public stats are off. */
     stats_url: string | null;
     stats_include_titles: boolean;
+    maintenance_expected_minutes: number;
+    maintenance_repeat_minutes: number;
 };
 
 type Agent = {
@@ -471,6 +473,8 @@ function GeneralSection({ project, settings }: Props) {
         issue_prefix: settings.issue_prefix,
         allowed_origins: settings.allowed_origins,
         scrub_keys: settings.scrub_keys,
+        maintenance_expected_minutes: settings.maintenance_expected_minutes,
+        maintenance_repeat_minutes: settings.maintenance_repeat_minutes,
     };
     const form = useForm(initial);
     useFormSync(form, initial);
@@ -754,6 +758,35 @@ function GeneralSection({ project, settings }: Props) {
                             scrubErrors[0] ??
                             t('settings.general.scrub_hint')}
                     </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                    {(
+                        [
+                            ['maintenance_expected_minutes', 1, 10080],
+                            ['maintenance_repeat_minutes', 5, 1440],
+                        ] as const
+                    ).map(([key, min, max]) => (
+                        <Field
+                            key={key}
+                            label={t(`settings.general.${key}`)}
+                            htmlFor={`project-${key}`}
+                            hint={t(`settings.general.${key}_hint`)}
+                            error={form.errors[key]}
+                        >
+                            <Input
+                                id={`project-${key}`}
+                                type="number"
+                                className="w-32 font-mono"
+                                value={form.data[key]}
+                                onChange={(e) =>
+                                    form.setData(key, Number(e.target.value))
+                                }
+                                required
+                                min={min}
+                                max={max}
+                            />
+                        </Field>
+                    ))}
                 </div>
                 <div>
                     <Button

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Data;
 
 use App\Domains\Alerts\Contracts\Alert;
+use App\Domains\Alerts\Data\Concerns\LabelsMaintenance;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
+use Override;
 
 /**
  * A queue has had too many jobs waiting, or one waiting too long, for a while; or it
@@ -15,6 +17,8 @@ use Carbon\CarbonImmutable;
  */
 final readonly class QueueBacklogAlert implements Alert
 {
+    use LabelsMaintenance;
+
     public function __construct(
         public Project $project,
         public string $connection,
@@ -35,7 +39,7 @@ final readonly class QueueBacklogAlert implements Alert
 
     public function headline(): string
     {
-        return __($this->recovered ? 'alerts.messages.queue_backlog_recovered' : 'alerts.messages.queue_backlog', ['project' => $this->project->name]);
+        return $this->marked((string) __($this->recovered ? 'alerts.messages.queue_backlog_recovered' : 'alerts.messages.queue_backlog', ['project' => $this->project->name]));
     }
 
     public function subject(): string
@@ -68,5 +72,11 @@ final readonly class QueueBacklogAlert implements Alert
     public function urgency(): string
     {
         return $this->recovered ? 'low' : 'high';
+    }
+
+    #[Override]
+    protected function maintenanceScope(): array
+    {
+        return [$this->project->id, null];
     }
 }

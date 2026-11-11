@@ -68,6 +68,8 @@ class ProjectSettingsController
                 'server_url' => url('/'),
                 'stats_url' => $project->stats_key !== null ? url('/api/v1/public/'.$project->stats_key) : null,
                 'stats_include_titles' => $project->stats_include_titles,
+                'maintenance_expected_minutes' => $project->maintenance_expected_minutes,
+                'maintenance_repeat_minutes' => $project->maintenance_repeat_minutes,
             ],
             'labels' => $project->labels()->withCount('issues')->get()->map(fn (Label $l): array => [...$l->toSummary(), 'issues' => (int) $l->issues_count])->all(),
             'agents' => $agents->map(fn (ProjectAgent $a): array => [
@@ -119,6 +121,8 @@ class ProjectSettingsController
             array_values((array) $request->input('allowed_origins', [])),
             array_values((array) $request->input('scrub_keys', $project->scrub_keys ?? [])),
             $request->has('issue_prefix') ? $request->string('issue_prefix')->toString() : null,
+            $request->has('maintenance_expected_minutes') ? $request->integer('maintenance_expected_minutes') : null,
+            $request->has('maintenance_repeat_minutes') ? $request->integer('maintenance_repeat_minutes') : null,
         );
 
         return back()->with('status', __('projects.saved'));

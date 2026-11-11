@@ -10,6 +10,7 @@ use App\Domains\Alerts\Jobs\SendQueueBacklogAlert;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\QueueBacklog;
 use App\Domains\Jobs\Models\QueueSample;
+use App\Domains\Maintenance\Models\MaintenanceWindow;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,8 @@ class CheckQueueBacklogsAction
                 continue;
             }
 
+            // Queues report no environment, so any window of the project mutes them all.
+            $maintenance = MaintenanceWindow::openFor($project, null) !== null;
             $states = QueueBacklog::query()->where('alert_rule_id', $rule->id)->where('project_id', $project->id)->get()->keyBy(fn (QueueBacklog $b): string => $b->connection.':'.$b->queue);
 
             foreach ($this->latestSamples($project->id) as $sample) {
@@ -50,8 +53,8 @@ class CheckQueueBacklogsAction
                 // ponytail: one query per queue and minute; load a project's thresholds at once if projects grow many queues.
                 $settings = QueueBacklogSettings::forQueue($rule, $project, $sample->connection, $sample->queue);
 
-                // A muted queue never alerts, not even that a backlog it had is over.
-                if ($settings->muted) {
+                // A muted queue never alerts, not even that a backlog it had is over; nor one under maintenance.
+                if ($settings->muted || $maintenance) {
                     if ($state->exists) {
                         $state->delete();
                     }

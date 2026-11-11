@@ -30,19 +30,27 @@ an exception becomes a Server issue; any other becomes a Log issue titled
 
 ![The issues list with three issues selected and the selection bar at the bottom](./screenshots/issues.png)
 
-| Filter   | Choices                                                                               |
-| -------- | ------------------------------------------------------------------------------------- |
-| Status   | Open (the default, includes in progress), In progress, Resolved, Ignored, with counts |
-| Source   | All, Server, Browser, Log                                                             |
-| Release  | Up to 20 releases. Matches the release of the issue's latest occurrence               |
-| Label    | One of the project's labels                                                           |
-| Assigned | Everyone, Assigned to me, Unassigned                                                  |
-| Watching | Only the issues you [watch](#watching)                                                |
-| Search   | Message, class or [number](#issue-numbers)                                            |
+| Filter            | Choices                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| Status            | Open (the default, includes in progress), In progress, Resolved, Ignored, with counts |
+| Source            | All, Server, Browser, Log                                                             |
+| Release           | Up to 20 releases. Matches the release of the issue's latest occurrence               |
+| Label             | One of the project's labels                                                           |
+| Assigned          | Everyone, Assigned to me, Unassigned                                                  |
+| Watching          | Only the issues you [watch](#watching)                                                |
+| Under maintenance | Only the issues flagged **Under maintenance**                                         |
+| Search            | Message, class or [number](#issue-numbers)                                            |
 
 Sort by **Last seen** (the default), **Most occurrences**, **Most users** or **First
 seen**. Each issue shows its occurrences of the last 24 hours as a small chart, its
-notes count, and the flags **New**, **Regression**, **Escalating** and **Came back**.
+notes count, and the flags **New**, **Regression**, **Escalating**, **Came back** and
+**Under maintenance**.
+
+An occurrence that comes in while a [maintenance window](./health#maintenance-windows)
+covers its environment is flagged **Under maintenance** on the issue page. An issue
+carries the flag as long as every one of its occurrences came in during a window: a new
+issue from a deploy has it, and loses it with its first occurrence outside one.
+Alerts for it are still sent, marked as sent during maintenance.
 
 ## Issue numbers
 

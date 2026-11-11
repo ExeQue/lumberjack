@@ -44,13 +44,13 @@ See the [metrics API](./metrics-api) and [MCP](./mcp) pages for those endpoints.
 }
 ```
 
-| Field         | Required | Notes                                                                                                                                                   |
-| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `v`           | yes      | Always `1`.                                                                                                                                             |
-| `environment` | no       | At most 64 characters.                                                                                                                                  |
-| `release`     | no       | At most 64 characters.                                                                                                                                  |
-| `host`        | no       | At most 255 characters.                                                                                                                                 |
-| `events`      | yes      | At most 5,000 events, each of type `request`, `request_counts`, `query`, `exception`, `job`, `log`, `schedule`, `command`, `span`, `health` or `alert`. |
+| Field         | Required | Notes                                                                                                                                                                  |
+| ------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `v`           | yes      | Always `1`.                                                                                                                                                            |
+| `environment` | no       | At most 64 characters.                                                                                                                                                 |
+| `release`     | no       | At most 64 characters.                                                                                                                                                 |
+| `host`        | no       | At most 255 characters.                                                                                                                                                |
+| `events`      | yes      | At most 5,000 events, each of type `request`, `request_counts`, `query`, `exception`, `job`, `log`, `schedule`, `command`, `span`, `health`, `alert` or `maintenance`. |
 
 ### Requests
 
@@ -173,6 +173,35 @@ An event of type `alert` sends a [custom alert](./alerts#custom-alerts):
 | `links`                       | At most 5, with `label` (at most 75 characters), `url` (at most 512) and a `style` of `primary` or `danger`. |
 | `dedupe_key`,`dedupe_minutes` | A repeat of the key within the minutes is listed, but not sent.                                              |
 | `timestamp`                   | When it happened.                                                                                            |
+
+## Maintenance events
+
+An event of type `maintenance` opens or closes a
+[maintenance window](./health#maintenance-windows) of the batch's environment:
+
+```json
+{
+    "type": "maintenance",
+    "state": "start",
+    "message": "Upgrading the database",
+    "expected_minutes": 15,
+    "timestamp": 1762164000.123
+}
+```
+
+| Field              | Notes                                                                                                          |
+| ------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `state`            | Required. `start` or `end`. An event with anything else is skipped.                                            |
+| `message`          | What is going on. At most 500 characters.                                                                      |
+| `expected_minutes` | How long it should take, at most a week.                                                                       |
+| `expected_until`   | When it should be over, in ISO 8601. Wins over `expected_minutes`. Without either, the project's default (30). |
+| `timestamp`        | When it started or ended.                                                                                      |
+
+The environment comes from the batch, like `release` and `host`; a batch without one
+covers every environment of the project. A `start` while a window of the environment is
+open keeps that window, with the new message and expected end where the event sends
+them. An `end` closes the environment's open window, and does nothing when none is
+open. Other fields are ignored. Browsers cannot send it.
 
 ## Browser
 

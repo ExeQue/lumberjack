@@ -24,7 +24,7 @@ class UpdateProject extends Tool
 
     protected string $name = 'update_project';
 
-    protected string $description = 'Changes the project\'s name, slug or issue prefix, as the settings form does; pass only what changes. Allowed browser origins and scrubbed keys stay on the settings page, since they decide what data is kept. Returns the settings it saved.';
+    protected string $description = 'Changes the project\'s name, slug, issue prefix or maintenance settings, as the settings form does; pass only what changes. Allowed browser origins and scrubbed keys stay on the settings page, since they decide what data is kept. Returns the settings it saved.';
 
     public function __construct(
         private readonly UpdateProjectAction $action,
@@ -38,6 +38,8 @@ class UpdateProject extends Tool
             'name' => $schema->string(),
             'slug' => $schema->string()->description('Changing it changes every link to the project.'),
             'issue_prefix' => $schema->string()->description('2 to 8 letters or digits, starting with a letter, e.g. SHOP. Changes every issue reference such as SHOP-42.'),
+            'maintenance_expected_minutes' => $schema->integer()->description('How long a maintenance window the app reports without an expected end is expected to take, 1 to 10080. Defaults to 30.'),
+            'maintenance_repeat_minutes' => $schema->integer()->description('How often the maintenance overrun alert repeats while a window stays open past its expected end, 5 to 1440. Defaults to 30.'),
         ];
     }
 
@@ -59,7 +61,9 @@ class UpdateProject extends Tool
             'issue_prefix' => $project->issuePrefix(),
             'allowed_origins' => $project->allowed_origins ?? [],
             'scrub_keys' => $project->scrub_keys ?? [],
-            ...array_filter($request->only(['name', 'slug', 'issue_prefix']), fn (mixed $value): bool => $value !== null),
+            'maintenance_expected_minutes' => $project->maintenance_expected_minutes,
+            'maintenance_repeat_minutes' => $project->maintenance_repeat_minutes,
+            ...array_filter($request->only(['name', 'slug', 'issue_prefix', 'maintenance_expected_minutes', 'maintenance_repeat_minutes']), fn (mixed $value): bool => $value !== null),
         ];
         $input['issue_prefix'] = strtoupper(trim((string) $input['issue_prefix']));
 
@@ -72,6 +76,8 @@ class UpdateProject extends Tool
             array_values(array_map(strval(...), (array) $input['allowed_origins'])),
             array_values(array_map(strval(...), (array) $input['scrub_keys'])),
             (string) $input['issue_prefix'],
+            (int) $input['maintenance_expected_minutes'],
+            (int) $input['maintenance_repeat_minutes'],
         );
 
         return Response::json([
@@ -81,6 +87,8 @@ class UpdateProject extends Tool
             'issue_prefix' => $project->issuePrefix(),
             'allowed_origins' => $project->allowed_origins ?? [],
             'scrub_keys' => $project->scrub_keys ?? [],
+            'maintenance_expected_minutes' => $project->maintenance_expected_minutes,
+            'maintenance_repeat_minutes' => $project->maintenance_repeat_minutes,
         ]);
     }
 }

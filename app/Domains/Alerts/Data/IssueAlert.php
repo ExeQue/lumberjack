@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Data;
 
 use App\Domains\Alerts\Contracts\Alert;
+use App\Domains\Alerts\Data\Concerns\LabelsMaintenance;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Issues\Actions\DetectEscalationAction;
 use App\Domains\Issues\Enums\IssueStatus;
@@ -12,12 +13,15 @@ use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\IssueNote;
 use App\Domains\Issues\Support\NoteMentions;
 use Carbon\CarbonImmutable;
+use Override;
 
 /**
  * For a regression, $resolvedBy and $resolvedAt say who resolved it last and when.
  */
 final readonly class IssueAlert implements Alert
 {
+    use LabelsMaintenance;
+
     public function __construct(
         public Issue $issue,
         public AlertRuleType $type,
@@ -132,15 +136,21 @@ final readonly class IssueAlert implements Alert
         $status = $this->statusChange ?? $this->note?->status;
 
         if ($status !== null) {
-            return __('alerts.messages.status.'.$status->value, [
+            return $this->marked((string) __('alerts.messages.status.'.$status->value, [
                 'project' => $this->issue->project->name,
                 'actor' => $this->actor ?? $this->noteAuthor() ?? __('alerts.messages.unknown_author'),
-            ]);
+            ]));
         }
 
-        return __('alerts.messages.'.$this->type->value, [
+        return $this->marked((string) __('alerts.messages.'.$this->type->value, [
             'project' => $this->issue->project->name,
             'environment' => $this->environment ?? __('alerts.messages.unknown_environment'),
-        ]);
+        ]));
+    }
+
+    #[Override]
+    protected function maintenanceScope(): array
+    {
+        return [$this->issue->project_id, $this->environment];
     }
 }

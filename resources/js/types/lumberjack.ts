@@ -7,6 +7,19 @@ export type ProjectHeader = {
     name: string;
     can_administer: boolean;
     environments: string[];
+    maintenance: MaintenanceWindow[];
+};
+
+/** A maintenance window; a null environment covers every environment. */
+export type MaintenanceWindow = {
+    id: string;
+    environment: string | null;
+    source: 'planned' | 'reported';
+    message: string | null;
+    starts_at: string;
+    expected_end_at: string;
+    ended_at: string | null;
+    state: 'planned' | 'open' | 'overrun' | 'ended';
 };
 
 export type DashboardFilters = {
@@ -28,6 +41,7 @@ export type IssueSummary = {
     regressed: boolean;
     escalating: boolean;
     returned: boolean;
+    under_maintenance: boolean;
     ignore_until: {
         at?: string;
         occurrences_left?: number;
@@ -72,6 +86,7 @@ export type Occurrence = {
     host: string | null;
     request: { method: string | null; route: string | null } | null;
     user_id: string | null;
+    under_maintenance: boolean;
     stacktrace?: StackFrame[];
     context: Record<string, unknown>;
 };
@@ -332,6 +347,7 @@ export type HealthCheckDetail = {
         started_at: string;
         ended_at: string | null;
         duration_s: number;
+        maintenance: boolean;
     }[];
     latency_series: SeriesPoint[];
 };

@@ -38,7 +38,7 @@ skip Write.
 | ---------------- | -------------- | ------------------------------------------------------------ |
 | Issues           | `issues`       | Triage, status, labels, assignees, notes, GitHub issues.     |
 | Telemetry        | `telemetry`    | Traces, requests, queries, jobs, logs, releases and metrics. |
-| Health checks    | `health`       | Checks Lumberjack runs and those the app reports.            |
+| Health checks    | `health`       | Checks Lumberjack runs, those the app reports, maintenance.  |
 | Scheduled tasks  | `schedule`     | Tasks the app reports.                                       |
 | Alerts           | `alerts`       | Alert rules, topics, queue thresholds. Team-wide.            |
 | Data sources     | `data_sources` | Pulled sources and app connections.                          |
@@ -240,6 +240,22 @@ microseconds. **Needs** is the area and level a token needs for the tool; see
 | `archive_health_check` | `health: write`  | Archive or unarchive a check.            | `project`, **`check`**, **`archived`**                                                                                                                 |
 | `delete_health_check`  | `health: manage` | Delete a check and its history. Deletes. | `project`, **`check`**                                                                                                                                 |
 
+### Maintenance windows
+
+| Tool                        | Needs           | Does                            | Arguments                                                                 |
+| --------------------------- | --------------- | ------------------------------- | ------------------------------------------------------------------------- |
+| `list_maintenance_windows`  | `health: read`  | Maintenance windows with state. | `project`, `environment`, `state`                                         |
+| `create_maintenance_window` | `health: write` | Plan a maintenance window.      | `project`, `environment`, **`starts_at`**, **`ends_at`**, `message`       |
+| `update_maintenance_window` | `health: write` | Change a maintenance window.    | `project`, **`window`**, `environment`, `starts_at`, `ends_at`, `message` |
+| `end_maintenance_window`    | `health: write` | End a maintenance window now.   | `project`, **`window`**                                                   |
+
+A window covers one environment, or every environment when `environment` is left out.
+`starts_at` and `ends_at` are ISO 8601; `ends_at` is the expected end, and past it the
+maintenance overrun alert fires until the window is ended. `state` is `open` (including
+overrun), `planned`, `ended` or `all`; by default the windows not ended yet and the last
+5 that ended. How long a window the app reports is expected to take, and how often the
+overrun alert repeats, are set with `update_project`.
+
 ### Scheduled tasks
 
 | Tool                    | Needs              | Does                                 | Arguments                             |
@@ -308,15 +324,15 @@ microseconds. **Needs** is the area and level a token needs for the tool; see
 
 ### Project settings
 
-| Tool                    | Needs             | Does                                               | Arguments                                                                  |
-| ----------------------- | ----------------- | -------------------------------------------------- | -------------------------------------------------------------------------- |
-| `get_project_overview`  | `project: read`   | Health of the project at a glance.                 | `project`, `period`, `environment`                                         |
-| `get_project_settings`  | `project: read`   | Settings without secrets.                          | `project`                                                                  |
-| `update_project`        | `project: write`  | Name, slug, prefix, origins, scrubbed keys.        | `project`, `name`, `slug`, `issue_prefix`, `allowed_origins`, `scrub_keys` |
-| `create_log_channel`    | `project: write`  | Add a log channel.                                 | `project`, **`name`**                                                      |
-| `delete_log_channel`    | `project: manage` | Delete a log channel and its lines. Deletes.       | `project`, **`channel_id`**                                                |
-| `set_project_retention` | `project: manage` | Days kept per data type. Deletes.                  | `project`, `days`, `forever`, `channels`                                   |
-| `set_public_stats`      | `project: manage` | Public stats link on or off. Can make data public. | `project`, **`enabled`**, `include_titles`                                 |
+| Tool                    | Needs             | Does                                                     | Arguments                                                                                                                                |
+| ----------------------- | ----------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_project_overview`  | `project: read`   | Health of the project at a glance.                       | `project`, `period`, `environment`                                                                                                       |
+| `get_project_settings`  | `project: read`   | Settings without secrets.                                | `project`                                                                                                                                |
+| `update_project`        | `project: write`  | Name, slug, prefix, origins, scrubbed keys, maintenance. | `project`, `name`, `slug`, `issue_prefix`, `allowed_origins`, `scrub_keys`, `maintenance_expected_minutes`, `maintenance_repeat_minutes` |
+| `create_log_channel`    | `project: write`  | Add a log channel.                                       | `project`, **`name`**                                                                                                                    |
+| `delete_log_channel`    | `project: manage` | Delete a log channel and its lines. Deletes.             | `project`, **`channel_id`**                                                                                                              |
+| `set_project_retention` | `project: manage` | Days kept per data type. Deletes.                        | `project`, `days`, `forever`, `channels`                                                                                                 |
+| `set_public_stats`      | `project: manage` | Public stats link on or off. Can make data public.       | `project`, **`enabled`**, `include_titles`                                                                                               |
 
 ### Team
 

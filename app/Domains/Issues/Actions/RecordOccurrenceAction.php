@@ -13,6 +13,7 @@ use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Issues\Support\Fingerprinter;
 use App\Domains\Live\Actions\BroadcastProjectChangeAction;
+use App\Domains\Maintenance\Models\MaintenanceWindow;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -35,12 +36,13 @@ class RecordOccurrenceAction
     public function execute(Project $project, IssueSignal $signal): Occurrence
     {
         $fingerprint = $this->fingerprinter->fingerprint($signal);
+        $underMaintenance = MaintenanceWindow::openFor($project, $signal->environment, $signal->occurredAt) !== null;
 
         try {
-            $occurrence = $this->record($project, $signal, $fingerprint);
+            $occurrence = $this->record($project, $signal, $fingerprint, $underMaintenance);
         } catch (UniqueConstraintViolationException) {
             // Another worker created the issue between our read and insert; it exists now.
-            $occurrence = $this->record($project, $signal, $fingerprint);
+            $occurrence = $this->record($project, $signal, $fingerprint, $underMaintenance);
         }
 
         if ($occurrence->issue !== null) {
@@ -52,9 +54,9 @@ class RecordOccurrenceAction
         return $occurrence;
     }
 
-    private function record(Project $project, IssueSignal $signal, string $fingerprint): Occurrence
+    private function record(Project $project, IssueSignal $signal, string $fingerprint, bool $underMaintenance): Occurrence
     {
-        return DB::transaction(function () use ($project, $signal, $fingerprint): Occurrence {
+        return DB::transaction(function () use ($project, $signal, $fingerprint, $underMaintenance): Occurrence {
             $issue = Issue::query()
                 ->where('project_id', $project->id)
                 ->where('fingerprint', $fingerprint)
@@ -87,6 +89,7 @@ class RecordOccurrenceAction
                     'first_seen_at' => $at,
                     'last_seen_at' => $at,
                     'surfaced_at' => now(),
+                    'under_maintenance' => $underMaintenance,
                 ]);
 
                 // The listeners (the live toast names the project and team) need not load it again.
@@ -103,6 +106,8 @@ class RecordOccurrenceAction
                     'occurrences_count' => $issue->occurrences_count + 1,
                     'last_seen_at' => $at->greaterThan($issue->last_seen_at) ? $at : $issue->last_seen_at,
                     'last_release' => $signal->release ?? $issue->last_release,
+                    // Under maintenance only while every occurrence came in during a window.
+                    'under_maintenance' => $issue->under_maintenance && $underMaintenance,
                 ]);
 
                 if ($regressed) {
@@ -144,6 +149,7 @@ class RecordOccurrenceAction
                 'stacktrace' => $signal->stacktrace,
                 'context' => $signal->context,
                 'occurred_at' => $at,
+                'under_maintenance' => $underMaintenance,
             ]);
         });
     }

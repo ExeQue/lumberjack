@@ -595,7 +595,10 @@ export function WidgetTile({
             ) : widget.type === 'slo' ? (
                 <Slo {...bodyProps} colored={colored} />
             ) : (
-                <Health {...bodyProps} />
+                <>
+                    <MaintenanceLine data={payload} t={t} />
+                    <Health {...bodyProps} />
+                </>
             );
     }
 
@@ -1939,6 +1942,44 @@ function Hosts({
     );
 }
 
+type OpenMaintenance = {
+    project: string;
+    environment: string | null;
+    message: string | null;
+    state: 'open' | 'overrun';
+    expected_end_at: string;
+};
+
+/** A line over the health widget while a window in its scope is open, an overrun one first. */
+function MaintenanceLine({
+    data,
+    t,
+}: {
+    data: Record<string, unknown>;
+    t: Translate;
+}) {
+    const windows = (data.maintenance as OpenMaintenance[] | undefined) ?? [];
+    const w = windows.find((m) => m.state === 'overrun') ?? windows[0] ?? null;
+
+    return (
+        w && (
+            <span
+                className="lj-tile-small max-w-full shrink-0 truncate"
+                style={{
+                    color:
+                        w.state === 'overrun'
+                            ? 'var(--s-amber)'
+                            : 'var(--s-blue)',
+                }}
+            >
+                {[t(`common.maintenance.${w.state}`), w.environment, w.message]
+                    .filter(Boolean)
+                    .join(' · ')}
+            </span>
+        )
+    );
+}
+
 type Check = {
     uuid: string;
     name: string;
@@ -2300,6 +2341,14 @@ type OverviewProject = {
     name: string;
     state: 'ok' | 'amber' | 'red';
     reasons: OverviewReason[];
+    maintenance: 'open' | 'overrun' | null;
+};
+
+/** A project in maintenance: blue, or amber once past the window's expected end. */
+const MAINTENANCE_COLOR = { open: 'var(--s-blue)', overrun: 'var(--s-amber)' };
+const MAINTENANCE_BG = {
+    open: 'var(--s-blue-card)',
+    overrun: 'var(--s-amber-card)',
 };
 
 /** A project's light in the words and colors of a health check. */
@@ -2418,21 +2467,35 @@ function Overview({ widget, schema, data, t }: BodyProps) {
         >
             {projects.map((p) => {
                 const reasons = p.reasons.map((r) => reasonText(t, r));
+                // In maintenance outranks the reasons: it is why they are there.
+                const maintenance = p.maintenance
+                    ? t(`common.maintenance.${p.maintenance}`)
+                    : null;
 
                 return (
                     <div
                         key={p.project}
-                        title={[p.name, ...reasons].join(' · ')}
+                        title={[p.name, maintenance, ...reasons]
+                            .filter(Boolean)
+                            .join(' · ')}
                         className="[container-type:size] flex min-h-0 min-w-0 flex-col items-center justify-center gap-[0.1em] overflow-hidden rounded-md border px-2 text-center"
-                        style={{
-                            background:
-                                CARD_BG[LIGHT_STATE[p.state]] ??
-                                'var(--s-panel-2)',
-                            borderColor:
-                                p.state === 'ok'
-                                    ? 'var(--s-green-line)'
-                                    : ROW_COLOR[p.state],
-                        }}
+                        style={
+                            p.maintenance
+                                ? {
+                                      background: MAINTENANCE_BG[p.maintenance],
+                                      borderColor:
+                                          MAINTENANCE_COLOR[p.maintenance],
+                                  }
+                                : {
+                                      background:
+                                          CARD_BG[LIGHT_STATE[p.state]] ??
+                                          'var(--s-panel-2)',
+                                      borderColor:
+                                          p.state === 'ok'
+                                              ? 'var(--s-green-line)'
+                                              : ROW_COLOR[p.state],
+                                  }
+                        }
                     >
                         {/* A long name takes a second line before it is cut. */}
                         <span
@@ -2447,16 +2510,19 @@ function Overview({ widget, schema, data, t }: BodyProps) {
                         <span
                             className="max-w-full truncate leading-tight"
                             style={{
-                                color: ROW_COLOR[p.state],
+                                color: p.maintenance
+                                    ? MAINTENANCE_COLOR[p.maintenance]
+                                    : ROW_COLOR[p.state],
                                 fontSize: 'max(0.62em, min(14cqh, 8cqw))',
                             }}
                         >
-                            {showReason && reasons.length > 0
-                                ? reasons[0] +
-                                  (reasons.length > 1
-                                      ? ` ${t('screens.overview.more', { count: reasons.length - 1 })}`
-                                      : '')
-                                : word(p.state)}
+                            {maintenance ??
+                                (showReason && reasons.length > 0
+                                    ? reasons[0] +
+                                      (reasons.length > 1
+                                          ? ` ${t('screens.overview.more', { count: reasons.length - 1 })}`
+                                          : '')
+                                    : word(p.state))}
                         </span>
                     </div>
                 );

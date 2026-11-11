@@ -65,6 +65,7 @@ environments (comma separated, empty for all). There is one rule per type:
 | Health check degraded  | A [health check](./health#alerts) that keeps warning or starts failing. | On      |
 | Health check down      | A health check that keeps failing.                                      | On      |
 | Health check recovered | A health check that is ok again.                                        | On      |
+| Maintenance overrun    | A [maintenance window](./health#expected-end-and-overrun) past its end. | On      |
 
 Alerts your own code sends have their own topics, see [Custom alerts](#custom-alerts).
 
@@ -137,6 +138,23 @@ settings list them under the rules. The alert names the thresholds it used, with
 "(this queue)" when they are the queue's own. Setting them needs the right to change
 the project.
 
+### Maintenance overrun
+
+Fires as soon as a [maintenance window](./health#maintenance-windows) is still open past
+its expected end, with no grace period, and again every project's **Repeat overrun
+alert** minutes (30 by default) until the window ends. When it ends, one more message
+says how long it ran over. Like the other rules it is a team rule with project
+overrides, and its environments limit it to windows of those environments.
+
+### Maintenance
+
+Alerts are still sent while a maintenance window covers their environment, and
+throttled as usual, but marked: chat and push messages start their title with
+**[Under maintenance]**, and so does a mail's subject. Health checks and queue backlogs
+send nothing during a window, see [Health](./health#maintenance-windows). Alerts
+without an environment, such as a bulk status change, are marked during any window of
+the project.
+
 ## Custom alerts
 
 Your app can send its own alerts, with the
@@ -196,7 +214,21 @@ A webhook channel POSTs JSON to your endpoint.
 `event` is the rule, or `test`:
 
 `new_issue`, `regression`, `escalation`, `status_change`, `note`, `bulk_status_change`,
-`queue_backlog`, `health_degraded`, `health_down`, `health_recovered`.
+`queue_backlog`, `health_degraded`, `health_down`, `health_recovered`,
+`maintenance_overrun`.
+
+Every body also has `maintenance`: the window the alert was sent during, or `null`
+outside one.
+
+```json
+{
+    "maintenance": {
+        "id": "...",
+        "started_at": "2026-11-03T10:00:00+00:00",
+        "message": "Upgrading the database"
+    }
+}
+```
 
 `status_change` and `note` are filled in for those events.
 
@@ -271,6 +303,36 @@ Lumberjack runs itself:
 }
 ```
 
+A maintenance overrun carries the window. `window.state` is `overrun` while it is open,
+and `ended` on the message sent when it ends; `overrun_minutes` is how long it ran over:
+
+```json
+{
+    "version": "1",
+    "sent_at": "2026-11-03T10:31:00+00:00",
+    "event": "maintenance_overrun",
+    "project": { "id": "...", "slug": "shop", "name": "Shop" },
+    "environment": "production",
+    "window": {
+        "id": "...",
+        "environment": "production",
+        "source": "reported",
+        "message": "Upgrading the database",
+        "starts_at": "2026-11-03T10:00:00+00:00",
+        "expected_end_at": "2026-11-03T10:30:00+00:00",
+        "ended_at": null,
+        "state": "overrun",
+        "overrun_minutes": 1,
+        "url": "https://lumberjack.example.com/projects/.../health"
+    },
+    "maintenance": {
+        "id": "...",
+        "started_at": "2026-11-03T10:00:00+00:00",
+        "message": "Upgrading the database"
+    }
+}
+```
+
 Every request is signed with the channel's secret, shown once when the channel is
 created:
 
@@ -288,6 +350,7 @@ An SDK may verify these for you; see its docs.
 | **Send test**                          | 6 a minute per person                          |
 | New issue and Escalation messages      | 1 per issue, rule and channel every 30 minutes |
 | Queue backlog messages                 | 1 new backlog per queue every 30 minutes       |
+| Maintenance overrun messages           | 1 per window every 30 minutes, per project     |
 | Issues named in a bulk summary message | 10                                             |
 | Custom alerts sent                     | 60 a minute per project, the rest only listed  |
 | Discord sender name                    | 80 characters                                  |

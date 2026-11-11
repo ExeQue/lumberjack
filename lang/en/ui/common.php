@@ -84,7 +84,9 @@ return [
     'statuses' => ['open' => 'Open', 'in_progress' => 'In progress', 'resolved' => 'Resolved', 'ignored' => 'Ignored'],
     'job_statuses' => ['queued' => 'Queued', 'processing' => 'Processing', 'processed' => 'Processed', 'released' => 'Released', 'failed' => 'Failed', 'stuck' => 'Stuck'],
     'levels' => ['debug' => 'debug', 'info' => 'info', 'notice' => 'notice', 'warning' => 'warning', 'error' => 'error', 'critical' => 'critical', 'alert' => 'alert', 'emergency' => 'emergency'],
-    'flags' => ['new' => 'New', 'regression' => 'Regression', 'escalating' => 'Escalating', 'returned' => 'Came back'],
+    'flags' => ['new' => 'New', 'regression' => 'Regression', 'escalating' => 'Escalating', 'returned' => 'Came back', 'maintenance' => 'Under maintenance'],
+    // A project with a maintenance window open now, in the top bar, chart hovers and screens.
+    'maintenance' => ['open' => 'In maintenance', 'overrun' => 'Overrun'],
     'secret_once' => 'Copy it now. It is shown only this once and cannot be retrieved later.',
     'copy' => 'Copy',
     'copied' => 'Copied',

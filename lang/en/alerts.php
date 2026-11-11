@@ -18,6 +18,7 @@ return [
         'health_recovered' => ['label' => 'Health check recovered', 'description' => 'A health check that was degraded or down and passes again past its recovery threshold.'],
         'custom_alert' => ['label' => 'Custom alert', 'description' => 'An alert your app sent.'],
         'new_release' => ['label' => 'New release', 'description' => 'An environment reports a release for the first time, with the version, environment and host. Once per release and environment; an environment\'s very first release sends nothing.'],
+        'maintenance_overrun' => ['label' => 'Maintenance overrun', 'description' => 'A maintenance window still open past its expected end: at once, then again every project\'s repeat interval (30 minutes by default) until it ends. Tells once more, with how long it ran over, when it ends.'],
         'queue_backlog' => ['label' => 'Queue backlog', 'description' => 'A queue with too many jobs waiting, or one waiting too long, for a while, from the sizes the agents report. Catches dead workers, which start no job to measure. Tells again when it is back under.'],
     ],
     'messages' => [
@@ -46,6 +47,17 @@ return [
         'health_check_down' => 'Health check down in :project',
         'health_check_degraded' => 'Health check degraded in :project',
         'health_check_recovered' => 'Health check recovered in :project',
+        'maintenance_overrun' => 'Maintenance overrun in :project (:environment)',
+        'maintenance_ended' => 'Maintenance over in :project (:environment)',
+    ],
+    // Put in front of the headline of every alert sent while a maintenance window is open.
+    'maintenance_marker' => '[Under maintenance] :headline',
+    'maintenance' => [
+        'no_message' => 'Maintenance',
+        'every_environment' => 'every environment',
+        'overrun' => '{1} Expected to end at :expected, 1 minute ago, and still open.|[2,*] Expected to end at :expected, :count minutes ago, and still open.',
+        'ran_over' => '{1} Ended 1 minute after its expected end at :expected.|[2,*] Ended :count minutes after its expected end at :expected.',
+        'facts' => ['environment' => 'Environment', 'started' => 'Started', 'expected_end' => 'Expected end', 'over_by' => 'Over by'],
     ],
     'custom' => [
         'topic_description' => 'Custom alerts your apps send to this topic.',

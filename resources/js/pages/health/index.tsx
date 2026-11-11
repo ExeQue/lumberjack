@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { CopyButton } from '@/components/lj/copy-text';
 import { HealthCheckDialog } from '@/components/lj/health-check-dialog';
+import { MaintenanceCard } from '@/components/lj/maintenance';
 import type { HealthDataSource } from '@/components/lj/health-check-dialog';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
@@ -441,7 +442,12 @@ export default function HealthIndex({
     ).length;
     const stale = active.filter((check) => check.state === 'stale').length;
 
-    useProjectLive(project.uuid, ['health.changed'], ['checks', 'detail']);
+    // The project carries the maintenance windows, which the app can open and end.
+    useProjectLive(
+        project.uuid,
+        ['health.changed'],
+        ['checks', 'detail', 'project'],
+    );
 
     const select = (check: string | null) => {
         const query = Object.fromEntries(
@@ -574,6 +580,8 @@ export default function HealthIndex({
                         />
                     </Card>
                 )}
+
+                <MaintenanceCard project={project} />
 
                 {selected && detail && detail.uuid === selected.uuid && (
                     <CheckDetail
@@ -928,9 +936,20 @@ function CheckDetail({
                                                     )}
                                                 </td>
                                                 <td className={tdClass}>
-                                                    <StateBadge
-                                                        state={outage.status}
-                                                    />
+                                                    <span className="flex flex-wrap gap-1">
+                                                        <StateBadge
+                                                            state={
+                                                                outage.status
+                                                            }
+                                                        />
+                                                        {outage.maintenance && (
+                                                            <Badge tone="info">
+                                                                {t(
+                                                                    'health.maintenance.title',
+                                                                )}
+                                                            </Badge>
+                                                        )}
+                                                    </span>
                                                 </td>
                                                 <td
                                                     className={cn(

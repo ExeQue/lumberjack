@@ -55,6 +55,10 @@ class UpdateProjectRequest extends FormRequest
             'allowed_origins.*' => ['string', 'url:http,https', 'max:255'],
             'scrub_keys' => ['sometimes', 'array', 'max:50'],
             'scrub_keys.*' => ['string', 'max:64', 'regex:/^[A-Za-z0-9_.*-]+$/'],
+            // How long a window the app reports without an expected end is expected to take, up to a week.
+            'maintenance_expected_minutes' => ['sometimes', 'required', 'integer', 'min:1', 'max:10080'],
+            // How often the maintenance overrun alert repeats, up to a day.
+            'maintenance_repeat_minutes' => ['sometimes', 'required', 'integer', 'min:5', 'max:1440'],
         ];
     }
 }

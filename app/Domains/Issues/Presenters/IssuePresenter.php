@@ -43,6 +43,7 @@ class IssuePresenter
                 'escalation' => $issue->ignore_until_escalation ?: null,
             ], fn ($value): bool => $value !== null) ?: null : null,
             'new' => $issue->first_seen_at->greaterThan(now()->subDay()),
+            'under_maintenance' => $issue->under_maintenance,
             'location' => $issue->file !== null ? $issue->file.($issue->line !== null ? ':'.$issue->line : '') : $issue->log_channel,
             'occurrences' => $issue->occurrences_count,
             'users' => $issue->users_count,
@@ -77,6 +78,7 @@ class IssuePresenter
             'environment' => $occurrence->environment,
             'release' => $occurrence->release,
             'host' => $occurrence->host,
+            'under_maintenance' => $occurrence->under_maintenance,
             'stacktrace' => $occurrence->stacktrace ?? [],
             'context' => $occurrence->context ?? [],
         ];

@@ -44,6 +44,7 @@ class IssueController
         $sort = (string) $request->query('sort', 'last_seen');
         $label = (string) $request->query('label', '');
         $watching = $request->boolean('watching');
+        $maintenance = $request->boolean('maintenance');
 
         $base = Issue::query()->where('project_id', $project->id);
 
@@ -58,6 +59,7 @@ class IssueController
                 'sort' => $sort,
                 'label' => $label,
                 'watching' => $watching,
+                'maintenance' => $maintenance,
             ],
             // Closures, so a live reload of the list builds only what it asks for.
             'labels' => fn (): array => $project->labels()->get()->map(fn (Label $l): array => $l->toSummary())->all(),
@@ -67,7 +69,7 @@ class IssueController
                 $counts['open'] = (int) ($counts['open'] ?? 0) + (int) ($counts['in_progress'] ?? 0);
             }),
             'releases' => fn () => (clone $base)->whereNotNull('last_release')->distinct()->orderByDesc('last_release')->limit(20)->pluck('last_release'),
-            'issues' => function () use ($base, $status, $source, $search, $release, $assigned, $label, $watching, $sort, $request, $presenter, $project) {
+            'issues' => function () use ($base, $status, $source, $search, $release, $assigned, $label, $watching, $maintenance, $sort, $request, $presenter, $project) {
                 $issues = (clone $base)
                     ->when($status === IssueStatus::Open)->whereOpen()
                     ->when($status !== IssueStatus::Open)->whereStatus($status)
@@ -78,6 +80,7 @@ class IssueController
                     ->when($assigned === 'none')->whereNull('assigned_user_id')
                     ->when($label !== '')->whereHasLabel($label)
                     ->when($watching)->whereWatchedBy($request->user())
+                    ->when($maintenance)->whereUnderMaintenance()
                     ->orderByDesc(match ($sort) {
                         'occurrences' => 'occurrences_count',
                         'users' => 'users_count',

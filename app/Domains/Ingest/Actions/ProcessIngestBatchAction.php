@@ -17,6 +17,7 @@ use App\Domains\Jobs\Actions\RecordJobEventAction;
 use App\Domains\Live\Actions\BroadcastProjectChangeAction;
 use App\Domains\Live\Enums\ChangeKind;
 use App\Domains\Logs\Actions\RecordLogLineAction;
+use App\Domains\Maintenance\Actions\RecordMaintenanceEventAction;
 use App\Domains\Performance\Actions\RecordRequestCountsAction;
 use App\Domains\Performance\Enums\DeviceClass;
 use App\Domains\Performance\Enums\SpanKind;
@@ -60,6 +61,7 @@ class ProcessIngestBatchAction
         private readonly RecordCustomAlertAction $recordCustomAlertAction,
         private readonly RecordReleaseEnvironmentAction $recordReleaseEnvironmentAction,
         private readonly SymbolicateFramesAction $symbolicateFramesAction,
+        private readonly RecordMaintenanceEventAction $recordMaintenanceEventAction,
     ) {
     }
 
@@ -104,6 +106,7 @@ class ProcessIngestBatchAction
                     'command' => $this->recordCommandEventAction->execute($project, $event, $envelope),
                     'health' => $this->recordReportedHealthAction->execute($project, $event, $envelope),
                     'alert' => $this->recordCustomAlertAction->execute($project, $event, $envelope),
+                    'maintenance' => $this->recordMaintenanceEventAction->execute($project, $event, $envelope),
                     default => null,
                 };
             } catch (Throwable $e) {

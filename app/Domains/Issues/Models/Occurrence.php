@@ -26,8 +26,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property list<array<string, mixed>>|null $stacktrace
  * @property array<string, mixed>|null $context
  * @property CarbonImmutable $occurred_at
+ * @property bool $under_maintenance came in during a maintenance window of its environment
  */
-#[Fillable(['issue_id', 'project_id', 'trace_id', 'environment', 'release', 'host', 'user_id', 'stacktrace', 'context', 'occurred_at'])]
+#[Fillable(['issue_id', 'project_id', 'trace_id', 'environment', 'release', 'host', 'user_id', 'stacktrace', 'context', 'occurred_at', 'under_maintenance'])]
 #[WithoutTimestamps]
 #[DateFormat('Y-m-d H:i:s.v')]
 #[UseFactory(OccurrenceFactory::class)]
@@ -42,6 +43,7 @@ class Occurrence extends Model
             'stacktrace' => 'array',
             'context' => 'array',
             'occurred_at' => 'datetime',
+            'under_maintenance' => 'boolean',
         ];
     }
 

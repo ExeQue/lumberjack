@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Data;
 
 use App\Domains\Alerts\Contracts\Alert;
+use App\Domains\Alerts\Data\Concerns\LabelsMaintenance;
 use App\Domains\Alerts\Enums\CustomAlertLevel;
 use App\Domains\Alerts\Models\CustomAlert;
 use Override;
@@ -14,6 +15,8 @@ use Override;
  */
 final readonly class CustomAlertMessage implements Alert
 {
+    use LabelsMaintenance;
+
     public function __construct(
         public CustomAlert $alert,
     ) {
@@ -108,14 +111,14 @@ final readonly class CustomAlertMessage implements Alert
     #[Override]
     public function headline(): string
     {
-        return $this->alert->title;
+        return $this->marked($this->alert->title);
     }
 
     #[Override]
     public function summary(): array
     {
         return [
-            'title' => $this->alert->title,
+            'title' => $this->headline(),
             'subject' => $this->context(),
             'body' => $this->alert->message !== null ? [$this->alert->message] : [],
         ];
@@ -137,5 +140,11 @@ final readonly class CustomAlertMessage implements Alert
     public function url(): string
     {
         return $this->titleUrl() ?? $this->links()[0]['url'] ?? route('alerts.index');
+    }
+
+    #[Override]
+    protected function maintenanceScope(): array
+    {
+        return [$this->alert->project_id, $this->alert->environment];
     }
 }

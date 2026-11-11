@@ -19,7 +19,7 @@ return [
     'areas' => [
         'issues' => ['label' => 'Issues', 'description' => 'Triage, status, labels, assignees and notes.'],
         'telemetry' => ['label' => 'Telemetry', 'description' => 'Traces, requests, queries, jobs, logs, releases and metrics. Read only.'],
-        'health' => ['label' => 'Health checks', 'description' => 'Checks Lumberjack runs (http, ssl, tcp, dns, heartbeat) and those the app reports.'],
+        'health' => ['label' => 'Health checks', 'description' => 'Checks Lumberjack runs (http, ssl, tcp, dns, heartbeat), those the app reports, and maintenance windows.'],
         'schedule' => ['label' => 'Scheduled tasks', 'description' => 'Tasks the app reports. Stale tasks can be removed.'],
         'alerts' => ['label' => 'Alerts', 'description' => 'Alert rules, topics and queue thresholds. Channels stay in the UI.'],
         'data_sources' => ['label' => 'Data sources', 'description' => 'Pulled sources and app connections that feed screens.'],
@@ -76,6 +76,12 @@ return [
         'run_health_check' => 'Run a check now',
         'archive_health_check' => 'Archive or unarchive a check',
         'delete_health_check' => 'Delete a check and its history',
+
+        // Maintenance windows
+        'list_maintenance_windows' => 'Maintenance windows with state',
+        'create_maintenance_window' => 'Plan a maintenance window',
+        'update_maintenance_window' => 'Change a maintenance window',
+        'end_maintenance_window' => 'End a maintenance window now',
 
         // Scheduled tasks
         'list_scheduled_tasks' => 'Tasks with last run and state',

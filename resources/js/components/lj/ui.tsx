@@ -1,6 +1,8 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { ComponentProps, ReactNode } from 'react';
+import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import type { ProjectHeader } from '@/types/lumberjack';
 
 /**
  * An on/off control. The label names what it turns on for assistive technology.
@@ -445,6 +447,7 @@ export function Bars({
     height = 140,
     highlightNonZero,
     tips,
+    shades,
 }: {
     values: number[];
     label: string;
@@ -453,6 +456,8 @@ export function Bars({
     highlightNonZero?: string;
     /** One line per bar, shown on hover: "10:00 PM · 15". */
     tips?: string[];
+    /** Maintenance behind each bar, from useMaintenanceShades. */
+    shades?: MaintenanceShade[];
 }) {
     const max = Math.max(1, ...values);
 
@@ -466,7 +471,10 @@ export function Bars({
             {values.map((v, i) => (
                 <div
                     key={i}
-                    className="group relative flex h-full flex-1 items-end"
+                    className={cn(
+                        'group relative flex h-full flex-1 items-end',
+                        shades?.[i] && shadeClass[shades[i]],
+                    )}
                 >
                     <div
                         className="w-full rounded-t-sm group-hover:brightness-125"
@@ -490,6 +498,59 @@ export function Bars({
             ))}
         </div>
     );
+}
+
+export type MaintenanceShade = 'open' | 'overrun' | null;
+
+export const shadeClass = { open: 'bg-info-bg', overrun: 'bg-warn-bg' };
+
+/**
+ * Which buckets (given by their start times) a maintenance window of the page's project
+ * covers, as "overrun" where it ran past its expected end. A window for another
+ * environment than the page's filter is left out.
+ */
+export function useMaintenanceShades(times: string[]): MaintenanceShade[] {
+    const { project, filters } = usePage<{
+        project?: ProjectHeader;
+        filters?: { environment?: string | null };
+    }>().props;
+    const env = filters?.environment;
+    const windows = (project?.maintenance ?? []).filter(
+        (w) => !w.environment || !env || w.environment === env,
+    );
+    const starts = times.map((t) => Date.parse(t));
+    const step = starts.length > 1 ? starts[1] - starts[0] : 0;
+
+    return starts.map((start) =>
+        windows.reduce<MaintenanceShade>((shade, w) => {
+            const from = Date.parse(w.starts_at);
+            const to = w.ended_at ? Date.parse(w.ended_at) : Date.now();
+
+            if (from >= start + step || to <= start) {
+                return shade;
+            }
+
+            return Math.min(start + step, to) > Date.parse(w.expected_end_at)
+                ? 'overrun'
+                : (shade ?? 'open');
+        }, null),
+    );
+}
+
+/** The swatches under a chart that names its maintenance shading. */
+export function MaintenanceLegend({ shades }: { shades: MaintenanceShade[] }) {
+    const t = useT();
+
+    return (['open', 'overrun'] as const)
+        .filter((kind) => shades.includes(kind))
+        .map((kind) => (
+            <span key={kind} className="flex items-center gap-1.5">
+                <span
+                    className={cn('h-2.5 w-3 rounded-sm', shadeClass[kind])}
+                />
+                {t(`common.maintenance.${kind}`)}
+            </span>
+        ));
 }
 
 /**
@@ -550,7 +611,9 @@ export function TimeBars({
     height?: number;
     formatValue?: (v: number) => string;
 }) {
+    const t = useT();
     const values = series.map((p) => p.v);
+    const shades = useMaintenanceShades(series.map((p) => p.t));
     // ponytail: five evenly spaced ticks, enough for 1h to 30d buckets
     const ticks =
         series.length > 1
@@ -576,9 +639,10 @@ export function TimeBars({
                         highlightNonZero={highlightNonZero}
                         height={height}
                         label={label}
+                        shades={shades}
                         tips={series.map(
-                            (p) =>
-                                `${bucketLabel(p.t, period)} · ${formatValue(p.v)}`,
+                            (p, i) =>
+                                `${bucketLabel(p.t, period)} · ${formatValue(p.v)}${shades[i] ? ` · ${t(`common.maintenance.${shades[i]}`)}` : ''}`,
                         )}
                     />
                 </div>
@@ -591,6 +655,11 @@ export function TimeBars({
                     <span key={i}>{bucketLabel(p.t, period)}</span>
                 ))}
             </div>
+            {shades.some(Boolean) && (
+                <div className="ml-12 flex gap-3 text-xs text-ink-3">
+                    <MaintenanceLegend shades={shades} />
+                </div>
+            )}
         </div>
     );
 }

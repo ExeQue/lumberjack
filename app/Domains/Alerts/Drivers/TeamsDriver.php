@@ -59,7 +59,7 @@ class TeamsDriver implements ChannelDriver
         $row = fn (array $cells): array => ['type' => 'TableRow', 'cells' => array_map(fn (string $cell): array => ['type' => 'TableCell', 'items' => [$text($cell)]], $cells)];
 
         $this->post($channel, $this->card([
-            $text($alert->title, ['weight' => 'Bolder', 'size' => 'Medium', 'color' => $message->level()->teamsColor()]),
+            $text($message->headline(), ['weight' => 'Bolder', 'size' => 'Medium', 'color' => $message->level()->teamsColor()]),
             ...($alert->message !== null ? [$text($alert->message, ['isSubtle' => true])] : []),
             ...($message->fields() !== [] ? [['type' => 'FactSet', 'facts' => array_map(fn (array $field): array => ['title' => $field['name'], 'value' => self::escape($field['value'])], $message->fields())]] : []),
             ...collect($message->tables())->flatMap(fn (array $table): array => [

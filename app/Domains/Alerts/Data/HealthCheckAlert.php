@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Data;
 
 use App\Domains\Alerts\Contracts\Alert;
+use App\Domains\Alerts\Data\Concerns\LabelsMaintenance;
 use App\Domains\Health\Models\HealthCheck;
 use Carbon\CarbonImmutable;
+use Override;
 
 /**
  * A health check became degraded or down, or recovered.
  */
 final readonly class HealthCheckAlert implements Alert
 {
+    use LabelsMaintenance;
+
     public const string DOWN = 'down';
 
     public const string DEGRADED = 'degraded';
@@ -39,7 +43,7 @@ final readonly class HealthCheckAlert implements Alert
 
     public function headline(): string
     {
-        return __('alerts.messages.health_check_'.$this->state, ['project' => $this->check->project->name]);
+        return $this->marked((string) __('alerts.messages.health_check_'.$this->state, ['project' => $this->check->project->name]));
     }
 
     public function summary(): array
@@ -73,5 +77,11 @@ final readonly class HealthCheckAlert implements Alert
             self::RECOVERED => 'low',
             default => 'normal',
         };
+    }
+
+    #[Override]
+    protected function maintenanceScope(): array
+    {
+        return [$this->check->project_id, $this->check->environment !== '' ? $this->check->environment : null];
     }
 }

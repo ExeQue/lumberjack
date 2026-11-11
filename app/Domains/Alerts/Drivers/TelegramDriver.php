@@ -58,7 +58,7 @@ class TelegramDriver implements ChannelDriver
         $buttons = array_map(fn (array $link): array => array_filter(['text' => $link['label'], 'url' => $link['url'], 'style' => $link['style']]), $message->links());
 
         $this->post($channel, mb_substr(implode("\n", array_filter([
-            $message->level()->emoji().' <b>'.self::escape($alert->title).'</b>',
+            $message->level()->emoji().' <b>'.self::escape($message->headline()).'</b>',
             $alert->message !== null ? self::escape($alert->message) : null,
             ...array_map(fn (array $field): string => '<b>'.self::escape($field['name']).':</b> '.self::escape($field['value']), $message->fields()),
             ...array_map(fn (array $table): string => ($table['title'] !== null ? '<b>'.self::escape($table['title'])."</b>\n" : '').'<pre>'.self::escape(CustomAlertMessage::tableText($table)).'</pre>', $message->tables()),

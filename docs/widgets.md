@@ -357,6 +357,9 @@ message, and for a database check its connections and size.
 
 A database check shows its connections, amber at 80% of the maximum and red at 90%.
 
+While a maintenance window in scope is open, a line on top says **In maintenance** (blue), or
+**Overrun** (amber) once it runs past its expected end, with the environment and message.
+
 ## Project overview
 
 Every project in scope as a traffic light: one cell each with its name, its color, and
@@ -383,6 +386,9 @@ A project's color is the worst of these:
 - **Show why**: when off, the cell shows the state instead of the reason.
 - **Amber from new issues**: 1, 3, 5, 10 or 20.
 - **Stale counts as**: **Degraded** or **Ok**.
+
+A project in maintenance shows **In maintenance** in blue, or **Overrun** in amber, instead
+of its color and reason.
 
 A muted queue stays green. The tile takes the color of its worst project. Share links show
 project names.

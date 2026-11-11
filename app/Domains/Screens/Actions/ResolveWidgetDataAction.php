@@ -21,6 +21,7 @@ use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Enums\JobRunStatus;
 use App\Domains\Jobs\Models\QueueSample;
 use App\Domains\Jobs\Queries\QueueStatisticsQuery;
+use App\Domains\Maintenance\Models\MaintenanceWindow;
 use App\Domains\Metrics\Data\MetricFilter;
 use App\Domains\Metrics\Data\MetricWindow;
 use App\Domains\Metrics\Enums\Metric;
@@ -619,7 +620,26 @@ class ResolveWidgetDataAction
             $detail = $detail !== null ? [...$detail, 'last_message' => null] : null;
         }
 
-        return ['summary' => $states, 'checks' => $checks, 'check' => $detail];
+        // In maintenance: the scope's open windows, so the widget can say so instead of looking down.
+        $maintenance = array_values(array_map(fn (array $w): array => array_intersect_key($w, array_flip(['project', 'environment', 'message', 'state', 'expected_end_at'])), $this->maintenance($projects, $scope)));
+
+        return ['summary' => $states, 'checks' => $checks, 'check' => $detail, 'maintenance' => $aggregatesOnly ? array_map(fn (array $w): array => [...$w, 'message' => null], $maintenance) : $maintenance];
+    }
+
+    /**
+     * The maintenance windows open now in the scope's projects and environment, at most
+     * one per project (the latest), by project id: {project, ...window summary}.
+     *
+     * @param  Collection<int, Project>  $projects
+     * @return array<int, array<string, mixed>>
+     */
+    private function maintenance(Collection $projects, WidgetScope $scope): array
+    {
+        return $this->memo->remember('maintenance:'.implode(',', $projects->modelKeys()).':'.($scope->environment ?? '*'), fn (): array => MaintenanceWindow::query()
+            ->whereIn('project_id', $projects->modelKeys())->whereOpen()->whereCovers($scope->environment)
+            ->orderBy('starts_at')->get()
+            ->mapWithKeys(fn (MaintenanceWindow $w): array => [$w->project_id => ['project' => $projects->firstWhere('id', $w->project_id)?->slug, ...$w->toSummary()]])
+            ->all());
     }
 
     /**
@@ -647,6 +667,7 @@ class ResolveWidgetDataAction
             ->selectRaw('project_id, COUNT(*) FILTER (WHERE escalated_at > ?) AS escalating_count, COUNT(*) FILTER (WHERE first_seen_at >= ?) AS new_count', [now()->subMinutes(DetectEscalationAction::ACTIVE_MINUTES), $since])
             ->toBase()->get()->keyBy('project_id');
         $backlogs = $this->backlogs($team, $ids, $since);
+        $maintenance = $this->maintenance($projects, $scope);
         $rank = ['red' => 0, 'amber' => 1];
         $cells = [];
 
@@ -664,7 +685,11 @@ class ResolveWidgetDataAction
             ]));
             usort($reasons, fn (array $a, array $b): int => $rank[$a['state']] <=> $rank[$b['state']]);
 
-            $cells[] = ['project' => $project->slug, 'name' => $project->name, 'state' => $reasons[0]['state'] ?? 'ok', 'reasons' => $reasons];
+            $cells[] = [
+                'project' => $project->slug, 'name' => $project->name, 'state' => $reasons[0]['state'] ?? 'ok', 'reasons' => $reasons,
+                // Shown as in maintenance (overrun once past its expected end), whatever the reasons say.
+                'maintenance' => isset($maintenance[$project->id]) ? $maintenance[$project->id]['state'] : null,
+            ];
         }
 
         $states = array_count_values(array_column($cells, 'state'));

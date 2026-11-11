@@ -36,7 +36,7 @@ class NtfyDriver implements ChannelDriver
     {
         if ($alert instanceof CustomAlertMessage) {
             $this->post($channel, array_filter([
-                'title' => mb_substr($alert->alert->title, 0, 250),
+                'title' => mb_substr($alert->headline(), 0, 250),
                 'message' => mb_substr(implode("\n", $alert->plainLines()), 0, 4000),
                 'click' => $alert->titleUrl(),
                 'priority' => ['high' => 4, 'normal' => 3, 'low' => 2][$alert->urgency()],
