@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Http;
  * Stands GitHub's REST API in for the repository acme/shop: four open pull requests (one a
  * draft, one waiting for review), seven open issues counting them, three merged (in 2, 4 and
  * 10 hours) and two failed runs in any range, a failed run last on main, and a release
- * behind a draft. 42 stars, 5 forks, 3 watchers. Any range has three commits on main over
+ * (with notes) behind a draft. 42 stars, 5 forks, 3 watchers. Any range has three commits on main over
  * two pages (ana on 10 and 7 November, Bo without an account on 9 November), and 17 when
  * only counted; six issues opened, two closed, one open bug. Dependabot has three open
  * alerts (critical, high, high), code scanning is not set up, secret scanning has none.
@@ -78,7 +78,7 @@ trait FakesGitHub
                     ]]),
                 '/repos/acme/shop/releases' => Http::response([
                     ['tag_name' => 'v2.0.0', 'name' => 'Next', 'draft' => true, 'prerelease' => false, 'html_url' => 'https://github.com/acme/shop/releases/tag/untagged', 'published_at' => null],
-                    ['tag_name' => 'v1.2.0', 'name' => '', 'draft' => false, 'prerelease' => false, 'html_url' => 'https://github.com/acme/shop/releases/tag/v1.2.0', 'published_at' => '2026-11-09T10:00:00Z'],
+                    ['tag_name' => 'v1.2.0', 'name' => '', 'draft' => false, 'prerelease' => false, 'html_url' => 'https://github.com/acme/shop/releases/tag/v1.2.0', 'published_at' => '2026-11-09T10:00:00Z', 'body' => "## Fixed\n\n- The cart <script>keeps</script> its items.\n"],
                 ]),
                 '/repos/acme/shop/tags' => Http::response([['name' => 'v0.1.0']]),
                 default => Http::response(['message' => 'Not Found'], 404),

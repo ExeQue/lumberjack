@@ -1,6 +1,8 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { Fragment, useState } from 'react';
 import type { ReactNode } from 'react';
+import Markdown from 'react-markdown';
 import {
     ConnectionCard,
     ConnectorPanel,
@@ -53,6 +55,8 @@ type Release = {
     prerelease: boolean;
     url: string;
     published_at: string | null;
+    /** The release's notes as written, in Markdown. */
+    body: string;
 };
 
 type PullRequest = {
@@ -103,6 +107,8 @@ type Permission = {
 type Props = {
     project: ProjectHeader;
     filters: { period: Period };
+    /** How many rows each list shows, when more than at first. */
+    rows: Partial<Record<List, number>>;
     connection: { uuid: string; name: string; url: string } | null;
     /** Every repository the project reads, by the uuid of its connection. */
     repositories: { uuid: string; name: string }[];
@@ -154,6 +160,23 @@ const MEMBER_TABS = [
     'security',
 ] as const;
 
+/**
+ * Each list's rows at first, which is also how many each Load more adds, and the most it
+ * loads, as the controller holds them; and the prop each list comes in.
+ */
+const LISTS = {
+    pull_requests: { rows: 20, max: 100, prop: 'pull_requests' },
+    runs: { rows: 20, max: 100, prop: 'runs' },
+    releases: { rows: 20, max: 100, prop: 'releases' },
+    commits: { rows: 20, max: 1000, prop: 'commits' },
+    contributors: { rows: 10, max: 100, prop: 'commits' },
+} as const;
+
+type List = keyof typeof LISTS;
+
+/** Shows the next rows of a list, partially reloading only its prop. */
+type LoadMore = (list: List) => void;
+
 /** Dependabot severities, the worst first. */
 const SEVERITIES = ['critical', 'high', 'medium', 'low'] as const;
 
@@ -179,6 +202,7 @@ function resultTone(result: string): Tone {
 export default function GitHubIndex({
     project,
     filters,
+    rows,
     connection,
     repositories,
     error,
@@ -196,19 +220,52 @@ export default function GitHubIndex({
     const tabs: readonly Tab[] = project.can_administer ? TABS : MEMBER_TABS;
     const [tab, setTab] = useHashTab<Tab>(tabs);
 
-    const visit = (changes: { period?: Period; connection?: string }) => {
+    /**
+     * Visits the page as changed. The rows loaded are kept in the query until the repository
+     * or period changes.
+     */
+    const visit = (
+        changes: {
+            period?: Period;
+            connection?: string;
+            rows?: Props['rows'];
+        },
+        only?: string[],
+    ) => {
         const period = changes.period ?? filters.period;
-        const query = period === '7d' ? {} : { period };
+        const query: Record<string, string> = period === '7d' ? {} : { period };
+        const resets =
+            changes.connection !== undefined || changes.period !== undefined;
         const chosen = changes.connection ?? connection?.uuid;
 
+        Object.entries(changes.rows ?? (resets ? {} : rows)).forEach(
+            ([list, count]) => (query[`rows[${list}]`] = String(count)),
+        );
+
         router.get(
-            chosen
+            (chosen
                 ? githubIndex([project.uuid, chosen], { query }).url
-                : githubIndex({ project: project.uuid }, { query }).url,
+                : githubIndex({ project: project.uuid }, { query }).url) +
+                window.location.hash,
             {},
-            { preserveScroll: true, replace: true },
+            {
+                preserveScroll: true,
+                replace: true,
+                ...(only ? { only, preserveState: true } : {}),
+            },
         );
     };
+
+    const loadMore: LoadMore = (list) =>
+        visit(
+            {
+                rows: {
+                    ...rows,
+                    [list]: (rows[list] ?? LISTS[list].rows) + LISTS[list].rows,
+                },
+            },
+            [LISTS[list].prop, 'rows'],
+        );
 
     return (
         <>
@@ -303,7 +360,11 @@ export default function GitHubIndex({
                             current={tab}
                         >
                             {error === null && (
-                                <PullRequests pulls={pull_requests} />
+                                <PullRequests
+                                    pulls={pull_requests}
+                                    shown={rows}
+                                    onMore={loadMore}
+                                />
                             )}
                         </ConnectorPanel>
                         <ConnectorPanel
@@ -315,6 +376,8 @@ export default function GitHubIndex({
                                 <CommitsPanel
                                     commits={commits}
                                     period={filters.period}
+                                    shown={rows}
+                                    onMore={loadMore}
                                 />
                             )}
                         </ConnectorPanel>
@@ -323,14 +386,26 @@ export default function GitHubIndex({
                             name="actions"
                             current={tab}
                         >
-                            {error === null && <Runs runs={runs} />}
+                            {error === null && (
+                                <Runs
+                                    runs={runs}
+                                    shown={rows}
+                                    onMore={loadMore}
+                                />
+                            )}
                         </ConnectorPanel>
                         <ConnectorPanel
                             id="github"
                             name="releases"
                             current={tab}
                         >
-                            {error === null && <Releases releases={releases} />}
+                            {error === null && (
+                                <Releases
+                                    releases={releases}
+                                    shown={rows}
+                                    onMore={loadMore}
+                                />
+                            )}
                         </ConnectorPanel>
                         <ConnectorPanel
                             id="github"
@@ -510,9 +585,13 @@ function Summary({
 function CommitsPanel({
     commits,
     period,
+    shown,
+    onMore,
 }: {
     commits: Commits;
     period: Period;
+    shown: Props['rows'];
+    onMore: LoadMore;
 }) {
     const t = useT();
 
@@ -587,6 +666,12 @@ function CommitsPanel({
                         </table>
                     </div>
                 )}
+                <More
+                    list="contributors"
+                    count={commits.contributors.length}
+                    shown={shown}
+                    onMore={onMore}
+                />
             </Card>
             <Card aria-labelledby="github-latest-commits">
                 <CardHeader
@@ -643,6 +728,12 @@ function CommitsPanel({
                         </table>
                     </div>
                 )}
+                <More
+                    list="commits"
+                    count={commits.latest.length}
+                    shown={shown}
+                    onMore={onMore}
+                />
             </Card>
         </div>
     );
@@ -701,6 +792,34 @@ function Security({ kinds }: { kinds: SecurityKind[] }) {
     );
 }
 
+/** A list's Load more, below it while a full page came back and the list is not at its most. */
+function More({
+    list,
+    count,
+    shown,
+    onMore,
+}: {
+    list: List;
+    count: number;
+    shown: Props['rows'];
+    onMore: LoadMore;
+}) {
+    const t = useT();
+    const limit = shown[list] ?? LISTS[list].rows;
+
+    if (count < limit || limit >= LISTS[list].max) {
+        return null;
+    }
+
+    return (
+        <div className="border-t border-line p-2 text-center">
+            <Button variant="ghost" onClick={() => onMore(list)}>
+                {t('connectors.github.load_more')}
+            </Button>
+        </div>
+    );
+}
+
 function External({ href, children }: { href: string; children: ReactNode }) {
     return (
         <a
@@ -714,7 +833,15 @@ function External({ href, children }: { href: string; children: ReactNode }) {
     );
 }
 
-function PullRequests({ pulls }: { pulls: PullRequest[] }) {
+function PullRequests({
+    pulls,
+    shown,
+    onMore,
+}: {
+    pulls: PullRequest[];
+    shown: Props['rows'];
+    onMore: LoadMore;
+}) {
     const t = useT();
 
     return (
@@ -786,11 +913,25 @@ function PullRequests({ pulls }: { pulls: PullRequest[] }) {
                     </table>
                 </div>
             )}
+            <More
+                list="pull_requests"
+                count={pulls.length}
+                shown={shown}
+                onMore={onMore}
+            />
         </Card>
     );
 }
 
-function Runs({ runs }: { runs: Run[] }) {
+function Runs({
+    runs,
+    shown,
+    onMore,
+}: {
+    runs: Run[];
+    shown: Props['rows'];
+    onMore: LoadMore;
+}) {
     const t = useT();
 
     return (
@@ -859,12 +1000,31 @@ function Runs({ runs }: { runs: Run[] }) {
                     </table>
                 </div>
             )}
+            <More
+                list="runs"
+                count={runs.length}
+                shown={shown}
+                onMore={onMore}
+            />
         </Card>
     );
 }
 
-function Releases({ releases }: { releases: Release[] }) {
+function Releases({
+    releases,
+    shown,
+    onMore,
+}: {
+    releases: Release[];
+    shown: Props['rows'];
+    onMore: LoadMore;
+}) {
     const t = useT();
+    const [open, setOpen] = useState<string[]>([]);
+    const toggle = (url: string) =>
+        setOpen((urls) =>
+            urls.includes(url) ? urls.filter((u) => u !== url) : [...urls, url],
+        );
 
     return (
         <Card aria-labelledby="github-releases">
@@ -892,41 +1052,125 @@ function Releases({ releases }: { releases: Release[] }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {releases.map((release) => (
-                                <tr key={release.url}>
-                                    <td className={tdClass}>
-                                        <span className="inline-flex flex-wrap items-center gap-2">
-                                            <External href={release.url}>
-                                                {release.name}
-                                            </External>
-                                            {release.prerelease && (
-                                                <Badge tone="info">
-                                                    {t(
-                                                        'connectors.github.releases.prerelease',
+                            {releases.map((release, i) => {
+                                const expanded = open.includes(release.url);
+                                const notes = `github-release-notes-${i}`;
+
+                                return (
+                                    <Fragment key={release.url}>
+                                        <tr>
+                                            <td className={tdClass}>
+                                                <span className="inline-flex flex-wrap items-center gap-2">
+                                                    {release.body !== '' && (
+                                                        <button
+                                                            type="button"
+                                                            aria-expanded={
+                                                                expanded
+                                                            }
+                                                            aria-controls={
+                                                                notes
+                                                            }
+                                                            aria-label={t(
+                                                                'connectors.github.releases.notes',
+                                                                {
+                                                                    name: release.name,
+                                                                },
+                                                            )}
+                                                            onClick={() =>
+                                                                toggle(
+                                                                    release.url,
+                                                                )
+                                                            }
+                                                            className="rounded p-0.5 text-ink-3 hover:bg-panel-2 hover:text-ink"
+                                                        >
+                                                            <ChevronRight
+                                                                className={`size-3 transition-transform ${expanded ? 'rotate-90' : ''}`}
+                                                                aria-hidden="true"
+                                                            />
+                                                        </button>
                                                     )}
-                                                </Badge>
-                                            )}
-                                        </span>
-                                    </td>
-                                    <td className={`${tdClass} font-mono`}>
-                                        {release.tag}
-                                    </td>
-                                    <td
-                                        className={`${tdClass} whitespace-nowrap`}
-                                    >
-                                        {release.published_at
-                                            ? formatRelative(
-                                                  release.published_at,
-                                              )
-                                            : ''}
-                                    </td>
-                                </tr>
-                            ))}
+                                                    <External
+                                                        href={release.url}
+                                                    >
+                                                        {release.name}
+                                                    </External>
+                                                    {release.prerelease && (
+                                                        <Badge tone="info">
+                                                            {t(
+                                                                'connectors.github.releases.prerelease',
+                                                            )}
+                                                        </Badge>
+                                                    )}
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`${tdClass} font-mono`}
+                                            >
+                                                {release.tag}
+                                            </td>
+                                            <td
+                                                className={`${tdClass} whitespace-nowrap`}
+                                            >
+                                                {release.published_at
+                                                    ? formatRelative(
+                                                          release.published_at,
+                                                      )
+                                                    : ''}
+                                            </td>
+                                        </tr>
+                                        {expanded && (
+                                            <tr id={notes}>
+                                                <td
+                                                    colSpan={3}
+                                                    className={tdClass}
+                                                >
+                                                    <ReleaseNotes
+                                                        body={release.body}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </Fragment>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
             )}
+            <More
+                list="releases"
+                count={releases.length}
+                shown={shown}
+                onMore={onMore}
+            />
         </Card>
+    );
+}
+
+/**
+ * A release's notes, rendered as the About page renders Lumberjack's own: react-markdown
+ * makes React elements and escapes any HTML in them, so nothing is injected.
+ */
+function ReleaseNotes({ body }: { body: string }) {
+    return (
+        <div className="flex flex-col gap-2 text-sm break-words text-ink-2 [&_code]:rounded [&_code]:bg-panel-2 [&_code]:px-1 [&_code]:font-mono [&_code]:text-xs [&_h1]:font-medium [&_h1]:text-ink [&_h2]:font-medium [&_h2]:text-ink [&_h3]:mt-2 [&_h3]:text-xs [&_h3]:font-medium [&_h3]:tracking-wide [&_h3]:text-ink-3 [&_h3]:uppercase [&_li]:ml-4 [&_li]:list-disc [&_pre]:overflow-x-auto [&_strong]:text-ink [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-1">
+            <Markdown
+                components={{
+                    a: ({ href, children }) => (
+                        <a
+                            href={href}
+                            className="text-amber hover:underline"
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            {children}
+                        </a>
+                    ),
+                }}
+            >
+                {body}
+            </Markdown>
+        </div>
     );
 }
 

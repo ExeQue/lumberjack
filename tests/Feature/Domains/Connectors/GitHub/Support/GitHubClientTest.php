@@ -63,7 +63,7 @@ describe('asking GitHub', function () {
     });
 
     it('reads the latest release, leaving drafts out and naming one without a name by its tag', function () {
-        expect($this->client->latestRelease($this->credentials))->toBe(['name' => 'v1.2.0', 'tag' => 'v1.2.0', 'prerelease' => false, 'url' => 'https://github.com/acme/shop/releases/tag/v1.2.0', 'published_at' => '2026-11-09T10:00:00Z']);
+        expect($this->client->latestRelease($this->credentials))->toBe(['name' => 'v1.2.0', 'tag' => 'v1.2.0', 'prerelease' => false, 'url' => 'https://github.com/acme/shop/releases/tag/v1.2.0', 'published_at' => '2026-11-09T10:00:00Z', 'body' => "## Fixed\n\n- The cart <script>keeps</script> its items."]);
     });
 
     it('falls back to the first tag when there is no release', function () {

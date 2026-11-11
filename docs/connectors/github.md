@@ -72,11 +72,15 @@ are there too.
 | Tab               | What it shows                                                                                   |
 | ----------------- | ----------------------------------------------------------------------------------------------- |
 | **Pull requests** | The newest open pull requests, drafts marked, with their author.                                |
-| **Commits**       | Commits on the default branch over the period as a chart, the top contributors, the latest 20.  |
+| **Commits**       | Commits on the default branch over the period as a chart, the top contributors, the latest.     |
 | **Actions**       | The latest workflow runs on every branch, with their result.                                    |
-| **Releases**      | The newest releases, pre-releases marked. Drafts are not shown.                                 |
+| **Releases**      | The newest releases, pre-releases marked, each opening to its notes. Drafts are not shown.      |
 | **Security**      | Open Dependabot (by severity), code scanning and secret scanning alerts, or why there are none. |
 | **Connection**    | The connection and its optional permissions, for team owners and admins.                        |
+
+Each list shows its first 20 rows (the top contributors 10). **Load more** below it shows as
+many more, up to 100, or for the latest commits up to the 1,000 commits read for the period.
+The rows loaded are kept in the address until the repository or period changes.
 
 The figures on top and the commits are kept as long as on the other statistics pages (5
 minutes for 7 days), and the tabs' lists and the security alerts for a minute, so a reloaded

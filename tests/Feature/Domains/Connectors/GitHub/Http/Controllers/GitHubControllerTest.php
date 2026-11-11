@@ -14,6 +14,7 @@ use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -180,7 +181,63 @@ describe('the GitHub page', function () {
             ->assertInertia(fn (Assert $page) => $page->where('error', __('connectors.github.errors.unauthorized'))->where('summary', null));
     });
 
+    it('sends each release\'s notes as written', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $connection]))
+            ->assertInertia(fn (Assert $page) => $page->where('releases.0.body', "## Fixed\n\n- The cart <script>keeps</script> its items."));
+    });
+
     it('knows no repository on another kind of connection', function () {
         $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, DataSourceConnection::factory()->mosparo()->for($this->project)->create()]))->assertNotFound();
     });
+});
+
+describe('loading more of a list', function () {
+    beforeEach(function () {
+        $this->connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+    });
+
+    it('asks GitHub for a bigger page of pull requests, runs and releases', function () {
+        $pulls = array_map(fn (int $n): array => ['number' => $n, 'title' => 'Pull '.$n, 'user' => ['login' => 'ana'], 'draft' => false, 'html_url' => 'https://github.com/acme/shop/pull/'.$n, 'created_at' => '2026-11-10T09:00:00Z'], range(1, 40));
+        $this->gitHubAnswers = ['/repos/acme/shop/pulls' => [$pulls]];
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $this->connection, 'rows' => ['pull_requests' => 40, 'runs' => 60, 'releases' => 80]]))
+            ->assertInertia(fn (Assert $page) => $page->where('rows', ['pull_requests' => 40, 'runs' => 60, 'releases' => 80])->has('pull_requests', 40));
+
+        Http::assertSent(fn (Request $request): bool => str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/pulls') && $request['per_page'] === 40);
+        Http::assertSent(fn (Request $request): bool => str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/actions/runs') && $request['per_page'] === 60);
+        Http::assertSent(fn (Request $request): bool => str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/releases') && $request['per_page'] === 80);
+    });
+
+    it('shows more of the period\'s commits and contributors without asking GitHub again for them', function () {
+        $commits = array_map(fn (int $n): array => self::commit('s'.$n, 'author'.$n, 'Author '.$n, '2026-11-09T'.sprintf('%02d', $n % 24).':00:00Z'), range(1, 25));
+        $this->gitHubAnswers = ['/repos/acme/shop/commits' => [$commits]];
+
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $this->connection]))
+            ->assertInertia(fn (Assert $page) => $page->has('commits.latest', 20)->has('commits.contributors', 10));
+
+        Http::fake();
+        $this->get(route('connectors.github.index', [$this->project, $this->connection, 'rows' => ['commits' => 40, 'contributors' => 20]]))
+            ->assertInertia(fn (Assert $page) => $page->has('commits.latest', 25)->has('commits.contributors', 20));
+        Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/commits'));
+    });
+
+    it('holds each list to its most', function () {
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $this->connection, 'rows' => ['pull_requests' => 9999, 'commits' => 99999, 'contributors' => 500]]))
+            ->assertInertia(fn (Assert $page) => $page->where('rows', ['pull_requests' => 100, 'commits' => 1000, 'contributors' => 100]));
+
+        Http::assertSent(fn (Request $request): bool => str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/pulls') && $request['per_page'] === 100);
+    });
+
+    it('shows the first rows for a count it cannot read', function (mixed $rows) {
+        $this->actingAs($this->member)->get(route('connectors.github.index', [$this->project, $this->connection, 'rows' => ['runs' => $rows, 'unknown' => 50]]))
+            ->assertInertia(fn (Assert $page) => $page->where('rows', []));
+
+        Http::assertSent(fn (Request $request): bool => str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/actions/runs') && $request['per_page'] === 20);
+    })->with([
+        'a word' => ['many'],
+        'fewer than at first' => [5],
+        'a negative number' => [-40],
+    ]);
 });
