@@ -81,11 +81,24 @@ describe('finding the ledger', function () {
 
 describe('a ledger date', function () {
     it('counts captures as revenue and transactions, refunds, capture fees and payouts', function () {
-        expect($this->client->day($this->keys, '302321', '2026-11-09'))->toBe(['revenue' => 59900, 'transactions' => 2, 'refunds' => 10000, 'fees' => 1500, 'payouts' => 48400]);
+        expect($this->client->day($this->keys, '302321', '2026-11-09')['figures'])->toBe(['revenue' => 59900, 'transactions' => 2, 'refunds' => 10000, 'fees' => 1500, 'payouts' => 48400]);
+    });
+
+    it('keeps what the lists and breakdowns need of its entries', function () {
+        $sale = fn (string $time, string $type, int $amount, string $reference): array => ['at' => strtotime('2026-11-09 '.$time.' UTC'), 'type' => $type, 'amount' => $amount, 'reference' => $reference];
+
+        expect($this->client->day($this->keys, '302321', '2026-11-09'))->toMatchArray([
+            'balance' => ['at' => strtotime('2026-11-09 23:59:30 UTC'), 'amount' => 0],
+            'hours' => [strtotime('2026-11-09 09:00 UTC') => ['sales' => 1, 'revenue' => 49900], strtotime('2026-11-09 18:00 UTC') => ['sales' => 1, 'revenue' => 10000]],
+            'units' => ['NO:123455' => 49900, 'NO:123456' => 10000],
+            'latest' => [$sale('19:00', 'refund', -10000, 'order-b'), $sale('18:30', 'capture', 10000, 'order-b'), $sale('09:15', 'capture', 49900, 'acme-shop-123-order123abc')],
+            'largest' => [$sale('09:15', 'capture', 49900, 'acme-shop-123-order123abc'), $sale('18:30', 'capture', 10000, 'order-b')],
+            'payouts' => [['at' => strtotime('2026-11-09 23:59:30 UTC'), 'date' => '2026-11-09', 'amount' => 48400]],
+        ]);
     });
 
     it('reads every page of an open date', function () {
-        expect($this->client->day($this->keys, '302321', '2026-11-10'))->toBe(['revenue' => 25000, 'transactions' => 2, 'refunds' => 0, 'fees' => 0, 'payouts' => 0]);
+        expect($this->client->day($this->keys, '302321', '2026-11-10')['figures'])->toBe(['revenue' => 25000, 'transactions' => 2, 'refunds' => 0, 'fees' => 0, 'payouts' => 0]);
     });
 
     it('keeps a closed date, and asks for an open one again after ten minutes', function () {
@@ -96,5 +109,47 @@ describe('a ledger date', function () {
 
         expect($reports('2026-11-09'))->toBe(2)
             ->and($reports('2026-11-10'))->toBe(6);
+    });
+});
+
+describe('a range of dates', function () {
+    beforeEach(function () {
+        $this->reports = fn (): int => Http::recorded(fn (Request $request): bool => str_contains($request->url(), '/report/v2/'))->count();
+    });
+
+    it('asks for each date not kept once per topic, and an open date\'s next page after', function () {
+        $days = $this->client->days($this->keys, '302321', CarbonImmutable::parse('2026-11-04'), CarbonImmutable::parse('2026-11-10'));
+
+        expect(array_keys($days))->toBe(['2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08', '2026-11-09', '2026-11-10'])
+            ->and(($this->reports)())->toBe(7 * 2 + 1)
+            ->and(($this->tokenRequests)())->toBe(1)
+            ->and($days['2026-11-10']['figures']['revenue'])->toBe(25000);
+
+        $this->client->days($this->keys, '302321', CarbonImmutable::parse('2026-11-04'), CarbonImmutable::parse('2026-11-10'));
+
+        expect(($this->reports)())->toBe(15);
+    });
+
+    it('says why a date failed, keeping the dates read with it', function () {
+        $this->mobilePayAnswers['/report/v2/ledgers/302321/fees/dates/2026-11-08'] = [['title' => 'Internal Server Error'], 500];
+
+        expect(fn () => $this->client->days($this->keys, '302321', CarbonImmutable::parse('2026-11-07'), CarbonImmutable::parse('2026-11-09')))
+            ->toThrow(MobilePayRequestFailedException::class, __('connectors.mobilepay.errors.status', ['status' => 500]));
+
+        $this->mobilePayAnswers = [];
+        $days = $this->client->days($this->keys, '302321', CarbonImmutable::parse('2026-11-07'), CarbonImmutable::parse('2026-11-09'));
+
+        expect($days['2026-11-09']['figures']['revenue'])->toBe(59900)
+            ->and(Http::recorded(fn (Request $request): bool => str_contains($request->url(), '/dates/2026-11-08'))->count())->toBe(4)
+            ->and(Http::recorded(fn (Request $request): bool => str_contains($request->url(), '/dates/2026-11-09'))->count())->toBe(2);
+    });
+
+    it('asks again for a date whose connection failed in the pool', function () {
+        $this->mobilePayDropped = ['/report/v2/ledgers/302321/funds/dates/2026-11-09'];
+
+        $days = $this->client->days($this->keys, '302321', CarbonImmutable::parse('2026-11-08'), CarbonImmutable::parse('2026-11-09'));
+
+        expect($days['2026-11-09']['figures']['revenue'])->toBe(59900)
+            ->and($this->mobilePayDropped)->toBe([]);
     });
 });

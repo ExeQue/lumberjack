@@ -9,7 +9,9 @@ use App\Domains\Connectors\MobilePay\Exceptions\MobilePayRequestFailedException;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -21,8 +23,13 @@ use Throwable;
  * test environment, so it is only ever asked in production.
  *
  * Each call carries an access token from the Access Token API, which lasts 24 hours and is
- * kept until shortly before then. A closed day never changes, so its figures are kept for
- * a month and only the open days are asked again.
+ * kept until shortly before then. A closed day never changes, so what is kept of it is
+ * kept for a month and only the open days are asked again.
+ *
+ * @phpstan-type Figures array{revenue: int, transactions: int, refunds: int, fees: int, payouts: int}
+ * @phpstan-type Entry array{at: int, type: string, amount: int, reference: string}
+ * @phpstan-type Payout array{at: int, date: string, amount: int}
+ * @phpstan-type Day array{figures: Figures, balance: array{at: int, amount: int}|null, hours: array<int, array{sales: int, revenue: int}>, units: array<string, int>, latest: array<int, Entry>, largest: array<int, Entry>, payouts: array<int, Payout>}
  */
 class MobilePayClient
 {
@@ -34,6 +41,12 @@ class MobilePayClient
     public const int OPEN_DAY_SECONDS = 600;
 
     public const int CLOSED_DAY_SECONDS = 30 * 86400;
+
+    /** The most rows a list of entries on the page loads, and so the most of them a day keeps. */
+    public const int MAX_LIST = 200;
+
+    /** Days' first pages asked for at once at most. */
+    private const int CONCURRENCY = 10;
 
     /** Pages of ledgers, or of one day's entries, read at most. */
     private const int MAX_PAGES = 50;
@@ -81,7 +94,7 @@ class MobilePayClient
     /**
      * Each ledger date from $from to $to, both included, by its date.
      *
-     * @return array<string, array{revenue: int, transactions: int, refunds: int, fees: int, payouts: int}>
+     * @return array<string, Day>
      *
      * @throws MobilePayRequestFailedException
      */
@@ -90,46 +103,131 @@ class MobilePayClient
         $days = [];
 
         for ($day = $from->startOfDay(); $day <= $to; $day = $day->addDay()) {
-            $days[$day->format('Y-m-d')] = $this->day($credentials, $ledgerId, $day->format('Y-m-d'));
+            $days[$day->format('Y-m-d')] = self::kept($ledgerId, $day->format('Y-m-d'));
         }
 
+        $missing = collect($days)->filter(fn (?array $day): bool => $day === null)->keys();
+
+        if ($missing->isNotEmpty()) {
+            $token = $this->token($credentials);
+            // The first page of both topics of every day not kept, a few at a time; the pages after follow one by one.
+            $firsts = Http::pool(fn (Pool $pool): Collection => $missing->crossJoin(['funds', 'fees'])->map(
+                fn (array $call): mixed => $this->configure($pool->as($call[0].'/'.$call[1]), $credentials)->withToken($token)->get(self::path($ledgerId, $call[1], $call[0])),
+            ), self::CONCURRENCY);
+            $failure = null;
+
+            // A day that fails leaves the others read and kept, and is said once they are.
+            foreach ($missing as $date) {
+                try {
+                    $days[$date] = $this->fetchDay($credentials, $ledgerId, $date, $firsts[$date.'/funds'] ?? null, $firsts[$date.'/fees'] ?? null);
+                } catch (MobilePayRequestFailedException $e) {
+                    $failure ??= $e;
+                }
+            }
+
+            if ($failure !== null) {
+                throw $failure;
+            }
+        }
+
+        /** @var array<string, Day> $days */
         return $days;
     }
 
     /**
-     * One ledger date's figures, amounts in minor units: what was captured and how many
-     * captures, what was refunded, the fees charged and what was scheduled to be paid out.
+     * One ledger date, amounts in minor units, as kept: its figures (what was captured and
+     * how many captures, what was refunded, the fees charged and what was scheduled to be
+     * paid out), the balance after its latest entry, its captures per hour (by the hour's
+     * start, a Unix time) and per sales unit, its latest sales and refunds, its largest
+     * captures and its payouts.
      *
-     * @return array{revenue: int, transactions: int, refunds: int, fees: int, payouts: int}
+     * @return Day
      *
      * @throws MobilePayRequestFailedException
      */
     public function day(MobilePayCredentials $credentials, string $ledgerId, string $date): array
     {
-        $key = 'mobilepay:day:'.$ledgerId.':'.$date;
-        $kept = Cache::get($key);
+        return self::kept($ledgerId, $date) ?? $this->fetchDay($credentials, $ledgerId, $date);
+    }
 
-        if (is_array($kept) && is_array($kept['figures'] ?? null)) {
-            return self::totals([$kept['figures']]);
-        }
+    /**
+     * @return Day|null
+     */
+    private static function kept(string $ledgerId, string $date): ?array
+    {
+        $kept = Cache::get(self::dayKey($ledgerId, $date));
 
+        /** @var Day|null */
+        return is_array($kept) && is_array($kept['figures'] ?? null) ? $kept : null;
+    }
+
+    private static function dayKey(string $ledgerId, string $date): string
+    {
+        return 'mobilepay:day:v2:'.$ledgerId.':'.$date;
+    }
+
+    /**
+     * A day read from Vipps MobilePay and kept, starting from the first pages of its topics
+     * when they were already asked for together with other days'.
+     *
+     * @return Day
+     *
+     * @throws MobilePayRequestFailedException
+     */
+    private function fetchDay(MobilePayCredentials $credentials, string $ledgerId, string $date, mixed $funds = null, mixed $fees = null): array
+    {
+        [$funds, $fundsOpen] = $this->entries($credentials, $ledgerId, 'funds', $date, $funds);
+        [$fees, $feesOpen] = $this->entries($credentials, $ledgerId, 'fees', $date, $fees);
+        $day = self::summarize($funds, $fees);
+
+        Cache::put(self::dayKey($ledgerId, $date), $day, $fundsOpen || $feesOpen ? self::OPEN_DAY_SECONDS : self::CLOSED_DAY_SECONDS);
+
+        return $day;
+    }
+
+    /**
+     * A day's entries reduced to what is kept of them. The figures, hours and sales units
+     * count every entry; of the entries themselves only enough are kept for the longest list
+     * the page loads.
+     *
+     * @param  list<array<mixed>>  $funds
+     * @param  list<array<mixed>>  $fees
+     * @return Day
+     */
+    private static function summarize(array $funds, array $fees): array
+    {
         $figures = ['revenue' => 0, 'transactions' => 0, 'refunds' => 0, 'fees' => 0, 'payouts' => 0];
-        [$funds, $fundsOpen] = $this->entries($credentials, $ledgerId, 'funds', $date);
-        [$fees, $feesOpen] = $this->entries($credentials, $ledgerId, 'fees', $date);
+        $balance = null;
+        $hours = [];
+        $units = [];
+        $sales = [];
+        $payouts = [];
 
         // Amounts are signed by how they change the balance: a refund or a payout is negative.
         foreach ($funds as $entry) {
             $amount = is_int($entry['amount'] ?? null) ? $entry['amount'] : 0;
-
             $type = $entry['entryType'] ?? null;
+            $at = is_string($entry['time'] ?? null) ? (int) strtotime($entry['time']) : 0;
+            $reference = is_string($entry['reference'] ?? null) ? $entry['reference'] : '';
+
+            if (is_int($entry['balanceAfter'] ?? null) && ($balance === null || $at >= $balance['at'])) {
+                $balance = ['at' => $at, 'amount' => $entry['balanceAfter']];
+            }
 
             if ($type === 'capture') {
                 $figures['revenue'] += $amount;
                 $figures['transactions']++;
+                $hour = $at - $at % 3600;
+                $hours[$hour] = ['sales' => ($hours[$hour]['sales'] ?? 0) + 1, 'revenue' => ($hours[$hour]['revenue'] ?? 0) + $amount];
+                $unit = is_string($entry['recipientHandle'] ?? null) ? $entry['recipientHandle'] : '';
+                $units[$unit] = ($units[$unit] ?? 0) + $amount;
+                $sales[] = ['at' => $at, 'type' => 'capture', 'amount' => $amount, 'reference' => $reference];
             } elseif ($type === 'refund') {
                 $figures['refunds'] -= $amount;
+                $sales[] = ['at' => $at, 'type' => 'refund', 'amount' => $amount, 'reference' => $reference];
             } elseif ($type === 'payout-scheduled' || $type === 'payout-aborted') {
                 $figures['payouts'] -= $amount;
+                $payouts[] = ['at' => $at, 'date' => is_string($entry['ledgerDate'] ?? null) ? $entry['ledgerDate'] : gmdate('Y-m-d', $at), 'amount' => -$amount];
             }
         }
 
@@ -140,46 +238,39 @@ class MobilePayClient
             }
         }
 
-        Cache::put($key, ['figures' => $figures], $fundsOpen || $feesOpen ? self::OPEN_DAY_SECONDS : self::CLOSED_DAY_SECONDS);
+        $sales = collect($sales);
 
-        return $figures;
-    }
-
-    /**
-     * The sum of several days' figures.
-     *
-     * @param  iterable<array<mixed>>  $days
-     * @return array{revenue: int, transactions: int, refunds: int, fees: int, payouts: int}
-     */
-    public static function totals(iterable $days): array
-    {
-        $sum = ['revenue' => 0, 'transactions' => 0, 'refunds' => 0, 'fees' => 0, 'payouts' => 0];
-
-        foreach ($days as $figures) {
-            foreach ($sum as $key => $value) {
-                $sum[$key] = $value + (is_numeric($figures[$key] ?? null) ? (int) $figures[$key] : 0);
-            }
-        }
-
-        return $sum;
+        return [
+            'figures' => $figures,
+            'balance' => $balance,
+            'hours' => $hours,
+            'units' => $units,
+            // ponytail: a day keeps its latest MAX_LIST sales and refunds and its MAX_LIST largest captures, as no list loads more.
+            'latest' => $sales->sortByDesc('at')->take(self::MAX_LIST)->values()->all(),
+            'largest' => $sales->where('type', 'capture')->sortByDesc('amount')->take(self::MAX_LIST)->values()->all(),
+            'payouts' => collect($payouts)->sortByDesc('at')->values()->all(),
+        ];
     }
 
     /**
      * A ledger date's entries in one topic (funds or fees), every page of them, and whether
-     * the date is still open (tryLater), so more can come.
+     * the date is still open (tryLater), so more can come. The first page may have come in a
+     * pool: a connection that failed there is asked again, retried like any other call.
      *
      * @return array{list<array<mixed>>, bool}
      *
      * @throws MobilePayRequestFailedException
      */
-    private function entries(MobilePayCredentials $credentials, string $ledgerId, string $topic, string $date): array
+    private function entries(MobilePayCredentials $credentials, string $ledgerId, string $topic, string $date, mixed $first = null): array
     {
-        $path = '/report/v2/ledgers/'.rawurlencode($ledgerId).'/'.$topic.'/dates/'.$date;
+        $path = self::path($ledgerId, $topic, $date);
         $entries = [];
         $cursor = '';
 
         for ($page = 0; $page < self::MAX_PAGES; $page++) {
-            $data = $this->get($credentials, $path, $cursor === '' ? [] : ['cursor' => $cursor]);
+            $data = $page === 0 && $first instanceof Response
+                ? $this->answer($credentials, $first)
+                : $this->get($credentials, $path, $cursor === '' ? [] : ['cursor' => $cursor]);
             $entries = [...$entries, ...self::listOf($data['items'] ?? null)];
             $cursor = is_string($data['cursor'] ?? null) ? $data['cursor'] : '';
 
@@ -190,6 +281,11 @@ class MobilePayClient
 
         // ponytail: 50 pages of 1000 entries a day; past that the day reads short and is asked again soon.
         return [$entries, true];
+    }
+
+    private static function path(string $ledgerId, string $topic, string $date): string
+    {
+        return '/report/v2/ledgers/'.rawurlencode($ledgerId).'/'.$topic.'/dates/'.$date;
     }
 
     /**
@@ -245,6 +341,18 @@ class MobilePayClient
             throw new MobilePayRequestFailedException(__('connectors.mobilepay.errors.unreachable'), previous: $e);
         }
 
+        return $this->answer($credentials, $response);
+    }
+
+    /**
+     * A response's body, or why it has none.
+     *
+     * @return array<mixed>
+     *
+     * @throws MobilePayRequestFailedException
+     */
+    private function answer(MobilePayCredentials $credentials, Response $response): array
+    {
         $data = $response->json();
 
         if ($response->status() === 200 && is_array($data)) {
@@ -272,12 +380,18 @@ class MobilePayClient
 
     private function http(MobilePayCredentials $credentials): PendingRequest
     {
-        return Http::retry(
+        return $this->configure(Http::retry(
             times: 3,
             sleepMilliseconds: 200,
             when: fn (?Throwable $e): bool => $e instanceof ConnectionException,
             throw: false,
-        )->baseUrl(self::API)->acceptJson()
+        ), $credentials);
+    }
+
+    /** Where and as whom every call goes, pooled or not. */
+    private function configure(PendingRequest $request, MobilePayCredentials $credentials): PendingRequest
+    {
+        return $request->baseUrl(self::API)->acceptJson()
             ->withHeaders([
                 'Ocp-Apim-Subscription-Key' => $credentials->subscriptionKey,
                 'Merchant-Serial-Number' => $credentials->merchantSerialNumber,
