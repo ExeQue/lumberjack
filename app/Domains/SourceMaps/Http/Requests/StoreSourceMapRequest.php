@@ -11,7 +11,6 @@ use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
 use InvalidArgumentException;
-use Override;
 
 class StoreSourceMapRequest extends FormRequest
 {
@@ -21,17 +20,6 @@ class StoreSourceMapRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->attributes->get('project') instanceof Project;
-    }
-
-    /**
-     * The path as it is stored, so its length is checked against the column.
-     */
-    #[Override]
-    protected function prepareForValidation(): void
-    {
-        if (is_string($this->input('path')) && $this->input('path') !== '') {
-            $this->merge(['path' => SourceMap::normalizePath($this->input('path'))]);
-        }
     }
 
     /** @return array<string, mixed> */
@@ -46,7 +34,12 @@ class StoreSourceMapRequest extends FormRequest
                     $fail(__('source_maps.invalid'));
                 }
             }],
-            'path' => ['required', 'string', 'max:500'],
+            // Checked as stored (normalized once, by the action), against the column.
+            'path' => ['required', 'string', function (string $attribute, mixed $path, Closure $fail): void {
+                if (is_string($path) && mb_strlen(SourceMap::normalizePath($path)) > 500) {
+                    $fail(__('validation.max.string', ['attribute' => $attribute, 'max' => 500]));
+                }
+            }],
             'release' => ['nullable', 'string', 'max:64'],
         ];
     }
