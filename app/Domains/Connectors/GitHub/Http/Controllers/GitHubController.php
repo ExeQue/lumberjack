@@ -6,6 +6,8 @@ namespace App\Domains\Connectors\GitHub\Http\Controllers;
 
 use App\Domains\Connectors\GitHub\Actions\PullGitHubSourceAction;
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
+use App\Domains\Connectors\GitHub\Enums\GitHubFigure;
+use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubExceptionInterface;
 use App\Domains\Connectors\GitHub\Queries\GitHubDashboardQuery;
 use App\Domains\Connectors\GitHub\Support\GitHubClient;
@@ -17,6 +19,7 @@ use App\Domains\Shared\Enums\Period;
 use App\Domains\Shared\Http\Concerns\ReadsDashboardFilters;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -57,6 +60,8 @@ class GitHubController
         $commits = null;
         $issues = null;
         $security = [];
+        $figures = [];
+        $links = [];
 
         // How many rows each list shows, as rows[list]=n, grown by its Load more.
         $rows = array_map(fn (array $list): int => $list[0], self::LISTS);
@@ -68,18 +73,27 @@ class GitHubController
         if ($connection !== null) {
             try {
                 $summary = $query->summary($connection, $period);
+                $figures = GitHubConfig::figuresOf($connection->config, $summary['private']);
                 $pullRequests = $query->pullRequests($connection, $rows['pull_requests']);
                 $runs = $query->runs($connection, $rows['runs']);
                 $releases = $query->releases($connection, $rows['releases']);
                 $commits = $query->commits($connection, $period, $rows['commits'], $rows['contributors']);
-                $issues = $query->issues($connection, $period);
+                // The issue counts are asked only for a figure that shows them.
+                $issues = collect($figures)->contains(fn (GitHubFigure $figure): bool => $figure->permission() === GitHubPermission::Issues) ? $query->issues($connection, $period) : null;
                 $security = $query->security($connection);
+                $links = $query->links($connection, $period, $summary);
             } catch (GitHubExceptionInterface $e) {
                 $error = $e->getMessage();
             } catch (DecryptException) {
                 $error = __('connectors.github.errors.secret_unreadable');
             }
         }
+
+        // A hidden figure's values and link are left out of the page.
+        $hidden = collect(GitHubFigure::cases())->reject(fn (GitHubFigure $figure): bool => in_array($figure, $figures, true));
+        $summary = $summary === null ? null : Arr::except($summary, $hidden->flatMap->keys()->all());
+        $issues = $issues === null ? null : Arr::except($issues, $hidden->flatMap->keys()->all());
+        $links = Arr::except($links, $hidden->map->value->all());
 
         // The branch field's suggestions, after the page; a repository GitHub does not answer for suggests none.
         $branches = function () use ($query, $connection): array {
@@ -104,6 +118,12 @@ class GitHubController
                 ...(Gate::allows('update', $project) ? [
                     'default_branch' => Inertia::defer(fn (): ?string => $branches()['default_branch'] ?? null, 'branches'),
                     'branches' => Inertia::defer(fn (): array => $branches()['branches'] ?? [], 'branches'),
+                    // The figures the token can show, to choose from by group.
+                    'figure_choices' => collect(GitHubFigure::cases())
+                        ->filter(fn (GitHubFigure $figure): bool => $figure->permission() === null || in_array($figure->permission(), GitHubConfig::grantedBy($connection->config), true))
+                        ->map(fn (GitHubFigure $figure): array => ['key' => $figure->value, 'group' => $figure->group()])
+                        ->values()
+                        ->all(),
                 ] : []),
             ],
             // Every repository the project reads, to switch between.
@@ -116,6 +136,9 @@ class GitHubController
             'commits' => $commits,
             'issues' => $issues,
             'security' => $security,
+            // The key figures shown, in order, and where each is on GitHub.
+            'figures' => array_map(fn (GitHubFigure $figure): string => $figure->value, $figures),
+            'links' => (object) $links,
             // Which optional permissions the token has, for the Connection tab.
             'permissions' => $connection === null ? [] : $query->permissions($connection),
         ]);

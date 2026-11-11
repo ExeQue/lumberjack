@@ -44,6 +44,8 @@ return [
         // Flash message after changing the branch on the Connection tab.
         'branch_changed' => 'Commits and CI are now read from :branch.',
         'branch_default' => 'Commits and CI are now read from the default branch.',
+        // Flash message after saving the Connection tab without changing the branch.
+        'settings_saved' => 'Connection settings saved.',
 
         // The optional read permissions a token may have, as GitHub's token form names them, and what each adds.
         'permissions' => [

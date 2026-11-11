@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domains\Connectors\GitHub\Http\Controllers;
 
-use App\Domains\Connectors\GitHub\Actions\ChangeGitHubBranchAction;
 use App\Domains\Connectors\GitHub\Actions\ConnectGitHubAction;
+use App\Domains\Connectors\GitHub\Actions\UpdateGitHubConnectionAction;
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
 use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubBranchNotFoundException;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubExceptionInterface;
-use App\Domains\Connectors\GitHub\Http\Requests\ChangeGitHubBranchRequest;
 use App\Domains\Connectors\GitHub\Http\Requests\ConnectGitHubRequest;
+use App\Domains\Connectors\GitHub\Http\Requests\UpdateGitHubConnectionRequest;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Connecting a project to a GitHub repository, and changing the branch it is read from;
+ * Connecting a project to a GitHub repository, and changing its settings;
  * the token never leaves the server again.
  */
 class GitHubConnectionController
@@ -44,22 +44,25 @@ class GitHubConnectionController
                 : __('connectors.github.connected_missing', ['name' => $connection->name, 'permissions' => implode(', ', array_map(fn (GitHubPermission $permission): string => $permission->label(), $missing))]));
     }
 
-    public function update(ChangeGitHubBranchRequest $request, Project $project, DataSourceConnection $dataSourceConnection, ChangeGitHubBranchAction $action): RedirectResponse
+    public function update(UpdateGitHubConnectionRequest $request, Project $project, DataSourceConnection $dataSourceConnection, UpdateGitHubConnectionAction $action): RedirectResponse
     {
         abort_unless($dataSourceConnection->isFor(ConnectionKind::GitHub), 404);
         Gate::authorize('update', $dataSourceConnection);
-        $branch = ChangeGitHubBranchRequest::branchOf($request);
+        $branch = UpdateGitHubConnectionRequest::branchOf($request);
+        $changesBranch = GitHubConfig::branchOf($dataSourceConnection->config) !== $branch;
 
         try {
-            $action->execute($dataSourceConnection, $branch);
+            $action->execute($dataSourceConnection, $branch, $request->figures());
         } catch (GitHubExceptionInterface $e) {
             throw ValidationException::withMessages(['branch' => $e->getMessage()]);
         } catch (DecryptException) {
             throw ValidationException::withMessages(['branch' => __('connectors.github.errors.secret_unreadable')]);
         }
 
-        return back()->with('status', $branch === null
-            ? __('connectors.github.branch_default')
-            : __('connectors.github.branch_changed', ['branch' => $branch]));
+        return back()->with('status', match (true) {
+            ! $changesBranch => __('connectors.github.settings_saved'),
+            $branch === null => __('connectors.github.branch_default'),
+            default => __('connectors.github.branch_changed', ['branch' => $branch]),
+        });
     }
 }

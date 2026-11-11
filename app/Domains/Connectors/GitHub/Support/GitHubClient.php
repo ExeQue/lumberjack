@@ -70,10 +70,10 @@ class GitHubClient
     private array $prefetched = [];
 
     /**
-     * The repository as GitHub names it, its default branch, and its open issues (pull
-     * requests included, as GitHub counts them). Reading it needs Metadata only.
+     * The repository as GitHub names it, its default branch, whether it is private, and its
+     * open issues (pull requests included, as GitHub counts them). Reading it needs Metadata only.
      *
-     * @return array{full_name: string, default_branch: string, open_issues_count: int, stars: int, forks: int, watchers: int}
+     * @return array{full_name: string, default_branch: string, private: bool, open_issues_count: int, stars: int, forks: int, watchers: int}
      *
      * @throws GitHubRequestFailedException
      */
@@ -88,6 +88,8 @@ class GitHubClient
         return [
             'full_name' => $data['full_name'],
             'default_branch' => is_string($data['default_branch'] ?? null) ? $data['default_branch'] : 'main',
+            // Unsaid counts as private, so its stars are not shown by default.
+            'private' => ($data['private'] ?? true) !== false,
             'open_issues_count' => is_int($data['open_issues_count'] ?? null) ? $data['open_issues_count'] : 0,
             'stars' => is_int($data['stargazers_count'] ?? null) ? $data['stargazers_count'] : 0,
             'forks' => is_int($data['forks_count'] ?? null) ? $data['forks_count'] : 0,
@@ -801,7 +803,7 @@ class GitHubClient
     }
 
     /** A range as GitHub's search reads it, in UTC to the second. */
-    private static function range(CarbonImmutable $from, CarbonImmutable $to): string
+    public static function range(CarbonImmutable $from, CarbonImmutable $to): string
     {
         return $from->utc()->format('Y-m-d\TH:i:s\Z').'..'.$to->utc()->format('Y-m-d\TH:i:s\Z');
     }

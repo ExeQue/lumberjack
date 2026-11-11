@@ -8,7 +8,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Stands GitHub's REST API in for the repository acme/shop: four open pull requests (one a
+ * Stands GitHub's REST API in for the public repository acme/shop: four open pull requests (one a
  * draft, one waiting for review), seven open issues counting them, three merged (in 2, 4 and
  * 10 hours) and two failed runs in any range, a failed run last on main, and a release
  * (with notes) behind a draft. 42 stars, 5 forks, 3 watchers. Any range has three commits on main over
@@ -39,7 +39,7 @@ trait FakesGitHub
             }
 
             return match ($path) {
-                '/repos/acme/shop' => Http::response(['full_name' => 'acme/shop', 'default_branch' => 'main', 'open_issues_count' => 7, 'private' => true, 'stargazers_count' => 42, 'forks_count' => 5, 'subscribers_count' => 3]),
+                '/repos/acme/shop' => Http::response(['full_name' => 'acme/shop', 'default_branch' => 'main', 'open_issues_count' => 7, 'private' => false, 'stargazers_count' => 42, 'forks_count' => 5, 'subscribers_count' => 3]),
                 '/search/issues' => Http::response(['total_count' => match (true) {
                     str_contains($q, 'is:merged') => 3,
                     str_contains($q, 'review:none') => 1,

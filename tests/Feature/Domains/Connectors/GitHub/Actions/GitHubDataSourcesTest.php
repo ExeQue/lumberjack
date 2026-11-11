@@ -60,6 +60,15 @@ describe('listing a repository\'s sources', function () {
             ->not->toContain('issues_opened', 'open_bugs', 'dependabot_alerts', 'dependabot_by_severity', 'code_scanning_alerts');
     });
 
+    it('offers every source whichever key figures the page shows, stars of a private repository included', function () {
+        $this->gitHubAnswers = ['/repos/acme/shop' => [['full_name' => 'acme/shop', 'default_branch' => 'main', 'private' => true]]];
+        $connection = DataSourceConnection::factory()->github()->create(['config' => new GitHubConfig('acme/shop', 'github_pat_test', figures: ['stars' => false, 'failed_runs' => false])]);
+
+        app(SyncDataSourceConnectionAction::class)->execute($connection->id);
+
+        expect(DataSource::query()->where('data_source_connection_id', $connection->id)->pluck('key'))->toContain('stars', 'forks', 'watchers', 'failed_runs', 'lead_time');
+    });
+
     it('shows on the connection when GitHub refuses the token', function () {
         $this->gitHubAnswers = ['/repos/acme/shop' => [['message' => 'Bad credentials'], 401]];
         $connection = DataSourceConnection::factory()->github()->create();

@@ -258,11 +258,17 @@ export function StatCard({
     value,
     note,
     tone,
+    href,
+    hrefLabel,
 }: {
     label: ReactNode;
     value: ReactNode;
     note?: ReactNode;
     tone?: 'err' | 'warn' | 'ok';
+    /** Makes the value a link opening elsewhere in a new tab. */
+    href?: string;
+    /** Read after the value by screen readers, such as "(opens GitHub in a new tab)". */
+    hrefLabel?: string;
 }) {
     return (
         <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-4">
@@ -275,7 +281,19 @@ export function StatCard({
                     tone === 'ok' && 'text-ok',
                 )}
             >
-                {value}
+                {href ? (
+                    <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                    >
+                        {value}
+                        {hrefLabel && <SrOnly>{` ${hrefLabel}`}</SrOnly>}
+                    </a>
+                ) : (
+                    value
+                )}
             </span>
             {note && <span className="text-xs text-ink-2">{note}</span>}
         </div>

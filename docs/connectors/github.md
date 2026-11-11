@@ -64,19 +64,29 @@ admins:
   from, without connecting again; GitHub is asked whether the repository has it before it
   is saved. Empty goes back to the default branch. Pull requests, releases, issues,
   security alerts and stars always cover the whole repository.
+- **Key figures** switches each figure on top of the page on or off, the switches grouped
+  under Pull requests, Code, Issues, Community and Security. By default all show except the
+  lead time, the commit authors, the failed runs, the latest release, the forks and the
+  watchers; the stars show only for a public repository, and a figure needing an optional
+  permission shows once the token has it. Only a figure switched otherwise than its default
+  is remembered, so the others keep following it, such as the stars of a repository made
+  public later. The data sources for screens stay available either way, so a figure hidden
+  here can still go on a screen.
 - **Optional permissions** lists each, whether the token had it when last connected, and
   what it adds.
 
 ## The GitHub page
 
-Once connected, **GitHub** shows in the project's sidebar. On top are the open pull
+Once connected, **GitHub** shows in the project's sidebar. On top are the key figures
+chosen under **Key figures** on the **Connection** tab, out of these: the open pull
 requests, those waiting for review, the pull requests merged, their median lead time, the
 commits on the branch read and the workflow runs that failed in the period (on the branch
 read, when one is chosen, or else on every branch), each against the period before, the
 commit authors, the open issues, the result of the latest run on the branch read, the
-latest release, and the stars with forks and watchers. With **Issues**,
-the issues opened and closed in the period (against the period before) and the open bugs
-are there too.
+latest release, and the stars, forks and watchers. With **Issues**,
+the issues opened and closed in the period (against the period before) and the open bugs,
+and with a security permission its open alerts. Each figure links to its page on GitHub in a new tab,
+such as the pull requests merged in the period, or the failed runs on the branch read.
 
 | Tab               | What it shows                                                                                   |
 | ----------------- | ----------------------------------------------------------------------------------------------- |
@@ -85,7 +95,7 @@ are there too.
 | **Actions**       | The latest workflow runs on every branch, with their result.                                    |
 | **Releases**      | The newest releases, pre-releases marked, each opening to its notes. Drafts are not shown.      |
 | **Security**      | Open Dependabot (by severity), code scanning and secret scanning alerts, or why there are none. |
-| **Connection**    | The connection, its branch and its optional permissions, for team owners and admins.            |
+| **Connection**    | The connection, its branch, key figures and optional permissions, for team owners and admins.   |
 
 Each list shows its first 20 rows (the top contributors 10). **Load more** below it shows as
 many more, up to 100, or for the latest commits up to the 1,000 commits read for the period.
