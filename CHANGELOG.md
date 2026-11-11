@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-11
+
 ### Added
 
 - **Data source value** health check: holds a number from a data source against a warn and a fail limit (`>`, `>=`, `<`, `<=`, `=` or `!=`), judged after each fetch. JSON and Prometheus sources are read at a path; Umami, mosparo and connected apps' number sources over a period, which the check keeps pulled. It fails when the source fails, is not fetched in time or has no number, and shows the value it read. The source is picked in the same searchable, grouped picker as in the screen designer. The MCP tools set it up too.
@@ -214,7 +216,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/ExeQue/lumberjack/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/ExeQue/lumberjack/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ExeQue/lumberjack/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/ExeQue/lumberjack/compare/v0.5.0...v0.5.1
