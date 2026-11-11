@@ -10,6 +10,90 @@ return [
         'disconnect' => 'Disconnect',
     ],
 
+    // GitHub: a repository's pull requests, workflow runs and releases.
+    'github' => [
+        'title' => 'GitHub',
+        'description' => 'Pull requests, workflow runs and releases of :name.',
+        'error_title' => 'GitHub could not be read',
+        // The picker of which connected repository the page shows.
+        'repository' => 'Repository',
+        'never' => 'None yet',
+
+        'cards' => [
+            'open_pull_requests' => 'Open pull requests',
+            'waiting_for_review' => 'Waiting for review',
+            'merged' => 'Merged',
+            'failed_runs' => 'Failed runs',
+            'open_issues' => 'Open issues',
+            'ci' => 'CI on :branch',
+            'ci_none' => 'CI',
+            'latest_release' => 'Latest release',
+        ],
+
+        'tabs' => [
+            'label' => 'GitHub sections',
+            'pull_requests' => 'Pull requests',
+            'actions' => 'Actions',
+            'releases' => 'Releases',
+            'connection' => 'Connection',
+        ],
+
+        'pull_requests' => [
+            'title' => 'Open pull requests',
+            'description' => 'The newest first.',
+            'pull_request' => 'Pull request',
+            'author' => 'Author',
+            'opened' => 'Opened',
+            'draft' => 'Draft',
+            'empty' => 'No open pull requests.',
+        ],
+
+        'actions' => [
+            'title' => 'Workflow runs',
+            'description' => 'The latest runs, on every branch.',
+            'workflow' => 'Workflow',
+            'branch' => 'Branch',
+            'event' => 'Event',
+            'result' => 'Result',
+            'started' => 'Started',
+            'empty' => 'No workflow runs.',
+        ],
+
+        'releases' => [
+            'title' => 'Releases',
+            'description' => 'The newest first.',
+            'release' => 'Release',
+            'tag' => 'Tag',
+            'published' => 'Published',
+            'prerelease' => 'Pre-release',
+            'empty' => 'No releases.',
+        ],
+
+        'not_connected' => [
+            'description' => 'Pull requests, workflow runs and releases of a GitHub repository.',
+            'title' => 'Connect GitHub',
+            'body' => 'Give Lumberjack a repository and a read-only token for it. Its figures show here and as data sources for screens.',
+            'members' => 'No repository is connected. A team owner or admin can connect one.',
+        ],
+
+        'connect' => [
+            'repository' => 'Repository',
+            'repository_hint' => 'As owner/name, such as acme/shop, or its address on github.com.',
+            'token' => 'Token',
+            'token_hint' => 'A fine-grained token for this repository with read-only Metadata, Pull requests, Actions and Contents. Not the token of the repository integration.',
+            // Buttons.
+            'submit' => 'Connect',
+            'cancel' => 'Cancel',
+        ],
+
+        'settings' => [
+            'body' => 'Reads :url.',
+            // Buttons.
+            'add' => 'Connect another repository',
+            'disconnect_question' => 'Disconnect this repository? Its data sources are removed, and widgets showing them go empty.',
+        ],
+    ],
+
     // mosparo: a project's form submissions, read through mosparo's statistic API.
     'mosparo' => [
         'title' => 'mosparo',

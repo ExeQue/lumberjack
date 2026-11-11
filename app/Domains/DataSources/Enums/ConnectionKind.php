@@ -16,6 +16,7 @@ enum ConnectionKind: string
     case App = 'app';
     case Umami = 'umami';
     case Mosparo = 'mosparo';
+    case GitHub = 'github';
 
     /** The service's name; an app's connection is named by its environment instead. */
     public function label(): ?string
@@ -24,6 +25,7 @@ enum ConnectionKind: string
             self::App => null,
             self::Umami => 'Umami',
             self::Mosparo => 'mosparo',
+            self::GitHub => 'GitHub',
         };
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\DataSources\Actions;
 
 use App\Domains\Connectors\Exceptions\ConnectorsExceptionInterface;
+use App\Domains\Connectors\GitHub\Actions\BuildGitHubCatalogAction;
 use App\Domains\Connectors\Mosparo\Actions\BuildMosparoCatalogAction;
 use App\Domains\Connectors\Umami\Actions\BuildUmamiCatalogAction;
 use App\Domains\DataSources\Enums\ConnectionKind;
@@ -27,6 +28,7 @@ class SyncDataSourceConnectionAction
         private readonly RecordDataSourceCatalogAction $record,
         private readonly BuildUmamiCatalogAction $umamiCatalog,
         private readonly BuildMosparoCatalogAction $mosparoCatalog,
+        private readonly BuildGitHubCatalogAction $gitHubCatalog,
     ) {
     }
 
@@ -89,6 +91,7 @@ class SyncDataSourceConnectionAction
         $this->record->execute($connection, match ($connection->kind) {
             ConnectionKind::Umami => $this->umamiCatalog->execute($connection),
             ConnectionKind::Mosparo => $this->mosparoCatalog->execute($connection),
+            ConnectionKind::GitHub => $this->gitHubCatalog->execute($connection),
             ConnectionKind::App => throw new ProbeFailedException(__('data_sources.errors.bad_index')),
         });
     }

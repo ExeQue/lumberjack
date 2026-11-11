@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Domains\Connectors\GitHub\Data\GitHubConfig;
 use App\Domains\Connectors\Mosparo\Data\MosparoConfig;
 use App\Domains\Connectors\Umami\Data\UmamiConfig;
 use App\Domains\DataSources\Enums\ConnectionKind;
@@ -53,6 +54,21 @@ class DataSourceConnectionFactory extends Factory
             'pull_token' => null,
             'name' => 'Contact form',
             'config' => new MosparoConfig('public_key', 'private_key'),
+        ]);
+    }
+
+    /**
+     * A GitHub repository, read with a fine-grained token.
+     */
+    public function github(): static
+    {
+        return $this->state(fn (): array => [
+            'kind' => ConnectionKind::GitHub,
+            'environment' => ConnectionKind::GitHub->environment(),
+            'url' => 'https://github.com/acme/shop',
+            'pull_token' => null,
+            'name' => 'acme/shop',
+            'config' => new GitHubConfig('acme/shop', 'github_pat_test'),
         ]);
     }
 

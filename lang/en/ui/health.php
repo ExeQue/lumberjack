@@ -23,7 +23,7 @@ return [
         'heartbeat' => 'A secret URL your cron job or backup calls; fails when no call came in time.',
         'domain' => 'Warns before a domain registration expires, and fails close to it.',
         'smtp' => 'Greets a mail server and checks that it answers and offers encryption. Sends no mail.',
-        'data_source' => 'Holds a number from one of your data sources, Umami and mosparo included, against limits, after each fetch.',
+        'data_source' => 'Holds a number from one of your data sources, Umami, mosparo and GitHub included, against limits, after each fetch.',
     ],
     'muted' => 'Muted',
     // In the latency column for a data source check, which measures nothing but reads a value.
@@ -149,7 +149,7 @@ return [
             'data_source_none' => 'Pick a data source',
             'data_source_search' => 'Search name or group',
             'data_source_no_matches' => 'No data source matches.',
-            'data_source_empty' => 'No data source with a number yet; add one on the project\'s Data sources page, or connect Umami or mosparo.',
+            'data_source_empty' => 'No data source with a number yet; add one on the project\'s Data sources page, or connect Umami, mosparo or GitHub.',
             'period' => 'Period',
             'period_hint' => 'The figure over this period, as a screen shows it.',
             'path' => 'Path',
