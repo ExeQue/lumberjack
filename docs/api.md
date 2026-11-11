@@ -191,13 +191,13 @@ An event of type `maintenance` opens or closes a
 }
 ```
 
-| Field              | Notes                                                                                                          |
-| ------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `state`            | Required. `start` or `end`. An event with anything else is skipped.                                            |
-| `message`          | What is going on. At most 500 characters.                                                                      |
-| `expected_minutes` | How long it should take, at most a week.                                                                       |
-| `expected_until`   | When it should be over, in ISO 8601. Wins over `expected_minutes`. Without either, the project's default (30). |
-| `timestamp`        | When it started or ended.                                                                                      |
+| Field              | Notes                                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state`            | Required. `start` or `end`. An event with anything else is skipped.                                                                                     |
+| `message`          | What is going on. Cut to 500 characters.                                                                                                                |
+| `expected_minutes` | How long it should take, at most a week.                                                                                                                |
+| `expected_until`   | When it should be over, in ISO 8601, kept between the start and a week later. Wins over `expected_minutes`. Without either, the project's default (30). |
+| `timestamp`        | When it started or ended.                                                                                                                               |
 
 The environment comes from the batch, like `release` and `host`; a batch without one
 covers every environment of the project. A `start` while a window of the environment is
@@ -237,7 +237,8 @@ rm public/build/assets/*.map
 ```
 
 The answer is `201` with the stored `path`, `release` and `size`. The same path and
-release uploaded again replaces the map. A file that is not a source map gets a `422`.
+release uploaded again replaces the map. A file that is not a source map gets a `422`,
+and a map that could not be stored gets a `503`; upload it again.
 
 ## Limits
 

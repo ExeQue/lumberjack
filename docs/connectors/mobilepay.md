@@ -152,4 +152,8 @@ The connection and the Vipps MobilePay page say why:
 | The API keys may not read the Report API                  | Check the sales unit's access in the business portal.                                                     |
 | The API keys see no ledger for merchant serial number ... | Check the number: it is the sales unit's, shown beside its keys.                                          |
 | Vipps MobilePay no longer finds the ledger                | Connect it again.                                                                                         |
+| This ledger is being connected already                    | Try again in a moment.                                                                                    |
+| Vipps MobilePay asks to slow down                         | A rate limit was reached. It is asked again shortly.                                                      |
+| Vipps MobilePay answered with HTTP ...                    | Vipps MobilePay had a problem. It is asked again on the next fetch.                                       |
+| Vipps MobilePay could not be reached                      | Check that the server can reach `api.vipps.no`.                                                           |
 | The Vipps MobilePay keys cannot be decrypted              | `APP_KEY` changed. Connect Vipps MobilePay again.                                                         |

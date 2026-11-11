@@ -11,6 +11,18 @@ It needs:
 - PostgreSQL and Redis
 - A web server with PHP, such as FrankenPHP, Caddy or nginx with PHP-FPM
 
+Set these in `php.ini`, as the Docker image does:
+
+```ini
+memory_limit=512M
+upload_max_filesize=20M
+post_max_size=21M
+```
+
+Source maps are uploaded up to 20 MB. Protobuf [OpenTelemetry](./opentelemetry) exports
+are decoded in PHP at some 150 times their size in memory, and each worker keeps up to
+128 MB of decoded source maps.
+
 ## 1. Get the code
 
 Check out the latest [release](https://github.com/ExeQue/lumberjack/releases), not `main`:

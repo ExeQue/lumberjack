@@ -40,6 +40,15 @@ A browser error from a bundled build points at minified code. Upload the build's
 maps in the deploy, after the build, and browser errors show your own files, lines and
 functions. The same error also stays one issue across deploys.
 
+Vite writes maps only with `build.sourcemap` set in `vite.config`; `'hidden'` keeps the
+`sourceMappingURL` comment out of the public bundles:
+
+```js
+export default defineConfig({
+    build: { sourcemap: 'hidden' },
+});
+```
+
 **Laravel SDK.** Run the command after `vite build`:
 
 ```bash

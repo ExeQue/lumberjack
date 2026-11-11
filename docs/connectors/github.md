@@ -184,11 +184,14 @@ rarely reached; when it is, the source says so and is asked again shortly.
 
 The connect dialog, the connection and the GitHub page say why:
 
-| Error                                     | What to do                                                            |
-| ----------------------------------------- | --------------------------------------------------------------------- |
-| GitHub refused the token                  | The token expired or was revoked. Generate another and connect again. |
-| The token cannot read the repository      | Check the name, and that the token's repository access includes it.   |
-| The token cannot read the repository's... | Give the token the permission named, read-only.                       |
-| ... are not enabled for the repository    | Turn the feature on, or give the token its permission, read-only.     |
-| GitHub asks to slow down                  | A rate limit was reached. It is asked again shortly.                  |
-| The GitHub token cannot be decrypted      | `APP_KEY` changed. Connect GitHub again.                              |
+| Error                                     | What to do                                                                             |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| GitHub refused the token                  | The token expired or was revoked. Generate another and connect again.                  |
+| The token cannot read the repository      | Check the name, and that the token's repository access includes it.                    |
+| The token cannot read the repository's... | Give the token the permission named, read-only.                                        |
+| ... are not enabled for the repository    | Turn the feature on, or give the token its permission, read-only.                      |
+| ... has no branch ...                     | Check the branch name on the Connection tab, or leave it empty for the default branch. |
+| GitHub asks to slow down                  | A rate limit was reached. It is asked again shortly.                                   |
+| GitHub answered with HTTP ...             | GitHub had a problem. It is asked again on the next fetch.                             |
+| GitHub could not be reached               | Check that the server can reach `api.github.com`.                                      |
+| The GitHub token cannot be decrypted      | `APP_KEY` changed. Connect GitHub again.                                               |

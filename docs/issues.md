@@ -20,7 +20,8 @@ A bundler puts a hash in the bundle's file name, so the top frame of a browser e
 changes with every build. With the build's [source maps](./projects#source-maps)
 uploaded, the frames are turned back into the original source before grouping, and the
 same error stays one issue across deploys. Errors received before their map was
-uploaded keep their minified frames.
+uploaded keep their minified frames, as do frames past the
+[symbolication limits](./projects#source-maps), and those can group into a separate issue.
 
 Only log lines of level **error** and above become issues. A line whose context carries
 an exception becomes a Server issue; any other becomes a Log issue titled

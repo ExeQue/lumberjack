@@ -119,8 +119,10 @@ While the window is open:
 - every other alert is still sent, with **[Under maintenance]** at the start of its title;
 - errors that come in are flagged **Under maintenance** in the issues list.
 
-When the window is still open past its expected end, the **Maintenance overrun** rule
-fires at once and repeats every 30 minutes until it ends. Set the repeat, and how long a
+A window does not close at its planned end. It stays open until the app reports `artisan
+up` or someone clicks **End now**; past its expected end it shows **Overrun**, and the
+**Maintenance overrun** rule fires at once and repeats every 30 minutes by default until
+it ends. Set the repeat, and how long a
 window the app reports is expected to take, in the project's **Settings** under
 **General**. See [Maintenance windows](../health.md#maintenance-windows).
 

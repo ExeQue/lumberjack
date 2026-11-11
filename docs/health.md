@@ -207,9 +207,15 @@ purpose, for a deploy or planned work. A window covers one environment, or every
 environment of the project when it has none. It comes from one of two places:
 
 - **Planned**: **Plan maintenance** on the Health page, with the environment, start,
-  planned end and an optional message, or over [MCP](./mcp). Planned windows can be
-  changed and ended early there too. Planning one needs the right to change the project.
-  A window planned wholly in the past is saved as ended, a record of maintenance that was.
+  planned end and an optional message, or over [MCP](./mcp). Planning one needs the right
+  to change the project. A window planned wholly in the past is saved as ended, a record
+  of maintenance that was.
+
+Team admins change a window that has not ended with **Edit**, and end an open one with
+**End now**, whether planned or reported. A planned window that has not started yet has
+no **End now** and cannot be deleted; move it with **Edit**, or cancel it with the MCP
+tool `end_maintenance_window`, which ends it where it would have started.
+
 - **Reported by the app**: a `maintenance` event with `state` `start` or `end`, see
   [Ingest](./api#maintenance-events). The Laravel library sends them on `artisan down`
   and `artisan up` with no setup.

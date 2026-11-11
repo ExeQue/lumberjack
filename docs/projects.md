@@ -72,8 +72,8 @@ open at a time; the address names the open section (such as `#agents`).
     - `*` is a wildcard in the key name: `card_*`.
     - A dotted pattern matches the full path: `session.checkout.*`.
 - **Agents:** the servers that send data, see [Agents](#agents).
-- **Source maps:** the uploaded maps, with their release, size and upload time. Delete
-  one here. See [Source maps](#source-maps).
+- **Source maps:** the newest 100 uploaded maps, with their release, size and upload
+  time, and the total count. Delete one here. See [Source maps](#source-maps).
 - **Alerts:** the project's [own channels, and its rules](./alerts#team-rules-and-project-overrides): the team's by default, or customized for the project.
 - **Log channels:** the channels the project's log lines go to, with the lines of the
   last 24 hours and each channel's own [retention](#retention). Names are kebab-case.
@@ -183,7 +183,9 @@ function and source instead of the minified bundle. Issues then group on the ori
 source, so a deploy does not split an error into a new issue.
 
 Upload each `.map` file after the build, with the server token and the public path of
-the bundle it belongs to. With Vite, that is every map in `public/build/assets`. See
+the bundle it belongs to. Vite writes maps only with `build.sourcemap` set; `'hidden'`
+keeps the `sourceMappingURL` comment out of the public bundles. With Vite, that is every
+map in `public/build/assets`. See
 [the API](./api#source-maps) for the request. Then delete the maps from the build, so
 your source is not served to everyone.
 
@@ -192,6 +194,10 @@ your source is not served to everyone.
   of the page's `data-release` wins, then the newest.
 - Uploading the same path and release again replaces the map.
 - Errors received before the map was uploaded keep their minified frames.
+- At most 4 maps are used per error, those of its top frames first, and a project has
+  at most 20 maps decoded a minute. A map that fails to decode is tried again after 60
+  seconds. Past these limits frames stay minified, and the error can group into a
+  separate issue.
 - A map is deleted when it is older than 90 days and belongs to none of the project's
   last 10 releases, and when the project is deleted.
 - The maps are stored on the default filesystem disk, not served publicly: in Docker

@@ -70,6 +70,10 @@ environments (comma separated, empty for all). There is one rule per type:
 
 Alerts your own code sends have their own topics, see [Custom alerts](#custom-alerts).
 
+On a team that existed before the upgrade, **Maintenance overrun** starts on but with no
+channels, and **Weekly summary** off with none, as new shared channels are not added to
+it. Pick their channels to hear from them.
+
 A rule shows how many channels it sends to. Click the number to pick them, grouped by
 type.
 
@@ -106,10 +110,6 @@ In a project's settings, under **Alerts**, each type shows either:
   follows the team's rule again. Its channels that the team's rule does not send to,
   such as the project's webhook, stay on as add-ons.
 
-A new shared channel is added to the team's rules that are on by default. A new project
-channel is added to the project's rules of those types: as an add-on where the project
-uses the team's rule, directly where it has customized one.
-
 ### Resolved or ignored
 
 The message includes the comment given and who did it: a user, or an MCP token as
@@ -145,14 +145,16 @@ Fires as soon as a [maintenance window](./health#maintenance-windows) is still o
 its expected end, with no grace period, and again every project's **Repeat overrun
 alert** minutes (30 by default) until the window ends. When it ends, one more message
 says how long it ran over. Like the other rules it is a team rule with project
-overrides, and its environments limit it to windows of those environments.
+overrides, and its environments limit it to windows of those environments. On a team
+from before the upgrade it has no channels until you pick them.
 
 ### Weekly summary
 
 Sends the past 7 days of each project against the 7 days before, once a week on the
 **day** and at the **time** set on the rule, in the app's time zone (Monday 08:00 by
 default). Like the other rules it is a team rule with project overrides; the
-environments setting does not apply to it.
+environments setting does not apply to it. New shared channels are not added to it, so
+pick its channels when you turn it on.
 
 Each channel gets one message, with a section for every project whose rule sends there:
 a project whose own rule sends to other channels is in their message instead, sent at
@@ -249,8 +251,8 @@ A webhook channel POSTs JSON to your endpoint.
 `queue_backlog`, `health_degraded`, `health_down`, `health_recovered`,
 `maintenance_overrun`, `weekly_summary`.
 
-Every body also has `maintenance`: the window the alert was sent during, or `null`
-outside one.
+Every body except a `test` also has `maintenance`: the window the alert was sent
+during, or `null` outside one.
 
 ```json
 {
@@ -467,14 +469,14 @@ An SDK may verify these for you; see its docs.
 
 ## Limits
 
-| What                                   | Limit                                          |
-| -------------------------------------- | ---------------------------------------------- |
-| **Send test**                          | 6 a minute per person                          |
-| New issue and Escalation messages      | 1 per issue, rule and channel every 30 minutes |
-| Queue backlog messages                 | 1 new backlog per queue every 30 minutes       |
-| Maintenance overrun messages           | 1 per window every 30 minutes, per project     |
-| Weekly summary messages                | 1 per channel and rule a week                  |
-| Issues, routes and outages per summary | 5 each, per project                            |
-| Issues named in a bulk summary message | 10                                             |
-| Custom alerts sent                     | 60 a minute per project, the rest only listed  |
-| Discord sender name                    | 80 characters                                  |
+| What                                   | Limit                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------- |
+| **Send test**                          | 6 a minute per person                                                           |
+| New issue and Escalation messages      | 1 per issue, rule and channel every 30 minutes                                  |
+| Queue backlog messages                 | 1 new backlog per queue every 30 minutes                                        |
+| Maintenance overrun messages           | 1 per window per **Repeat overrun alert** interval (5–1440 minutes, default 30) |
+| Weekly summary messages                | 1 per channel and rule a week                                                   |
+| Issues, routes and outages per summary | 5 each, per project                                                             |
+| Issues named in a bulk summary message | 10                                                                              |
+| Custom alerts sent                     | 60 a minute per project, the rest only listed                                   |
+| Discord sender name                    | 80 characters                                                                   |
