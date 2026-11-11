@@ -1,8 +1,8 @@
 # Libraries
 
 Lumberjack is not tied to a framework. Your apps send data through a library where one
-exists, and through the [ingest API](./api.md) from anything else. Each library links to its own
-docs.
+exists, and from anything else through an [OpenTelemetry](./opentelemetry.md) SDK or
+collector, or the [ingest API](./api.md). Each library links to its own docs.
 
 | Library                                                                     | For                                 |
 | --------------------------------------------------------------------------- | ----------------------------------- |

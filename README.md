@@ -20,16 +20,22 @@ AI agents work with your issues over MCP.
 
 - **Know when production breaks.** Exceptions, browser errors and error logs become issues,
   and an alert reaches you by email, Slack, Microsoft Teams, Discord, Telegram, ntfy,
-  Pushover or a webhook.
+  Pushover or a webhook. Source maps turn minified browser errors back into your own code.
 - **Find out why a page is slow.** Response times, Web Vitals, queries and N+1 hints per
   route, down to a single trace.
 - **Check a release.** See which deploy brought new errors or slowdowns.
+- **Get a weekly summary.** Each project's past week against the week before, by mail,
+  chat or webhook.
 - **Watch background work.** See which jobs, scheduled tasks and commands failed or never
   ran, and which queues back up.
 - **Check that your sites are up.** Run HTTP, SSL, TCP, DNS and heartbeat checks, and track
-  outages and uptime.
+  outages and uptime. Plan maintenance, or let your app report it, and the checks
+  stay quiet while it lasts.
 - **Search your logs**, or watch them live.
-- **Put a status screen on the wall.** Design a dashboard and show it on any TV.
+- **Put a status screen on the wall.** Design a dashboard and show it on any TV, with
+  figures from GitHub, Vipps MobilePay, Umami or mosparo beside your own.
+- **Watch an app in any language.** Send traces and logs from an OpenTelemetry SDK or
+  collector.
 - **Let an AI agent read your errors.** Agents can triage issues, write notes, open issues in
   your repository and draft pull requests.
 
@@ -49,7 +55,8 @@ curl -fsSL https://exeque.github.io/lumberjack/install.sh | sh
 [Running Lumberjack with Docker](https://exeque.github.io/lumberjack/docs/docker) has the whole setup. Your apps send data
 through a [library](https://exeque.github.io/lumberjack/docs/libraries), such as
 [`exeque/laravel-lumberjack`](https://exeque.github.io/laravel-lumberjack/) for Laravel, or
-straight to the [ingest API](https://exeque.github.io/lumberjack/docs/api) from any language or framework.
+straight to the [ingest API](https://exeque.github.io/lumberjack/docs/api) or over
+[OpenTelemetry](https://exeque.github.io/lumberjack/docs/opentelemetry) from any language or framework.
 
 ## Guides
 
@@ -80,6 +87,8 @@ straight to the [ingest API](https://exeque.github.io/lumberjack/docs/api) from 
 - [Health](https://exeque.github.io/lumberjack/docs/health)
 - [Finding things](https://exeque.github.io/lumberjack/docs/finding-things): search, filters and the command palette.
 - [Status screens](https://exeque.github.io/lumberjack/docs/screens) and [widgets](https://exeque.github.io/lumberjack/docs/widgets)
+- [Connectors](https://exeque.github.io/lumberjack/docs/connectors/): figures from GitHub, Vipps MobilePay, Umami and
+  mosparo.
 - [MCP](https://exeque.github.io/lumberjack/docs/mcp)
 - [Metrics API](https://exeque.github.io/lumberjack/docs/metrics-api): read figures from Grafana, Prometheus or a script.
 - [Ingest and API](https://exeque.github.io/lumberjack/docs/api): the endpoints SDKs and agents send to, and their limits.

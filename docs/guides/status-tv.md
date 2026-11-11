@@ -38,6 +38,17 @@ settings of the selected widget on the right.
    **List** of the newest issues.
 4. **Amber at** and **Red at** set where a tile changes colour.
 
+A widget can also show a [data source](../data-sources.md): a figure from your own app,
+or from a service through a [connector](../connectors/index.md), such as the open pull
+requests and failed workflow runs of a [GitHub](../connectors/github.md) repository, or
+the revenue per day on a [Vipps MobilePay](../connectors/mobilepay.md) ledger. A team owner
+or admin connects one from **Data sources**, under **Connectors**; then pick its figure
+under **Data source**.
+
+During a [maintenance window](../health.md#maintenance-windows), the health and project
+overview widgets say **In maintenance** in blue, or **Overrun** in amber once it runs
+past its expected end.
+
 Every TV showing the screen follows a change within a second.
 
 **Show an incident** previews the screen when things go wrong; **Live data** goes back to
@@ -100,3 +111,4 @@ Prefer pairing where you can: a paired TV needs no link that could be passed on.
 - [Status screens](../screens.md): the designer, pairing, displays, share links,
   templates and export.
 - [Widgets](../widgets.md): every widget and its settings.
+- [Connectors](../connectors/index.md): the services Lumberjack reads, and their data sources.

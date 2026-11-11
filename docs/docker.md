@@ -297,8 +297,12 @@ location / {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_read_timeout 120s;
+    client_max_body_size 21m;
 }
 ```
+
+nginx refuses bodies over 1 MB by default; `client_max_body_size` lets
+[source maps](./projects#source-maps) of up to 20 MB through.
 
 **Traefik** handles WebSockets without extra settings; route the host to port 8080.
 
