@@ -22,6 +22,7 @@ use App\Domains\Schedule\Enums\ScheduledRunStatus;
 use App\Domains\Schedule\Models\ScheduledTaskRun;
 use App\Domains\Shared\Enums\Period;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -96,10 +97,10 @@ class WeeklySummaryQuery
             'failed_jobs' => array_map(intval(...), $compare(Metric::JobFailures)),
             'missed_tasks' => $count(fn (MetricWindow $w): int => ScheduledTaskRun::query()->where('project_id', $project->id)
                 ->where('status', ScheduledRunStatus::Missed)->where('started_at', '>=', $w->from)->where('started_at', '<', $w->to)->count()),
-            'health_checks' => array_values(array_map(fn (array $row): array => ['name' => $row['name'], 'environment' => $row['environment'], 'uptime' => $row['uptime']], array_filter(
-                $this->health->rows($project, Period::Week),
-                fn (array $row): bool => ! $row['archived'] && $row['uptime'] !== null,
-            ))),
+            'health_checks' => collect($this->health->rows($project, Period::Week))
+                ->filter(fn (array $row): bool => ! $row['archived'] && $row['uptime'] !== null)
+                ->map(fn (array $row): array => Arr::only($row, ['name', 'environment', 'uptime']))
+                ->values()->all(),
             'outages' => [
                 'current' => $outages->count(),
                 'previous' => HealthOutage::query()->where('project_id', $project->id)->where('started_at', '>=', $before->from)->where('started_at', '<', $before->to)->count(),
@@ -169,8 +170,6 @@ class WeeklySummaryQuery
             }
         }
 
-        usort($rows, fn (array $a, array $b): int => ($b['p95_ms'] - $b['previous_p95_ms']) <=> ($a['p95_ms'] - $a['previous_p95_ms']));
-
-        return array_slice($rows, 0, self::LISTED);
+        return array_values(collect($rows)->sortByDesc(fn (array $row): float => $row['p95_ms'] - $row['previous_p95_ms'])->take(self::LISTED)->all());
     }
 }

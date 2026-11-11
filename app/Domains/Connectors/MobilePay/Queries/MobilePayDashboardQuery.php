@@ -68,17 +68,13 @@ class MobilePayDashboardQuery
     {
         $config = $connection->mobilePayConfig();
         $today = CarbonImmutable::now($connection->timezone)->startOfDay();
-        $series = [];
 
-        foreach ($this->client->days($config->credentials, $config->ledgerId, $today->subDays(self::days($period) - 1), $today) as $date => $figures) {
-            $series[] = [
+        return array_values(collect($this->client->days($config->credentials, $config->ledgerId, $today->subDays(self::days($period) - 1), $today))
+            ->map(fn (array $day, string $date): array => [
                 't' => CarbonImmutable::parse($date, $connection->timezone)->toIso8601String(),
-                'revenue' => MobilePaySource::major($figures['figures']['revenue']),
-                'transactions' => $figures['figures']['transactions'],
-            ];
-        }
-
-        return $series;
+                'revenue' => MobilePaySource::major($day['figures']['revenue']),
+                'transactions' => $day['figures']['transactions'],
+            ])->all());
     }
 
     /**

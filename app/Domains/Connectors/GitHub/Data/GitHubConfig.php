@@ -37,7 +37,7 @@ final readonly class GitHubConfig
             is_string($data['repository'] ?? null) ? $data['repository'] : '',
             is_string($data['token'] ?? null) ? $data['token'] : '',
             // A connection made before optional permissions were asked has none.
-            is_array($data['granted'] ?? null) ? array_values(array_filter(array_map(fn (mixed $value): ?GitHubPermission => is_string($value) ? GitHubPermission::tryFrom($value) : null, $data['granted']))) : [],
+            is_array($data['granted'] ?? null) ? array_values(collect($data['granted'])->map(fn (mixed $value): ?GitHubPermission => is_string($value) ? GitHubPermission::tryFrom($value) : null)->filter()->all()) : [],
             // A connection made before a branch could be chosen reads the default branch.
             is_string($data['branch'] ?? null) && $data['branch'] !== '' ? $data['branch'] : null,
             // A connection made before the figures could be chosen shows each as by default.

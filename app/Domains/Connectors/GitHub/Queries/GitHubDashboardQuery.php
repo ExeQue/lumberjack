@@ -139,8 +139,8 @@ class GitHubDashboardQuery
             return [
                 'count' => ['current' => count($commits), 'previous' => $this->client->commitCount($credentials, $branch, $before, $from)],
                 'authors' => count($contributors),
-                'series' => array_map(fn (int $at, int $count): array => ['t' => gmdate('Y-m-d\TH:i:s\Z', $at), 'commits' => $count], array_keys($series), $series),
-                'contributors' => array_map(fn (string $author, int $count): array => ['author' => $author, 'commits' => $count], array_keys($contributors), $contributors),
+                'series' => array_values(collect($series)->map(fn (int $count, int $at): array => ['t' => gmdate('Y-m-d\TH:i:s\Z', $at), 'commits' => $count])->all()),
+                'contributors' => collect($contributors)->map(fn (int $count, int|string $author): array => ['author' => (string) $author, 'commits' => $count])->values()->all(),
                 'latest' => $commits,
                 'capped' => count($commits) >= GitHubClient::MAX_PAGES * GitHubClient::PER_PAGE,
             ];

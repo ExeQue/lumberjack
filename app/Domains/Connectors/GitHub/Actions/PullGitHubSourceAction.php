@@ -55,13 +55,15 @@ class PullGitHubSourceAction
             GitHubSource::CiStatus => self::ciStatus($this->client->branchRun($credentials)),
             GitHubSource::LatestRelease => self::latestRelease($this->client->latestRelease($credentials)),
             GitHubSource::Commits => count($commits),
-            GitHubSource::CommitsSeries => array_map(fn (int $at, int $count): array => ['at' => $at, 'value' => $count], array_keys($series = self::perBucket($commits, $from, $to, $bucket, $timezone)), $series),
+            GitHubSource::CommitsSeries => collect(self::perBucket($commits, $from, $to, $bucket, $timezone))
+                ->map(fn (int $count, int $at): array => ['at' => $at, 'value' => $count])->values()->all(),
             GitHubSource::Authors => count(self::contributors($commits)),
             GitHubSource::LatestCommits => array_map(fn (array $commit): array => [
                 'label' => $commit['message'].' ('.$commit['author'].')',
                 'value' => CarbonImmutable::parse($commit['committed_at'])->setTimezone($timezone)->format('Y-m-d H:i'),
             ], array_slice($commits, 0, self::LIST_ROWS)),
-            GitHubSource::TopContributors => array_map(fn (string $author, int $count): array => ['label' => $author, 'value' => $count], array_keys($top = array_slice(self::contributors($commits), 0, self::LIST_ROWS, true)), $top),
+            GitHubSource::TopContributors => collect(self::contributors($commits))->take(self::LIST_ROWS)
+                ->map(fn (int $count, int|string $author): array => ['label' => (string) $author, 'value' => $count])->values()->all(),
             GitHubSource::PullRequestList => array_map(fn (array $pull): array => [
                 'label' => '#'.$pull['number'].' '.$pull['title'].' ('.$pull['author'].($pull['draft'] ? ', '.__('connectors.github.draft') : '').')',
                 'value' => $pull['created_at'] === null ? '' : CarbonImmutable::parse($pull['created_at'])->setTimezone($timezone)->format('Y-m-d'),
@@ -74,11 +76,8 @@ class PullGitHubSourceAction
             GitHubSource::IssuesClosed => $this->client->issues($credentials, 'closed', $from, $to),
             GitHubSource::OpenBugs => $this->client->openBugs($credentials),
             GitHubSource::DependabotAlerts => count($this->client->openAlerts($credentials, GitHubPermission::DependabotAlerts)),
-            GitHubSource::DependabotBySeverity => array_map(
-                fn (string $severity, int $count): array => ['label' => __('connectors.github.severities.'.$severity), 'value' => $count],
-                GitHubClient::SEVERITIES,
-                array_values(GitHubClient::bySeverity($this->client->openAlerts($credentials, GitHubPermission::DependabotAlerts))),
-            ),
+            GitHubSource::DependabotBySeverity => collect(GitHubClient::bySeverity($this->client->openAlerts($credentials, GitHubPermission::DependabotAlerts)))
+                ->map(fn (int $count, string $severity): array => ['label' => __('connectors.github.severities.'.$severity), 'value' => $count])->values()->all(),
             GitHubSource::CodeScanningAlerts => count($this->client->openAlerts($credentials, GitHubPermission::CodeScanningAlerts)),
             GitHubSource::SecretScanningAlerts => count($this->client->openAlerts($credentials, GitHubPermission::SecretScanningAlerts)),
         };
@@ -149,11 +148,7 @@ class PullGitHubSourceAction
      */
     public static function contributors(array $commits): array
     {
-        $counts = array_count_values(array_column($commits, 'author'));
-        arsort($counts);
-
-        // array_count_values() turns a numeric name into an int key.
-        return array_combine(array_map(strval(...), array_keys($counts)), $counts);
+        return collect($commits)->countBy('author')->sortDesc()->all();
     }
 
     /** What a run came to, in words; one GitHub adds later reads as it says it. */

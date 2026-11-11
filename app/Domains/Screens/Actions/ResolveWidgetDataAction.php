@@ -43,6 +43,7 @@ use App\Domains\Shared\Support\LruCache;
 use App\Domains\Teams\Models\Team;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -621,7 +622,7 @@ class ResolveWidgetDataAction
         }
 
         // In maintenance: the scope's open windows, so the widget can say so instead of looking down.
-        $maintenance = array_values(array_map(fn (array $w): array => array_intersect_key($w, array_flip(['project', 'environment', 'message', 'state', 'expected_end_at'])), $this->maintenance($projects, $scope)));
+        $maintenance = collect($this->maintenance($projects, $scope))->map(fn (array $w): array => Arr::only($w, ['project', 'environment', 'message', 'state', 'expected_end_at']))->values()->all();
 
         return ['summary' => $states, 'checks' => $checks, 'check' => $detail, 'maintenance' => $aggregatesOnly ? array_map(fn (array $w): array => [...$w, 'message' => null], $maintenance) : $maintenance];
     }
