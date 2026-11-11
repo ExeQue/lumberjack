@@ -34,7 +34,7 @@ class PruneSourceMapsAction
         $deleted = 0;
 
         SourceMap::query()
-            ->where('project_id', $project->id)
+            ->whereProject($project)
             ->where('updated_at', '<', now()->subDays(self::KEEP_DAYS))
             ->where(fn ($q) => $q->whereNull('release')->orWhereNotIn('release', $releases))
             ->eachById(function (SourceMap $map) use (&$deleted): void {

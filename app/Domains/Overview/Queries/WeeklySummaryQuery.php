@@ -62,7 +62,7 @@ class WeeklySummaryQuery
         $jobRuns = (int) $this->metrics->value(Metric::JobRuns, $filter, $week);
         $scheduled = ScheduledTaskRun::query()->where('project_id', $project->id)->whereBetween('started_at', [$week->from, $week->to])->count();
         $outages = HealthOutage::query()->where('project_id', $project->id)->whereBetween('started_at', [$week->from, $week->to])->orderBy('started_at')->get();
-        $windows = MaintenanceWindow::query()->where('project_id', $project->id)->whereOverlaps($week->from)->orderBy('starts_at')->get();
+        $windows = MaintenanceWindow::query()->whereProject($project)->whereOverlaps($week->from)->orderBy('starts_at')->get();
         $checked = HealthCheck::query()->where('project_id', $project->id)->where('last_result_at', '>=', $week->from)->exists();
 
         if ($requests['current'] == 0 && $occurrences === 0 && $jobRuns === 0 && $scheduled === 0 && $outages->isEmpty() && $windows->isEmpty() && ! $checked) {

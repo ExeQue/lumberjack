@@ -179,6 +179,7 @@ return [
         'description' => 'Browser errors from a bundle with an uploaded map show the original file, line and source. Upload the maps after each build, with the server token. Kept 90 days, and as long as they belong to one of the last 10 releases.',
         'upload_url' => 'Upload URL',
         'empty' => 'No source maps uploaded yet.',
+        'newest' => 'The newest :shown of :total maps.',
         'path' => 'Bundle',
         'release' => 'Release',
         'size' => 'Size',

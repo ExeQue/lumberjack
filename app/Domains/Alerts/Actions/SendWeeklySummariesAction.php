@@ -51,6 +51,8 @@ class SendWeeklySummariesAction
         }
 
         // Marked sent once queued: a queue that cannot be reached leaves them due for the next run.
+        // ponytail: a queue failing part way sends the channels already queued again next run;
+        // a per-channel sent mark if that happens in practice.
         $due->each(fn (AlertRule $rule) => $rule->forceFill(['last_sent_at' => $now])->save());
 
         return count($channels);

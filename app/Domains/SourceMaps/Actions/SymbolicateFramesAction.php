@@ -22,6 +22,15 @@ class SymbolicateFramesAction
     /** Lines of source shown around a frame, like the server SDK sends. */
     public const int CODE_LINES = 15;
 
+    /** Maps one error is mapped with, its top frames' first: any error's frames could name every bundle. */
+    public const int MAX_MAPS_PER_ERROR = 4;
+
+    /**
+     * Maps decoded per instance, which is one ingest batch: a map can be 20 MB, and the
+     * browser key that sends errors is public. Past it frames stay minified.
+     */
+    public const int MAX_DECODES = 20;
+
     /**
      * Decoded maps by id and upload time. A map can be 20 MB, so only a few.
      *
@@ -29,9 +38,11 @@ class SymbolicateFramesAction
      */
     private LruCache $decoded;
 
+    private int $decodes = 0;
+
     public function __construct()
     {
-        $this->decoded = new LruCache(4);
+        $this->decoded = new LruCache(self::MAX_MAPS_PER_ERROR);
     }
 
     public function execute(Project $project, IssueSignal $signal): IssueSignal
@@ -47,14 +58,14 @@ class SymbolicateFramesAction
 
     private function symbolicate(Project $project, IssueSignal $signal): IssueSignal
     {
-        $paths = collect($signal->stacktrace)->map(fn (array $frame): ?string => $this->bundlePath($frame))->filter()->unique()->values()->all();
+        $paths = collect($signal->stacktrace)->map(fn (array $frame): ?string => $this->bundlePath($frame))->filter()->unique()->take(self::MAX_MAPS_PER_ERROR)->values()->all();
 
         if ($paths === []) {
             return $signal;
         }
 
         // The path is unique on its own with a hash in the file name; the release breaks a tie, then the newest upload.
-        $maps = SourceMap::query()->where('project_id', $project->id)->whereIn('path', $paths)->get()
+        $maps = SourceMap::query()->whereProject($project)->wherePathIn($paths)->get()
             ->sortBy(fn (SourceMap $map): array => [(int) ($map->release === $signal->release), $map->updated_at->getTimestamp(), $map->id])
             ->keyBy('path');
 
@@ -110,6 +121,10 @@ class SymbolicateFramesAction
     private function decode(SourceMap $map): ?SourceMapDecoder
     {
         return $this->decoded->remember($map->id.':'.$map->updated_at->getTimestamp(), function () use ($map): ?SourceMapDecoder {
+            if (++$this->decodes > self::MAX_DECODES) {
+                return null;
+            }
+
             try {
                 return SourceMapDecoder::decode((string) Storage::get($map->filePath()));
             } catch (Throwable $e) {

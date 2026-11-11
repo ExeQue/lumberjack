@@ -150,6 +150,7 @@ describe('source maps', function () {
                 ->where('source_maps.0.release', 'v2')
                 ->where('source_maps.0.size', 2048)
                 ->where('source_maps.1.path', '/build/assets/old.js')
+                ->where('source_maps_total', 2)
                 ->where('settings.sourcemaps_url', url('/api/ingest/sourcemaps')));
     });
 });

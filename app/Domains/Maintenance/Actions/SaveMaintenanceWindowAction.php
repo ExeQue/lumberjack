@@ -31,6 +31,17 @@ class SaveMaintenanceWindowAction
             'message' => $message,
         ]);
         $window->expectTo($endsAt);
+
+        // Planned wholly in the past it is a record of maintenance that happened, not an overrun.
+        if ($window->ended_at === null && $endsAt->lessThanOrEqualTo(now())) {
+            $window->ended_at = $window->expected_end_at;
+        }
+
+        // Moved to start after it ended, it ends where it starts.
+        if ($window->ended_at !== null) {
+            $window->ended_at = $window->ended_at->max($window->starts_at);
+        }
+
         $window->save();
 
         $this->broadcast->execute($project->id, ChangeKind::Health, $project->uuid);

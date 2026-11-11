@@ -63,7 +63,7 @@ class UpdateAlertRule extends Tool
             return $refused;
         }
 
-        $input = $request->validate(UpdateAlertRuleRequest::fieldRules());
+        $input = $request->validate(UpdateAlertRuleRequest::fieldRules($team->type));
         $rule = $this->customize->execute($project, $team->type, $team->topic);
         $rule = $this->update->execute($rule, (bool) $input['enabled'], array_values(array_map(intval(...), $input['channels'])), $input['environments'] ?? null, $input['settings'] ?? null);
 

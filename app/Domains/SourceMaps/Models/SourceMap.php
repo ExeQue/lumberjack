@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Domains\SourceMaps\Models;
 
 use App\Domains\Projects\Models\Project;
+use App\Domains\SourceMaps\Eloquent\Builders\SourceMapBuilder;
 use Carbon\CarbonImmutable;
 use Database\Factories\SourceMapFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +29,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable(['project_id', 'path', 'release', 'size'])]
 #[UseFactory(SourceMapFactory::class)]
+#[UseEloquentBuilder(SourceMapBuilder::class)]
 class SourceMap extends Model
 {
     /** @use HasFactory<SourceMapFactory> */

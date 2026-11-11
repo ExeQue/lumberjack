@@ -48,6 +48,33 @@ describe('browser frames with an uploaded map', function () {
             ->and(Issue::sole()->only(['file', 'line']))->toBe(['file' => 'node_modules/tiny-lib/index.js', 'line' => 2]);
     });
 
+    it('maps one error with the bundles of its top frames only', function () {
+        $bundles = array_map(fn (int $n): string => "https://app.example.test/build/assets/chunk-{$n}.js", range(1, SymbolicateFramesAction::MAX_MAPS_PER_ERROR + 2));
+
+        foreach ($bundles as $bundle) {
+            SourceMap::factory()->for($this->project)->withFile($this->map)->create(['path' => parse_url($bundle, PHP_URL_PATH)]);
+        }
+
+        ($this->sendBrowserError)([...$this->minifiedBrowserError(), 'stacktrace' => array_map(fn (string $bundle): array => ['file' => $bundle, 'line' => 1, 'column' => 21, 'function' => 'o', 'in_app' => true], $bundles)]);
+
+        expect(collect(Occurrence::sole()->stacktrace)->map(fn (array $frame): bool => isset($frame['minified']))->all())
+            ->toBe([...array_fill(0, SymbolicateFramesAction::MAX_MAPS_PER_ERROR, true), false, false]);
+    });
+
+    it('decodes no more maps than its budget for one batch, and leaves the rest minified', function () {
+        $events = [];
+
+        foreach (range(1, SymbolicateFramesAction::MAX_DECODES + 1) as $n) {
+            $bundle = "https://app.example.test/build/assets/chunk-{$n}.js";
+            SourceMap::factory()->for($this->project)->withFile($this->map)->create(['path' => parse_url($bundle, PHP_URL_PATH)]);
+            $events[] = [...$this->minifiedBrowserError($bundle), 'message' => "Error {$n}"];
+        }
+
+        $this->postJson('/api/ingest/browser?key='.$this->project->public_key, [...$this->batch($events), 'release' => 'a1f3c9e'], ['Origin' => 'https://app.example.test'])->assertStatus(202);
+
+        expect(Occurrence::query()->get()->filter(fn (Occurrence $o): bool => isset($o->stacktrace[0]['minified']))->count())->toBe(SymbolicateFramesAction::MAX_DECODES);
+    });
+
     it('groups the same error from two builds on one issue', function () {
         foreach (['app-BxQ3kZ9a', 'app-Kd81Lm2Q'] as $bundle) {
             SourceMap::factory()->for($this->project)->withFile($this->map)->create(['path' => "/build/assets/{$bundle}.js"]);

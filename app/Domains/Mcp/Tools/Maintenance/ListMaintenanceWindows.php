@@ -42,7 +42,7 @@ class ListMaintenanceWindows extends Tool
             return $project;
         }
 
-        $query = fn () => MaintenanceWindow::query()->where('project_id', $project->id)->whereCovers((string) $request->get('environment', ''))->latest('starts_at');
+        $query = fn () => MaintenanceWindow::query()->whereProject($project)->whereCovers((string) $request->get('environment', ''))->latest('starts_at');
 
         $windows = match ($request->get('state')) {
             'open' => $query()->whereOpen()->get(),

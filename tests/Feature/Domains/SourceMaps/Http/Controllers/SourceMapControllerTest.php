@@ -69,6 +69,7 @@ describe('uploading a source map', function () {
 
     it('keeps no row when the file cannot be written', function () {
         Storage::shouldReceive('putFileAs')->once()->andReturn(false);
+        Storage::shouldReceive('exists')->andReturn(false);
 
         ($this->upload)(['file' => UploadedFile::fake()->createWithContent('app.js.map', $this->map), 'path' => '/app.js'])
             ->assertStatus(503)

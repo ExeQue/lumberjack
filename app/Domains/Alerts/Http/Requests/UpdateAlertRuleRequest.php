@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Http\Requests;
 
+use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -22,15 +23,19 @@ class UpdateAlertRuleRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return self::fieldRules();
+        $rule = $this->route('rule');
+
+        return self::fieldRules($rule instanceof AlertRule ? $rule->type : AlertRuleType::QueueBacklog);
     }
 
     /**
-     * The rules without the request, for MCP tools that take the same input.
+     * The rules without the request, for MCP tools that take the same input. Settings are
+     * the type's own: a queue backlog's thresholds (at least one of size and age), or a
+     * weekly summary's day and time; any other type has none.
      *
      * @return array<string, mixed>
      */
-    public static function fieldRules(): array
+    public static function fieldRules(AlertRuleType $type): array
     {
         return [
             'enabled' => ['required', 'boolean'],
@@ -38,13 +43,20 @@ class UpdateAlertRuleRequest extends FormRequest
             'channels.*' => ['integer'],
             'environments' => ['nullable', 'array'],
             'environments.*' => ['string', 'max:64'],
-            // Queue backlog thresholds, at least one of size and age; or a weekly summary's day and time.
-            'settings' => ['nullable', 'array:size,age_minutes,sustain_minutes,day,time'],
-            'settings.size' => ['exclude_without:settings', 'exclude_with:settings.day', 'nullable', 'integer', 'min:1', 'required_without:settings.age_minutes'],
-            'settings.age_minutes' => ['exclude_with:settings.day', 'nullable', 'integer', 'min:1', 'max:10080'],
-            'settings.sustain_minutes' => ['exclude_with:settings.day', 'required_with:settings', 'integer', 'min:1', 'max:1440'],
-            'settings.day' => ['required_with:settings.time', 'integer', 'between:1,7'],
-            'settings.time' => ['required_with:settings.day', 'date_format:H:i'],
+            ...match ($type) {
+                AlertRuleType::QueueBacklog => [
+                    'settings' => ['nullable', 'array:size,age_minutes,sustain_minutes'],
+                    'settings.size' => ['exclude_without:settings', 'nullable', 'integer', 'min:1', 'required_without:settings.age_minutes'],
+                    'settings.age_minutes' => ['nullable', 'integer', 'min:1', 'max:10080'],
+                    'settings.sustain_minutes' => ['required_with:settings', 'integer', 'min:1', 'max:1440'],
+                ],
+                AlertRuleType::WeeklySummary => [
+                    'settings' => ['nullable', 'array:day,time'],
+                    'settings.day' => ['required_with:settings', 'integer', 'between:1,7'],
+                    'settings.time' => ['required_with:settings', 'date_format:H:i'],
+                ],
+                default => ['settings' => ['prohibited']],
+            },
         ];
     }
 

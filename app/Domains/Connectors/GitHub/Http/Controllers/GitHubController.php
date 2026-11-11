@@ -95,6 +95,13 @@ class GitHubController
         $issues = $issues === null ? null : Arr::except($issues, $hidden->flatMap->keys()->all());
         $links = Arr::except($links, $hidden->map->value->all());
 
+        // A config saved under another APP_KEY reads as none: the page says why and offers to connect again.
+        try {
+            $config = $connection?->gitHubConfig();
+        } catch (DecryptException) {
+            $config = null;
+        }
+
         // The branch field's suggestions, after the page; a repository GitHub does not answer for suggests none.
         $branches = function () use ($query, $connection): array {
             try {
@@ -113,14 +120,14 @@ class GitHubController
                 'name' => $connection->displayName(),
                 'url' => $connection->url,
                 // The branch commits and CI are read from; null for the default branch.
-                'branch' => GitHubConfig::branchOf($connection->config),
+                'branch' => GitHubConfig::branchOf($config),
                 // For the Connection tab, so only for those who may change the branch.
                 ...(Gate::allows('update', $project) ? [
                     'default_branch' => Inertia::defer(fn (): ?string => $branches()['default_branch'] ?? null, 'branches'),
                     'branches' => Inertia::defer(fn (): array => $branches()['branches'] ?? [], 'branches'),
                     // The figures the token can show, to choose from by group.
                     'figure_choices' => collect(GitHubFigure::cases())
-                        ->filter(fn (GitHubFigure $figure): bool => $figure->permission() === null || in_array($figure->permission(), GitHubConfig::grantedBy($connection->config), true))
+                        ->filter(fn (GitHubFigure $figure): bool => $figure->permission() === null || in_array($figure->permission(), GitHubConfig::grantedBy($config), true))
                         ->map(fn (GitHubFigure $figure): array => ['key' => $figure->value, 'group' => $figure->group()])
                         ->values()
                         ->all(),
@@ -140,7 +147,7 @@ class GitHubController
             'figures' => array_map(fn (GitHubFigure $figure): string => $figure->value, $figures),
             'links' => (object) $links,
             // Which optional permissions the token has, for the Connection tab.
-            'permissions' => $connection === null ? [] : $query->permissions($connection),
+            'permissions' => $connection === null ? [] : $query->permissions($config),
         ]);
     }
 }

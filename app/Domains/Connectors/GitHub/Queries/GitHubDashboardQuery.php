@@ -246,13 +246,13 @@ class GitHubDashboardQuery
      *
      * @return list<array{key: string, label: string, unlocks: string, granted: bool}>
      */
-    public function permissions(DataSourceConnection $connection): array
+    public function permissions(?GitHubConfig $config): array
     {
         return array_map(fn (GitHubPermission $permission): array => [
             'key' => $permission->value,
             'label' => $permission->label(),
             'unlocks' => $permission->unlocks(),
-            'granted' => in_array($permission, GitHubConfig::grantedBy($connection->config), true),
+            'granted' => in_array($permission, GitHubConfig::grantedBy($config), true),
         ], GitHubPermission::cases());
     }
 
