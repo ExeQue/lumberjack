@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domains\Connectors\GitHub\Http\Controllers;
 
+use App\Domains\Connectors\GitHub\Actions\PullGitHubSourceAction;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubExceptionInterface;
 use App\Domains\Connectors\GitHub\Queries\GitHubDashboardQuery;
+use App\Domains\Connectors\GitHub\Support\GitHubClient;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
@@ -27,6 +29,18 @@ class GitHubController
 {
     use ReadsDashboardFilters;
 
+    /**
+     * Each list's rows at first, which is also how many each Load more adds, and the most it
+     * loads: one page of GitHub's, or for the commits all the period's commits that are read.
+     */
+    private const array LISTS = [
+        'pull_requests' => [GitHubClient::ROWS, GitHubClient::MAX_ROWS],
+        'runs' => [GitHubClient::ROWS, GitHubClient::MAX_ROWS],
+        'releases' => [GitHubClient::ROWS, GitHubClient::MAX_ROWS],
+        'commits' => [GitHubClient::ROWS, GitHubClient::MAX_PAGES * GitHubClient::PER_PAGE],
+        'contributors' => [PullGitHubSourceAction::LIST_ROWS, GitHubClient::MAX_ROWS],
+    ];
+
     public function __invoke(Request $request, Project $project, GitHubDashboardQuery $query, ProjectPresenter $presenter, ?DataSourceConnection $dataSourceConnection = null): Response
     {
         Gate::authorize('view', $project);
@@ -43,13 +57,20 @@ class GitHubController
         $issues = null;
         $security = [];
 
+        // How many rows each list shows, as rows[list]=n, grown by its Load more.
+        $rows = array_map(fn (array $list): int => $list[0], self::LISTS);
+
+        foreach (array_intersect_key((array) $request->query('rows', []), self::LISTS) as $list => $n) {
+            $rows[$list] = is_numeric($n) ? min(max((int) $n, self::LISTS[$list][0]), self::LISTS[$list][1]) : self::LISTS[$list][0];
+        }
+
         if ($connection !== null) {
             try {
                 $summary = $query->summary($connection, $period);
-                $pullRequests = $query->pullRequests($connection);
-                $runs = $query->runs($connection);
-                $releases = $query->releases($connection);
-                $commits = $query->commits($connection, $period);
+                $pullRequests = $query->pullRequests($connection, $rows['pull_requests']);
+                $runs = $query->runs($connection, $rows['runs']);
+                $releases = $query->releases($connection, $rows['releases']);
+                $commits = $query->commits($connection, $period, $rows['commits'], $rows['contributors']);
                 $issues = $query->issues($connection, $period);
                 $security = $query->security($connection);
             } catch (GitHubExceptionInterface $e) {
@@ -62,6 +83,7 @@ class GitHubController
         return Inertia::render('connectors/github/index', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => ['period' => $period->value, 'environment' => null],
+            'rows' => (object) array_filter($rows, fn (int $n, string $list): bool => $n > self::LISTS[$list][0], ARRAY_FILTER_USE_BOTH),
             'connection' => $connection === null ? null : [
                 'uuid' => $connection->uuid,
                 'name' => $connection->displayName(),

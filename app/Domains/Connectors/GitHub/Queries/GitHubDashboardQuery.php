@@ -69,16 +69,17 @@ class GitHubDashboardQuery
      * The default branch's commits over the period: how many against the period before, the
      * distinct authors, a count per bucket of the period, the authors with the most commits
      * and the latest commits. One list of the period's commits answers all but the count
-     * before, which is asked on its own.
+     * before, which is asked on its own. It is cached whole, so showing more of either list
+     * asks GitHub nothing.
      *
      * @return array{count: array{current: int, previous: int}, authors: int, series: list<array{t: string, commits: int}>, contributors: list<array{author: string, commits: int}>, latest: list<array{sha: string, message: string, author: string, url: string, committed_at: string}>, capped: bool}
      *
      * @throws GitHubRequestFailedException
      * @throws DecryptException
      */
-    public function commits(DataSourceConnection $connection, Period $period): array
+    public function commits(DataSourceConnection $connection, Period $period, int $latest = GitHubClient::ROWS, int $contributors = PullGitHubSourceAction::LIST_ROWS): array
     {
-        return StatisticsCache::remember('github-commits', $period, [$connection->id, $connection->url], function () use ($connection, $period): array {
+        $commits = StatisticsCache::remember('github-commits', $period, [$connection->id, $connection->url], function () use ($connection, $period): array {
             $credentials = $connection->gitHubCredentials();
             $branch = $this->client->repository($credentials)['default_branch'];
             $to = now();
@@ -92,11 +93,13 @@ class GitHubDashboardQuery
                 'count' => ['current' => count($commits), 'previous' => $this->client->commitCount($credentials, $branch, $before, $from)],
                 'authors' => count($contributors),
                 'series' => array_map(fn (int $at, int $count): array => ['t' => gmdate('Y-m-d\TH:i:s\Z', $at), 'commits' => $count], array_keys($series), $series),
-                'contributors' => array_map(fn (string $author, int $count): array => ['author' => $author, 'commits' => $count], array_keys($top = array_slice($contributors, 0, PullGitHubSourceAction::LIST_ROWS, true)), $top),
-                'latest' => array_slice($commits, 0, GitHubClient::ROWS),
+                'contributors' => array_map(fn (string $author, int $count): array => ['author' => $author, 'commits' => $count], array_keys($contributors), $contributors),
+                'latest' => $commits,
                 'capped' => count($commits) >= GitHubClient::MAX_PAGES * GitHubClient::PER_PAGE,
             ];
         });
+
+        return [...$commits, 'contributors' => array_slice($commits['contributors'], 0, $contributors), 'latest' => array_slice($commits['latest'], 0, $latest)];
     }
 
     /**
@@ -184,9 +187,9 @@ class GitHubDashboardQuery
      * @throws GitHubRequestFailedException
      * @throws DecryptException
      */
-    public function pullRequests(DataSourceConnection $connection): array
+    public function pullRequests(DataSourceConnection $connection, int $rows = GitHubClient::ROWS): array
     {
-        return StatisticsCache::remember('github-pulls', Period::Day, [$connection->id, $connection->url], fn (): array => $this->client->pullRequests($connection->gitHubCredentials()));
+        return StatisticsCache::remember('github-pulls', Period::Day, [$connection->id, $connection->url, $rows], fn (): array => $this->client->pullRequests($connection->gitHubCredentials(), $rows));
     }
 
     /**
@@ -197,22 +200,22 @@ class GitHubDashboardQuery
      * @throws GitHubRequestFailedException
      * @throws DecryptException
      */
-    public function runs(DataSourceConnection $connection): array
+    public function runs(DataSourceConnection $connection, int $rows = GitHubClient::ROWS): array
     {
-        return StatisticsCache::remember('github-runs', Period::Day, [$connection->id, $connection->url], fn (): array => array_map(
+        return StatisticsCache::remember('github-runs', Period::Day, [$connection->id, $connection->url, $rows], fn (): array => array_map(
             fn (array $run): array => [...$run, 'result_label' => PullGitHubSourceAction::result($run['result'])],
-            $this->client->runs($connection->gitHubCredentials())['runs'],
+            $this->client->runs($connection->gitHubCredentials(), rows: $rows)['runs'],
         ));
     }
 
     /**
-     * @return list<array{name: string, tag: string, prerelease: bool, url: string, published_at: string|null}>
+     * @return list<array{name: string, tag: string, prerelease: bool, url: string, published_at: string|null, body: string}>
      *
      * @throws GitHubRequestFailedException
      * @throws DecryptException
      */
-    public function releases(DataSourceConnection $connection): array
+    public function releases(DataSourceConnection $connection, int $rows = GitHubClient::ROWS): array
     {
-        return StatisticsCache::remember('github-releases', Period::Day, [$connection->id, $connection->url], fn (): array => $this->client->releases($connection->gitHubCredentials()));
+        return StatisticsCache::remember('github-releases', Period::Day, [$connection->id, $connection->url, $rows], fn (): array => $this->client->releases($connection->gitHubCredentials(), $rows));
     }
 }

@@ -31,6 +31,12 @@ class GitHubClient
     /** Items GitHub lists a page at most. */
     public const int PER_PAGE = 100;
 
+    /** The most rows a list on the page loads with Load more: one page of GitHub's. */
+    public const int MAX_ROWS = self::PER_PAGE;
+
+    /** The most characters of a release's notes kept. */
+    public const int MAX_NOTES = 20_000;
+
     /**
      * Pages read for one list, such as a range's commits or the open alerts.
      *
@@ -317,9 +323,9 @@ class GitHubClient
      *
      * @throws GitHubRequestFailedException
      */
-    public function pullRequests(GitHubCredentials $credentials): array
+    public function pullRequests(GitHubCredentials $credentials, int $rows = self::ROWS): array
     {
-        $data = $this->get($credentials, '/repos/'.$credentials->repository.'/pulls', ['state' => 'open', 'per_page' => self::ROWS], 'Pull requests');
+        $data = $this->get($credentials, '/repos/'.$credentials->repository.'/pulls', ['state' => 'open', 'per_page' => $rows], 'Pull requests');
 
         return array_map(fn (array $pull): array => [
             'number' => is_int($pull['number'] ?? null) ? $pull['number'] : 0,
@@ -332,10 +338,10 @@ class GitHubClient
     }
 
     /**
-     * Published releases, the newest first. Drafts are left out; a read-only token does not
-     * see them anyway.
+     * Published releases, the newest first, with their notes as written (Markdown). Drafts
+     * are left out; a read-only token does not see them anyway.
      *
-     * @return list<array{name: string, tag: string, prerelease: bool, url: string, published_at: string|null}>
+     * @return list<array{name: string, tag: string, prerelease: bool, url: string, published_at: string|null, body: string}>
      *
      * @throws GitHubRequestFailedException
      */
@@ -356,6 +362,7 @@ class GitHubClient
                 'prerelease' => ($release['prerelease'] ?? false) === true,
                 'url' => self::text($release['html_url'] ?? null),
                 'published_at' => is_string($release['published_at'] ?? null) ? $release['published_at'] : null,
+                'body' => mb_substr(trim(self::text($release['body'] ?? null)), 0, self::MAX_NOTES),
             ];
         }
 
@@ -365,7 +372,7 @@ class GitHubClient
     /**
      * The newest release, or else the first tag GitHub lists, which has no date.
      *
-     * @return array{name: string, tag: string, prerelease: bool, url: string, published_at: string|null}|null
+     * @return array{name: string, tag: string, prerelease: bool, url: string, published_at: string|null, body: string}|null
      *
      * @throws GitHubRequestFailedException
      */
@@ -386,6 +393,7 @@ class GitHubClient
             'prerelease' => false,
             'url' => 'https://github.com/'.$credentials->repository.'/releases/tag/'.rawurlencode($name),
             'published_at' => null,
+            'body' => '',
         ];
     }
 

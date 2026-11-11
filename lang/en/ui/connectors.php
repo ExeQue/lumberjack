@@ -18,6 +18,8 @@ return [
         // The picker of which connected repository the page shows.
         'repository' => 'Repository',
         'never' => 'None yet',
+        // Button below a list: show twenty more rows (ten more of the top contributors).
+        'load_more' => 'Load more',
 
         'cards' => [
             'open_pull_requests' => 'Open pull requests',
@@ -113,6 +115,8 @@ return [
             'published' => 'Published',
             'prerelease' => 'Pre-release',
             'empty' => 'No releases.',
+            // Name of the icon button that shows or hides a release's notes.
+            'notes' => 'Notes of :name',
         ],
 
         'not_connected' => [
