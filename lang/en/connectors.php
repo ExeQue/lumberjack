@@ -12,6 +12,10 @@ return [
             'label' => 'GitHub',
             'description' => 'Pull requests, workflow runs and releases of a GitHub repository, on a page of their own and as data sources for screens.',
         ],
+        'mobilepay' => [
+            'label' => 'Vipps MobilePay',
+            'description' => 'Revenue, transactions, refunds, fees and payouts of a Vipps MobilePay ledger per day, on a page of their own and as data sources for screens.',
+        ],
         'mosparo' => [
             'label' => 'mosparo',
             'description' => 'Valid and spam form submissions of a mosparo project, on a page of their own and as data sources for screens.',
@@ -66,6 +70,35 @@ return [
             'unreachable' => 'GitHub could not be reached.',
             'unknown_source' => 'GitHub has no such source.',
             'secret_unreadable' => 'The GitHub token cannot be decrypted (was APP_KEY changed?). Connect GitHub again.',
+        ],
+    ],
+
+    // Vipps MobilePay: a sales unit's ledger, read through the Report API.
+    'mobilepay' => [
+        // Flash message after connecting.
+        'connected' => 'Vipps MobilePay connected: :name. Its sources show up under Data sources within a minute.',
+
+        // The data sources a ledger offers screens; :currency is the ledger's, such as NOK.
+        'sources' => [
+            'revenue' => 'Revenue (:currency)',
+            'transactions' => 'Transactions',
+            'refunds' => 'Refunds (:currency)',
+            'fees' => 'Fees (:currency)',
+            'payouts' => 'Payouts (:currency)',
+            'revenue_series' => 'Revenue per day (:currency)',
+        ],
+
+        // Why asking Vipps MobilePay failed, shown in the connect dialog, on the connection, its sources and the Vipps MobilePay page.
+        'errors' => [
+            'unauthorized' => 'Vipps MobilePay refused the API keys. Check the client ID, client secret, subscription key and merchant serial number in the business portal.',
+            'forbidden' => 'The API keys may not read the Report API. Check the sales unit\'s access in the business portal.',
+            'not_found' => 'Vipps MobilePay no longer finds the ledger. Connect it again.',
+            'no_ledger' => 'The API keys see no ledger for merchant serial number :msn. Check the number in the business portal.',
+            'rate_limited' => 'Vipps MobilePay asks to slow down. It is asked again shortly.',
+            'status' => 'Vipps MobilePay answered with HTTP :status.',
+            'unreachable' => 'Vipps MobilePay could not be reached.',
+            'unknown_source' => 'Vipps MobilePay has no such source.',
+            'secret_unreadable' => 'The Vipps MobilePay keys cannot be decrypted (was APP_KEY changed?). Connect Vipps MobilePay again.',
         ],
     ],
 

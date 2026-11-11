@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
+use App\Domains\Connectors\MobilePay\Data\MobilePayConfig;
+use App\Domains\Connectors\MobilePay\Data\MobilePayCredentials;
 use App\Domains\Connectors\Mosparo\Data\MosparoConfig;
 use App\Domains\Connectors\Umami\Data\UmamiConfig;
 use App\Domains\DataSources\Enums\ConnectionKind;
@@ -69,6 +71,21 @@ class DataSourceConnectionFactory extends Factory
             'pull_token' => null,
             'name' => 'acme/shop',
             'config' => new GitHubConfig('acme/shop', 'github_pat_test'),
+        ]);
+    }
+
+    /**
+     * A Vipps MobilePay ledger in NOK, read with a sales unit's API keys.
+     */
+    public function mobilePay(): static
+    {
+        return $this->state(fn (): array => [
+            'kind' => ConnectionKind::MobilePay,
+            'environment' => ConnectionKind::MobilePay->environment(),
+            'url' => 'https://api.vipps.no',
+            'pull_token' => null,
+            'name' => 'ACME Fitness Oslo',
+            'config' => new MobilePayConfig(new MobilePayCredentials('client-id', 'client-secret', 'subscription-key', '123455'), '302321', 'NOK'),
         ]);
     }
 

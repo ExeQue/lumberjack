@@ -108,7 +108,7 @@ See [retention](./projects#retention), under **Data source history**.
 
 ## Connectors
 
-Lumberjack can also read outside services itself, such as Umami, mosparo and GitHub. See
+Lumberjack can also read outside services itself, such as Umami, mosparo, GitHub and Vipps MobilePay. See
 [Connectors](./connectors/).
 
 ## Connected sources

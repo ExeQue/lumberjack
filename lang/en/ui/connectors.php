@@ -94,6 +94,63 @@ return [
         ],
     ],
 
+    // Vipps MobilePay: a sales unit's ledger, read through the Report API.
+    'mobilepay' => [
+        'title' => 'Vipps MobilePay',
+        'description' => 'What :name booked in Vipps MobilePay, per day.',
+        'error_title' => 'Vipps MobilePay could not be read',
+        // The picker of which connected ledger the page shows.
+        'ledger' => 'Ledger',
+
+        'cards' => [
+            'revenue' => 'Revenue',
+            'transactions' => 'Transactions',
+            'refunds' => 'Refunds',
+            'fees' => 'Fees',
+            'payouts' => 'Payouts',
+        ],
+
+        'series' => [
+            'title' => 'Revenue',
+            'description' => 'Per ledger date. Today fills in as Vipps MobilePay books it, and is complete once the day closes.',
+            'summary' => ':revenue from :transactions transactions over the period',
+        ],
+
+        'not_connected' => [
+            'description' => 'Revenue, refunds, fees and payouts of a Vipps MobilePay ledger.',
+            'title' => 'Connect Vipps MobilePay',
+            'body' => 'Give Lumberjack the API keys of a sales unit. Its ledger\'s figures show here and as data sources for screens.',
+            'members' => 'No Vipps MobilePay ledger is connected. A team owner or admin can connect one.',
+        ],
+
+        'connect' => [
+            'client_id' => 'Client ID',
+            'client_secret' => 'Client secret',
+            'subscription_key' => 'Subscription key',
+            'msn' => 'Merchant serial number',
+            'keys_hint' => 'In the business portal, under For developers > Production: Show keys beside the sales unit. Either subscription key works.',
+            'timezone' => 'Days begin in',
+            'timezone_hint' => 'The time zone the ledger\'s days run in, normally the merchant\'s own.',
+            // Buttons.
+            'submit' => 'Connect',
+            'cancel' => 'Cancel',
+        ],
+
+        // The ledger is booked per day: 24 hours is today.
+        'periods' => ['24h' => '1 d', '7d' => '7 d', '30d' => '30 d'],
+        'tabs' => [
+            'label' => 'Vipps MobilePay sections',
+            'overview' => 'Overview',
+            'connection' => 'Connection',
+        ],
+        'settings' => [
+            'body' => 'Reads the ledger of :name; days begin in :timezone.',
+            // Buttons.
+            'add' => 'Connect another ledger',
+            'disconnect_question' => 'Disconnect this ledger? Its data sources are removed, and widgets showing them go empty.',
+        ],
+    ],
+
     // mosparo: a project's form submissions, read through mosparo's statistic API.
     'mosparo' => [
         'title' => 'mosparo',

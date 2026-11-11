@@ -16,6 +16,7 @@ enum Connector: string
     case Umami = 'umami';
     case Mosparo = 'mosparo';
     case GitHub = 'github';
+    case MobilePay = 'mobilepay';
 
     public function label(): string
     {
@@ -34,6 +35,7 @@ enum Connector: string
             self::Umami => ConnectionKind::Umami,
             self::Mosparo => ConnectionKind::Mosparo,
             self::GitHub => ConnectionKind::GitHub,
+            self::MobilePay => ConnectionKind::MobilePay,
         };
     }
 
@@ -55,6 +57,7 @@ enum Connector: string
             self::Umami => route('connectors.umami.index', $project),
             self::Mosparo => route('connectors.mosparo.index', $project),
             self::GitHub => route('connectors.github.index', $project),
+            self::MobilePay => route('connectors.mobilepay.index', $project),
         };
     }
 

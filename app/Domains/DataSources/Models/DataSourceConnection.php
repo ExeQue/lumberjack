@@ -7,6 +7,8 @@ namespace App\Domains\DataSources\Models;
 use App\Domains\Connectors\Casts\ConnectorConfigCast;
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
 use App\Domains\Connectors\GitHub\Data\GitHubCredentials;
+use App\Domains\Connectors\MobilePay\Data\MobilePayConfig;
+use App\Domains\Connectors\MobilePay\Data\MobilePayCredentials;
 use App\Domains\Connectors\Mosparo\Data\MosparoConfig;
 use App\Domains\Connectors\Mosparo\Data\MosparoCredentials;
 use App\Domains\Connectors\Umami\Data\UmamiConfig;
@@ -45,7 +47,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $next_check_at
  * @property ConnectionKind $kind
  * @property string|null $name a service's website or project, as it is shown
- * @property UmamiConfig|MosparoConfig|GitHubConfig|null $config a service's settings and credentials, encrypted
+ * @property UmamiConfig|MosparoConfig|GitHubConfig|MobilePayConfig|null $config a service's settings and credentials, encrypted
  * @property-read Project $project
  */
 #[Fillable(['project_id', 'kind', 'environment', 'url', 'timezone', 'pull_token', 'pull_token_previous', 'uses_previous', 'last_checked_at', 'last_ok_at', 'last_error', 'next_check_at', 'name', 'config'])]
@@ -218,6 +220,18 @@ class DataSourceConnection extends Model
         return $config instanceof GitHubConfig
             ? new GitHubCredentials($config->repository, $config->token)
             : new GitHubCredentials((string) $this->name, '');
+    }
+
+    /**
+     * Its Vipps MobilePay ledger and the keys that read it.
+     *
+     * @throws DecryptException
+     */
+    public function mobilePayConfig(): MobilePayConfig
+    {
+        $config = $this->config;
+
+        return $config instanceof MobilePayConfig ? $config : new MobilePayConfig(new MobilePayCredentials('', '', '', ''), '', '');
     }
 
     /** What it is called on a page: an app's environment, a service's website or project. */
