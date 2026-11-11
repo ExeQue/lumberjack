@@ -80,6 +80,11 @@ describe('planning a window', function () {
 });
 
 describe('who may plan', function () {
+    it('turns away a member before telling what is wrong with the form', function () {
+        $this->actingAs($this->member)->post(route('maintenance.store', $this->project), [])->assertForbidden();
+        $this->actingAs($this->member)->put(route('maintenance.update', [$this->project, $this->planned]), [])->assertForbidden();
+    });
+
     it('turns away a member who does not administer the team', function () {
         $this->actingAs($this->member)->post(route('maintenance.store', $this->project), [
             'starts_at' => '2026-11-12T08:00:00+00:00', 'ends_at' => '2026-11-12T09:00:00+00:00',

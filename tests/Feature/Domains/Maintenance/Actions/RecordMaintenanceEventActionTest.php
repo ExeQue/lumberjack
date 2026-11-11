@@ -77,6 +77,25 @@ describe('an end event', function () {
             ->and($staging->refresh()->ended_at)->toBeNull();
     });
 
+    it('ignores a start held back past the end that followed it', function () {
+        $startedAt = now()->getTimestamp();
+        $this->travel(2)->minutes();
+        ($this->send)(['state' => 'start']);
+        ($this->send)(['state' => 'end']);
+
+        // The agent delivers the first start late.
+        ($this->send)(['state' => 'start', 'timestamp' => $startedAt]);
+
+        expect(MaintenanceWindow::query()->whereNotEnded()->count())->toBe(0);
+    });
+
+    it('leaves open a window that started after the end', function () {
+        ($this->send)(['state' => 'start']);
+        ($this->send)(['state' => 'end', 'timestamp' => now()->subMinute()->getTimestamp()]);
+
+        expect(MaintenanceWindow::query()->sole()->ended_at)->toBeNull();
+    });
+
     it('does nothing with no window open', function () {
         $ended = MaintenanceWindow::factory()->of($this->project)->ended()->create();
         $endedAt = $ended->ended_at->getTimestamp();

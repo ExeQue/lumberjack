@@ -213,7 +213,9 @@ environment of the project when it has none. It comes from one of two places:
   [Ingest](./api#maintenance-events). The Laravel library sends them on `artisan down`
   and `artisan up` with no setup.
 
-Only an `end` event or **End now** closes a window. Requests, heartbeats and good
+Only an `end` event or **End now** closes a window. An `end` closes only windows that
+started before it, and a `start` older than the environment's last `end` (held back by the
+agent, say) is ignored. Requests, heartbeats and good
 results never do, and a window never closes on its own.
 
 While a window is open:

@@ -44,13 +44,14 @@ class SendWeeklySummariesAction
                     $channels[$channel->id]['rules'][$project->id] = $rule->id;
                 }
             }
-
-            $rule->forceFill(['last_sent_at' => $now])->save();
         }
 
         foreach ($channels as ['channel' => $channel, 'rules' => $rules]) {
             SendWeeklySummary::dispatch($channel, $rules);
         }
+
+        // Marked sent once queued: a queue that cannot be reached leaves them due for the next run.
+        $due->each(fn (AlertRule $rule) => $rule->forceFill(['last_sent_at' => $now])->save());
 
         return count($channels);
     }

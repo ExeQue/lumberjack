@@ -71,6 +71,19 @@ class MaintenanceWindowBuilder extends Builder
     }
 
     /**
+     * Ended at or after the moment.
+     */
+    public function whereEndedSince(CarbonInterface $datetime): self
+    {
+        return $this->where('ended_at', '>=', $datetime);
+    }
+
+    public function orWhereEndedSince(CarbonInterface $datetime): self
+    {
+        return $this->orWhere('ended_at', '>=', $datetime);
+    }
+
+    /**
      * Not ended yet, whether it started or is still planned.
      */
     public function whereNotEnded(): self

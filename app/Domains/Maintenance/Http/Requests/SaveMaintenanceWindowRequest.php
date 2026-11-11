@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Maintenance\Http\Requests;
 
+use App\Domains\Maintenance\Models\MaintenanceWindow;
+use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -12,6 +14,14 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class SaveMaintenanceWindowRequest extends FormRequest
 {
+    /** Before validation, so one without the right is not told what is wrong with the form. */
+    public function authorize(): bool
+    {
+        $subject = $this->route('maintenanceWindow') ?? $this->route('project');
+
+        return ($subject instanceof MaintenanceWindow || $subject instanceof Project) && $this->user()?->can('update', $subject) === true;
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {

@@ -67,6 +67,16 @@ describe('uploading a source map', function () {
             ->and(Storage::get($unreleased->filePath()))->toBe($replacement);
     });
 
+    it('keeps no row when the file cannot be written', function () {
+        Storage::shouldReceive('putFileAs')->once()->andReturn(false);
+
+        ($this->upload)(['file' => UploadedFile::fake()->createWithContent('app.js.map', $this->map), 'path' => '/app.js'])
+            ->assertStatus(503)
+            ->assertJson(['message' => __('source_maps.not_stored')]);
+
+        expect(SourceMap::query()->count())->toBe(0);
+    });
+
     it('refuses what it cannot keep', function (array $fields, string $field) {
         ($this->upload)($fields)->assertUnprocessable()->assertJsonValidationErrors($field);
 

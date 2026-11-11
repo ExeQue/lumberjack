@@ -7,6 +7,7 @@ namespace App\Domains\SourceMaps\Http\Controllers;
 use App\Domains\Projects\Models\Project;
 use App\Domains\SourceMaps\Actions\DeleteSourceMapAction;
 use App\Domains\SourceMaps\Actions\StoreSourceMapAction;
+use App\Domains\SourceMaps\Exceptions\SourceMapNotStoredException;
 use App\Domains\SourceMaps\Http\Requests\StoreSourceMapRequest;
 use App\Domains\SourceMaps\Models\SourceMap;
 use Illuminate\Http\JsonResponse;
@@ -18,12 +19,16 @@ class SourceMapController
     /** Uploaded after a build, with the project's server token. */
     public function store(StoreSourceMapRequest $request, StoreSourceMapAction $action): JsonResponse
     {
-        $map = $action->execute(
-            $request->project(),
-            $request->map(),
-            $request->string('path')->toString(),
-            $request->filled('release') ? $request->string('release')->toString() : null,
-        );
+        try {
+            $map = $action->execute(
+                $request->project(),
+                $request->map(),
+                $request->string('path')->toString(),
+                $request->filled('release') ? $request->string('release')->toString() : null,
+            );
+        } catch (SourceMapNotStoredException $e) {
+            return response()->json(['message' => $e->getMessage()], 503);
+        }
 
         return response()->json(['path' => $map->path, 'release' => $map->release, 'size' => $map->size], 201);
     }

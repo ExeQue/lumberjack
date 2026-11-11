@@ -13,6 +13,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Domains\Teams\Models\Team;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Support\Facades\Queue;
 use Tests\Support\Teams\CreatesTeamMembers;
 
@@ -38,6 +39,14 @@ describe('when it sends', function () {
         expect($this->rule->enabled)->toBeFalse()
             ->and(($this->send)())->toBe(0);
         Queue::assertNothingPushed();
+    });
+
+    it('stays due when the summaries cannot be queued', function () {
+        $this->rule->update(['enabled' => true]);
+        $this->mock(Dispatcher::class)->shouldReceive('dispatch')->andThrow(new RuntimeException('queue down'));
+
+        expect(fn () => ($this->send)())->toThrow(RuntimeException::class)
+            ->and($this->rule->refresh()->last_sent_at)->toBeNull();
     });
 
     it('saves its day and time, and refuses a time that is none', function () {
