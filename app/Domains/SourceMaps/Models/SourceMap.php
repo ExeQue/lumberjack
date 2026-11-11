@@ -61,8 +61,11 @@ class SourceMap extends Model
     public static function normalizePath(string $path): string
     {
         $path = parse_url($path, PHP_URL_PATH);
+        $path = is_string($path) ? $path : '';
+        $decoded = rawurldecode($path);
 
-        return '/'.ltrim(rawurldecode(is_string($path) ? $path : ''), '/');
+        // Only when it decodes to text: %FF alone is no character, and the database takes none.
+        return '/'.ltrim(mb_check_encoding($decoded, 'UTF-8') ? $decoded : $path, '/');
     }
 
     /** Where the map lives on the default disk. */

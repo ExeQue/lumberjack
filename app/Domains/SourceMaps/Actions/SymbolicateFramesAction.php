@@ -41,6 +41,9 @@ class SymbolicateFramesAction
     /** @var array<string, SourceMapDecoder> by id and upload time, least recently used first */
     private array $decoded = [];
 
+    /** @var array<string, int> when a map last failed to decode, by id and upload time; tried again after a minute */
+    private array $failed = [];
+
     public function execute(Project $project, IssueSignal $signal): IssueSignal
     {
         try {
@@ -126,6 +129,10 @@ class SymbolicateFramesAction
             return $this->decoded[$key] = $decoder;
         }
 
+        if (($this->failed[$key] ?? 0) > now()->getTimestamp() - 60) {
+            return null;
+        }
+
         if (! RateLimiter::attempt('sourcemap-decodes:'.$project->id, self::MAX_DECODES_PER_MINUTE, fn (): bool => true)) {
             return null;
         }
@@ -133,8 +140,9 @@ class SymbolicateFramesAction
         try {
             $decoder = SourceMapDecoder::decode((string) Storage::get($map->filePath()));
         } catch (Throwable $e) {
-            // Not kept: the file may still be being written, and the next error tries again.
+            // Not kept: the file may still be being written. Tried again after a minute, not on every error.
             report($e);
+            $this->failed[$key] = now()->getTimestamp();
 
             return null;
         }

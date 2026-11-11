@@ -68,6 +68,7 @@ describe('browser frames with an uploaded map', function () {
 
         ($this->sendBrowserError)($this->minifiedBrowserError());
         Storage::put($map->filePath(), $this->map);
+        $this->travel(61)->seconds();
         ($this->sendBrowserError)([...$this->minifiedBrowserError(), 'message' => 'Another']);
 
         expect(Occurrence::query()->orderBy('id')->get()->map(fn (Occurrence $o): bool => isset($o->stacktrace[0]['minified']))->all())->toBe([false, true]);
@@ -95,6 +96,16 @@ describe('browser frames with an uploaded map', function () {
         $this->postJson('/api/ingest/browser?key='.$this->project->public_key, [...$this->batch($events), 'release' => 'a1f3c9e'], ['Origin' => 'https://app.example.test'])->assertStatus(202);
 
         expect(Occurrence::query()->get()->filter(fn (Occurrence $o): bool => isset($o->stacktrace[0]['minified']))->count())->toBe(SymbolicateFramesAction::MAX_DECODES_PER_MINUTE);
+    });
+
+    it('keeps a frame whose path decodes to no text, and maps the others', function () {
+        SourceMap::factory()->for($this->project)->withFile($this->map)->create(['path' => '/build/assets/app-BxQ3kZ9a.js']);
+        $error = $this->minifiedBrowserError();
+        $error['stacktrace'][] = ['file' => 'https://app.example.test/build/a%FF.js', 'line' => 1, 'column' => 1, 'in_app' => true];
+
+        ($this->sendBrowserError)($error);
+
+        expect(Occurrence::sole()->stacktrace[0])->toHaveKey('minified');
     });
 
     it('matches a frame and an upload however each encoded the path', function () {
