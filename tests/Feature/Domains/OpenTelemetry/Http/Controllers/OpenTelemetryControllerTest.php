@@ -70,6 +70,17 @@ describe('traces', function () {
             ->and($request->release)->toBeNull();
     });
 
+    it('answers a server span without a status code as its span status says', function (int $status, int $expected) {
+        $span = $this->protobufSpan(SpanKind::SPAN_KIND_SERVER, ['http.request.method' => 'GET', 'http.route' => '/'], status: $status);
+
+        $this->otlp('traces', $this->protobufTraces([$span]))->assertOk();
+
+        expect(RequestRun::sole()->status_code)->toBe($expected);
+    })->with([
+        'unset' => [StatusCode::STATUS_CODE_UNSET, 200],
+        'error' => [StatusCode::STATUS_CODE_ERROR, 500],
+    ]);
+
     it('takes a gzip body', function () {
         $this->otlp('traces', $this->protobufTraces([($this->serverSpan)()]), gzip: true)->assertOk();
 
@@ -272,6 +283,14 @@ describe('what it refuses', function () {
 
         $this->call('POST', '/api/v1/opentelemetry/v1/traces', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_CONTENT_ENCODING' => 'gzip', 'HTTP_AUTHORIZATION' => 'Bearer lj_srv_test-token'], $body)
             ->assertStatus(413);
+    });
+
+    it('rejects an export with more events than an agent batch may hold, keeping none', function () {
+        $spans = array_fill(0, IngestBatchRequest::MAX_EVENTS + 1, $this->protobufSpan(SpanKind::SPAN_KIND_SERVER, ['http.request.method' => 'GET']));
+
+        $this->otlp('traces', $this->protobufTraces($spans))->assertStatus(413);
+
+        expect(RequestRun::count())->toBe(0);
     });
 
     it('rejects another content type', function () {

@@ -37,7 +37,7 @@ class EndMaintenanceWindowAction
             $rule = AlertRule::query()->whereEffectiveFor($window->project)->whereType(AlertRuleType::MaintenanceOverrun)->whereEnabled()->first();
 
             if ($rule !== null && $rule->appliesToEnvironment($window->environment !== '' ? $window->environment : null)) {
-                SendMaintenanceOverrunAlert::dispatch($rule, $window);
+                SendMaintenanceOverrunAlert::dispatch($rule, $window, ended: true);
             }
         }
 

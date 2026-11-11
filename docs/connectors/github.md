@@ -48,7 +48,8 @@ the **GitHub** page of a project that has none yet.
 
 The optional permissions are asked again whenever the repository is connected again, so to
 add one, give the token the permission (or create a new one) and connect the repository
-again. Connections made before optional permissions existed have none until then.
+again. Connecting again keeps the key figures chosen; a different branch drops what was
+read from the old one. Connections made before optional permissions existed have none until then.
 
 The token is stored encrypted, never shown again, and only ever sent to `api.github.com`.
 

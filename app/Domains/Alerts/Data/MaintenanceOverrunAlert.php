@@ -10,19 +10,21 @@ use Override;
 
 /**
  * A maintenance window still open past its expected end, or one that ended after
- * it was alerted on as overrun: then it says how long it ran over.
+ * it was alerted on as overrun: then it says how long it ran over. Which of the two is
+ * decided when it is queued, so a window ended before the overrun is sent still sends both.
  */
 final readonly class MaintenanceOverrunAlert implements Alert
 {
     public function __construct(
         public MaintenanceWindow $window,
         public string $url,
+        public bool $ended,
     ) {
     }
 
     public function ended(): bool
     {
-        return $this->window->ended_at !== null;
+        return $this->ended;
     }
 
     /**
@@ -30,7 +32,9 @@ final readonly class MaintenanceOverrunAlert implements Alert
      */
     public function overrunMinutes(): int
     {
-        return max(1, (int) round($this->window->expected_end_at->diffInMinutes($this->window->ended_at ?? now())));
+        $until = $this->ended ? ($this->window->ended_at ?? now()) : now();
+
+        return max(1, (int) round($this->window->expected_end_at->diffInMinutes($until)));
     }
 
     #[Override]

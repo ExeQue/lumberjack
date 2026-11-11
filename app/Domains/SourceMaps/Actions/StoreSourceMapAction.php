@@ -16,15 +16,19 @@ class StoreSourceMapAction
 {
     public function execute(Project $project, UploadedFile $file, string $path, ?string $release): SourceMap
     {
-        $map = SourceMap::query()->firstOrNew([
+        // createOrFirst underneath: two uploads of the same map at once both land on one row.
+        $map = SourceMap::query()->firstOrCreate([
             'project_id' => $project->id,
             'path' => SourceMap::normalizePath($path),
             'release' => $release !== '' ? $release : null,
-        ]);
-        $map->size = (int) $file->getSize();
-        // A replaced map counts as new, also when its size did not change.
-        $map->updated_at = now();
-        $map->save();
+        ], ['size' => (int) $file->getSize()]);
+
+        if (! $map->wasRecentlyCreated) {
+            $map->size = (int) $file->getSize();
+            // A replaced map counts as new, also when its size did not change.
+            $map->updated_at = now();
+            $map->save();
+        }
 
         Storage::putFileAs(SourceMap::directory($project->id), $file, $map->id.'.map');
 

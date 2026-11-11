@@ -6,6 +6,7 @@ namespace App\Domains\OpenTelemetry\Actions\Concerns;
 
 use App\Domains\Ingest\Http\Requests\IngestBatchRequest;
 use App\Domains\Ingest\Jobs\ProcessIngestBatch;
+use App\Domains\OpenTelemetry\Exceptions\TooManyEventsException;
 use App\Domains\Projects\Models\Project;
 use Opentelemetry\Proto\Common\V1\AnyValue;
 use Opentelemetry\Proto\Common\V1\KeyValue;
@@ -118,12 +119,19 @@ trait MapsOtlpData
     }
 
     /**
-     * One ingest batch per environment, release and host, as an agent would send them.
+     * One ingest batch per environment, release and host, as an agent would send them. An
+     * export holds no more events than one agent batch may, as throttling counts requests.
      *
      * @param  list<array{array{environment: ?string, release: ?string, host: ?string}, list<array<string, mixed>>}>  $parts
+     *
+     * @throws TooManyEventsException
      */
     private function dispatch(Project $project, array $parts): void
     {
+        if (array_sum(array_map(fn (array $part): int => count($part[1]), $parts)) > IngestBatchRequest::MAX_EVENTS) {
+            throw new TooManyEventsException(__('opentelemetry.errors.too_many_events', ['max' => IngestBatchRequest::MAX_EVENTS]));
+        }
+
         $batches = [];
 
         foreach ($parts as [$envelope, $events]) {

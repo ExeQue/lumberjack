@@ -116,7 +116,7 @@ except a wrong token and a rate limit, which answer in JSON.
 | `200`  | Accepted, with an empty export response. It is processed in the background.    |
 | `400`  | The body is not valid gzip, or not an export request.                          |
 | `401`  | The token is wrong or missing.                                                 |
-| `413`  | The body is larger than 1 MB, or 20 MB after gzip.                             |
+| `413`  | The body is larger than 1 MB, or 20 MB after gzip, or holds over 5000 events.  |
 | `415`  | The body is neither `application/x-protobuf` nor `application/json`.           |
 | `429`  | The project's rate limit is hit, with `Retry-After`. Exporters retry after it. |
 
@@ -124,4 +124,4 @@ except a wrong token and a rate limit, which answer in JSON.
 
 The endpoints share the project's [ingest limits](./api.md#limits): 600 exports a minute per
 project, counted with the agent's batches, and a body of at most 1 MB, or 20 MB once
-inflated.
+inflated, holding at most 5000 events (spans, exceptions and log records it is turned into).

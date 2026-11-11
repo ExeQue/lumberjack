@@ -35,7 +35,7 @@ class RecordMaintenanceEventAction
 
         match ($event['state'] ?? null) {
             'start' => $this->startMaintenanceAction->execute($project, $environment, Envelope::short($event['message'] ?? null, 500), $this->expectedEnd($event, $at), $at),
-            'end' => MaintenanceWindow::query()->where('project_id', $project->id)->where('environment', $environment)->whereOpen()->get()
+            'end' => MaintenanceWindow::query()->whereProject($project)->whereEnvironment($environment)->whereOpen()->get()
                 ->each(fn (MaintenanceWindow $window) => $this->endMaintenanceWindowAction->execute($window, $at)),
             default => throw new InvalidArgumentException('A maintenance event is either start or end.'),
         };

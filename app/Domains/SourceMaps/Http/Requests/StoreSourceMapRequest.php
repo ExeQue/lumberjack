@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\SourceMaps\Http\Requests;
 
 use App\Domains\Projects\Models\Project;
+use App\Domains\SourceMaps\Models\SourceMap;
 use App\Domains\SourceMaps\Support\SourceMapDecoder;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -19,6 +20,16 @@ class StoreSourceMapRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->attributes->get('project') instanceof Project;
+    }
+
+    /**
+     * The path as it is stored, so its length is checked against the column.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('path')) && $this->input('path') !== '') {
+            $this->merge(['path' => SourceMap::normalizePath($this->input('path'))]);
+        }
     }
 
     /** @return array<string, mixed> */

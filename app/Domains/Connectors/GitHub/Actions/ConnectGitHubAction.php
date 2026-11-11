@@ -11,14 +11,17 @@ use App\Domains\Connectors\GitHub\Exceptions\GitHubRequestFailedException;
 use App\Domains\Connectors\GitHub\Support\GitHubClient;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
+use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\Projects\Models\Project;
+use Illuminate\Contracts\Encryption\DecryptException;
 
 /**
  * Connects a project to a GitHub repository, once the token proves it reads the repository
  * and everything the connector requires, and the repository has the branch chosen, if one is,
  * remembering which optional permissions it has. A project reads as many repositories as it
  * likes, one connection each; connecting a repository it already reads renews that
- * connection's token and branch.
+ * connection's token and branch, keeping the key figures chosen for it. A new branch drops
+ * what was read from the old one.
  */
 class ConnectGitHubAction
 {
@@ -50,15 +53,36 @@ class ConnectGitHubAction
                 'environment' => ConnectionKind::GitHub->environment(),
             ]);
 
+        $previous = $connection->exists ? $this->previous($connection) : null;
+        // A config saved under another APP_KEY cannot say its branch; what was read is dropped to be safe.
+        $branchChanged = $connection->exists && $previous?->branch !== $credentials->branch;
+
         $connection->fill([
             'url' => 'https://github.com/'.$repository,
             'name' => $repository,
-            'config' => new GitHubConfig($repository, $credentials->token, $granted, $credentials->branch),
+            'config' => new GitHubConfig($repository, $credentials->token, $granted, $credentials->branch, $previous->figures ?? []),
             'last_error' => null,
             // Its sources are listed within a minute.
             'next_check_at' => null,
         ])->save();
 
+        if ($branchChanged) {
+            DataSourceWindow::query()->whereConnection($connection)->delete();
+        }
+
         return $connection;
+    }
+
+    /**
+     * The connection's config as it was; null when it cannot be read (another APP_KEY), the
+     * very case connecting again is for.
+     */
+    private function previous(DataSourceConnection $connection): ?GitHubConfig
+    {
+        try {
+            return $connection->gitHubConfig();
+        } catch (DecryptException) {
+            return null;
+        }
     }
 }

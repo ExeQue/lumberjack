@@ -11,6 +11,7 @@ use App\Domains\Connectors\MobilePay\Support\MobilePayClient;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
+use Illuminate\Contracts\Encryption\DecryptException;
 
 /**
  * Connects a project to the Vipps MobilePay ledger a sales unit settles to, once its keys
@@ -31,7 +32,7 @@ class ConnectMobilePayAction
     {
         $ledger = $this->client->ledger($credentials);
 
-        $connection = $project->mobilePayConnections()->get()->first(fn (DataSourceConnection $c): bool => $c->mobilePayConfig()->ledgerId === $ledger['ledger_id'])
+        $connection = $project->mobilePayConnections()->get()->first(fn (DataSourceConnection $c): bool => $this->readsLedger($c, $ledger['ledger_id']))
             ?? new DataSourceConnection([
                 'project_id' => $project->id,
                 'kind' => ConnectionKind::MobilePay,
@@ -49,5 +50,18 @@ class ConnectMobilePayAction
         ])->save();
 
         return $connection;
+    }
+
+    /**
+     * A connection whose keys were saved under another APP_KEY cannot say its ledger, and
+     * is not taken for this one; connecting again is how such a connection is fixed.
+     */
+    private function readsLedger(DataSourceConnection $connection, string $ledgerId): bool
+    {
+        try {
+            return $connection->mobilePayConfig()->ledgerId === $ledgerId;
+        } catch (DecryptException) {
+            return false;
+        }
     }
 }

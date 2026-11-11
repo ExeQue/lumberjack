@@ -183,7 +183,7 @@ back, up to a day late.
 Alerts are still sent while a maintenance window covers their environment, and
 throttled as usual, but marked: chat and push messages start their title with
 **[Under maintenance]**, and so does a mail's subject. Health checks and queue backlogs
-send nothing during a window, see [Health](./health#maintenance-windows). Alerts
+send nothing during a window, up to its expected end, see [Health](./health#maintenance-windows). Alerts
 without an environment, such as a bulk status change, are marked during any window of
 the project.
 

@@ -26,8 +26,8 @@ class StartMaintenanceAction
     public function execute(Project $project, string $environment, ?string $message, ?CarbonImmutable $expectedEnd, CarbonImmutable $at): MaintenanceWindow
     {
         $window = MaintenanceWindow::query()
-            ->where('project_id', $project->id)
-            ->where('environment', $environment)
+            ->whereProject($project)
+            ->whereEnvironment($environment)
             ->whereOpen()
             ->latest('starts_at')
             ->first();

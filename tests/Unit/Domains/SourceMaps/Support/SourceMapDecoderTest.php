@@ -28,6 +28,12 @@ it('hands out the original source with a position', function () {
         ->and($map->lookup(2, 1))->toBeNull();
 });
 
+it('keeps the place of a null source, which mappings point at by index', function () {
+    $map = SourceMapDecoder::decode('{"version": 3, "sources": [null, "b.js"], "sourcesContent": [null, "const b = 1;"], "names": [null, "b"], "mappings": "ACAAC"}');
+
+    expect($map->lookup(1, 1))->toBe(['source' => 'b.js', 'line' => 1, 'column' => 1, 'name' => 'b', 'content' => 'const b = 1;']);
+});
+
 it('refuses what is not a version 3 source map', function (string $json) {
     SourceMapDecoder::decode($json);
 })->with([
