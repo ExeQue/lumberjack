@@ -22,16 +22,22 @@ class CheckMaintenanceOverrunsAction
     public function execute(): int
     {
         $queued = 0;
+        /** @var array<int, AlertRule|null> $rules by project id, asked once per run */
+        $rules = [];
 
         // Sending moves overrun_alerted_at, which the repeat check reads, so page by id.
-        MaintenanceWindow::query()->whereOverrun()->with('project')->eachById(function (MaintenanceWindow $window) use (&$queued): void {
+        MaintenanceWindow::query()->whereOverrun()->with('project')->eachById(function (MaintenanceWindow $window) use (&$queued, &$rules): void {
             $project = $window->project;
 
             if ($window->overrun_alerted_at !== null && $window->overrun_alerted_at->greaterThan(now()->subMinutes($project->maintenance_repeat_minutes))) {
                 return;
             }
 
-            $rule = AlertRule::query()->whereEffectiveFor($project)->whereType(AlertRuleType::MaintenanceOverrun)->whereEnabled()->first();
+            if (! array_key_exists($project->id, $rules)) {
+                $rules[$project->id] = AlertRule::query()->whereEffectiveFor($project)->whereType(AlertRuleType::MaintenanceOverrun)->whereEnabled()->first();
+            }
+
+            $rule = $rules[$project->id];
 
             // A rule with no channels still runs: members may want it by push (SendMaintenanceOverrunAlert).
             if ($rule === null || ! $rule->appliesToEnvironment($window->environment !== '' ? $window->environment : null)) {

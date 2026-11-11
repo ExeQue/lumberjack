@@ -19,8 +19,11 @@ use Throwable;
  */
 class OtlpExportRequest extends FormRequest
 {
-    /** The largest body after gzip, as for an agent's batch. */
-    public const int MAX_INFLATED_BYTES = IngestBatchRequest::MAX_BYTES * 20;
+    /**
+     * The largest body after gzip. Lower than an agent's batch: protobuf is decoded in PHP,
+     * at some 150 times the body's size in memory.
+     */
+    public const int MAX_INFLATED_BYTES = IngestBatchRequest::MAX_BYTES * 2;
 
     /** OTLP/JSON writes these ids as hex; the protobuf JSON parser reads bytes as base64. */
     private const array ID_FIELDS = ['traceId', 'spanId', 'parentSpanId', 'trace_id', 'span_id', 'parent_span_id'];

@@ -23,6 +23,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Enums\TeamRole;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -94,6 +95,12 @@ describe('connecting a repository', function () {
         $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), $this->input)->assertSessionHasNoErrors();
 
         expect($connection->refresh()->gitHubCredentials()->token)->toBe('github_pat_test');
+    });
+
+    it('keeps one connection per repository in the database, as two connects at once would race', function () {
+        DataSourceConnection::factory()->github()->for($this->project)->create();
+
+        expect(fn () => DataSourceConnection::factory()->github()->for($this->project)->create())->toThrow(UniqueConstraintViolationException::class);
     });
 
     it('takes any address under the repository', function (string $address) {

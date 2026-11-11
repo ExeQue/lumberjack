@@ -33,9 +33,13 @@ class RecordMaintenanceEventAction
         $at = Envelope::time($event['timestamp'] ?? null)->min(now());
         $environment = $envelope->environment ?? '';
 
+        // A start held back by the agent can come after the end that followed it: an end at or
+        // after it already closed what it opened, and an end only closes what started before it.
         match ($event['state'] ?? null) {
-            'start' => $this->startMaintenanceAction->execute($project, $environment, Envelope::short($event['message'] ?? null, 500), $this->expectedEnd($event, $at), $at),
-            'end' => MaintenanceWindow::query()->whereProject($project)->whereEnvironment($environment)->whereOpen()->get()
+            'start' => MaintenanceWindow::query()->whereProject($project)->whereEnvironment($environment)->whereEndedSince($at)->exists()
+                ? null
+                : $this->startMaintenanceAction->execute($project, $environment, Envelope::short($event['message'] ?? null, 500), $this->expectedEnd($event, $at), $at),
+            'end' => MaintenanceWindow::query()->whereProject($project)->whereEnvironment($environment)->whereOpen($at)->whereNotEnded()->get()
                 ->each(fn (MaintenanceWindow $window) => $this->endMaintenanceWindowAction->execute($window, $at)),
             default => throw new InvalidArgumentException('A maintenance event is either start or end.'),
         };

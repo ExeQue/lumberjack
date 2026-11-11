@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Domains\SourceMaps\Actions;
 
 use App\Domains\Projects\Models\Project;
+use App\Domains\SourceMaps\Exceptions\SourceMapNotStoredException;
 use App\Domains\SourceMaps\Models\SourceMap;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 /**
  * Keeps an uploaded source map. The same path and release uploaded again replaces it.
@@ -30,7 +32,21 @@ class StoreSourceMapAction
             $map->save();
         }
 
-        Storage::putFileAs(SourceMap::directory($project->id), $file, $map->id.'.map');
+        try {
+            $stored = Storage::putFileAs(SourceMap::directory($project->id), $file, $map->id.'.map');
+        } catch (Throwable $e) {
+            $stored = false;
+            report($e);
+        }
+
+        // A row without its file would fail every frame it should map.
+        if ($stored === false) {
+            if ($map->wasRecentlyCreated) {
+                $map->delete();
+            }
+
+            throw new SourceMapNotStoredException(__('source_maps.not_stored'));
+        }
 
         return $map;
     }

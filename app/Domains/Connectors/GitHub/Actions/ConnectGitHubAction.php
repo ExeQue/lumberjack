@@ -6,6 +6,7 @@ namespace App\Domains\Connectors\GitHub\Actions;
 
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
 use App\Domains\Connectors\GitHub\Data\GitHubCredentials;
+use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubBranchNotFoundException;
 use App\Domains\Connectors\GitHub\Exceptions\GitHubRequestFailedException;
 use App\Domains\Connectors\GitHub\Support\GitHubClient;
@@ -14,6 +15,7 @@ use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Database\UniqueConstraintViolationException;
 
 /**
  * Connects a project to a GitHub repository, once the token proves it reads the repository
@@ -46,6 +48,19 @@ class ConnectGitHubAction
         // Asked again on every renewal, as a new token may have more or fewer.
         $granted = $this->client->grantedPermissions($credentials);
 
+        try {
+            return $this->store($project, $repository, $credentials, $granted);
+        } catch (UniqueConstraintViolationException) {
+            // Connected at the same moment by another request: that connection is renewed.
+            return $this->store($project, $repository, $credentials, $granted);
+        }
+    }
+
+    /**
+     * @param  list<GitHubPermission>  $granted
+     */
+    private function store(Project $project, string $repository, GitHubCredentials $credentials, array $granted): DataSourceConnection
+    {
         $connection = $project->gitHubConnections()->where('name', $repository)->first()
             ?? new DataSourceConnection([
                 'project_id' => $project->id,
