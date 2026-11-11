@@ -80,7 +80,7 @@ describe('an overrun', function () {
 
     it('says how long it is past its expected end', function () {
         $this->travel(12)->minutes();
-        $alert = new MaintenanceOverrunAlert($this->window->refresh(), 'https://lumberjack.test/health');
+        $alert = new MaintenanceOverrunAlert($this->window->refresh(), 'https://lumberjack.test/health', ended: false);
 
         expect($alert->headline())->toBe('Maintenance overrun in Shop (production)')
             ->and($alert->summary()['body'][0])->toStartWith('Expected to end at ')->toContain('2 minutes ago, and still open')
@@ -89,6 +89,17 @@ describe('an overrun', function () {
 });
 
 describe('the end of a window', function () {
+    it('still sends an overrun queued before the window ended as an overrun', function () {
+        $this->travel(10)->minutes();
+        ($this->check)();
+        $this->window->refresh()->update(['ended_at' => now()]);
+
+        $alert = new MaintenanceOverrunAlert($this->window, 'https://lumberjack.test/health', ended: false);
+
+        expect($alert->headline())->toBe('Maintenance overrun in Shop (production)')
+            ->and($alert->urgency())->toBe('high');
+    });
+
     it('tells once more, with how long it ran over, when it was alerted on', function () {
         $this->travel(10)->minutes();
         ($this->check)();
@@ -97,9 +108,10 @@ describe('the end of a window', function () {
         app(EndMaintenanceWindowAction::class)->execute($this->window->refresh());
 
         Queue::assertPushed(SendMaintenanceOverrunAlert::class, 2);
-        Queue::assertPushed(SendMaintenanceOverrunAlert::class, fn (SendMaintenanceOverrunAlert $job): bool => $job->window->ended_at !== null);
+        Queue::assertPushed(SendMaintenanceOverrunAlert::class, fn (SendMaintenanceOverrunAlert $job): bool => ! $job->ended);
+        Queue::assertPushed(SendMaintenanceOverrunAlert::class, fn (SendMaintenanceOverrunAlert $job): bool => $job->ended);
 
-        $alert = new MaintenanceOverrunAlert($this->window->refresh(), 'https://lumberjack.test/health');
+        $alert = new MaintenanceOverrunAlert($this->window->refresh(), 'https://lumberjack.test/health', ended: true);
         expect($alert->ended())->toBeTrue()
             ->and($alert->overrunMinutes())->toBe(7)
             ->and($alert->headline())->toBe('Maintenance over in Shop (production)')

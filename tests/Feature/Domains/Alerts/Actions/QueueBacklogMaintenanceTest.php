@@ -50,4 +50,14 @@ describe('queue backlogs under maintenance', function () {
 
         expect(($this->titles)())->toBe(['Queue backlog in Shop']);
     });
+
+    it('alerts as usual once the window is past its expected end, even if nobody ends it', function () {
+        MaintenanceWindow::factory()->of($this->project)->overrun()->create();
+
+        foreach (range(1, 10) as $i) {
+            ($this->minute)(500);
+        }
+
+        expect(($this->titles)())->toBe(['[Under maintenance] Queue backlog in Shop']);
+    });
 });

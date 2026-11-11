@@ -223,6 +223,18 @@ class DataSourceConnection extends Model
     }
 
     /**
+     * Its GitHub repository's settings; null on another kind of connection.
+     *
+     * @throws DecryptException
+     */
+    public function gitHubConfig(): ?GitHubConfig
+    {
+        $config = $this->config;
+
+        return $config instanceof GitHubConfig ? $config : null;
+    }
+
+    /**
      * Its Vipps MobilePay ledger and the keys that read it.
      *
      * @throws DecryptException

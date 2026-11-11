@@ -6,6 +6,7 @@ namespace App\Domains\OpenTelemetry\Http\Controllers;
 
 use App\Domains\OpenTelemetry\Actions\IngestLogsAction;
 use App\Domains\OpenTelemetry\Actions\IngestTracesAction;
+use App\Domains\OpenTelemetry\Exceptions\TooManyEventsException;
 use App\Domains\OpenTelemetry\Http\Requests\OtlpExportRequest;
 use Illuminate\Http\Response;
 use Opentelemetry\Proto\Collector\Logs\V1\ExportLogsServiceRequest;
@@ -21,14 +22,22 @@ class OpenTelemetryController
 {
     public function traces(OtlpExportRequest $request, IngestTracesAction $action): Response
     {
-        $action->execute($request->project(), $request->decodeInto(new ExportTraceServiceRequest()));
+        try {
+            $action->execute($request->project(), $request->decodeInto(new ExportTraceServiceRequest()));
+        } catch (TooManyEventsException $e) {
+            throw $request->failure(413, $e->getMessage());
+        }
 
         return $request->answer(new ExportTraceServiceResponse());
     }
 
     public function logs(OtlpExportRequest $request, IngestLogsAction $action): Response
     {
-        $action->execute($request->project(), $request->decodeInto(new ExportLogsServiceRequest()));
+        try {
+            $action->execute($request->project(), $request->decodeInto(new ExportLogsServiceRequest()));
+        } catch (TooManyEventsException $e) {
+            throw $request->failure(413, $e->getMessage());
+        }
 
         return $request->answer(new ExportLogsServiceResponse());
     }

@@ -71,6 +71,15 @@ describe('a check under maintenance', function () {
         Queue::assertPushed(SendHealthCheckAlert::class, fn (SendHealthCheckAlert $job): bool => $job->state === HealthCheckAlert::DOWN);
     });
 
+    it('alerts again once the window is past its expected end, even if nobody ends it', function () {
+        MaintenanceWindow::factory()->of($this->project)->overrun()->create();
+
+        ($this->report)('failed');
+        ($this->report)('failed');
+
+        Queue::assertPushed(SendHealthCheckAlert::class, 1);
+    });
+
     it('still alerts during a window that has not started yet', function () {
         MaintenanceWindow::factory()->of($this->project)->planned()->create();
 

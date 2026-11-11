@@ -76,6 +76,7 @@ describe('uploading a source map', function () {
         'a file that is not a source map' => [fn () => ['file' => UploadedFile::fake()->createWithContent('app.js.map', '{"version": 2}'), 'path' => '/app.js'], 'file'],
         'no file' => [fn () => ['path' => '/app.js'], 'file'],
         'no path' => [fn () => ['file' => UploadedFile::fake()->createWithContent('app.js.map', $this->map)], 'path'],
+        'a path longer than its column once it starts with /' => [fn () => ['file' => UploadedFile::fake()->createWithContent('app.js.map', $this->map), 'path' => str_repeat('a', 500)], 'path'],
     ]);
 });
 

@@ -79,7 +79,7 @@ class MaintenanceWindow extends Model
     public static function openFor(Project|int $project, ?string $environment, ?CarbonImmutable $at = null): ?self
     {
         return self::query()
-            ->where('project_id', $project instanceof Project ? $project->id : $project)
+            ->whereProject($project)
             ->whereOpen($at)
             ->whereCovers($environment)
             ->latest('starts_at')

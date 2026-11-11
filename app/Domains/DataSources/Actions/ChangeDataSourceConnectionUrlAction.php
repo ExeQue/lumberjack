@@ -18,7 +18,7 @@ class ChangeDataSourceConnectionUrlAction
         DB::transaction(function () use ($connection, $url, $timezone): void {
             $connection->update(['url' => $url, 'timezone' => $timezone ?? $connection->timezone, 'last_error' => null, 'next_check_at' => null]);
             $connection->sources()->update(['url' => $url, 'last_error' => null]);
-            DataSourceWindow::query()->whereIn('data_source_id', $connection->sources()->select('id'))->update(['error' => null, 'failures' => 0, 'next_fetch_at' => null]);
+            DataSourceWindow::query()->whereConnection($connection)->update(['error' => null, 'failures' => 0, 'next_fetch_at' => null]);
         });
     }
 }

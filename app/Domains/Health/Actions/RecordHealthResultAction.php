@@ -187,8 +187,9 @@ class RecordHealthResultAction
         }
 
         // During maintenance a check is as good as muted: nothing is told, nor remembered as
-        // told, so one still down once the window ends alerts on its next result.
-        if (($status !== HealthStatus::Ok || $check->alerted_status !== null) && MaintenanceWindow::openFor($check->project_id, $check->environment !== '' ? $check->environment : null) !== null) {
+        // told, so one still down once the window ends alerts on its next result. Only until
+        // the expected end: a window nobody ends does not mute it for good.
+        if (($status !== HealthStatus::Ok || $check->alerted_status !== null) && MaintenanceWindow::query()->whereProject($check->project_id)->whereExcusing()->whereCovers($check->environment)->exists()) {
             return null;
         }
 

@@ -62,7 +62,13 @@ class IngestTracesAction
         $status = (int) $this->first($attributes, 'http.response.status_code', 'http.status_code');
 
         $events = match (true) {
-            $span->getKind() === SpanKind::SPAN_KIND_SERVER && $method !== null => [$this->request($base, $attributes, $method, $status)],
+            // A server span without a status code answered as its own status says.
+            $span->getKind() === SpanKind::SPAN_KIND_SERVER && $method !== null => [$this->request(
+                $base,
+                $attributes,
+                $method,
+                $status ?: ($span->getStatus()?->getCode() === StatusCode::STATUS_CODE_ERROR ? 500 : 200)
+            )],
             $span->getKind() === SpanKind::SPAN_KIND_CONSUMER => $this->job($span, $base, $attributes),
             $database === 'redis' => [[...$base, 'type' => 'span', 'kind' => LumberjackSpanKind::Redis->value,
                 'name' => strtoupper(strtok($statement ?? $span->getName(), ' ') ?: 'REDIS'), 'target' => $statement ?? $span->getName()]],

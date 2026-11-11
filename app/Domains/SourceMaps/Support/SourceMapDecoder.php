@@ -40,9 +40,10 @@ final class SourceMapDecoder
         }
 
         $root = is_string($map['sourceRoot'] ?? null) && $map['sourceRoot'] !== '' ? rtrim($map['sourceRoot'], '/').'/' : '';
-        $sources = array_map(fn ($s): string => $root.$s, array_values(array_filter($map['sources'], 'is_string')));
+        // A null source keeps its place: mappings point at sources by index.
+        $sources = array_map(fn ($s): string => is_string($s) ? $root.$s : '', array_values($map['sources']));
         $contents = array_map(fn ($c): ?string => is_string($c) ? $c : null, array_values((array) ($map['sourcesContent'] ?? [])));
-        $names = array_values(array_filter((array) ($map['names'] ?? []), 'is_string'));
+        $names = array_map(fn ($n): string => is_string($n) ? $n : '', array_values((array) ($map['names'] ?? [])));
 
         $digits = array_flip(str_split(self::BASE64));
         $source = $line = $column = $name = 0;

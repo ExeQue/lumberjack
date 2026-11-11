@@ -18,7 +18,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * A window overrun, or its end after one; which, the window's ended_at says.
+ * A window overrun, or its end after one; which, $ended says, as it was when queued.
  */
 class SendMaintenanceOverrunAlert implements ShouldQueue
 {
@@ -32,6 +32,7 @@ class SendMaintenanceOverrunAlert implements ShouldQueue
     public function __construct(
         public readonly AlertRule $rule,
         public readonly MaintenanceWindow $window,
+        public readonly bool $ended,
     ) {
         $this->onQueue(SendIssueAlerts::QUEUE);
     }
@@ -45,7 +46,7 @@ class SendMaintenanceOverrunAlert implements ShouldQueue
     public function handle(SendProjectAlertAction $action, NotifyProjectMembersAction $members): void
     {
         $project = $this->window->project;
-        $alert = new MaintenanceOverrunAlert($this->window, route('health.index', $project));
+        $alert = new MaintenanceOverrunAlert($this->window, route('health.index', $project), $this->ended);
 
         $action->execute($this->rule, $project, $alert);
         // Members who want health by push get it: an app not back from maintenance is its health.

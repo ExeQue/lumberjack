@@ -64,7 +64,7 @@ class UpdateGitHubConnectionAction
 
         if ($branchChanged) {
             // What was read from the other branch is not this one's.
-            DataSourceWindow::query()->whereIn('data_source_id', $connection->sources()->select('id'))->delete();
+            DataSourceWindow::query()->whereConnection($connection)->delete();
         }
 
         return $connection;

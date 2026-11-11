@@ -5,14 +5,56 @@ declare(strict_types=1);
 namespace App\Domains\Maintenance\Eloquent\Builders;
 
 use App\Domains\Maintenance\Models\MaintenanceWindow;
+use App\Domains\Projects\Models\Project;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
  * @extends Builder<MaintenanceWindow>
+ *
+ * @mixin Builder<MaintenanceWindow>
  */
 class MaintenanceWindowBuilder extends Builder
 {
+    public function whereProject(Project|int $project): self
+    {
+        return $this->where('project_id', $project instanceof Project ? $project->id : $project);
+    }
+
+    public function orWhereProject(Project|int $project): self
+    {
+        return $this->orWhere('project_id', $project instanceof Project ? $project->id : $project);
+    }
+
+    /**
+     * Exactly this environment; '' is a window for the whole project.
+     */
+    public function whereEnvironment(string $environment): self
+    {
+        return $this->where('environment', $environment);
+    }
+
+    public function orWhereEnvironment(string $environment): self
+    {
+        return $this->orWhere('environment', $environment);
+    }
+
+    /**
+     * Open and not past its expected end: what it excuses (down checks, queue backlogs)
+     * goes quiet only as long as was promised, as uptime counts it.
+     */
+    public function whereExcusing(?CarbonInterface $datetime = null): self
+    {
+        $datetime ??= now();
+
+        return $this->whereOpen($datetime)->where('expected_end_at', '>', $datetime);
+    }
+
+    public function orWhereExcusing(?CarbonInterface $datetime = null): self
+    {
+        return $this->orWhere(fn (self $q) => $q->whereExcusing($datetime));
+    }
+
     /**
      * Started and not ended at the moment.
      */

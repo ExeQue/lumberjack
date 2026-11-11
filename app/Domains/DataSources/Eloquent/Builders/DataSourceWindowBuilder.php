@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\DataSources\Eloquent\Builders;
 
 use App\Domains\DataSources\Actions\DispatchDueDataSourceWindowsAction;
+use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\Health\Eloquent\Builders\HealthCheckBuilder;
 use App\Domains\Health\Enums\HealthCheckType;
@@ -20,6 +21,19 @@ use Illuminate\Database\Eloquent\Builder;
  */
 final class DataSourceWindowBuilder extends Builder
 {
+    /**
+     * The periods of every data source a connection serves.
+     */
+    public function whereConnection(DataSourceConnection $connection): self
+    {
+        return $this->whereIn('data_source_id', $connection->sources()->select('id'));
+    }
+
+    public function orWhereConnection(DataSourceConnection $connection): self
+    {
+        return $this->orWhereIn('data_source_id', $connection->sources()->select('id'));
+    }
+
     /**
      * Periods someone is looking at: a screen asked lately, or a health check reads it.
      */

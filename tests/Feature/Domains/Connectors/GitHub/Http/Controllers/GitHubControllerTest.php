@@ -18,6 +18,7 @@ use App\Domains\DataSources\Actions\SyncDataSourceConnectionAction;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceConnection;
+use App\Domains\DataSources\Models\DataSourceWindow;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Enums\TeamRole;
@@ -63,6 +64,36 @@ describe('connecting a repository', function () {
 
         expect(DataSourceConnection::query()->count())->toBe(1)
             ->and($this->project->gitHubConnections()->sole()->gitHubCredentials()->token)->toBe('renewed');
+    });
+
+    it('keeps the key figures chosen when connected again, and the cached data while the branch is the same', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'old', figures: ['forks' => true])]);
+        $window = DataSourceWindow::factory()->forSource(DataSource::factory()->connected()->for($this->project)->create(['data_source_connection_id' => $connection->id]))->create();
+
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), $this->input)->assertSessionHasNoErrors();
+
+        expect($connection->refresh()->config->figures)->toBe(['forks' => true])
+            ->and($window->exists())->toBeTrue()
+            ->and(DataSourceWindow::query()->count())->toBe(1);
+    });
+
+    it('drops the data read from the old branch when connected again on another', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+        DataSourceWindow::factory()->forSource(DataSource::factory()->connected()->for($this->project)->create(['data_source_connection_id' => $connection->id]))->create();
+
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), [...$this->input, 'branch' => 'develop'])->assertSessionHasNoErrors();
+
+        expect(GitHubConfig::branchOf($connection->refresh()->config))->toBe('develop')
+            ->and(DataSourceWindow::query()->count())->toBe(0);
+    });
+
+    it('renews a connection whose config was saved under another APP_KEY', function () {
+        $connection = DataSourceConnection::factory()->github()->for($this->project)->create();
+        DB::table('data_source_connections')->where('id', $connection->id)->update(['config' => 'not-decryptable']);
+
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), $this->input)->assertSessionHasNoErrors();
+
+        expect($connection->refresh()->gitHubCredentials()->token)->toBe('github_pat_test');
     });
 
     it('takes any address under the repository', function (string $address) {

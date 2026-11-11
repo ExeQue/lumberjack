@@ -40,7 +40,7 @@ class CheckMaintenanceOverrunsAction
 
             $window->overrun_alerted_at = now();
             $window->save();
-            SendMaintenanceOverrunAlert::dispatch($rule, $window);
+            SendMaintenanceOverrunAlert::dispatch($rule, $window, ended: false);
             $queued++;
         });
 

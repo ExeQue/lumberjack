@@ -125,7 +125,7 @@ class OtlpExportRequest extends FormRequest
      * An error answer as OTLP/HTTP asks: a google.rpc.Status with only its message, in the
      * request's encoding. In protobuf that is field 2, a length-prefixed string.
      */
-    private function failure(int $status, string $message): HttpResponseException
+    public function failure(int $status, string $message): HttpResponseException
     {
         if (! $this->isProtobuf()) {
             return new HttpResponseException(response()->json(['message' => $message], $status));

@@ -43,8 +43,8 @@ class CheckQueueBacklogsAction
                 continue;
             }
 
-            // Queues report no environment, so any window of the project mutes them all.
-            $maintenance = MaintenanceWindow::openFor($project, null) !== null;
+            // Queues report no environment, so any window of the project mutes them all, until its expected end.
+            $maintenance = MaintenanceWindow::query()->whereProject($project)->whereExcusing()->exists();
             $states = QueueBacklog::query()->where('alert_rule_id', $rule->id)->where('project_id', $project->id)->get()->keyBy(fn (QueueBacklog $b): string => $b->connection.':'.$b->queue);
 
             foreach ($this->latestSamples($project->id) as $sample) {

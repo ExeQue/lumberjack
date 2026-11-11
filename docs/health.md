@@ -198,7 +198,7 @@ recovered alerts are still sent.
 Each step for the worse is sent at once: ok to degraded, and degraded to down. Going
 from recovering back to degraded or down is not a new alert. Muted and archived checks
 send no alerts. See [Alerts](./alerts#webhooks) for the webhook body. During a
-[maintenance window](#maintenance-windows) checks are treated as muted.
+[maintenance window](#maintenance-windows), up to its expected end, checks are treated as muted.
 
 ## Maintenance windows
 
@@ -219,10 +219,11 @@ results never do, and a window never closes on its own.
 While a window is open:
 
 - Health checks of its environment, and checks without an environment, are treated as
-  muted: no degraded, down or recovered alerts. On the first result after the window
-  ends they alert as usual, so a check still down then sends its down alert.
-- Queue backlogs of the project send nothing: queues report no environment, so any
-  window of the project mutes them.
+  muted until the window's expected end: no degraded, down or recovered alerts. On the
+  first result after the window ends, or after its expected end, they alert as usual, so
+  a check still down then sends its down alert.
+- Queue backlogs of the project send nothing until the expected end: queues report no
+  environment, so any window of the project mutes them.
 - Every other alert is still sent, marked as sent during maintenance, see
   [Alerts](./alerts#maintenance).
 - Errors that come in are flagged **Under maintenance**, see [Issues](./issues#the-issues-list).
