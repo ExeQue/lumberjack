@@ -75,7 +75,8 @@ class RecordOccurrenceAction
     {
         $since = now()->subHours(self::MAINTENANCE_LOOKBACK_HOURS);
 
-        if ($signal->occurredAt->lessThan($since)) {
+        // Outside what the batch read (a clock ahead, or an old spool): asked on its own.
+        if ($signal->occurredAt->lessThan($since) || $signal->occurredAt->greaterThan(now())) {
             return MaintenanceWindow::openFor($project, $signal->environment, $signal->occurredAt) !== null;
         }
 

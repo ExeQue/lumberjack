@@ -24,18 +24,19 @@ class SaveMaintenanceWindowAction
 
     public function execute(Project $project, ?MaintenanceWindow $window, string $environment, CarbonImmutable $startsAt, CarbonImmutable $endsAt, ?string $message): MaintenanceWindow
     {
+        // One not started yet may still be moved wholly into the past, as a new one may.
+        $notStarted = $window === null || $window->starts_at->greaterThan(now());
         $window ??= new MaintenanceWindow(['project_id' => $project->id, 'source' => MaintenanceSource::Planned]);
         $window->fill([
             'environment' => $environment,
             'starts_at' => $startsAt,
             'message' => $message,
         ]);
-        $isNew = ! $window->exists;
         $window->expectTo($endsAt);
 
         // Planned wholly in the past it is a record of maintenance that happened, not an overrun.
-        // Only a new one: an open window is ended by EndMaintenanceWindowAction, which tells who heard of its overrun.
-        if ($isNew && $endsAt->lessThanOrEqualTo(now())) {
+        // Not an open one: that is ended by EndMaintenanceWindowAction, which tells who heard of its overrun.
+        if ($notStarted && $window->ended_at === null && $endsAt->lessThanOrEqualTo(now())) {
             $window->ended_at = $window->expected_end_at;
         }
 

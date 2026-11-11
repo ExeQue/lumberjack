@@ -62,6 +62,17 @@ describe('browser frames with an uploaded map', function () {
             ->toBe([...array_fill(0, SymbolicateFramesAction::MAX_MAPS_PER_ERROR, true), false, false]);
     });
 
+    it('tries a map again whose file could not be read, instead of keeping it minified', function () {
+        $map = SourceMap::factory()->for($this->project)->create(['path' => '/build/assets/app-BxQ3kZ9a.js']);
+        Exceptions::fake();
+
+        ($this->sendBrowserError)($this->minifiedBrowserError());
+        Storage::put($map->filePath(), $this->map);
+        ($this->sendBrowserError)([...$this->minifiedBrowserError(), 'message' => 'Another']);
+
+        expect(Occurrence::query()->orderBy('id')->get()->map(fn (Occurrence $o): bool => isset($o->stacktrace[0]['minified']))->all())->toBe([false, true]);
+    });
+
     it('decodes a map once for every batch after it, in the same worker', function () {
         SourceMap::factory()->for($this->project)->withFile($this->map)->create(['path' => '/build/assets/app-BxQ3kZ9a.js']);
 

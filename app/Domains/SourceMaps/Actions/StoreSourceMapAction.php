@@ -25,13 +25,6 @@ class StoreSourceMapAction
             'release' => $release !== '' ? $release : null,
         ], ['size' => (int) $file->getSize()]);
 
-        if (! $map->wasRecentlyCreated) {
-            $map->size = (int) $file->getSize();
-            // A replaced map counts as new, also when its size did not change.
-            $map->updated_at = now();
-            $map->save();
-        }
-
         try {
             $stored = Storage::putFileAs(SourceMap::directory($project->id), $file, $map->id.'.map');
         } catch (Throwable $e) {
@@ -47,6 +40,14 @@ class StoreSourceMapAction
             }
 
             throw new SourceMapNotStoredException(__('source_maps.not_stored'));
+        }
+
+        // Once the file is there: a replaced map counts as new, also when its size did not change,
+        // and a decoded copy of the old one is not taken for it.
+        if (! $map->wasRecentlyCreated) {
+            $map->size = (int) $file->getSize();
+            $map->updated_at = now();
+            $map->save();
         }
 
         return $map;
