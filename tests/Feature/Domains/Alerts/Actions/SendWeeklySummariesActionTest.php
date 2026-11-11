@@ -85,7 +85,7 @@ describe('who gets what', function () {
 
         expect(($this->send)())->toBe(2);
         Queue::assertPushed(SendWeeklySummary::class, fn (SendWeeklySummary $job): bool => $job->channel->is($this->ops)
-            && $job->rules === [$this->shop->id => $this->rule->id, $this->blog->id => $this->rule->id]);
+            && $job->rules === [$this->blog->id => $this->rule->id, $this->shop->id => $this->rule->id]);
         Queue::assertPushed(SendWeeklySummary::class, fn (SendWeeklySummary $job): bool => $job->channel->is($dev) && count($job->rules) === 2);
     });
 
