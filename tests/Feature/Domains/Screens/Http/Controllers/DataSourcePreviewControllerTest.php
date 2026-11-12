@@ -175,6 +175,7 @@ describe('the result', function () {
 
 describe('a Prometheus source', function () {
     beforeEach(function () {
+        $this->freezeSecond();
         $text = fn (int $ok): string => "# TYPE http_requests_total counter\nhttp_requests_total{method=\"GET\",status=\"200\"} {$ok}\nhttp_requests_total{method=\"GET\",status=\"500\"} 4\n# TYPE queue_depth gauge\nqueue_depth{queue=\"a\"} 5\nqueue_depth{queue=\"b\"} 2\n";
         $this->source->update(['format' => DataSourceFormat::Prometheus, 'last_body' => $text(160)]);
         DB::table('data_source_fetches')->insert(['project_id' => $this->project->id, 'data_source_id' => $this->source->id, 'body' => json_encode(Prometheus::parse($text(100))), 'fetched_at' => now()->subMinutes(2)]);
