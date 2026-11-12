@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Changed
+
+- The test workflow can be run by hand from the Actions tab.
+
 ## [0.8.0] - 2026-11-11
 
 ### Added
