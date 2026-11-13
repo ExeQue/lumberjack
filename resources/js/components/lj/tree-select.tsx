@@ -392,6 +392,22 @@ export function TreeSelect({
                                 </>
                             ) : (
                                 <>
+                                    {value && clearLabel && (
+                                        <Command.Item
+                                            value="none"
+                                            onSelect={() => pick(null)}
+                                            className={cn(
+                                                rowClass,
+                                                'mb-1 border-b border-line text-ink-3',
+                                            )}
+                                        >
+                                            <span
+                                                aria-hidden="true"
+                                                className="size-3.5 shrink-0"
+                                            />
+                                            {clearLabel}
+                                        </Command.Item>
+                                    )}
                                     {visibleRows(tree, open).map((row) =>
                                         row.kind === 'source' ? (
                                             sourceItem(row.source, row.depth)
@@ -425,22 +441,6 @@ export function TreeSelect({
                                                 </span>
                                             </Command.Item>
                                         ),
-                                    )}
-                                    {value && clearLabel && (
-                                        <Command.Item
-                                            value="none"
-                                            onSelect={() => pick(null)}
-                                            className={cn(
-                                                rowClass,
-                                                'mt-1 border-t border-line text-ink-3',
-                                            )}
-                                        >
-                                            <span
-                                                aria-hidden="true"
-                                                className="size-3.5 shrink-0"
-                                            />
-                                            {clearLabel}
-                                        </Command.Item>
                                     )}
                                 </>
                             )}
