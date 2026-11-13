@@ -120,6 +120,7 @@ export function TreeSelect({
     onSearch,
     multiple = false,
     pickedLabel,
+    optionFor,
 }: {
     id: string;
     /** Submits the value with a surrounding form. */
@@ -136,6 +137,8 @@ export function TreeSelect({
     multiple?: boolean;
     /** How a multiple choice shows when closed, given how many are picked. */
     pickedLabel?: (count: number) => string;
+    /** How a picked value shows when the options do not hold it (a server search). */
+    optionFor?: (value: string) => TreeOption;
     placeholder: string;
     searchPlaceholder: string;
     noMatches: string;
@@ -160,11 +163,32 @@ export function TreeSelect({
     // A server search may not have the picked value among what it answered.
     const current =
         options.find((s) => s.value === first) ??
-        (onSearch && first ? { value: first, label: first } : undefined);
+        (onSearch && first
+            ? (optionFor?.(first) ?? { value: first, label: first })
+            : undefined);
     const currentPath = current?.path ?? [];
     const expanded = position !== undefined;
     const [query, setQuery] = useState('');
-    const tree = useMemo(() => treeOf(options), [options]);
+    const pickedKey = picked.join(KEY);
+    // When multiple, what is picked sits at the top, out of the tree.
+    const tree = useMemo(
+        () =>
+            treeOf(
+                multiple
+                    ? options.filter(
+                          (o) => !pickedKey.split(KEY).includes(o.value),
+                      )
+                    : options,
+            ),
+        [options, multiple, pickedKey],
+    );
+    const pickedOptions = multiple
+        ? picked.map(
+              (v) =>
+                  options.find((o) => o.value === v) ??
+                  optionFor?.(v) ?? { value: v, label: v },
+          )
+        : [];
     // A short list starts unfolded; a long one only down to what is picked.
     const [open, setOpen] = useState(
         () =>
@@ -432,6 +456,19 @@ export function TreeSelect({
                                             />
                                             {clearLabel}
                                         </Command.Item>
+                                    )}
+                                    {pickedOptions.length > 0 && (
+                                        <div className="mb-1 border-b border-line pb-1">
+                                            {pickedOptions.map((source) =>
+                                                sourceItem(
+                                                    source,
+                                                    0,
+                                                    (source.path ?? []).join(
+                                                        ' > ',
+                                                    ) || undefined,
+                                                ),
+                                            )}
+                                        </div>
                                     )}
                                     {visibleRows(tree, open).map((row) =>
                                         row.kind === 'source' ? (

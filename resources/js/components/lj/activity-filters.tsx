@@ -177,6 +177,7 @@ export function ActivityFilters({
                         value={listOf(kind)}
                         onChange={(value) => toggle(kind, value)}
                         multiple
+                        optionFor={option}
                         pickedLabel={(count) =>
                             t(
                                 `activity.filters.${kind}_count`,
