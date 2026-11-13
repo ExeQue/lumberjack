@@ -25,7 +25,7 @@ describe('recording an event', function () {
         $this->postJson('/api/ingest', $this->batch([($this->event)([
             'group' => 'Billing',
             'actor' => ['type' => 'App\\Models\\User', 'id' => 17],
-            'subject' => ['type' => 'order', 'id' => '42'],
+            'subjects' => [['type' => 'image', 'id' => 81], ['type' => 'gallery', 'id' => '5']],
             'payload' => ['total' => 499, 'card' => '4242'],
             'trace_id' => 'trace-1',
         ])]), $this->auth)->assertStatus(202);
@@ -36,7 +36,7 @@ describe('recording an event', function () {
             ->and($event->group)->toBe('billing')
             ->and($event->name)->toBe('order.placed')
             ->and([$event->actor_type, $event->actor_id])->toBe(['App\\Models\\User', '17'])
-            ->and([$event->subject_type, $event->subject_id])->toBe(['order', '42'])
+            ->and($event->subjects)->toEqual([['type' => 'image', 'id' => '81'], ['type' => 'gallery', 'id' => '5']])
             ->and($event->payload['total'])->toBe(499)
             ->and($event->payload['card'])->not->toBe('4242')
             ->and($event->trace_id)->toBe('trace-1')
@@ -51,6 +51,20 @@ describe('recording an event', function () {
         expect($event->group)->toBe(Activity::DEFAULT_GROUP)
             ->and($event->actor_type)->toBeNull()
             ->and($event->actor_id)->toBeNull();
+    });
+
+    it('keeps each subject once, also one sent alone as an older SDK does, and at most ten', function () {
+        $many = array_map(fn (int $i): array => ['type' => 'tag', 'id' => $i], range(1, 15));
+
+        $this->postJson('/api/ingest', $this->batch([
+            ($this->event)(['subject' => ['type' => 'order', 'id' => 1], 'subjects' => [['type' => 'order', 'id' => 1], ['type' => 'cart', 'id' => 2], ['type' => 'bad']]]),
+            ($this->event)(['subjects' => $many]),
+        ]), $this->auth);
+
+        [$first, $second] = Activity::query()->orderBy('id')->get()->all();
+
+        expect($first->subjects)->toEqual([['type' => 'order', 'id' => '1'], ['type' => 'cart', 'id' => '2']])
+            ->and($second->subjects)->toHaveCount(RecordActivityAction::MAX_SUBJECTS);
     });
 
     it('skips an event without a usable name', function (mixed $name) {

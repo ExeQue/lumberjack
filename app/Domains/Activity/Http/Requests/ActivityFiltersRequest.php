@@ -8,9 +8,9 @@ use App\Domains\Projects\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * One event's occurrences: sorted by time or by actor, and narrowed to one actor or subject.
+ * The Activity pages' filters: one actor, one subject, and how occurrences are sorted.
  */
-class ShowActivityRequest extends FormRequest
+class ActivityFiltersRequest extends FormRequest
 {
     public const array SORTS = ['time', 'actor'];
 

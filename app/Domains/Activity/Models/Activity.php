@@ -27,8 +27,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $name
  * @property string|null $actor_type
  * @property string|null $actor_id
- * @property string|null $subject_type
- * @property string|null $subject_id
+ * @property list<array{type: string, id: string}>|null $subjects
  * @property array<string, mixed>|null $payload
  * @property string|null $trace_id
  * @property string|null $environment
@@ -36,7 +35,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $host
  * @property CarbonImmutable $occurred_at
  */
-#[Fillable(['project_id', 'group', 'name', 'actor_type', 'actor_id', 'subject_type', 'subject_id', 'payload', 'trace_id', 'environment', 'release', 'host', 'occurred_at'])]
+#[Fillable(['project_id', 'group', 'name', 'actor_type', 'actor_id', 'subjects', 'payload', 'trace_id', 'environment', 'release', 'host', 'occurred_at'])]
 #[WithoutTimestamps]
 #[DateFormat('Y-m-d H:i:s.v')]
 #[UseEloquentBuilder(ActivityBuilder::class)]
@@ -52,6 +51,7 @@ class Activity extends Model
     protected function casts(): array
     {
         return [
+            'subjects' => 'array',
             'payload' => 'array',
             'occurred_at' => 'datetime',
         ];

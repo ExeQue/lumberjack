@@ -29,60 +29,65 @@ class ShowcaseActivitySeeder extends Seeder
     private const int USERS = 50;
 
     /**
-     * Per project: group => name => [events an hour at the busiest time, subject type or null, actor kind].
+     * Per project: group => name => [events an hour at the busiest time, subject types, actor kind].
      * The actor kind is "user", "system" or "none".
      *
-     * @var array<string, array<string, array<string, array{0: float, 1: string|null, 2: string}>>>
+     * @var array<string, array<string, array<string, array{0: float, 1: list<string>, 2: string}>>>
      */
     private const array EVENTS = [
         'storefront' => [
             'billing' => [
-                'order.placed' => [9, 'order', 'user'],
-                'order.refunded' => [0.6, 'order', 'user'],
-                'payment.failed' => [0.9, 'order', 'user'],
+                'order.placed' => [9, ['order', 'cart'], 'user'],
+                'order.refunded' => [0.6, ['order'], 'user'],
+                'payment.failed' => [0.9, ['order'], 'user'],
             ],
             'cart' => [
-                'cart.created' => [22, 'cart', 'user'],
-                'cart.abandoned' => [7, 'cart', 'none'],
+                'cart.created' => [22, ['cart'], 'user'],
+                'cart.abandoned' => [7, ['cart'], 'none'],
             ],
         ],
         'orders-api' => [
             'auth' => [
-                'user.signed_in' => [14, null, 'user'],
-                'user.signed_up' => [1.5, null, 'user'],
+                'user.signed_in' => [14, [], 'user'],
+                'user.signed_up' => [1.5, [], 'user'],
             ],
             'teams' => [
-                'team.created' => [0.8, 'team', 'user'],
-                'member.invited' => [2, 'team', 'user'],
+                'team.created' => [0.8, ['team'], 'user'],
+                'member.invited' => [2, ['team'], 'user'],
             ],
             'api' => [
-                'token.created' => [0.7, 'token', 'user'],
+                'token.created' => [0.7, ['token'], 'user'],
             ],
         ],
         'marketing-site' => [
             'default' => [
-                'newsletter.subscribed' => [3, null, 'none'],
-                'contact.submitted' => [0.8, null, 'none'],
+                'newsletter.subscribed' => [3, [], 'none'],
+                'contact.submitted' => [0.8, [], 'none'],
             ],
         ],
         'fulfillment-worker' => [
             'imports' => [
-                'import.started' => [1, 'import', 'system'],
-                'import.finished' => [0.95, 'import', 'system'],
+                'import.started' => [1, ['import'], 'system'],
+                'import.finished' => [0.95, ['import'], 'system'],
             ],
         ],
         'acme-booking' => [
             'bookings' => [
-                'booking.created' => [4, 'booking', 'user'],
-                'booking.cancelled' => [0.5, 'booking', 'user'],
+                'booking.created' => [4, ['booking', 'resource'], 'user'],
+                'booking.cancelled' => [0.5, ['booking', 'resource'], 'user'],
             ],
         ],
         'customer-portal' => [
             'auth' => [
-                'user.signed_in' => [8, null, 'user'],
+                'user.signed_in' => [8, [], 'user'],
             ],
             'documents' => [
-                'document.downloaded' => [5, 'document', 'user'],
+                'document.downloaded' => [5, ['document', 'folder'], 'user'],
+            ],
+            // An upload is done to the image and to the gallery it lands in.
+            'gallery' => [
+                'image.uploaded' => [6, ['image', 'gallery'], 'user'],
+                'image.deleted' => [0.8, ['image', 'gallery'], 'user'],
             ],
         ],
     ];
@@ -111,7 +116,7 @@ class ShowcaseActivitySeeder extends Seeder
                 $load = Showcase::load($hour, $shape);
 
                 foreach ($catalog as $group => $events) {
-                    foreach ($events as $name => [$peak, $subject, $actor]) {
+                    foreach ($events as $name => [$peak, $subjectTypes, $actor]) {
                         for ($n = Showcase::poisson($peak * $load); $n > 0; $n--) {
                             $at = $hour->addSeconds(mt_rand(0, 3599));
 
@@ -134,8 +139,7 @@ class ShowcaseActivitySeeder extends Seeder
                                 'name' => $name,
                                 'actor_type' => $actorType,
                                 'actor_id' => $actorId,
-                                'subject_type' => $subject,
-                                'subject_id' => $subject !== null ? (string) mt_rand(1000, 9999) : null,
+                                'subjects' => $subjectTypes !== [] ? json_encode(array_map($this->subject(...), $subjectTypes)) : null,
                                 'payload' => $payload !== null ? json_encode($payload) : null,
                                 'trace_id' => $traces !== [] && Showcase::chance(0.3) ? Showcase::any($traces) : null,
                                 'release' => Showcase::release($spec, $at),
@@ -191,6 +195,19 @@ class ShowcaseActivitySeeder extends Seeder
     }
 
     /**
+     * A subject of this type: the few containers (galleries, folders, resources, teams) come
+     * up again and again, the rest are new each time.
+     *
+     * @return array{type: string, id: string}
+     */
+    private function subject(string $type): array
+    {
+        $containers = ['gallery' => 12, 'folder' => 8, 'resource' => 6, 'team' => 20, 'cart' => 400];
+
+        return ['type' => $type, 'id' => (string) (isset($containers[$type]) ? mt_rand(1, $containers[$type]) : mt_rand(1000, 9999))];
+    }
+
+    /**
      * A small payload of the kind each event carries.
      *
      * @return array<string, mixed>|null
@@ -211,6 +228,7 @@ class ShowcaseActivitySeeder extends Seeder
             'import.finished' => ['rows' => mt_rand(200, 5000), 'failed' => Showcase::chance(0.2) ? mt_rand(1, 12) : 0],
             'booking.created' => ['seats' => mt_rand(1, 8), 'resource' => Showcase::any(['meeting-room', 'desk', 'van'])],
             'document.downloaded' => ['format' => Showcase::any(['pdf', 'pdf', 'xlsx'])],
+            'image.uploaded' => ['bytes' => mt_rand(200_000, 9_000_000), 'mime' => Showcase::any(['image/jpeg', 'image/jpeg', 'image/png', 'image/heic'])],
             default => null,
         };
     }

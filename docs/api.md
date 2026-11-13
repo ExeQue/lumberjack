@@ -216,22 +216,25 @@ An event of type `activity` records an [activity](./activity.md):
     "name": "order.placed",
     "group": "billing",
     "actor": { "type": "App\\Models\\User", "id": "17" },
-    "subject": { "type": "order", "id": "42" },
+    "subjects": [
+        { "type": "image", "id": "81" },
+        { "type": "gallery", "id": "5" }
+    ],
     "payload": { "total": 499, "currency": "DKK" },
     "trace_id": "4bf92f3577b34da6",
     "timestamp": 1763025600.123
 }
 ```
 
-| Field       | Notes                                                                                              |
-| ----------- | -------------------------------------------------------------------------------------------------- |
-| `name`      | Required. Letters, digits, `.`, `_`, `:` and `-`, at most 128 characters. Otherwise it is skipped. |
-| `group`     | Made into a slug. Without it, `default`.                                                           |
-| `actor`     | Who did it: a `type` (at most 128 characters) and an `id` (at most 64). Left out without both.     |
-| `subject`   | What it was done to, in the same form.                                                             |
-| `payload`   | A JSON object, scrubbed. Larger than 16 KB, it is replaced by `{"_truncated": true}`.              |
-| `trace_id`  | The trace it was recorded in.                                                                      |
-| `timestamp` | When it happened.                                                                                  |
+| Field       | Notes                                                                                                                 |
+| ----------- | --------------------------------------------------------------------------------------------------------------------- |
+| `name`      | Required. Letters, digits, `.`, `_`, `:` and `-`, at most 128 characters. Otherwise it is skipped.                    |
+| `group`     | Made into a slug. Without it, `default`.                                                                              |
+| `actor`     | Who did it: a `type` (at most 128 characters) and an `id` (at most 64). Left out without both.                        |
+| `subjects`  | What it was done to: a list of at most 10, each a `type` and an `id` like the actor. `subject` with one is taken too. |
+| `payload`   | A JSON object, scrubbed. Larger than 16 KB, it is replaced by `{"_truncated": true}`.                                 |
+| `trace_id`  | The trace it was recorded in.                                                                                         |
+| `timestamp` | When it happened.                                                                                                     |
 
 ### Forgetting an actor
 

@@ -34,6 +34,21 @@ describe('the activity page', function () {
                 ->where('activities.1.count', 1));
     });
 
+    it('counts only one actor\'s or one subject\'s activity when filtered', function () {
+        $this->events->named('gallery', 'image.uploaded')->byActor('user', 1)->onSubject('image', 10)->onSubject('gallery', 5)->count(2)->create();
+        $this->events->named('gallery', 'image.uploaded')->byActor('user', 2)->onSubject('image', 11)->onSubject('gallery', 6)->create();
+        $this->events->named('auth', 'user.signed_in')->byActor('user', 2)->create();
+
+        $index = fn (array $query) => $this->actingAs($this->user)->get(route('activity.index', ['project' => $this->project, ...$query]));
+
+        $index(['actor_type' => 'user', 'actor_id' => '2'])->assertInertia(fn (Assert $page) => $page
+            ->has('activities', 2)
+            ->where('filters.actor_id', '2'));
+        $index(['subject_type' => 'gallery', 'subject_id' => '5'])->assertInertia(fn (Assert $page) => $page
+            ->has('activities', 1)
+            ->where('activities.0.count', 2));
+    });
+
     it('is closed to someone outside the team', function () {
         $this->actingAs(User::factory()->inTeam()->create())
             ->get(route('activity.index', ['project' => $this->project]))
@@ -61,7 +76,7 @@ describe('one activity', function () {
         $event = $this->events->named('billing', 'order.placed');
         $event->byActor('user', 2)->onSubject('order', 1)->create();
         $event->byActor('user', 1)->onSubject('order', 2)->create();
-        $event->byActor('user', 1)->onSubject('order', 1)->create();
+        $event->byActor('user', 1)->onSubject('cart', 9)->onSubject('order', 1)->create();
 
         $show = fn (array $query) => $this->actingAs($this->user)
             ->get(route('activity.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed', ...$query]));
@@ -71,12 +86,49 @@ describe('one activity', function () {
             ->where('occurrences.1.actor.id', '1')
             ->where('occurrences.2.actor.id', '2'));
         $show(['actor_type' => 'user', 'actor_id' => '1'])->assertInertia(fn (Assert $page) => $page->has('occurrences', 2));
-        $show(['subject_type' => 'order', 'subject_id' => '1'])->assertInertia(fn (Assert $page) => $page->has('occurrences', 2));
+        $show(['subject_type' => 'order', 'subject_id' => '1'])->assertInertia(fn (Assert $page) => $page
+            ->has('occurrences', 2)
+            ->where('occurrences.0.subjects', [['type' => 'cart', 'id' => '9'], ['type' => 'order', 'id' => '1']])
+            ->where('stats.count', 2));
     });
 
     it('rejects an unknown sort', function () {
         $this->actingAs($this->user)
             ->get(route('activity.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed', 'sort' => 'payload']))
             ->assertSessionHasErrors('sort');
+    });
+});
+
+describe('filter suggestions', function () {
+    beforeEach(function () {
+        $event = $this->events->named('gallery', 'image.uploaded');
+        $event->byActor('user', 17)->onSubject('gallery', 5)->count(3)->create();
+        $event->byActor('user', 18)->onSubject('gallery', 51)->create();
+        $event->byActor('team', 1)->onSubject('image', 5)->create();
+        $this->references = fn (array $query) => $this->actingAs($this->user)
+            ->getJson(route('activity.references', ['project' => $this->project, ...$query]));
+    });
+
+    it('suggests the actors or subjects that match what is typed, most active first', function (array $query, array $expected) {
+        ($this->references)($query)->assertOk()->assertExactJson($expected);
+    })->with([
+        'actors of a type' => [['kind' => 'actor', 'q' => 'user'], ['user:17', 'user:18']],
+        'an actor by type and key' => [['kind' => 'actor', 'q' => 'user:18'], ['user:18']],
+        'subjects whose key starts with it' => [['kind' => 'subject', 'q' => '5'], ['gallery:5', 'gallery:51', 'image:5']],
+        'subjects by type and key' => [['kind' => 'subject', 'q' => 'gallery:5'], ['gallery:5', 'gallery:51']],
+        'no wildcards from what is typed' => [['kind' => 'actor', 'q' => 'u%'], []],
+    ]);
+
+    it('suggests from one activity only when asked', function () {
+        $this->events->named('auth', 'user.signed_in')->byActor('user', 99)->create();
+
+        ($this->references)(['kind' => 'actor', 'q' => 'user', 'group' => 'gallery', 'name' => 'image.uploaded'])
+            ->assertExactJson(['user:17', 'user:18']);
+    });
+
+    it('is closed to someone outside the team', function () {
+        $this->actingAs(User::factory()->inTeam()->create())
+            ->getJson(route('activity.references', ['project' => $this->project, 'kind' => 'actor']))
+            ->assertForbidden();
     });
 });

@@ -32,13 +32,16 @@ class ActivityBuilder extends Builder
         return $this->orWhere(fn (self $q) => $q->where('actor_type', $type)->where('actor_id', $id));
     }
 
+    /**
+     * Done to this subject, among any others.
+     */
     public function whereSubject(string $type, string $id): self
     {
-        return $this->where(fn (self $q) => $q->where('subject_type', $type)->where('subject_id', $id));
+        return $this->whereJsonContains('subjects', [['type' => $type, 'id' => $id]]);
     }
 
     public function orWhereSubject(string $type, string $id): self
     {
-        return $this->orWhere(fn (self $q) => $q->where('subject_type', $type)->where('subject_id', $id));
+        return $this->orWhereJsonContains('subjects', [['type' => $type, 'id' => $id]]);
     }
 }

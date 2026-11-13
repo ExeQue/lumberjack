@@ -27,6 +27,9 @@ class RecordActivityAction
     /** What a payload too large to keep becomes. */
     public const array TRUNCATED = ['_truncated' => true];
 
+    /** Subjects one activity keeps at most. */
+    public const int MAX_SUBJECTS = 10;
+
     private const string NAME_PATTERN = '/^[A-Za-z0-9._:\-]+$/';
 
     /** @var list<array<string, mixed>> events waiting for one bulk insert */
@@ -55,7 +58,7 @@ class RecordActivityAction
         $group = self::group($event['group'] ?? null);
         $at = Envelope::time($event['timestamp'] ?? null);
         [$actorType, $actorId] = $this->reference($event['actor'] ?? null);
-        [$subjectType, $subjectId] = $this->reference($event['subject'] ?? null);
+        $subjects = $this->subjects($event);
         $payload = $this->payload($project, $event['payload'] ?? null);
 
         $this->pending[] = [
@@ -64,8 +67,7 @@ class RecordActivityAction
             'name' => $name,
             'actor_type' => $actorType,
             'actor_id' => $actorId,
-            'subject_type' => $subjectType,
-            'subject_id' => $subjectId,
+            'subjects' => $subjects !== [] ? json_encode($subjects) : null,
             'payload' => $payload !== null ? json_encode($payload) : null,
             'trace_id' => Envelope::short($event['trace_id'] ?? null),
             'environment' => $envelope->environment,
@@ -135,6 +137,29 @@ class RecordActivityAction
         $id = Envelope::short($reference['id'] ?? null, 64);
 
         return $type !== null && $id !== null ? [$type, $id] : [null, null];
+    }
+
+    /**
+     * Every subject it was done to, from "subjects" (a list) and "subject" (one, as older
+     * SDKs send it), each once, at most MAX_SUBJECTS.
+     *
+     * @param  array<string, mixed>  $event
+     * @return list<array{type: string, id: string}>
+     */
+    private function subjects(array $event): array
+    {
+        $given = is_array($event['subjects'] ?? null) && array_is_list($event['subjects']) ? $event['subjects'] : [];
+        $subjects = [];
+
+        foreach ([$event['subject'] ?? null, ...array_slice($given, 0, self::MAX_SUBJECTS)] as $subject) {
+            [$type, $id] = $this->reference($subject);
+
+            if ($type !== null && $id !== null) {
+                $subjects[$type."\0".$id] = ['type' => $type, 'id' => $id];
+            }
+        }
+
+        return array_slice(array_values($subjects), 0, self::MAX_SUBJECTS);
     }
 
     /**

@@ -41,9 +41,9 @@ class ActivityFactory extends Factory
         return $this->state(fn () => ['actor_type' => $type, 'actor_id' => (string) $id]);
     }
 
-    /** Done to this subject: a morph alias or class name, and its key. */
+    /** Done to this subject too: a morph alias or class name, and its key. */
     public function onSubject(string $type, string|int $id): static
     {
-        return $this->state(fn () => ['subject_type' => $type, 'subject_id' => (string) $id]);
+        return $this->state(fn (array $attributes) => ['subjects' => [...$attributes['subjects'] ?? [], ['type' => $type, 'id' => (string) $id]]]);
     }
 }

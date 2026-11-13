@@ -1,8 +1,12 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import {
+    ActivityFilters,
+    referenceLabel,
+} from '@/components/lj/activity-filters';
+import type { Reference } from '@/components/lj/activity-filters';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
-    Button,
     Card,
     CardHeader,
     EmptyState,
@@ -34,13 +38,11 @@ import type {
 
 type Sort = 'time' | 'actor';
 
-type Reference = { type: string; id: string };
-
 type Occurrence = {
     id: number;
     at: string;
     actor: Reference | null;
-    subject: Reference | null;
+    subjects: Reference[];
     payload: Record<string, unknown> | null;
     trace_id: string | null;
     environment: string | null;
@@ -70,13 +72,6 @@ type Props = {
 const pagerClass =
     'inline-flex h-8 items-center rounded-md border border-line-strong bg-panel-2 px-3 text-ink';
 
-/** "user #17": a type's last segment (App\Models\User is user) and its key. */
-function referenceLabel(reference: Reference): string {
-    const type = reference.type.split('\\').pop() ?? reference.type;
-
-    return `${type} #${reference.id}`;
-}
-
 export default function ActivityShow({
     project,
     filters,
@@ -93,10 +88,6 @@ export default function ActivityShow({
     const actor =
         filters.actor_type && filters.actor_id
             ? { type: filters.actor_type, id: filters.actor_id }
-            : null;
-    const subject =
-        filters.subject_type && filters.subject_id
-            ? { type: filters.subject_type, id: filters.subject_id }
             : null;
 
     useProjectLive(
@@ -217,31 +208,12 @@ export default function ActivityShow({
                             ]}
                             onChange={(sort) => apply({ sort })}
                         />
-                        {actor && (
-                            <Button
-                                onClick={() =>
-                                    apply({ actor_type: null, actor_id: null })
-                                }
-                            >
-                                {t('activity.clear_actor', {
-                                    reference: referenceLabel(actor),
-                                })}
-                            </Button>
-                        )}
-                        {subject && (
-                            <Button
-                                onClick={() =>
-                                    apply({
-                                        subject_type: null,
-                                        subject_id: null,
-                                    })
-                                }
-                            >
-                                {t('activity.clear_subject', {
-                                    reference: referenceLabel(subject),
-                                })}
-                            </Button>
-                        )}
+                        <ActivityFilters
+                            filters={filters}
+                            onChange={apply}
+                            project={project.uuid}
+                            event={event}
+                        />
                         {actor && can_forget && (
                             <div className="ml-auto">
                                 <ConfirmButton
@@ -283,7 +255,7 @@ export default function ActivityShow({
                                             {t('activity.columns.actor')}
                                         </th>
                                         <th className={thClass}>
-                                            {t('activity.columns.subject')}
+                                            {t('activity.columns.subjects')}
                                         </th>
                                         <th className={thClass}>
                                             {t('activity.columns.payload')}
@@ -326,9 +298,25 @@ export default function ActivityShow({
                                                 )}
                                             </td>
                                             <td className={tdClass}>
-                                                {referenceButton(
-                                                    o.subject,
-                                                    'subject',
+                                                {o.subjects.length === 0 ? (
+                                                    <span className="text-ink-3">
+                                                        -
+                                                    </span>
+                                                ) : (
+                                                    <ul className="flex flex-col gap-0.5">
+                                                        {o.subjects.map(
+                                                            (subject) => (
+                                                                <li
+                                                                    key={`${subject.type}:${subject.id}`}
+                                                                >
+                                                                    {referenceButton(
+                                                                        subject,
+                                                                        'subject',
+                                                                    )}
+                                                                </li>
+                                                            ),
+                                                        )}
+                                                    </ul>
                                                 )}
                                             </td>
                                             <td

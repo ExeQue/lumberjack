@@ -9,16 +9,19 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Per event in the period: how often it happened, when last, and a count per bucket for
- * its sparkline. Read from the events themselves, whose retention covers every period.
+ * Per activity in the period: how often it happened, when last, and a count per bucket for
+ * its sparkline, for one actor or subject if given. Read from the activity itself, whose
+ * retention covers every period.
  */
 class ActivityStatisticsQuery
 {
     /**
      * @param  array{0: string, 1: string}|null  $event  only this group and name
+     * @param  array{type: string, id: string}|null  $actor
+     * @param  array{type: string, id: string}|null  $subject
      * @return list<array{group: string, name: string, count: int, last_at: string|null, series: list<int>}>
      */
-    public function get(int $projectId, Period $period, ?string $environment = null, ?array $event = null, int $limit = 200): array
+    public function get(int $projectId, Period $period, ?string $environment = null, ?array $event = null, ?array $actor = null, ?array $subject = null, int $limit = 200): array
     {
         $size = $period->bucketSeconds();
         $start = intdiv($period->since()->getTimestamp(), $size);
@@ -27,7 +30,10 @@ class ActivityStatisticsQuery
             ->where('occurred_at', '>=', $period->since()->format('Y-m-d H:i:s'))
             ->when($environment !== null)->where('environment', $environment)
             ->when($event !== null)->where('group', $event[0] ?? '')
-            ->when($event !== null)->where('name', $event[1] ?? '');
+            ->when($event !== null)->where('name', $event[1] ?? '')
+            ->when($actor !== null)->where('actor_type', $actor['type'] ?? '')
+            ->when($actor !== null)->where('actor_id', $actor['id'] ?? '')
+            ->when($subject !== null)->whereJsonContains('subjects', [$subject]);
 
         $rows = $base()
             ->selectRaw('"group", name, COUNT(*) AS c, MAX(occurred_at) AS last_at')

@@ -20,8 +20,9 @@ An activity has:
   two different ones.
 - **An actor**, optional: who did it, as a type and a key, such as `App\Models\User` and
   `17`. It can be anything with a key, not only a user: a team, an API client, `system`.
-- **A subject**, optional: what it was done to, in the same form, such as `order` and
-  `42`.
+- **Subjects**, optional: what it was done to, in the same form, at most 10. An upload
+  is done to the image and to the gallery it lands in, so it has both, and shows up
+  under either.
 - **A payload**, optional: what else the app wants to keep, as JSON. It is scrubbed like
   [error context](./administration.md#secrets-in-stored-data). A payload larger than
   16 KB is not kept; the activity is, marked as having had one too large.
@@ -41,12 +42,18 @@ What goes into the payload is up to the app.
 first, for the period and environment picked at the top. Each shows how often it
 happened, a trend over the period and when it last happened.
 
+To see one actor's or one subject's activity, type it as `type:id` (`user:17`,
+`gallery:5`) into **Actor** or **Subject** above the list. As you type, the field
+suggests the most active ones that match: a type (`gallery`), a key (`5`), or a type and
+the start of a key (`gallery:5`). The counts and trends then cover only that actor or
+subject, and the filter carries over to the occurrences.
+
 Click one to see its occurrences, newest first, 50 at a time:
 
 - **Sort by:** **Newest first**, or **Actor**, which puts each actor's occurrences
   together.
-- **Actor** and **Subject:** click one to show only its occurrences. The button above
-  the list takes the filter off again.
+- **Actor** and **Subjects:** click one to show only its occurrences, or type one into
+  the fields above the list. The buttons beside them take a filter off again.
 - **Payload:** click it to see it in full.
 - **Trace:** opens the request or job it was recorded in.
 

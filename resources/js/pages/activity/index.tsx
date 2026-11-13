@@ -1,4 +1,6 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { ActivityFilters } from '@/components/lj/activity-filters';
+import type { ReferenceFilters } from '@/components/lj/activity-filters';
 import { Relative } from '@/components/lj/relative';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
@@ -18,7 +20,10 @@ import { formatDateTime, formatNumber } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useProjectLive } from '@/lib/use-project-live';
-import { show as activityShow } from '@/routes/activity';
+import {
+    index as activityIndex,
+    show as activityShow,
+} from '@/routes/activity';
 import { show as projectShow } from '@/routes/projects';
 import type {
     DashboardFilters,
@@ -34,9 +39,11 @@ type EventStat = {
     series: number[];
 };
 
+type Filters = DashboardFilters & ReferenceFilters;
+
 type Props = {
     project: ProjectHeader;
-    filters: DashboardFilters;
+    filters: Filters;
     activities: EventStat[];
 };
 
@@ -58,6 +65,20 @@ export default function ActivityIndex({ project, filters, activities }: Props) {
     const query = Object.fromEntries(
         Object.entries(filters).filter(([, v]) => v !== null && v !== ''),
     ) as Record<string, string>;
+
+    const apply = (changes: Partial<Filters>) => {
+        const next = Object.fromEntries(
+            Object.entries({ ...filters, ...changes }).filter(
+                ([, v]) => v !== null && v !== '',
+            ),
+        ) as Record<string, string>;
+
+        router.get(
+            activityIndex(project.uuid, { query: next }).url,
+            {},
+            { preserveState: true, preserveScroll: true, replace: true },
+        );
+    };
 
     return (
         <>
@@ -86,6 +107,12 @@ export default function ActivityIndex({ project, filters, activities }: Props) {
                         {},
                         activities.length,
                     )}
+                />
+
+                <ActivityFilters
+                    filters={filters}
+                    onChange={apply}
+                    project={project.uuid}
                 />
 
                 {groups.length === 0 ? (

@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Domains\Activity\Http\Controllers;
 
-use App\Domains\Activity\Http\Requests\ShowActivityRequest;
+use App\Domains\Activity\Http\Requests\ActivityFiltersRequest;
+use App\Domains\Activity\Http\Requests\SearchActivityReferencesRequest;
 use App\Domains\Activity\Models\Activity;
+use App\Domains\Activity\Queries\ActivityReferencesQuery;
 use App\Domains\Activity\Queries\ActivityStatisticsQuery;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
 use App\Domains\Shared\Http\Concerns\ReadsDashboardFilters;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,26 +23,25 @@ class ActivityController
     public const int PER_PAGE = 50;
 
     /**
-     * Every event in the period, by group, with how often it happened.
+     * Every activity in the period, by group, with how often it happened: of one actor or
+     * subject if picked.
      */
-    public function index(Request $request, Project $project, ActivityStatisticsQuery $query, ProjectPresenter $presenter): Response
+    public function index(ActivityFiltersRequest $request, Project $project, ActivityStatisticsQuery $query, ProjectPresenter $presenter): Response
     {
-        Gate::authorize('view', $project);
-
         $period = $this->period($request);
         $environment = $this->environment($request);
 
         return Inertia::render('activity/index', [
             'project' => $presenter->header($project, $request->user()),
-            'filters' => $this->filters($request),
-            'activities' => fn (): array => $query->get($project->id, $period, $environment),
+            'filters' => $this->activityFilters($request),
+            'activities' => fn (): array => $query->get($project->id, $period, $environment, null, $request->actor(), $request->subject()),
         ]);
     }
 
     /**
      * One event's occurrences, newest first or by actor, for one actor or subject if picked.
      */
-    public function show(ShowActivityRequest $request, Project $project, string $group, string $name, ActivityStatisticsQuery $query, ProjectPresenter $presenter): Response
+    public function show(ActivityFiltersRequest $request, Project $project, string $group, string $name, ActivityStatisticsQuery $query, ProjectPresenter $presenter): Response
     {
         $period = $this->period($request);
         $environment = $this->environment($request);
@@ -66,21 +66,14 @@ class ActivityController
 
         return Inertia::render('activity/show', [
             'project' => $presenter->header($project, $request->user()),
-            'filters' => [
-                ...$this->filters($request),
-                'sort' => $sort,
-                'actor_type' => $actor['type'] ?? null,
-                'actor_id' => $actor['id'] ?? null,
-                'subject_type' => $subject['type'] ?? null,
-                'subject_id' => $subject['id'] ?? null,
-            ],
+            'filters' => [...$this->activityFilters($request), 'sort' => $sort],
             'event' => ['group' => $group, 'name' => $name],
-            'stats' => fn (): ?array => $query->get($project->id, $period, $environment, [$group, $name])[0] ?? null,
+            'stats' => fn (): ?array => $query->get($project->id, $period, $environment, [$group, $name], $actor, $subject)[0] ?? null,
             'occurrences' => array_map(fn (Activity $a): array => [
                 'id' => $a->id,
                 'at' => $a->occurred_at->format('Y-m-d\TH:i:s.vP'),
                 'actor' => $a->actor_type !== null ? ['type' => $a->actor_type, 'id' => (string) $a->actor_id] : null,
-                'subject' => $a->subject_type !== null ? ['type' => $a->subject_type, 'id' => (string) $a->subject_id] : null,
+                'subjects' => $a->subjects ?? [],
                 'payload' => $a->payload,
                 'trace_id' => $a->trace_id,
                 'environment' => $a->environment,
@@ -91,5 +84,37 @@ class ActivityController
             'prev_url' => $page->previousPageUrl(),
             'can_forget' => (bool) $request->user()?->can('update', $project),
         ]);
+    }
+
+    /**
+     * The actors or subjects matching what is typed into a filter field.
+     */
+    public function references(SearchActivityReferencesRequest $request, Project $project, ActivityReferencesQuery $references): JsonResponse
+    {
+        return response()->json($references->search(
+            $project->id,
+            $this->period($request),
+            $request->kind(),
+            $request->string('q')->toString(),
+            $this->environment($request),
+            $request->event(),
+        ));
+    }
+
+    /**
+     * @return array{period: string, environment: string|null, actor_type: string|null, actor_id: string|null, subject_type: string|null, subject_id: string|null}
+     */
+    private function activityFilters(ActivityFiltersRequest $request): array
+    {
+        $actor = $request->actor();
+        $subject = $request->subject();
+
+        return [
+            ...$this->filters($request),
+            'actor_type' => $actor['type'] ?? null,
+            'actor_id' => $actor['id'] ?? null,
+            'subject_type' => $subject['type'] ?? null,
+            'subject_id' => $subject['id'] ?? null,
+        ];
     }
 }

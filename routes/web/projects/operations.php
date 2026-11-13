@@ -24,6 +24,7 @@ Route::get('commands', CommandController::class)->name('commands.index');
 Route::delete('schedule/{scheduledTask}', [ScheduleController::class, 'destroy'])->name('schedule.destroy');
 Route::get('logs', LogController::class)->name('logs.index');
 Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
+Route::get('activity/references', [ActivityController::class, 'references'])->middleware('throttle:120,1')->name('activity.references');
 Route::delete('activity/actor', [ActivityActorController::class, 'forget'])->name('activity.actor.destroy');
 Route::get('activity/{group}/{name}', [ActivityController::class, 'show'])
     ->where(['group' => '[a-z0-9-]+', 'name' => '[A-Za-z0-9._:\-]+'])

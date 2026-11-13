@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domains\Projects\Models\Project;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -22,8 +23,8 @@ return new class () extends Migration {
             // Who did it and what it was done to: a type (a morph alias or class name) and a key, never more.
             $table->string('actor_type', 128)->nullable();
             $table->string('actor_id', 64)->nullable();
-            $table->string('subject_type', 128)->nullable();
-            $table->string('subject_id', 64)->nullable();
+            // A list of {type, id}: an upload is done to the image and to its gallery.
+            $table->jsonb('subjects')->nullable();
             $table->json('payload')->nullable();
             $table->string('trace_id', 64)->nullable();
             $table->string('environment', 64)->nullable();
@@ -36,6 +37,9 @@ return new class () extends Migration {
             $table->index(['project_id', 'actor_type', 'actor_id']);
             $table->index(['project_id', 'occurred_at']);
         });
+
+        // "Everything done to gallery 5" is a containment query: subjects @> '[{"type":"gallery","id":"5"}]'.
+        DB::statement('CREATE INDEX activities_subjects_index ON activities USING gin (subjects jsonb_path_ops)');
 
         Schema::create('activity_counts', function (Blueprint $table) {
             $table->id();
