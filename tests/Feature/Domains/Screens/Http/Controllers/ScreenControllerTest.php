@@ -209,6 +209,7 @@ describe('the pages', function () {
             ->has('sources.stat', 20)
             ->where("filters.{$this->project->uuid}.queue", ['emails'])
             ->where("filters.{$this->project->uuid}.activity", ['billing:invoice.paid'])
+            ->where('filter_labels', ['billing:invoice.paid' => 'Billing: Invoice paid'])
             ->has('environments')
             ->has('checks')
             ->where('limits.max_cols', Screen::MAX_COLS));

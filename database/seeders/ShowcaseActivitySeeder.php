@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Domains\Activity\Actions\RecordActivityAction;
 use App\Domains\Activity\Models\Activity;
 use App\Domains\Activity\Models\ActivityCount;
+use App\Domains\Activity\Models\ActivityLabel;
 use Database\Seeders\Support\Bulk;
 use Database\Seeders\Support\Showcase;
 use Illuminate\Database\Seeder;
@@ -27,6 +28,18 @@ class ShowcaseActivitySeeder extends Seeder
 
     /** Users an app's events are done by; a few of them do most. */
     private const int USERS = 50;
+
+    /**
+     * Per project: the names shown for a group (by its name) or an activity (group:name).
+     *
+     * @var array<string, array<string, string>>
+     */
+    private const array LABELS = [
+        'storefront' => [
+            'billing' => 'Payments',
+            'cart:cart.abandoned' => 'Abandoned cart',
+        ],
+    ];
 
     /**
      * Per project: group => name => [events an hour at the busiest time, subject types, actor kind].
@@ -99,6 +112,12 @@ class ShowcaseActivitySeeder extends Seeder
 
         foreach (Showcase::projects() as [$project, $spec]) {
             $catalog = self::EVENTS[$spec['slug']] ?? null;
+
+            // Names the team gave: groups by their own name, activities by group:name.
+            foreach (self::LABELS[$spec['slug']] ?? [] as $key => $label) {
+                [$group, $name] = explode(':', $key.':', 3);
+                ActivityLabel::query()->firstOrCreate(['project_id' => $project->id, 'group' => $group, 'name' => $name], ['label' => $label]);
+            }
 
             if ($catalog === null || Activity::query()->where('project_id', $project->id)->exists()) {
                 continue;

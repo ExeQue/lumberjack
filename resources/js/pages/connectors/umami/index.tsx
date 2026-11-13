@@ -1,7 +1,7 @@
 import { Deferred, Head, router, usePage } from '@inertiajs/react';
-import { Pencil } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { ConfirmButton } from '@/components/lj/confirm-button';
+import { LabelEditor } from '@/components/lj/label-editor';
 import {
     ConnectionCard,
     ConnectorPanel,
@@ -1124,9 +1124,14 @@ function Table({
                             )}
                             {onLabel && row.name !== '' && (
                                 <LabelEditor
-                                    dimension={dimension}
-                                    row={row}
-                                    onSave={onLabel}
+                                    value={row.name}
+                                    label={row.label}
+                                    field={t('connectors.umami.labels.field', {
+                                        value: row.name,
+                                    })}
+                                    onSave={(label) =>
+                                        onLabel(dimension, row.name, label)
+                                    }
                                 />
                             )}
                         </td>
@@ -1181,70 +1186,6 @@ function Table({
                 ))}
             </tbody>
         </table>
-    );
-}
-
-/** Gives a UTM value a readable name, in place, as a campaign id says little. */
-function LabelEditor({
-    dimension,
-    row,
-    onSave,
-}: {
-    dimension: string;
-    row: Row;
-    onSave: SaveLabel;
-}) {
-    const t = useT();
-    const [editing, setEditing] = useState(false);
-    const [label, setLabel] = useState(row.label ?? '');
-
-    if (!editing) {
-        return (
-            <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="relative ml-2 inline-flex items-center gap-1 rounded border border-line-strong px-1.5 py-0.5 align-middle text-[11px] text-ink-2 hover:border-amber hover:text-amber"
-                aria-label={t('connectors.umami.labels.field', {
-                    value: row.name,
-                })}
-            >
-                <Pencil aria-hidden="true" className="size-3" />
-                {row.label
-                    ? t('connectors.umami.labels.rename')
-                    : t('connectors.umami.labels.name')}
-            </button>
-        );
-    }
-
-    return (
-        <form
-            className="relative mt-1 flex gap-1.5"
-            onSubmit={(e) => {
-                e.preventDefault();
-                onSave(dimension, row.name, label);
-                setEditing(false);
-            }}
-        >
-            <label
-                className="sr-only"
-                htmlFor={`label-${dimension}-${row.name}`}
-            >
-                {t('connectors.umami.labels.field', { value: row.name })}
-            </label>
-            <Input
-                id={`label-${dimension}-${row.name}`}
-                autoFocus
-                maxLength={100}
-                value={label}
-                placeholder={row.name}
-                onChange={(e) => setLabel(e.target.value)}
-                onKeyDown={(e) => e.key === 'Escape' && setEditing(false)}
-                className="h-7 min-w-0 flex-1 text-xs"
-            />
-            <Button type="submit" className="h-7">
-                {t('connectors.umami.labels.save')}
-            </Button>
-        </form>
     );
 }
 

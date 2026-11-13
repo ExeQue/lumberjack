@@ -7,6 +7,7 @@ namespace App\Domains\Activity\Http\Controllers;
 use App\Domains\Activity\Http\Requests\ActivityFiltersRequest;
 use App\Domains\Activity\Http\Requests\SearchActivityReferencesRequest;
 use App\Domains\Activity\Models\Activity;
+use App\Domains\Activity\Models\ActivityLabel;
 use App\Domains\Activity\Queries\ActivityReferencesQuery;
 use App\Domains\Activity\Queries\ActivityStatisticsQuery;
 use App\Domains\Projects\Models\Project;
@@ -34,7 +35,17 @@ class ActivityController
         return Inertia::render('activity/index', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => $this->activityFilters($request),
-            'activities' => fn (): array => $query->get($project->id, $period, $environment, null, $request->actors(), $request->subjects()),
+            'activities' => function () use ($query, $project, $period, $environment, $request): array {
+                $labels = ActivityLabel::query()->whereProjectIn([$project->id])->toMap();
+
+                return array_map(fn (array $row): array => [
+                    ...$row,
+                    'label' => ActivityLabel::shown($labels, $row['group'], $row['name']),
+                    'group_label' => ActivityLabel::shown($labels, $row['group']),
+                ], $query->get($project->id, $period, $environment, null, $request->actors(), $request->subjects()));
+            },
+            'labels' => fn (): array => ActivityLabel::query()->whereProjectIn([$project->id])->toMap(),
+            'can_rename' => (bool) $request->user()?->can('update', $project),
         ]);
     }
 
@@ -67,7 +78,11 @@ class ActivityController
         return Inertia::render('activity/show', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => [...$this->activityFilters($request), 'sort' => $sort],
-            'event' => ['group' => $group, 'name' => $name],
+            'event' => (function () use ($project, $group, $name): array {
+                $labels = ActivityLabel::query()->whereProjectIn([$project->id])->toMap();
+
+                return ['group' => $group, 'name' => $name, 'label' => ActivityLabel::shown($labels, $group, $name), 'group_label' => ActivityLabel::shown($labels, $group)];
+            })(),
             'stats' => fn (): ?array => $query->get($project->id, $period, $environment, [$group, $name], $actors, $subjects)[0] ?? null,
             'occurrences' => array_map(fn (Activity $a): array => [
                 'id' => $a->id,

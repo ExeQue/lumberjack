@@ -262,6 +262,10 @@ down and back up.
 
 ![A calendar's events this week](./screenshots/widget-list-calendar.png)
 
+![The most frequent activity](./screenshots/widget-list-activity.png)
+
+![The latest activity](./screenshots/widget-list-activity-latest.png)
+
 **Shows**:
 
 - **Latest issues**: each issue's short id, title, status, count and age. Escalating and
@@ -278,6 +282,10 @@ down and back up.
   widget replace these and apply to the queue size.
 - **Hosts**: each host with CPU, memory and disk meters colored by their limits.
 - **Agents**: each agent, and **Offline** for one that stopped reporting.
+- **Most frequent activity**: the period's [activity](./activity), most frequent first,
+  with its group, count and when it last happened.
+- **Latest activity**: the newest occurrences, with the actor and subjects. A share link
+  leaves the actor and subjects out.
 - **Data source**: one row per item of an array in a data source.
 - **Calendar events**: a calendar's events. See [Calendars](#calendars).
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domains\Activity\Http\Controllers\ActivityActorController;
 use App\Domains\Activity\Http\Controllers\ActivityController;
+use App\Domains\Activity\Http\Controllers\ActivityLabelController;
 use App\Domains\Alerts\Http\Controllers\QueueAlertThresholdController;
 use App\Domains\Commands\Http\Controllers\CommandController;
 use App\Domains\Health\Http\Controllers\HealthController;
@@ -26,6 +27,7 @@ Route::get('logs', LogController::class)->name('logs.index');
 Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
 Route::get('activity/references', [ActivityController::class, 'references'])->middleware('throttle:120,1')->name('activity.references');
 Route::delete('activity/actor', [ActivityActorController::class, 'forget'])->name('activity.actor.destroy');
+Route::put('activity/labels', [ActivityLabelController::class, 'update'])->name('activity.labels.update');
 Route::get('activity/{group}/{name}', [ActivityController::class, 'show'])
     ->where(['group' => '[a-z0-9-]+', 'name' => '[A-Za-z0-9._:\-]+'])
     ->name('activity.show');

@@ -124,6 +124,9 @@ final class WidgetSources
             new WidgetSource($list, 'queues', 'rows', 100, 1000, filterOn: 'queue', snapshot: true),
             new WidgetSource($list, 'hosts', 'rows', 0.8, 0.9, filterOn: 'host', snapshot: true),
             new WidgetSource($list, 'agents', 'rows', filterOn: 'host', snapshot: true),
+            // Activity: the most frequent of the period, or the newest occurrences.
+            new WidgetSource($list, 'top_activity', 'rows', filterOn: 'activity'),
+            new WidgetSource($list, 'latest_activity', 'rows', filterOn: 'activity'),
             new WidgetSource($list, 'external_json', 'rows', snapshot: true),
             // An iCalendar data source's events (see Ical).
             new WidgetSource($list, 'calendar', 'rows', snapshot: true),

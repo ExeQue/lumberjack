@@ -73,6 +73,8 @@ export type Catalog = {
     periods: string[];
     /** Known names per filter kind (queue, host, domain), offered while typing a filter. */
     filters?: Record<string, string[]>;
+    /** What some filter names are shown as, by name. */
+    filterLabels?: Record<string, string>;
 };
 
 const ALL = '*';
@@ -1167,7 +1169,11 @@ export function WidgetInspector({
                             <datalist id={id(`filter-${filterOn}`)}>
                                 {(catalog.filters?.[filterOn] ?? []).map(
                                     (name) => (
-                                        <option key={name} value={name} />
+                                        <option
+                                            key={name}
+                                            value={name}
+                                            label={catalog.filterLabels?.[name]}
+                                        />
                                     ),
                                 )}
                             </datalist>

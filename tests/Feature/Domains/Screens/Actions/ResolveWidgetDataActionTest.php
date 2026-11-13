@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Domains\Activity\Models\Activity;
 use App\Domains\Activity\Models\ActivityCount;
+use App\Domains\Activity\Models\ActivityLabel;
 use App\Domains\Alerts\Models\QueueAlertThreshold;
 use App\Domains\DataSources\Enums\DataSourceFormat;
 use App\Domains\DataSources\Enums\DataSourceShape;
@@ -614,11 +616,36 @@ describe('activity', function () {
             ->and(($this->resolve)(WidgetType::Gauge, 'activity', ['red' => 10]))->toMatchArray(['value' => 7.0, 'state' => 'red']);
     });
 
-    it('charts one series per activity when split', function () {
+    it('charts one series per activity when split, named by the team or readably', function () {
+        ActivityLabel::factory()->forProject($this->project)->forActivity('billing', 'invoice.paid', 'Invoice paid')->create();
+
         $data = ($this->resolve)(WidgetType::Chart, 'activity', ['split_by' => 'activity']);
 
         expect(collect($data['series'])->mapWithKeys(fn (array $s): array => [$s['name'] => array_sum(array_column($s['points'], 'v'))])->all())
-            ->toBe(['billing:invoice.paid' => 4.0, 'users:user.signed_up' => 3.0]);
+            ->toBe(['Invoice paid' => 4.0, 'User signed up' => 3.0]);
+    });
+
+    it('lists the most frequent activity and the newest, named, and filtered', function () {
+        ActivityLabel::factory()->forProject($this->project)->forGroup('billing', 'Payments')->create();
+        Activity::factory()->forProject($this->project)->named('billing', 'invoice.paid')->count(2)->create(['occurred_at' => now()->subHour()]);
+        Activity::factory()->forProject($this->project)->named('users', 'user.signed_up')->byActor('user', 17)->onSubject('team', 3)->create(['occurred_at' => now()->subMinutes(5)]);
+
+        $top = ($this->resolve)(WidgetType::List, 'top_activity');
+        $latest = ($this->resolve)(WidgetType::List, 'latest_activity', ['limit' => '1']);
+
+        expect(array_map(fn (array $r): array => [$r['group'], $r['activity'], $r['count']], $top['rows']))->toBe([['Payments', 'Invoice paid', 2], ['Users', 'User signed up', 1]])
+            ->and($latest['rows'])->toHaveCount(1)
+            ->and($latest['rows'][0])->toMatchArray(['activity' => 'User signed up', 'actor' => 'user:17', 'subjects' => ['team:3']])
+            ->and(($this->resolve)(WidgetType::List, 'top_activity', scope: new WidgetScope(filter: 'users:*'))['rows'])->toHaveCount(1);
+    });
+
+    it('leaves actors and subjects out of a shared screen', function () {
+        Activity::factory()->forProject($this->project)->byActor('user', 17)->onSubject('team', 3)->create(['occurred_at' => now()->subMinutes(5)]);
+
+        $row = app(ResolveWidgetDataAction::class)
+            ->execute($this->project->team, WidgetType::List, 'latest_activity', new WidgetScope(), [], aggregatesOnly: true)['rows'][0];
+
+        expect($row)->toMatchArray(['actor' => null, 'subjects' => []]);
     });
 });
 

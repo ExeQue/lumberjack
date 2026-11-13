@@ -126,6 +126,8 @@ return [
             'queues' => 'Queues',
             'hosts' => 'Hosts',
             'agents' => 'Agents',
+            'top_activity' => 'Most frequent activity',
+            'latest_activity' => 'Latest activity',
             'external_json' => 'Data source',
             'calendar' => 'Calendar events',
         ],

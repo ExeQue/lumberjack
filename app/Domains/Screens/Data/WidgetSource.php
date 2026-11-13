@@ -51,7 +51,7 @@ final readonly class WidgetSource
             str_contains($this->id, 'job') || str_starts_with($this->id, 'queue') || $this->id === 'scheduled_tasks' => 'jobs',
             str_starts_with($this->id, 'host') || str_starts_with($this->id, 'agents') || $this->id === 'current_release' => 'infrastructure',
             str_starts_with($this->id, 'db_') => 'databases',
-            $this->id === 'activity' => 'activity',
+            str_ends_with($this->id, 'activity') => 'activity',
             $this->type === WidgetType::Health || $this->type === WidgetType::Overview || str_starts_with($this->id, 'health') => 'health',
             default => 'traffic',
         };

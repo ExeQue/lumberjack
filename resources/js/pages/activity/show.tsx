@@ -60,7 +60,7 @@ type Filters = DashboardFilters & ReferenceFilters & { sort: Sort };
 type Props = {
     project: ProjectHeader;
     filters: Filters;
-    event: { group: string; name: string };
+    event: { group: string; name: string; label: string; group_label: string };
     stats: { count: number; series: number[] } | null;
     occurrences: Occurrence[];
     next_url: string | null;
@@ -83,7 +83,8 @@ export default function ActivityShow({
 }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
-    const title = `${event.group}: ${event.name}`;
+    const raw = `${event.group}:${event.name}`;
+    const title = `${event.group_label}: ${event.label}`;
     // Forgetting is for one actor at a time.
     const actor =
         filters.actors.length === 1 ? parseReference(filters.actors[0]) : null;
@@ -151,7 +152,7 @@ export default function ActivityShow({
                         label: t('activity.title'),
                         href: activityIndex(project.uuid).url,
                     },
-                    { label: title, mono: true },
+                    { label: title },
                 ]}
             >
                 <DashboardFilterControls
@@ -161,7 +162,14 @@ export default function ActivityShow({
             </TopBar>
             <PageBody>
                 <PageTitle
-                    title={<span className="font-mono">{title}</span>}
+                    title={
+                        <span>
+                            {title}
+                            <span className="ml-2 font-mono text-sm font-normal text-ink-3">
+                                {raw}
+                            </span>
+                        </span>
+                    }
                     description={t(
                         'activity.occurrences_description',
                         { count: formatNumber(stats?.count ?? 0) },

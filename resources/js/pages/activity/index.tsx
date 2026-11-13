@@ -1,6 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ActivityFilters, filterQuery } from '@/components/lj/activity-filters';
+import { saveActivityLabel } from '@/components/lj/activity-labels';
+import type { ActivityLabels } from '@/components/lj/activity-labels';
 import type { ReferenceFilters } from '@/components/lj/activity-filters';
+import { LabelEditor } from '@/components/lj/label-editor';
 import { Relative } from '@/components/lj/relative';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
@@ -34,6 +37,9 @@ import type {
 type EventStat = {
     group: string;
     name: string;
+    /** The team's name for it, or a readable one. */
+    label: string;
+    group_label: string;
     count: number;
     last_at: string | null;
     series: number[];
@@ -45,9 +51,17 @@ type Props = {
     project: ProjectHeader;
     filters: Filters;
     activities: EventStat[];
+    labels: ActivityLabels;
+    can_rename: boolean;
 };
 
-export default function ActivityIndex({ project, filters, activities }: Props) {
+export default function ActivityIndex({
+    project,
+    filters,
+    activities,
+    labels,
+    can_rename,
+}: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
 
@@ -60,7 +74,9 @@ export default function ActivityIndex({ project, filters, activities }: Props) {
 
             return acc;
         }, {}),
-    ).toSorted(([a], [b]) => a.localeCompare(b));
+    ).toSorted(([, a], [, b]) =>
+        a[0].group_label.localeCompare(b[0].group_label),
+    );
 
     const query = filterQuery(filters);
 
@@ -123,7 +139,32 @@ export default function ActivityIndex({ project, filters, activities }: Props) {
                         >
                             <CardHeader
                                 id={`activity-group-${group}`}
-                                title={group}
+                                title={
+                                    <>
+                                        {rows[0].group_label}
+                                        <span className="ml-2 font-mono text-[11px] font-normal text-ink-3">
+                                            {group}
+                                        </span>
+                                        {can_rename && (
+                                            <LabelEditor
+                                                value={group}
+                                                label={labels.groups[group]}
+                                                field={t(
+                                                    'activity.rename_group',
+                                                    { group },
+                                                )}
+                                                onSave={(label) =>
+                                                    saveActivityLabel(
+                                                        project.uuid,
+                                                        group,
+                                                        null,
+                                                        label,
+                                                    )
+                                                }
+                                            />
+                                        )}
+                                    </>
+                                }
                             />
                             <div className="relative overflow-x-auto">
                                 <table className={tableClass}>
@@ -164,7 +205,7 @@ export default function ActivityIndex({ project, filters, activities }: Props) {
                                                 <td
                                                     className={cn(
                                                         tdClass,
-                                                        'font-mono text-xs',
+                                                        'text-xs',
                                                     )}
                                                 >
                                                     <Link
@@ -180,8 +221,36 @@ export default function ActivityIndex({ project, filters, activities }: Props) {
                                                         }
                                                         className="lj-row-link hover:text-amber"
                                                     >
-                                                        {event.name}
+                                                        {event.label}
                                                     </Link>
+                                                    <span className="relative ml-2 font-mono text-[11px] text-ink-3">
+                                                        {event.name}
+                                                    </span>
+                                                    {can_rename && (
+                                                        <LabelEditor
+                                                            value={`${event.group}:${event.name}`}
+                                                            label={
+                                                                labels
+                                                                    .activities[
+                                                                    `${event.group}:${event.name}`
+                                                                ]
+                                                            }
+                                                            field={t(
+                                                                'activity.rename_activity',
+                                                                {
+                                                                    activity: `${event.group}:${event.name}`,
+                                                                },
+                                                            )}
+                                                            onSave={(label) =>
+                                                                saveActivityLabel(
+                                                                    project.uuid,
+                                                                    event.group,
+                                                                    event.name,
+                                                                    label,
+                                                                )
+                                                            }
+                                                        />
+                                                    )}
                                                 </td>
                                                 <td
                                                     className={cn(

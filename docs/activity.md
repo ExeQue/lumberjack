@@ -58,10 +58,23 @@ Click one to see its occurrences, newest first, 50 at a time:
 - **Payload:** click it to see it in full.
 - **Trace:** opens the request or job it was recorded in.
 
+## Naming activity
+
+![The Activity page, some activity named](./screenshots/activity.png)
+
+Groups and activities show readably, with what the app records beside them: `billing`
+as **Billing**, `order.placed` as **Order placed**, `api.token_created` as **API token
+created**. Team owners and admins can give them names of their own with **Name** (or **Rename**)
+beside each group and activity on the Activity page, as for UTM values on the
+[Umami](./connectors/umami.md) page. An empty name goes back to the readable one. The
+names show on the Activity pages and on status screens; filters still take the recorded
+`group:name`.
+
 ## On status screens
 
 The **Activity** source of a stat, gauge or chart [widget](./widgets.md) counts activity
-over the widget's period. Its filter narrows it to `group:name`, such as `billing:*`. A
+over the widget's period, and the **Most frequent activity** and **Latest activity**
+lists show it row by row. Its filter narrows it to `group:name`, such as `billing:*`. A
 gauge holds it against a target of your own, and a chart can draw one series per
 activity.
 

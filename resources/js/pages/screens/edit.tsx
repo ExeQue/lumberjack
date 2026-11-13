@@ -107,6 +107,8 @@ type Props = {
     data_sources: Catalog['data_sources'];
     /** Known filter names per project uuid, then per kind. */
     filters?: Record<string, Record<string, string[]>>;
+    /** What some filter names are shown as, such as an activity's readable name. */
+    filter_labels?: Record<string, string>;
     limits: {
         min_cols: number;
         max_cols: number;
@@ -513,6 +515,7 @@ export default function EditScreen(props: Props) {
         screen: props.screen.uuid,
         periods: PERIODS,
         filters,
+        filterLabels: props.filter_labels ?? {},
     };
     // The data follows what is saved, so a widget refetches once its new settings are stored.
     const { data } = useScreenData(

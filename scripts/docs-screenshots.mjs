@@ -164,7 +164,7 @@ const pairCode = await page
 
 // It fills its display: 1920 px wide gives each cell the width an 8-column screen has on a
 // 1920 x 1080 TV, and rows as tall as that make a 1 x 1 tile square.
-const galleryView = { width: 1920, height: 240 * 15 };
+const galleryView = { width: 1920, height: 240 * 17 };
 // Health first: the seeded checks' agents report no more, and go stale within minutes.
 const galleryTiles = [
     'health-cards',
@@ -184,6 +184,8 @@ const galleryTiles = [
     'list-issues',
     'list-queues',
     'list-calendar',
+    'list-activity',
+    'list-activity-latest',
     'slo-availability',
     'slo-latency',
     'clock-world',
@@ -290,6 +292,7 @@ const shots = {
     schedule: { path: `${project}/schedule` },
     commands: { path: `${project}/commands` },
     logs: { path: `${project}/logs` },
+    activity: { path: `${project}/activity` },
     // A month, so the deploys before the bad release and its rollback show too.
     releases: { path: `${project}/releases?period=30d` },
     health: {

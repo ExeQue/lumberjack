@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Screens\Presenters;
 
 use App\Domains\Activity\Models\ActivityCount;
+use App\Domains\Activity\Models\ActivityLabel;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
@@ -246,6 +247,28 @@ class ScreenPresenter
     }
 
     /**
+     * The shown name of each activity the filters offer, by group:name.
+     *
+     * @param  Collection<int, Project>  $projects
+     * @param  array<string, array<string, list<string>>>  $filters
+     * @return array<string, string>
+     */
+    private function activityLabels(Collection $projects, array $filters): array
+    {
+        $labels = ActivityLabel::query()->whereProjectIn(array_values(array_map(intval(...), $projects->modelKeys())))->toMap();
+        $shown = [];
+
+        foreach ($filters as $kinds) {
+            foreach ($kinds['activity'] ?? [] as $key) {
+                [$group, $name] = explode(':', $key, 2) + [1 => ''];
+                $shown[$key] = ActivityLabel::shown($labels, $group).': '.ActivityLabel::shown($labels, $group, $name);
+            }
+        }
+
+        return $shown;
+    }
+
+    /**
      * What the designer offers to pick from besides the catalog: the team's environments,
      * health checks and data sources, and the grid's limits.
      *
@@ -265,7 +288,9 @@ class ScreenPresenter
                 ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'group' => $s->pickerGroup(), 'host' => $s->pickerHost(), 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' && $s->dataSourceConnection?->isFor(ConnectionKind::App) !== false ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name, 'project_uuid' => $projects->find($s->project_id)?->uuid, 'periods' => $s->dataSourceConnection !== null ? array_map(fn (Period $p): string => $p->value, $s->dataSourceConnection->kind->periods()) : null])->values()->all(),
             // Names a filter can pick from, so a queue, host, domain or database check is chosen, not
             // typed; per project uuid, so the designer offers only those of the screen's projects.
-            'filters' => $this->filterNames($projects),
+            'filters' => $filters = $this->filterNames($projects),
+            // What an activity filter's names are shown as, by group:name.
+            'filter_labels' => $this->activityLabels($projects, $filters),
             'limits' => ['min_cols' => Screen::MIN_COLS, 'max_cols' => Screen::MAX_COLS, 'min_rows' => Screen::MIN_ROWS, 'max_rows' => Screen::MAX_ROWS, 'max_widgets' => WidgetSchema::MAX_WIDGETS],
         ];
     }

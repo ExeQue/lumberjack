@@ -16,7 +16,7 @@ use Illuminate\Database\Seeder;
 
 /**
  * The Local Team's "Widget gallery": one widget of every type and its main variants, the
- * screen docs/widgets.md takes its screenshots of (npm run docs:screenshots). An 8 x 15
+ * screen docs/widgets.md takes its screenshots of (npm run docs:screenshots). An 8 x 17
  * grid that fills its display: 1920 px wide, its cells are as wide as an 8-column screen's
  * on a 1920 x 1080 TV, and square. Its calendar is a data source of Storefront whose feed is
  * written again on every run, relative to now; a gallery screen already there is kept.
@@ -28,7 +28,7 @@ class ShowcaseWidgetsSeeder extends Seeder
     /** Eight columns as on a 1920 x 1080 TV with four rows; the gallery has more rows of the same size. */
     private const int COLS = 8;
 
-    private const int ROWS = 15;
+    private const int ROWS = 17;
 
     private const string TIMEZONE = 'Europe/Copenhagen';
 
@@ -126,7 +126,7 @@ class ShowcaseWidgetsSeeder extends Seeder
     }
 
     /**
-     * Rows of tiles on the 8 x 15 grid, named by type and variant.
+     * Rows of tiles on the 8 x 17 grid, named by type and variant.
      *
      * @return list<array<string, mixed>>
      */
@@ -193,6 +193,8 @@ class ShowcaseWidgetsSeeder extends Seeder
             $widget('chart-activity', 'chart', 'activity', 0, 14, 4, 1, 'Storefront activity', ['split_by' => 'activity', 'style' => 'line', 'legend' => true], $storefront),
             $widget('gauge-activity', 'gauge', 'activity', 4, 14, 1, 1, 'Orders placed', ['max' => 200, 'red' => 100, 'amber' => 150], [...$storefront, 'filter' => 'billing:order.placed']),
             $widget('stat-activity', 'stat', 'activity', 5, 14, 2, 1, 'Carts abandoned', ['compare' => 'yesterday', ...$centered], [...$storefront, 'filter' => 'cart:cart.abandoned']),
+            $widget('list-activity', 'list', 'top_activity', 0, 15, 4, 2, 'Storefront activity', ['show_project' => false], $storefront),
+            $widget('list-activity-latest', 'list', 'latest_activity', 4, 15, 4, 2, options: [], scope: $storefront),
         ];
     }
 }

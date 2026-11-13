@@ -1586,6 +1586,26 @@ function rowText(
                     : undefined,
                 at: (row.last_run_at as string) ?? undefined,
             };
+        case 'top_activity':
+            return {
+                key: String(row.group),
+                main: String(row.activity),
+                count: `× ${formatNumber(Number(row.count))}`,
+                at: row.last_at as string,
+            };
+        case 'latest_activity':
+            return {
+                key: String(row.group),
+                main: String(row.activity),
+                count:
+                    [
+                        row.actor,
+                        ...((row.subjects as unknown as string[]) ?? []),
+                    ]
+                        .filter(Boolean)
+                        .join(' → ') || undefined,
+                at: row.at as string,
+            };
         case 'slowest_routes':
             return {
                 key: formatValue(row.p95, 'ms'),

@@ -129,6 +129,16 @@ describe('filter suggestions', function () {
         'no wildcards from what is typed' => [['kind' => 'actor', 'q' => 'u%'], []],
     ]);
 
+    it('suggests at most 20 of each type, so a busy type leaves room for the others', function () {
+        foreach (range(100, 124) as $id) {
+            $this->events->named('gallery', 'image.uploaded')->byActor('user', $id)->count(2)->create();
+        }
+
+        $suggested = ($this->references)(['kind' => 'actor'])->assertOk()->json();
+
+        expect(collect($suggested)->countBy(fn (string $r): string => strtok($r, ':'))->all())->toBe(['user' => 20, 'team' => 1]);
+    });
+
     it('suggests from one activity only when asked', function () {
         $this->events->named('auth', 'user.signed_in')->byActor('user', 99)->create();
 

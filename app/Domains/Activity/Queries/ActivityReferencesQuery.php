@@ -10,12 +10,16 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * The actors or subjects in the period that match what is typed, as "type:id", most
- * active first, for the filter fields' suggestions. "user:1" matches users whose key
+ * active first and at most LIMIT of each type, for the filter fields' suggestions. "user:1" matches users whose key
  * starts with 1; text without a colon matches the start of a type or of a key.
  */
 class ActivityReferencesQuery
 {
+    /** Suggestions per type. */
     public const int LIMIT = 20;
+
+    /** Types suggested at most. */
+    public const int MAX_TYPES = 20;
 
     /**
      * @param  'actor'|'subject'  $kind
@@ -40,15 +44,18 @@ class ActivityReferencesQuery
 
         $this->match($query, $type, $id, trim($term));
 
-        return $query
-            ->selectRaw("{$type} || ':' || {$id} AS reference, COUNT(*) AS c")
-            ->groupByRaw("{$type}, {$id}")
+        $ranked = $query
+            ->selectRaw("{$type} AS type, {$type} || ':' || {$id} AS reference, COUNT(*) AS c, ROW_NUMBER() OVER (PARTITION BY {$type} ORDER BY COUNT(*) DESC) AS rank")
+            ->groupByRaw("{$type}, {$id}");
+
+        return array_values(DB::query()->fromSub($ranked, 'r')
+            ->where('rank', '<=', self::LIMIT)
             ->orderByDesc('c')
-            ->limit(self::LIMIT)
+            ->orderBy('reference')
+            ->limit(self::LIMIT * self::MAX_TYPES)
             ->pluck('reference')
             ->map(fn (mixed $reference): string => (string) $reference)
-            ->values()
-            ->all();
+            ->all());
     }
 
     /**

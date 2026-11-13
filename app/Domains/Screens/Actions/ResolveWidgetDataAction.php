@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Actions;
 
+use App\Domains\Activity\Models\ActivityLabel;
 use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
@@ -46,6 +47,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use stdClass;
 
 /**
  * The data one status screen widget shows, as JSON: what its source (WidgetSources)
@@ -366,6 +368,12 @@ class ResolveWidgetDataAction
             ];
         }
 
+        // Activity under the names the team gave it.
+        if ($split === MetricGroup::Activity->value) {
+            $labels = ActivityLabel::query()->whereProjectIn(array_values(array_map(intval(...), $projects->modelKeys())))->toMap();
+            $series = array_combine(array_map(fn (string|int $key): string => str_contains((string) $key, ':') ? ActivityLabel::shown($labels, ...explode(':', (string) $key, 2)) : (string) $key, array_keys($series)), array_values($series));
+        }
+
         // A share link without names numbers the hosts a chart is split by; checks keep the
         // names the team gave them, as on the health widget.
         if ($aggregatesOnly && $split === MetricGroup::Host->value) {
@@ -523,10 +531,60 @@ class ResolveWidgetDataAction
                     ->sortByDesc('size')->when($onlyProblems)->filter(fn (array $r): bool => in_array($r['state'], ['amber', 'red'], true))->take($limit)->values()->all(),
             ],
             'hosts', 'agents' => $this->agentRows($source, $projects, $scope, $limits, $limit, $onlyProblems, $aggregatesOnly),
+            'top_activity', 'latest_activity' => $this->activityRows($source, $projects, $scope, $limit, $aggregatesOnly),
             default => [[], []],
         };
 
         return ['columns' => $columns, 'rows' => array_values($rows)];
+    }
+
+    /**
+     * The period's most frequent activity, or its newest occurrences, under the names the
+     * team gave them. A share link leaves actors and subjects out.
+     *
+     * ponytail: across projects the first name given to an activity wins; key labels by project if teams name them differently.
+     *
+     * @param  Collection<int, Project>  $projects
+     * @return array{list<string>, list<array<string, mixed>>}
+     */
+    private function activityRows(WidgetSource $source, Collection $projects, WidgetScope $scope, int $limit, bool $aggregatesOnly): array
+    {
+        $ids = array_values(array_map(intval(...), $projects->modelKeys()));
+        $slugs = $projects->pluck('slug', 'id');
+        $labels = ActivityLabel::query()->whereProjectIn($ids)->toMap();
+        $named = fn (stdClass $r): array => [
+            'project' => $slugs[$r->project_id],
+            'group' => ActivityLabel::shown($labels, $r->group),
+            'activity' => ActivityLabel::shown($labels, $r->group, $r->name),
+        ];
+        $query = DB::table('activities')->whereIn('project_id', $ids)
+            ->where('occurred_at', '>=', $scope->period->since())
+            ->when($scope->environment !== null)->where('environment', $scope->environment)
+            ->when($scope->filter !== null)->whereRaw('"group" || \':\' || name ILIKE ?', [str_replace('*', '%', addcslashes((string) $scope->filter, '\\%_'))]);
+
+        if ($source->id === 'top_activity') {
+            return [
+                ['group', 'activity', 'count', 'last_at'],
+                $query->groupBy('project_id', 'group', 'name')
+                    ->selectRaw('project_id, "group", name, COUNT(*) AS c, MAX(occurred_at) AS last_at')
+                    ->orderByDesc('c')->limit($limit)->get()
+                    ->map(fn (stdClass $r): array => [...$named($r), 'count' => (int) $r->c, 'last_at' => date(DATE_ATOM, (int) strtotime((string) $r->last_at)), 'state' => null])
+                    ->all(),
+            ];
+        }
+
+        return [
+            ['group', 'activity', 'actor', 'subjects', 'at'],
+            $query->orderByDesc('occurred_at')->orderByDesc('id')->limit($limit)
+                ->get(['project_id', 'group', 'name', 'actor_type', 'actor_id', 'subjects', 'occurred_at'])
+                ->map(fn (stdClass $r): array => [
+                    ...$named($r),
+                    'actor' => $aggregatesOnly || $r->actor_type === null ? null : $r->actor_type.':'.$r->actor_id,
+                    'subjects' => $aggregatesOnly ? [] : array_map(fn (array $s): string => $s['type'].':'.$s['id'], json_decode((string) ($r->subjects ?? '[]'), true) ?: []),
+                    'at' => date(DATE_ATOM, (int) strtotime((string) $r->occurred_at)),
+                    'state' => null,
+                ])->all(),
+        ];
     }
 
     /**

@@ -47,6 +47,8 @@ return [
     // Button
     'forget' => 'Forget actor',
     'forget_question' => 'Delete all activity of :reference in this project? Their hourly counts stay.',
+    'rename_group' => 'Name for the group :group; leave empty to forget the name',
+    'rename_activity' => 'Name for :activity; leave empty to forget the name',
     'payload_truncated' => 'Payload too large, not kept',
     'pages' => 'Pages',
     // Button

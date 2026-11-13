@@ -482,10 +482,6 @@ return [
             'cell' => ':day :hour:00: :count visitors',
         ],
         'labels' => [
-            // Buttons beside a UTM value: give it a name, or change the one it has.
-            'name' => 'Name',
-            'rename' => 'Rename',
-            'save' => 'Save',
             'field' => 'Name for :value; leave empty to forget the name',
         ],
         'filters' => [

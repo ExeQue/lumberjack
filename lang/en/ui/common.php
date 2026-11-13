@@ -97,6 +97,8 @@ return [
     'copied_text' => 'Copied :text',
     'done' => 'Done',
     'save' => 'Save',
+    // Buttons beside a value a team can give a name of its own: give it one, or change it.
+    'label' => ['name' => 'Name', 'rename' => 'Rename'],
     'cancel' => 'Cancel',
     'close' => 'Close',
     'delete' => 'Delete',

@@ -586,6 +586,8 @@ return [
             'queues' => ['default' => ''],
             'hosts' => ['default' => ''],
             'agents' => ['default' => ''],
+            'top_activity' => ['default' => 'most frequent first'],
+            'latest_activity' => ['default' => 'newest first'],
             'calendar' => ['default' => ''],
             'external_json' => ['default' => ''],
         ],
