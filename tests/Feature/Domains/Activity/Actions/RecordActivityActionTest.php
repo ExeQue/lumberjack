@@ -17,7 +17,7 @@ beforeEach(function () {
     Carbon::setTestNow('2026-11-13 10:20:00');
     $this->project = Project::factory()->withToken('lj_srv_test-token')->create(['scrub_keys' => ['card']]);
     $this->auth = ['Authorization' => 'Bearer lj_srv_test-token'];
-    $this->event = fn (array $event = []): array => ['type' => 'event', 'name' => 'order.placed', 'timestamp' => now()->getTimestamp(), ...$event];
+    $this->event = fn (array $event = []): array => ['type' => 'activity', 'name' => 'order.placed', 'timestamp' => now()->getTimestamp(), ...$event];
 });
 
 describe('recording an event', function () {

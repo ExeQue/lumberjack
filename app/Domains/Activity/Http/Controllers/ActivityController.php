@@ -31,10 +31,10 @@ class ActivityController
         $period = $this->period($request);
         $environment = $this->environment($request);
 
-        return Inertia::render('events/index', [
+        return Inertia::render('activity/index', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => $this->filters($request),
-            'events' => fn (): array => $query->get($project->id, $period, $environment),
+            'activities' => fn (): array => $query->get($project->id, $period, $environment),
         ]);
     }
 
@@ -64,7 +64,7 @@ class ActivityController
             ->cursorPaginate(self::PER_PAGE)
             ->withQueryString();
 
-        return Inertia::render('events/show', [
+        return Inertia::render('activity/show', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => [
                 ...$this->filters($request),

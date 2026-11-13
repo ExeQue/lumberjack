@@ -19,8 +19,11 @@ import { formatDateTime, formatNumber } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useProjectLive } from '@/lib/use-project-live';
-import { index as eventsIndex, show as eventShow } from '@/routes/events';
-import { destroy as forgetActor } from '@/routes/events/actor';
+import {
+    index as activityIndex,
+    show as activityShow,
+} from '@/routes/activity';
+import { destroy as forgetActor } from '@/routes/activity/actor';
 import { show as projectShow } from '@/routes/projects';
 import { show as traceShow } from '@/routes/traces';
 import type {
@@ -74,7 +77,7 @@ function referenceLabel(reference: Reference): string {
     return `${type} #${reference.id}`;
 }
 
-export default function EventShow({
+export default function ActivityShow({
     project,
     filters,
     event,
@@ -111,7 +114,8 @@ export default function EventShow({
         ) as Record<string, string>;
 
         router.get(
-            eventShow([project.uuid, event.group, event.name], { query }).url,
+            activityShow([project.uuid, event.group, event.name], { query })
+                .url,
             {},
             { preserveState: true, preserveScroll: true, replace: true },
         );
@@ -132,7 +136,7 @@ export default function EventShow({
                         [`${kind}_id`]: reference.id,
                     })
                 }
-                title={t(`events.filter_${kind}`, {
+                title={t(`activity.filter_${kind}`, {
                     reference: referenceLabel(reference),
                 })}
                 className="cursor-pointer text-left font-mono text-xs hover:text-amber hover:underline"
@@ -153,8 +157,8 @@ export default function EventShow({
                         mono: true,
                     },
                     {
-                        label: t('events.title'),
-                        href: eventsIndex(project.uuid).url,
+                        label: t('activity.title'),
+                        href: activityIndex(project.uuid).url,
                     },
                     { label: title, mono: true },
                 ]}
@@ -168,7 +172,7 @@ export default function EventShow({
                 <PageTitle
                     title={<span className="font-mono">{title}</span>}
                     description={t(
-                        'events.occurrences_description',
+                        'activity.occurrences_description',
                         { count: formatNumber(stats?.count ?? 0) },
                         stats?.count ?? 0,
                     )}
@@ -184,7 +188,7 @@ export default function EventShow({
                                 color="var(--lj-info)"
                                 width={200}
                                 height={36}
-                                label={t('events.trend_label', {
+                                label={t('activity.trend_label', {
                                     count: formatNumber(stats.count),
                                 })}
                             />
@@ -195,17 +199,20 @@ export default function EventShow({
                 <Card aria-labelledby="occurrences-title">
                     <CardHeader
                         id="occurrences-title"
-                        title={t('events.occurrences')}
+                        title={t('activity.occurrences')}
                     />
                     <div className="flex flex-wrap items-center gap-3 border-b border-line/60 px-3 py-2.5">
                         <Segmented<Sort>
-                            label={t('events.sort.label')}
+                            label={t('activity.sort.label')}
                             value={filters.sort}
                             options={[
-                                { value: 'time', label: t('events.sort.time') },
+                                {
+                                    value: 'time',
+                                    label: t('activity.sort.time'),
+                                },
                                 {
                                     value: 'actor',
-                                    label: t('events.sort.actor'),
+                                    label: t('activity.sort.actor'),
                                 },
                             ]}
                             onChange={(sort) => apply({ sort })}
@@ -216,7 +223,7 @@ export default function EventShow({
                                     apply({ actor_type: null, actor_id: null })
                                 }
                             >
-                                {t('events.clear_actor', {
+                                {t('activity.clear_actor', {
                                     reference: referenceLabel(actor),
                                 })}
                             </Button>
@@ -230,7 +237,7 @@ export default function EventShow({
                                     })
                                 }
                             >
-                                {t('events.clear_subject', {
+                                {t('activity.clear_subject', {
                                     reference: referenceLabel(subject),
                                 })}
                             </Button>
@@ -238,10 +245,10 @@ export default function EventShow({
                         {actor && can_forget && (
                             <div className="ml-auto">
                                 <ConfirmButton
-                                    question={t('events.forget_question', {
+                                    question={t('activity.forget_question', {
                                         reference: referenceLabel(actor),
                                     })}
-                                    confirmLabel={t('events.forget')}
+                                    confirmLabel={t('activity.forget')}
                                     onConfirm={() =>
                                         router.delete(
                                             forgetActor(project.uuid).url,
@@ -257,29 +264,29 @@ export default function EventShow({
                                         )
                                     }
                                 >
-                                    {t('events.forget')}
+                                    {t('activity.forget')}
                                 </ConfirmButton>
                             </div>
                         )}
                     </div>
                     {occurrences.length === 0 ? (
-                        <EmptyState title={t('events.no_occurrences')} />
+                        <EmptyState title={t('activity.no_occurrences')} />
                     ) : (
                         <div className="relative overflow-x-auto">
                             <table className={tableClass}>
                                 <thead>
                                     <tr>
                                         <th className={thClass}>
-                                            {t('events.columns.time')}
+                                            {t('activity.columns.time')}
                                         </th>
                                         <th className={thClass}>
-                                            {t('events.columns.actor')}
+                                            {t('activity.columns.actor')}
                                         </th>
                                         <th className={thClass}>
-                                            {t('events.columns.subject')}
+                                            {t('activity.columns.subject')}
                                         </th>
                                         <th className={thClass}>
-                                            {t('events.columns.payload')}
+                                            {t('activity.columns.payload')}
                                         </th>
                                         <th
                                             className={cn(
@@ -287,7 +294,7 @@ export default function EventShow({
                                                 'hidden lg:table-cell',
                                             )}
                                         >
-                                            {t('events.columns.release')}
+                                            {t('activity.columns.release')}
                                         </th>
                                         <th className={thClass}>
                                             <span className="sr-only">
@@ -338,7 +345,7 @@ export default function EventShow({
                                                   true ? (
                                                     <span className="text-warn">
                                                         {t(
-                                                            'events.payload_truncated',
+                                                            'activity.payload_truncated',
                                                         )}
                                                     </span>
                                                 ) : (
@@ -396,17 +403,17 @@ export default function EventShow({
 
                 {(prev_url || next_url) && (
                     <nav
-                        aria-label={t('events.pages')}
+                        aria-label={t('activity.pages')}
                         className="flex justify-end gap-2"
                     >
                         {prev_url && (
                             <Link href={prev_url} className={pagerClass}>
-                                {t('events.newer')}
+                                {t('activity.newer')}
                             </Link>
                         )}
                         {next_url && (
                             <Link href={next_url} className={pagerClass}>
-                                {t('events.older')}
+                                {t('activity.older')}
                             </Link>
                         )}
                     </nav>

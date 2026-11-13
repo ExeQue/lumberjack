@@ -18,40 +18,40 @@ beforeEach(function () {
     $this->events = Activity::factory()->forProject($this->project);
 });
 
-describe('the events page', function () {
+describe('the activity page', function () {
     it('lists each event of the period with its count', function () {
         $this->events->named('billing', 'order.placed')->count(3)->create();
         $this->events->named('auth', 'user.signed_in')->create();
         $this->events->named('auth', 'user.signed_in')->create(['occurred_at' => now()->subDays(2)]);
 
         $this->actingAs($this->user)
-            ->get(route('events.index', ['project' => $this->project]))
+            ->get(route('activity.index', ['project' => $this->project]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('events/index')
-                ->has('events', 2)
-                ->where('events.0', fn ($e) => $e['group'] === 'billing' && $e['name'] === 'order.placed' && $e['count'] === 3 && array_sum($e['series']) === 3)
-                ->where('events.1.count', 1));
+                ->component('activity/index')
+                ->has('activities', 2)
+                ->where('activities.0', fn ($e) => $e['group'] === 'billing' && $e['name'] === 'order.placed' && $e['count'] === 3 && array_sum($e['series']) === 3)
+                ->where('activities.1.count', 1));
     });
 
     it('is closed to someone outside the team', function () {
         $this->actingAs(User::factory()->inTeam()->create())
-            ->get(route('events.index', ['project' => $this->project]))
+            ->get(route('activity.index', ['project' => $this->project]))
             ->assertForbidden();
     });
 });
 
-describe('one event', function () {
+describe('one activity', function () {
     it('lists its occurrences newest first', function () {
         $this->events->named('billing', 'order.placed')->create(['occurred_at' => now()->subHours(2)]);
         $newest = $this->events->named('billing', 'order.placed')->create(['occurred_at' => now()->subMinute()]);
         $this->events->named('billing', 'order.refunded')->create();
 
         $this->actingAs($this->user)
-            ->get(route('events.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed']))
+            ->get(route('activity.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('events/show')
+                ->component('activity/show')
                 ->has('occurrences', 2)
                 ->where('occurrences.0.id', $newest->id)
                 ->where('stats.count', 2));
@@ -64,7 +64,7 @@ describe('one event', function () {
         $event->byActor('user', 1)->onSubject('order', 1)->create();
 
         $show = fn (array $query) => $this->actingAs($this->user)
-            ->get(route('events.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed', ...$query]));
+            ->get(route('activity.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed', ...$query]));
 
         $show(['sort' => 'actor'])->assertInertia(fn (Assert $page) => $page
             ->where('occurrences.0.actor.id', '1')
@@ -76,7 +76,7 @@ describe('one event', function () {
 
     it('rejects an unknown sort', function () {
         $this->actingAs($this->user)
-            ->get(route('events.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed', 'sort' => 'payload']))
+            ->get(route('activity.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed', 'sort' => 'payload']))
             ->assertSessionHasErrors('sort');
     });
 });

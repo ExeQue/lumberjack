@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 return [
-    'title' => 'Events',
-    'description' => '{0} No events in the period.|{1} 1 kind of event in the period.|[2,*] :count kinds of events in the period.',
-    'empty_title' => 'No events yet',
+    'title' => 'Activity',
+    'description' => '{0} No activity in the period.|{1} 1 kind of activity in the period.|[2,*] :count kinds of activity in the period.',
+    'empty_title' => 'No activity yet',
     'empty_body' => 'Record what happens in your app with Lumberjack::activity(\'order.placed\')->send(), optionally with a group, an actor, a subject and a payload.',
-    'trend_label' => ':count events in the period',
+    'trend_label' => ':count in the period',
     'columns' => [
-        'event' => 'Event',
+        'event' => 'Activity',
         'count' => 'Count',
         'trend' => 'Trend',
         'last_seen' => 'Last seen',
@@ -35,7 +35,7 @@ return [
     'clear_subject' => 'Subject: :reference ×',
     // Button
     'forget' => 'Forget actor',
-    'forget_question' => 'Delete every event of :reference in this project? Their hourly counts stay.',
+    'forget_question' => 'Delete all activity of :reference in this project? Their hourly counts stay.',
     'payload_truncated' => 'Payload too large, not kept',
     'pages' => 'Pages',
     // Button

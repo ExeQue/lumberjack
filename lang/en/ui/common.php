@@ -40,7 +40,7 @@ return [
         'schedule' => 'Schedule',
         'commands' => 'Commands',
         'logs' => 'Logs',
-        'events' => 'Events',
+        'activity' => 'Activity',
         'health' => 'Health',
         'data_sources' => 'Data sources',
         'settings' => 'Settings',

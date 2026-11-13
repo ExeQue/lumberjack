@@ -18,7 +18,7 @@ import { formatDateTime, formatNumber } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useProjectLive } from '@/lib/use-project-live';
-import { show as eventShow } from '@/routes/events';
+import { show as activityShow } from '@/routes/activity';
 import { show as projectShow } from '@/routes/projects';
 import type {
     DashboardFilters,
@@ -37,18 +37,18 @@ type EventStat = {
 type Props = {
     project: ProjectHeader;
     filters: DashboardFilters;
-    events: EventStat[];
+    activities: EventStat[];
 };
 
-export default function EventsIndex({ project, filters, events }: Props) {
+export default function ActivityIndex({ project, filters, activities }: Props) {
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
 
-    useProjectLive(project.uuid, ['activity.changed'], ['events']);
+    useProjectLive(project.uuid, ['activity.changed'], ['activities']);
 
-    // By group in name order, each group's events most frequent first.
+    // By group in name order, each group's activity most frequent first.
     const groups = Object.entries(
-        events.reduce<Record<string, EventStat[]>>((acc, event) => {
+        activities.reduce<Record<string, EventStat[]>>((acc, event) => {
             (acc[event.group] ??= []).push(event);
 
             return acc;
@@ -61,7 +61,7 @@ export default function EventsIndex({ project, filters, events }: Props) {
 
     return (
         <>
-            <Head title={`${t('events.title')} · ${project.name}`} />
+            <Head title={`${t('activity.title')} · ${project.name}`} />
             <TopBar
                 crumbs={[
                     { label: team.name },
@@ -70,7 +70,7 @@ export default function EventsIndex({ project, filters, events }: Props) {
                         href: projectShow(project.uuid).url,
                         mono: true,
                     },
-                    { label: t('events.title') },
+                    { label: t('activity.title') },
                 ]}
             >
                 <DashboardFilterControls
@@ -80,24 +80,28 @@ export default function EventsIndex({ project, filters, events }: Props) {
             </TopBar>
             <PageBody>
                 <PageTitle
-                    title={t('events.title')}
-                    description={t('events.description', {}, events.length)}
+                    title={t('activity.title')}
+                    description={t(
+                        'activity.description',
+                        {},
+                        activities.length,
+                    )}
                 />
 
                 {groups.length === 0 ? (
                     <Card>
-                        <EmptyState title={t('events.empty_title')}>
-                            {t('events.empty_body')}
+                        <EmptyState title={t('activity.empty_title')}>
+                            {t('activity.empty_body')}
                         </EmptyState>
                     </Card>
                 ) : (
                     groups.map(([group, rows]) => (
                         <Card
                             key={group}
-                            aria-labelledby={`events-group-${group}`}
+                            aria-labelledby={`activity-group-${group}`}
                         >
                             <CardHeader
-                                id={`events-group-${group}`}
+                                id={`activity-group-${group}`}
                                 title={group}
                             />
                             <div className="relative overflow-x-auto">
@@ -105,7 +109,7 @@ export default function EventsIndex({ project, filters, events }: Props) {
                                     <thead>
                                         <tr>
                                             <th className={thClass}>
-                                                {t('events.columns.event')}
+                                                {t('activity.columns.event')}
                                             </th>
                                             <th
                                                 className={cn(
@@ -113,7 +117,7 @@ export default function EventsIndex({ project, filters, events }: Props) {
                                                     'text-right',
                                                 )}
                                             >
-                                                {t('events.columns.count')}
+                                                {t('activity.columns.count')}
                                             </th>
                                             <th
                                                 className={cn(
@@ -121,10 +125,12 @@ export default function EventsIndex({ project, filters, events }: Props) {
                                                     'hidden md:table-cell',
                                                 )}
                                             >
-                                                {t('events.columns.trend')}
+                                                {t('activity.columns.trend')}
                                             </th>
                                             <th className={thClass}>
-                                                {t('events.columns.last_seen')}
+                                                {t(
+                                                    'activity.columns.last_seen',
+                                                )}
                                             </th>
                                         </tr>
                                     </thead>
@@ -142,7 +148,7 @@ export default function EventsIndex({ project, filters, events }: Props) {
                                                 >
                                                     <Link
                                                         href={
-                                                            eventShow(
+                                                            activityShow(
                                                                 [
                                                                     project.uuid,
                                                                     event.group,

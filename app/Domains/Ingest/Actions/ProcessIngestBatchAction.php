@@ -109,7 +109,7 @@ class ProcessIngestBatchAction
                     'health' => $this->recordReportedHealthAction->execute($project, $event, $envelope),
                     'alert' => $this->recordCustomAlertAction->execute($project, $event, $envelope),
                     'maintenance' => $this->recordMaintenance($project, $event, $envelope),
-                    'event' => $this->recordActivityAction->execute($project, $event, $envelope),
+                    'activity' => $this->recordActivityAction->execute($project, $event, $envelope),
                     default => null,
                 };
             } catch (Throwable $e) {
@@ -325,7 +325,7 @@ class ProcessIngestBatchAction
             $kinds[] = ChangeKind::Logs;
         }
 
-        if (isset($touched['event'])) {
+        if (isset($touched['activity'])) {
             $kinds[] = ChangeKind::Activity;
         }
 

@@ -22,7 +22,7 @@ beforeEach(function () {
 
 describe('forgetting an actor from the app', function () {
     it('deletes the actor\'s events in the token\'s project only, and keeps the counts', function () {
-        $this->deleteJson('/api/events/actor', ['type' => 'user', 'id' => '17'], ['Authorization' => 'Bearer lj_srv_test-token'])
+        $this->deleteJson('/api/activity/actor', ['type' => 'user', 'id' => '17'], ['Authorization' => 'Bearer lj_srv_test-token'])
             ->assertOk()
             ->assertJson(['deleted' => 2]);
 
@@ -32,8 +32,8 @@ describe('forgetting an actor from the app', function () {
     });
 
     it('needs the server token and an actor', function () {
-        $this->deleteJson('/api/events/actor', ['type' => 'user', 'id' => '17'])->assertUnauthorized();
-        $this->deleteJson('/api/events/actor', ['type' => 'user'], ['Authorization' => 'Bearer lj_srv_test-token'])->assertUnprocessable();
+        $this->deleteJson('/api/activity/actor', ['type' => 'user', 'id' => '17'])->assertUnauthorized();
+        $this->deleteJson('/api/activity/actor', ['type' => 'user'], ['Authorization' => 'Bearer lj_srv_test-token'])->assertUnprocessable();
 
         expect(Activity::query()->count())->toBe(4);
     });
@@ -44,7 +44,7 @@ describe('forgetting an actor from the event page', function () {
         $admin = User::factory()->inTeam($this->project->team, TeamRole::Admin)->create();
 
         $this->actingAs($admin)
-            ->delete(route('events.actor.destroy', ['project' => $this->project]), ['type' => 'user', 'id' => '17'])
+            ->delete(route('activity.actor.destroy', ['project' => $this->project]), ['type' => 'user', 'id' => '17'])
             ->assertRedirect()
             ->assertSessionHas('status');
 
@@ -55,7 +55,7 @@ describe('forgetting an actor from the event page', function () {
         $member = User::factory()->inTeam($this->project->team, TeamRole::Member)->create();
 
         $this->actingAs($member)
-            ->delete(route('events.actor.destroy', ['project' => $this->project]), ['type' => 'user', 'id' => '17'])
+            ->delete(route('activity.actor.destroy', ['project' => $this->project]), ['type' => 'user', 'id' => '17'])
             ->assertForbidden();
 
         expect(Activity::query()->count())->toBe(4);

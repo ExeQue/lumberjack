@@ -30,6 +30,6 @@ class ActivityActorController
     {
         $deleted = $action->execute($project, $request->string('type')->toString(), $request->string('id')->toString());
 
-        return back()->with('status', trans_choice('events.forgotten', $deleted, ['count' => $deleted]));
+        return back()->with('status', trans_choice('activity.forgotten', $deleted, ['count' => $deleted]));
     }
 }

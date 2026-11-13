@@ -30,8 +30,8 @@ Route::middleware(AuthenticateProjectToken::class)->group(function () {
     // A build's source maps, so browser errors show the original source. See docs/api.md.
     Route::post('ingest/sourcemaps', [SourceMapController::class, 'store'])->middleware('throttle:sourcemaps')->name('ingest.sourcemaps');
 
-    // The app forgets one actor's events, such as when the account behind it is deleted. See docs/events.md.
-    Route::delete('events/actor', [ActivityActorController::class, 'destroy'])->middleware('throttle:60,1')->name('events.actor.forget');
+    // The app forgets one actor's activity, such as when the account behind it is deleted. See docs/activity.md.
+    Route::delete('activity/actor', [ActivityActorController::class, 'destroy'])->middleware('throttle:60,1')->name('activity.actor.forget');
 
     // The app reads its health check states back, e.g. when its agent is not running.
     Route::get('health', HealthStatesController::class)->middleware('throttle:health-states')->name('health.states');

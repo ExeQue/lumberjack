@@ -233,28 +233,28 @@ For each data type, the table shows the **Default** the level inherits, the valu
 and **Deletes before**: the date up to which data is deleted next. Data is deleted once
 a day.
 
-| Data type            | Default  | What it is                                                                            |
-| -------------------- | -------- | ------------------------------------------------------------------------------------- |
-| Occurrences          | 90 days  | Each time an error happened, with its stack trace and context                         |
-| Requests             | 14 days  | Recorded HTTP requests and the request counts per minute                              |
-| Queries              | 14 days  | Database queries recorded with requests and jobs                                      |
-| Spans                | 14 days  | Outgoing HTTP calls, cache operations and custom timings in traces                    |
-| Web vitals           | 30 days  | Page load metrics from browsers                                                       |
-| Job runs             | 30 days  | Each attempt of a queued job. Can be set per job class                                |
-| Scheduled task runs  | 30 days  | Each run of a scheduled task                                                          |
-| Command runs         | 30 days  | Each console command run                                                              |
-| Logs                 | 14 days  | Log lines. Can be set per channel                                                     |
-| Events               | 30 days  | Each [event](./events.md) your apps recorded, with its actor, subject and payload     |
-| Event counts         | 365 days | Hourly counts per event, for charts and widgets                                       |
-| Health results       | 14 days  | Each health check result and its latency                                              |
-| Health outages       | 365 days | Periods a check was down or degraded. Uptime is counted from them                     |
-| Data source history  | 30 days  | What each [data source](./data-sources.md) answered, for charts                       |
-| Queue size samples   | 30 days  | Queue length and oldest job age, reported by the agents                               |
-| Host metrics         | 7 days   | CPU, memory and disk, reported by the agents                                          |
-| Alert history        | 90 days  | Every alert sent, to which channel, and whether it got through                        |
-| Custom alerts        | 30 days  | Alerts your apps sent, and how they were delivered                                    |
-| Audit log            | 365 days | What administrators did. Application level only                                       |
-| Notification history | 90 days  | Everyone's [notification center](./teams#notification-center). Application level only |
+| Data type            | Default  | What it is                                                                             |
+| -------------------- | -------- | -------------------------------------------------------------------------------------- |
+| Occurrences          | 90 days  | Each time an error happened, with its stack trace and context                          |
+| Requests             | 14 days  | Recorded HTTP requests and the request counts per minute                               |
+| Queries              | 14 days  | Database queries recorded with requests and jobs                                       |
+| Spans                | 14 days  | Outgoing HTTP calls, cache operations and custom timings in traces                     |
+| Web vitals           | 30 days  | Page load metrics from browsers                                                        |
+| Job runs             | 30 days  | Each attempt of a queued job. Can be set per job class                                 |
+| Scheduled task runs  | 30 days  | Each run of a scheduled task                                                           |
+| Command runs         | 30 days  | Each console command run                                                               |
+| Logs                 | 14 days  | Log lines. Can be set per channel                                                      |
+| Activity             | 30 days  | Each [activity](./activity.md) your apps recorded, with its actor, subject and payload |
+| Activity counts      | 365 days | Hourly counts per activity, for charts and widgets                                     |
+| Health results       | 14 days  | Each health check result and its latency                                               |
+| Health outages       | 365 days | Periods a check was down or degraded. Uptime is counted from them                      |
+| Data source history  | 30 days  | What each [data source](./data-sources.md) answered, for charts                        |
+| Queue size samples   | 30 days  | Queue length and oldest job age, reported by the agents                                |
+| Host metrics         | 7 days   | CPU, memory and disk, reported by the agents                                           |
+| Alert history        | 90 days  | Every alert sent, to which channel, and whether it got through                         |
+| Custom alerts        | 30 days  | Alerts your apps sent, and how they were delivered                                     |
+| Audit log            | 365 days | What administrators did. Application level only                                        |
+| Notification history | 90 days  | Everyone's [notification center](./teams#notification-center). Application level only  |
 
 Issues themselves are never deleted, only their occurrences. Failed job runs, failed or
 missed scheduled runs and failed command runs are kept at least as long as occurrences.
