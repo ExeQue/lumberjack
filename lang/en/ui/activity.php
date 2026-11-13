@@ -31,10 +31,14 @@ return [
         'label' => 'Filter by actor or subject',
         'actor' => 'Actor',
         'subject' => 'Subject',
-        'actor_placeholder' => 'Actor, e.g. user:17',
-        'subject_placeholder' => 'Subject, e.g. gallery:5',
+        'actor_placeholder' => 'Any actor',
+        'subject_placeholder' => 'Any subject',
+        'search' => 'Search by type or key, e.g. user:17',
+        'no_matches' => 'Nothing matches in the period',
         // Button
-        'apply' => 'Filter',
+        'actor_any' => 'Any actor',
+        // Button
+        'subject_any' => 'Any subject',
     ],
     'filter_actor' => 'Show only :reference',
     'filter_subject' => 'Show only :reference',

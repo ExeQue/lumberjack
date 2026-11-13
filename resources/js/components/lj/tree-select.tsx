@@ -115,6 +115,7 @@ export function TreeSelect({
     noMatches,
     clearLabel,
     startOpen = false,
+    onSearch,
 }: {
     id: string;
     /** Submits the value with a surrounding form. */
@@ -129,6 +130,11 @@ export function TreeSelect({
     /** The row that empties the choice; without it one must stay picked. */
     clearLabel?: string;
     startOpen?: boolean;
+    /**
+     * Searches somewhere else (the server) while open: called with what is typed, and the
+     * options given back are shown as they are, unfiltered.
+     */
+    onSearch?: (query: string) => void;
 }) {
     const t = useT();
     const trigger = useRef<HTMLButtonElement>(null);
@@ -136,7 +142,10 @@ export function TreeSelect({
     const [position, setPosition] = useState<CSSProperties>();
     const [container, setContainer] = useState<HTMLElement>();
     const title = (source: TreeOption) => source.label;
-    const current = options.find((s) => s.value === value);
+    // A server search may not have the picked value among what it answered.
+    const current =
+        options.find((s) => s.value === value) ??
+        (onSearch && value ? { value, label: value } : undefined);
     const currentPath = current?.path ?? [];
     const expanded = position !== undefined;
     const [query, setQuery] = useState('');
@@ -153,12 +162,21 @@ export function TreeSelect({
             ),
     );
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-    const matches = options.filter((source) => {
-        const text =
-            `${source.label} ${source.value} ${(source.path ?? []).join(' ')} ${source.keywords ?? ''}`.toLowerCase();
+    const matches = onSearch
+        ? options
+        : options.filter((source) => {
+              const text =
+                  `${source.label} ${source.value} ${(source.path ?? []).join(' ')} ${source.keywords ?? ''}`.toLowerCase();
 
-        return words.every((word) => text.includes(word));
-    });
+              return words.every((word) => text.includes(word));
+          });
+
+    // Asked only while open, so a closed field costs nothing.
+    useEffect(() => {
+        if (expanded) {
+            onSearch?.(query);
+        }
+    }, [expanded, query, onSearch]);
 
     const dismiss = () => {
         setPosition(undefined);
@@ -311,7 +329,7 @@ export function TreeSelect({
                 ref={trigger}
                 id={id}
                 type="button"
-                disabled={options.length === 0 && !value}
+                disabled={!onSearch && options.length === 0 && !value}
                 role="combobox"
                 aria-haspopup="dialog"
                 aria-expanded={expanded}
