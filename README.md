@@ -84,6 +84,7 @@ straight to the [ingest API](https://exeque.github.io/lumberjack/docs/api) or ov
 - [Alerts](https://exeque.github.io/lumberjack/docs/alerts)
 - [Performance and traces](https://exeque.github.io/lumberjack/docs/performance)
 - [Releases](https://exeque.github.io/lumberjack/docs/releases)
+- [Events](https://exeque.github.io/lumberjack/docs/events): activity and simple analytics your apps record.
 - [Health](https://exeque.github.io/lumberjack/docs/health)
 - [Finding things](https://exeque.github.io/lumberjack/docs/finding-things): search, filters and the command palette.
 - [Status screens](https://exeque.github.io/lumberjack/docs/screens) and [widgets](https://exeque.github.io/lumberjack/docs/widgets)

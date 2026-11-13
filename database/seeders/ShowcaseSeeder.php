@@ -10,7 +10,7 @@ use Illuminate\Database\Seeder;
 /**
  * The showcase: three teams, six projects (a webshop, a SaaS API, a marketing site, a
  * background worker and two smaller client projects) with a month of releases and
- * traffic, issues, jobs, schedules, health checks, logs, alerts and screens, all
+ * traffic, issues, jobs, schedules, health checks, logs, alerts, events and screens, all
  * relative to now and the same on every run. It only adds: run it on a database in
  * use (db:seed --class=ShowcaseSeeder) and it fills the showcase projects it creates,
  * leaving everything else, the showcase projects already there included, as it was.
@@ -33,6 +33,7 @@ class ShowcaseSeeder extends Seeder
             ShowcaseLogsSeeder::class,
             ShowcaseAlertsSeeder::class,
             ShowcaseCustomAlertsSeeder::class,
+            ShowcaseActivitySeeder::class,
             ShowcaseScreensSeeder::class,
             ShowcaseWidgetsSeeder::class,
         ]);

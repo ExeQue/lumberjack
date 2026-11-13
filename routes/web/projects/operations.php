@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Domains\Activity\Http\Controllers\ActivityActorController;
+use App\Domains\Activity\Http\Controllers\ActivityController;
 use App\Domains\Alerts\Http\Controllers\QueueAlertThresholdController;
 use App\Domains\Commands\Http\Controllers\CommandController;
 use App\Domains\Health\Http\Controllers\HealthController;
@@ -12,7 +14,7 @@ use App\Domains\Schedule\Http\Controllers\ScheduleController;
 use Illuminate\Support\Facades\Route;
 
 /*
- * A project's jobs, queue alert, schedule, commands, logs, health checks and maintenance windows. Loaded inside the project group.
+ * A project's jobs, queue alert, schedule, commands, logs, events, health checks and maintenance windows. Loaded inside the project group.
  */
 
 Route::get('jobs', JobController::class)->name('jobs.index');
@@ -21,6 +23,11 @@ Route::get('schedule', [ScheduleController::class, 'index'])->name('schedule.ind
 Route::get('commands', CommandController::class)->name('commands.index');
 Route::delete('schedule/{scheduledTask}', [ScheduleController::class, 'destroy'])->name('schedule.destroy');
 Route::get('logs', LogController::class)->name('logs.index');
+Route::get('events', [ActivityController::class, 'index'])->name('events.index');
+Route::delete('events/actor', [ActivityActorController::class, 'forget'])->name('events.actor.destroy');
+Route::get('events/{group}/{name}', [ActivityController::class, 'show'])
+    ->where(['group' => '[a-z0-9-]+', 'name' => '[A-Za-z0-9._:\-]+'])
+    ->name('events.show');
 Route::get('health', [HealthController::class, 'index'])->name('health.index');
 Route::post('health', [HealthController::class, 'store'])->name('health.store');
 Route::put('health/{healthCheck}', [HealthController::class, 'update'])->name('health.update');

@@ -256,6 +256,7 @@ return [
             'performance' => 'Performance',
             'jobs' => 'Jobs',
             'logs' => 'Logs',
+            'activity' => 'Events',
             'health' => 'Health',
             'infrastructure' => 'Infrastructure',
             'alerts' => 'Alerts',

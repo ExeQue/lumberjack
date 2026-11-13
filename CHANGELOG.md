@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- **Events**: apps record what happens in them (an order placed, a user signed in) with an `event` ingest event: a name, a group (`default` without one), an optional actor and subject (a type and a key only, no personal data) and an optional payload of at most 16 KB, scrubbed. The new **Events** page lists the period's events by group with a count and trend; each opens to its occurrences, sortable by actor and narrowed to one actor or subject by a click, with the payload and a link to the trace. Events are counted per hour, and the counts outlive the events: events are kept 30 days and their counts 365 by default, two new retention data types. `DELETE /api/events/actor` (server token) and a **Forget actor** button for team admins delete one actor's events, such as when an account is deleted. See the new Events docs page.
+
 ### Changed
 
 - The test workflow can be run by hand from the Actions tab.

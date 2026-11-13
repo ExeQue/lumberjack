@@ -11,6 +11,7 @@ enum ChangeKind: string
     case Schedule = 'schedule.changed';
     case Commands = 'commands.changed';
     case Logs = 'logs.changed';
+    case Activity = 'activity.changed';
     case Performance = 'performance.changed';
     case Agents = 'agents.changed';
     case Health = 'health.changed';

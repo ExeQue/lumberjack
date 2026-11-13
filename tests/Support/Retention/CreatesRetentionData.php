@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Support\Retention;
 
+use App\Domains\Activity\Models\Activity;
+use App\Domains\Activity\Models\ActivityCount;
 use App\Domains\Administration\Models\AdminAuditEntry;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\CustomAlert;
@@ -50,6 +52,8 @@ trait CreatesRetentionData
             RetentionCategory::ScheduledTaskRuns => ScheduledTaskRun::factory()->for(ScheduledTask::factory()->for($project)->state(['name' => 'artisan '.uniqid()]), 'task')->create(['created_at' => $at]),
             RetentionCategory::CommandRuns => CommandRun::factory()->for($project)->create(['created_at' => $at]),
             RetentionCategory::Logs => LogEntry::factory()->for($project->logChannels()->sole(), 'channel')->create($time),
+            RetentionCategory::Activity => Activity::factory()->forProject($project)->create($time),
+            RetentionCategory::ActivityCounts => ActivityCount::factory()->forProject($project)->create(['hour' => $at]),
             RetentionCategory::HealthResults => DB::table('health_check_results')->insert(['health_check_id' => HealthCheck::factory()->for($project)->create(['slug' => 'r-'.uniqid()])->id, 'project_id' => $project->id, 'status' => 'ok', 'checked_at' => $at]),
             RetentionCategory::HealthOutages => DB::table('health_outages')->insert(['health_check_id' => HealthCheck::factory()->for($project)->create(['slug' => 'o-'.uniqid()])->id, 'project_id' => $project->id, 'status' => 'down', 'started_at' => $at->copy()->subHour(), 'ended_at' => $at]),
             RetentionCategory::DataSourceFetches => DB::table('data_source_fetches')->insert(['project_id' => $project->id, 'data_source_id' => DataSource::factory()->for($project)->create()->id, 'body' => '{}', 'fetched_at' => $at]),

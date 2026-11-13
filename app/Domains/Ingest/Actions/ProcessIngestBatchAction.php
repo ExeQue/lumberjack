@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Ingest\Actions;
 
+use App\Domains\Activity\Actions\RecordActivityAction;
 use App\Domains\Alerts\Actions\RecordCustomAlertAction;
 use App\Domains\Commands\Actions\RecordCommandEventAction;
 use App\Domains\Health\Actions\RecordReportedHealthAction;
@@ -62,6 +63,7 @@ class ProcessIngestBatchAction
         private readonly RecordReleaseEnvironmentAction $recordReleaseEnvironmentAction,
         private readonly SymbolicateFramesAction $symbolicateFramesAction,
         private readonly RecordMaintenanceEventAction $recordMaintenanceEventAction,
+        private readonly RecordActivityAction $recordActivityAction,
     ) {
     }
 
@@ -107,6 +109,7 @@ class ProcessIngestBatchAction
                     'health' => $this->recordReportedHealthAction->execute($project, $event, $envelope),
                     'alert' => $this->recordCustomAlertAction->execute($project, $event, $envelope),
                     'maintenance' => $this->recordMaintenance($project, $event, $envelope),
+                    'event' => $this->recordActivityAction->execute($project, $event, $envelope),
                     default => null,
                 };
             } catch (Throwable $e) {
@@ -119,6 +122,7 @@ class ProcessIngestBatchAction
         }
 
         $this->recordLogLineAction->flush();
+        $this->recordActivityAction->flush();
 
         foreach (array_chunk($requests, self::INSERT_CHUNK) as $chunk) {
             DB::table('request_runs')->insert($chunk);
@@ -319,6 +323,10 @@ class ProcessIngestBatchAction
 
         if (isset($touched['log'])) {
             $kinds[] = ChangeKind::Logs;
+        }
+
+        if (isset($touched['event'])) {
+            $kinds[] = ChangeKind::Activity;
         }
 
         if (isset($touched['request']) || isset($touched['request_counts']) || isset($touched['query']) || isset($touched['vital'])) {

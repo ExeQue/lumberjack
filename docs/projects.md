@@ -244,6 +244,8 @@ a day.
 | Scheduled task runs  | 30 days  | Each run of a scheduled task                                                          |
 | Command runs         | 30 days  | Each console command run                                                              |
 | Logs                 | 14 days  | Log lines. Can be set per channel                                                     |
+| Events               | 30 days  | Each [event](./events.md) your apps recorded, with its actor, subject and payload     |
+| Event counts         | 365 days | Hourly counts per event, for charts and widgets                                       |
 | Health results       | 14 days  | Each health check result and its latency                                              |
 | Health outages       | 365 days | Periods a check was down or degraded. Uptime is counted from them                     |
 | Data source history  | 30 days  | What each [data source](./data-sources.md) answered, for charts                       |

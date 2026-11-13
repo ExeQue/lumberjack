@@ -25,7 +25,7 @@ class PurgeProjectData implements ShouldQueue
 
     public int $timeout = 3600;
 
-    public const array TABLES = ['request_runs', 'request_counts', 'query_runs', 'span_runs', 'web_vitals', 'job_runs', 'scheduled_task_runs', 'command_runs', 'log_entries', 'occurrences'];
+    public const array TABLES = ['request_runs', 'request_counts', 'query_runs', 'span_runs', 'web_vitals', 'job_runs', 'scheduled_task_runs', 'command_runs', 'log_entries', 'occurrences', 'activities', 'activity_counts'];
 
     public function __construct(public readonly int $projectId)
     {

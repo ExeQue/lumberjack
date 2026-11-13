@@ -18,6 +18,8 @@ enum RetentionCategory: string
     case ScheduledTaskRuns = 'scheduled_task_runs';
     case CommandRuns = 'command_runs';
     case Logs = 'logs';
+    case Activity = 'activity';
+    case ActivityCounts = 'activity_counts';
     case HealthResults = 'health_results';
     case HealthOutages = 'health_outages';
     case DataSourceFetches = 'data_source_fetches';
@@ -45,6 +47,7 @@ enum RetentionCategory: string
             self::Requests, self::Queries, self::Spans, self::WebVitals => 'performance',
             self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns => 'jobs',
             self::Logs => 'logs',
+            self::Activity, self::ActivityCounts => 'activity',
             self::HealthResults, self::HealthOutages, self::DataSourceFetches => 'health',
             self::QueueSamples, self::HostSamples => 'infrastructure',
             self::AlertSends, self::CustomAlerts => 'alerts',
@@ -61,9 +64,10 @@ enum RetentionCategory: string
             self::Occurrences, self::AlertSends, self::Notifications => 90,
             self::Requests, self::Queries, self::Spans, self::Logs, self::HealthResults => 14,
             // Data source history feeds screen charts, whose longest period is 30 days.
-            self::WebVitals, self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::QueueSamples, self::DataSourceFetches, self::CustomAlerts => 30,
+            self::WebVitals, self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::QueueSamples, self::DataSourceFetches, self::CustomAlerts, self::Activity => 30,
             self::HostSamples => 7,
-            self::HealthOutages, self::AuditLog => 365,
+            // The hourly counts feed charts and widgets long after the events they count are gone.
+            self::HealthOutages, self::AuditLog, self::ActivityCounts => 365,
         };
     }
 
@@ -82,6 +86,7 @@ enum RetentionCategory: string
             self::Queries => 'query_runs',
             self::Spans => 'span_runs',
             self::Logs => 'log_entries',
+            self::Activity => 'activities',
             self::HealthResults => 'health_check_results',
             self::AuditLog => 'admin_audit_entries',
             default => $this->value,
@@ -100,6 +105,7 @@ enum RetentionCategory: string
             self::QueueSamples, self::HostSamples => 'sampled_at',
             self::AlertSends => 'sent_at',
             self::DataSourceFetches => 'fetched_at',
+            self::ActivityCounts => 'hour',
             default => 'occurred_at',
         };
     }

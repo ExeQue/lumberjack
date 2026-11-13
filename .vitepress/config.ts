@@ -138,6 +138,7 @@ export default defineConfig({
                         link: '/docs/performance',
                     },
                     { text: 'Releases', link: '/docs/releases' },
+                    { text: 'Events', link: '/docs/events' },
                     { text: 'Health', link: '/docs/health' },
                     { text: 'Status screens', link: '/docs/screens' },
                     { text: 'Widgets', link: '/docs/widgets' },

@@ -13,6 +13,7 @@ their payloads and limits, for running Lumberjack behind a proxy or writing your
 | `POST /api/ingest/sourcemaps`            | Server token                      | 120 a minute per project                                  |
 | `POST /api/v1/opentelemetry/v1/...`      | Server token                      | Counted with the batches                                  |
 | `GET /api/health`                        | Server token                      | 120 a minute per project                                  |
+| `DELETE /api/events/actor`               | Server token                      | 60 a minute per project                                   |
 | `GET` or `POST /api/health/ping/{token}` | The heartbeat check's secret URL  | 60 a minute per address                                   |
 | `/mcp`                                   | MCP token, as a bearer token      | 120 calls a minute per token                              |
 | `GET /api/v1/...`                        | Team token, or public stats key   | 120 a minute per token or key                             |
@@ -46,13 +47,13 @@ See the [metrics API](./metrics-api) and [MCP](./mcp) pages for those endpoints,
 }
 ```
 
-| Field         | Required | Notes                                                                                                                                                                  |
-| ------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `v`           | yes      | Always `1`.                                                                                                                                                            |
-| `environment` | no       | At most 64 characters.                                                                                                                                                 |
-| `release`     | no       | At most 64 characters.                                                                                                                                                 |
-| `host`        | no       | At most 255 characters.                                                                                                                                                |
-| `events`      | yes      | At most 5,000 events, each of type `request`, `request_counts`, `query`, `exception`, `job`, `log`, `schedule`, `command`, `span`, `health`, `alert` or `maintenance`. |
+| Field         | Required | Notes                                                                                                                                                                           |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `v`           | yes      | Always `1`.                                                                                                                                                                     |
+| `environment` | no       | At most 64 characters.                                                                                                                                                          |
+| `release`     | no       | At most 64 characters.                                                                                                                                                          |
+| `host`        | no       | At most 255 characters.                                                                                                                                                         |
+| `events`      | yes      | At most 5,000 events, each of type `request`, `request_counts`, `query`, `exception`, `job`, `log`, `schedule`, `command`, `span`, `health`, `alert`, `maintenance` or `event`. |
 
 ### Requests
 
@@ -204,6 +205,39 @@ covers every environment of the project. A `start` while a window of the environ
 open keeps that window, with the new message and expected end where the event sends
 them. An `end` closes the environment's open window, and does nothing when none is
 open. Other fields are ignored. Browsers cannot send it.
+
+## Event events
+
+An event of type `event` records an [event](./events.md):
+
+```json
+{
+    "type": "event",
+    "name": "order.placed",
+    "group": "billing",
+    "actor": { "type": "App\\Models\\User", "id": "17" },
+    "subject": { "type": "order", "id": "42" },
+    "payload": { "total": 499, "currency": "DKK" },
+    "trace_id": "4bf92f3577b34da6",
+    "timestamp": 1763025600.123
+}
+```
+
+| Field       | Notes                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------- |
+| `name`      | Required. Letters, digits, `.`, `_`, `:` and `-`, at most 128 characters. Otherwise it is skipped. |
+| `group`     | Made into a slug. Without it, `default`.                                                           |
+| `actor`     | Who did it: a `type` (at most 128 characters) and an `id` (at most 64). Left out without both.     |
+| `subject`   | What it was done to, in the same form.                                                             |
+| `payload`   | A JSON object, scrubbed. Larger than 16 KB, it is replaced by `{"_truncated": true}`.              |
+| `trace_id`  | The trace it was recorded in.                                                                      |
+| `timestamp` | When it happened.                                                                                  |
+
+### Forgetting an actor
+
+`DELETE /api/events/actor` with the server token and a JSON body of the actor's `type`
+and `id` deletes every event of that actor in the project, and answers
+`{"deleted": <count>}`. The hourly counts are kept.
 
 ## Browser
 
