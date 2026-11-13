@@ -229,6 +229,9 @@ export default function About({
 /** Releases with a chip before the rest are asked for. */
 const CHIPS = 5;
 
+/** Releases listed before the rest are asked for. */
+const LISTED = 10;
+
 const anchor = (version: string) =>
     `release-${version.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
@@ -250,6 +253,17 @@ function ReleaseNotes({
     const chips = allChips ? releases : releases.slice(0, shownChips);
     const hidden = releases.length - chips.length;
     const nav = useRef<HTMLElement>(null);
+    const [allReleases, setAllReleases] = useState(false);
+    // Unreleased and the ten newest, and never short of the running one.
+    const listed = Math.max(
+        LISTED + (releases[0]?.version === 'Unreleased' ? 1 : 0),
+        releases.findIndex((r) => r.version === running) + 1,
+    );
+    const shownReleases = allReleases ? releases : releases.slice(0, listed);
+    const moreReleases = releases.length - shownReleases.length;
+    const focusFrom = useRef<number | null>(null);
+    // A release asked for (a chip or the address) that is not listed yet: opened once it is.
+    const [pending, setPending] = useState<string | null>(null);
     // Opens the release and brings it up just below the sticky row, however many lines that wraps to.
     const reveal = useCallback((id: string, smooth: boolean): boolean => {
         const target = document.getElementById(id);
@@ -276,6 +290,14 @@ function ReleaseNotes({
     }, []);
     // The address keeps the anchor, so it can be shared.
     const jump = (event: MouseEvent, release: Release) => {
+        if (!shownReleases.includes(release)) {
+            event.preventDefault();
+            setAllReleases(true);
+            setPending(anchor(release.version));
+
+            return;
+        }
+
         if (reveal(anchor(release.version), true)) {
             event.preventDefault();
             // Into the release, so the keyboard and a screen reader go on from there.
@@ -300,12 +322,40 @@ function ReleaseNotes({
         }
     }, [allChips, shownChips]);
 
-    // An address with a release's anchor opens it once the changelog is there.
+    // An address with a release's anchor opens it once the changelog is there, listing them all if need be.
     useEffect(() => {
-        if (window.location.hash.startsWith('#release-')) {
-            reveal(window.location.hash.slice(1), false);
+        if (
+            window.location.hash.startsWith('#release-') &&
+            !reveal(window.location.hash.slice(1), false)
+        ) {
+            setAllReleases(true);
+            setPending(window.location.hash.slice(1));
         }
     }, [reveal]);
+
+    useEffect(() => {
+        if (allReleases && focusFrom.current !== null) {
+            document
+                .getElementById(
+                    anchor(releases[focusFrom.current]?.version ?? ''),
+                )
+                ?.querySelector('summary')
+                ?.focus();
+            focusFrom.current = null;
+        }
+    }, [allReleases, releases]);
+
+    // Opens the release asked for once it is listed, and moves into it.
+    useEffect(() => {
+        if (pending !== null && allReleases && reveal(pending, true)) {
+            document
+                .getElementById(pending)
+                ?.querySelector('summary')
+                ?.focus({ preventScroll: true });
+            history.replaceState(history.state, '', `#${pending}`);
+            setPending(null);
+        }
+    }, [pending, allReleases, reveal]);
     const name = (release: Release) =>
         release.version === 'Unreleased'
             ? t('about.notes.unreleased')
@@ -360,7 +410,7 @@ function ReleaseNotes({
                         )}
                     </nav>
                     <div className="flex flex-col divide-y divide-line">
-                        {releases.map((release) => (
+                        {shownReleases.map((release) => (
                             <details
                                 key={release.version}
                                 id={anchor(release.version)}
@@ -410,6 +460,23 @@ function ReleaseNotes({
                             </details>
                         ))}
                     </div>
+                    {moreReleases > 0 && (
+                        <div className="border-t border-line px-5 py-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAllReleases(true);
+                                    // The first release it listed takes the focus, still folded.
+                                    focusFrom.current = shownReleases.length;
+                                }}
+                                className="cursor-pointer text-xs text-amber hover:underline"
+                            >
+                                {t('about.notes.more', {
+                                    count: moreReleases,
+                                })}
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
         </Card>
