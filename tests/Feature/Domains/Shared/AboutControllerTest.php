@@ -21,6 +21,7 @@ describe('the about page', function () {
                 ->where('release_url', 'https://github.com/ExeQue/lumberjack/releases/tag/v0.2.0')
                 ->where('changelog_url', 'https://github.com/ExeQue/lumberjack/blob/main/CHANGELOG.md')
                 ->where('repository_url', 'https://github.com/ExeQue/lumberjack')
+                ->has('contributors')
                 ->where('system', null));
     });
 

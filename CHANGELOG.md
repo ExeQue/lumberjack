@@ -15,6 +15,7 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 - **About** links to the source on GitHub, and a GitHub mark beside the version in the sidebar opens it too.
 - **What's new** on About lists the 10 newest releases (and any older one that is running), the rest behind **Show more**; a version chip or a link to an older release lists them all and opens it.
+- **About** lists the release's contributors, each linking to their GitHub profile. The release build reads them from GitHub; nothing is fetched while Lumberjack runs.
 - A screen with projects ticked limits its widgets to them: the designer offers only those projects, and only their health checks, data sources and filter names, and a widget's own projects are cut down to the screen's when it shows (one pointing only elsewhere shows nothing). A screen with no project ticked still offers every project of the team. A share link names only the screen's projects.
 - The test workflow can be run by hand from the Actions tab.
 

@@ -91,6 +91,15 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
 
+      # The About page lists who contributed; people only, most contributions first.
+      - name: Contributors
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/contributors" --paginate \
+            --jq '[.[] | select(.type == "User") | {login, contributions}]' \
+            | jq -s 'add // []' > contributors.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - id: build
         uses: docker/build-push-action@v7
         with:

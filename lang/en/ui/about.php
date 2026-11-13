@@ -18,6 +18,11 @@ return [
         'more' => 'Show :count more',
         'empty' => 'This build has no changelog.',
     ],
+    'contributors' => [
+        'title' => 'Contributors',
+        'description' => 'The people who made this release, most contributions first.',
+        'commits' => '{1} 1 contribution|[2,*] :count contributions',
+    ],
     'docs' => 'Documentation',
     'source' => 'Source on GitHub',
     'update' => [

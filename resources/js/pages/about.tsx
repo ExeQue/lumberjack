@@ -21,6 +21,8 @@ type Props = {
     repository_url: string;
     /** The changelog this build carries, newest first; deferred. */
     changelog?: Release[];
+    /** Who contributed, as the release build wrote it; none in a checkout. */
+    contributors: { login: string; url: string; contributions: number }[];
     /** The last check for a newer release; for system administrators, unless checks are off. */
     update: {
         latest: { version: string; checked_at: string } | null;
@@ -42,6 +44,7 @@ export default function About({
     docs_url: docsUrl,
     repository_url: repositoryUrl,
     changelog,
+    contributors,
     update,
     system,
 }: Props) {
@@ -185,6 +188,35 @@ export default function About({
                         </div>
                     )}
                 </Card>
+                {contributors.length > 0 && (
+                    <Card>
+                        <CardHeader
+                            title={t('about.contributors.title')}
+                            description={t('about.contributors.description')}
+                        />
+                        <ul className="flex flex-wrap gap-x-5 gap-y-2 px-5 py-4 text-sm">
+                            {contributors.map((contributor) => (
+                                <li key={contributor.login}>
+                                    <a
+                                        href={contributor.url}
+                                        className={link}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        title={t(
+                                            'about.contributors.commits',
+                                            {
+                                                count: contributor.contributions,
+                                            },
+                                            contributor.contributions,
+                                        )}
+                                    >
+                                        {contributor.login}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </Card>
+                )}
                 <Deferred
                     data="changelog"
                     fallback={
