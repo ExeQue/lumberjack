@@ -103,6 +103,7 @@ Tables come as typed columns and rows:
 | `db_size`                              | bytes | environment, check                        |
 | `db_connections`                       | count | environment, check                        |
 | `db_connections_used`                  | ratio | environment, check                        |
+| `activity`                             | count | environment, activity                     |
 
 Query parameters, which match Grafana's macros:
 
@@ -112,12 +113,14 @@ Query parameters, which match Grafana's macros:
   `auto` (the default) for about 300 points. The interval is at least a minute, rounded
   up to whole minutes, and raised so a series has at most 2,000 points. The answer's
   `interval` says what was used.
-- `environment`, `route`, `domain`, `queue`, `job`, `host`, `release`, `check`: filters.
-  `route`, `domain`, `queue`, `job`, `host` and `check` (a health check's slug, such as
-  `database:pgsql`) take `*` as a wildcard (`/api/*`, `*.example.com`). `route` matches a
+- `environment`, `route`, `domain`, `queue`, `job`, `host`, `release`, `check`,
+  `activity`: filters. `route`, `domain`, `queue`, `job`, `host`, `check` (a health
+  check's slug, such as `database:pgsql`) and `activity` (`group:name`, such as
+  `billing:invoice.paid`) take `*` as a wildcard (`/api/*`, `*.example.com`). `route` matches a
   route's URI or its name (`orders.*`). A filter that does not apply to a metric is ignored, except `host`, which is
   rejected with 422.
-- `group_by`: one series per environment, route, domain, host, queue, release or check.
+- `group_by`: one series per environment, route, domain, host, queue, release, check or
+  activity (as `group:name`).
   Only the busiest `top` are returned, 10 by default and at most 50.
 
 ```json
@@ -150,6 +153,10 @@ In a bucket without data, counts are zero and other metrics have no point. Witho
   Each check counts its largest figure in a bucket, summed over the checks. A database
   reported by several servers counts once. `db_connections_used` is `connections` over
   `max_connections`, the highest over the checks.
+- `activity` counts [activity](./activity) per hour when the interval is whole hours,
+  so an hourly series reaches back as far as the hourly counts are kept. A shorter
+  interval counts the activity itself, kept for less time. With hourly buckets, the
+  first hour of the range counts whole.
 
 ### Prometheus
 

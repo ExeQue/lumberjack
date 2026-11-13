@@ -58,6 +58,13 @@ Click one to see its occurrences, newest first, 50 at a time:
 - **Payload:** click it to see it in full.
 - **Trace:** opens the request or job it was recorded in.
 
+## On status screens
+
+The **Activity** source of a stat, gauge or chart [widget](./widgets.md) counts activity
+over the widget's period. Its filter narrows it to `group:name`, such as `billing:*`. A
+gauge holds it against a target of your own, and a chart can draw one series per
+activity.
+
 ## Forgetting an actor
 
 To delete all activity of one actor in a project, such as when a user deletes their
@@ -74,5 +81,6 @@ The hourly counts stay: they never held the actor.
 ## Retention
 
 Activity is kept 30 days and its hourly counts 365 days by default, each its own data
-type in [retention](./projects.md#retention). Charts and widgets read the counts, so they
-reach back further than the activity itself.
+type in [retention](./projects.md#retention). Status screen widgets and the
+[metrics API](./metrics-api.md#series) read the counts when they count per hour or longer,
+so they reach back further than the activity itself.

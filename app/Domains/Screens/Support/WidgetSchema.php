@@ -489,7 +489,7 @@ final class WidgetSchema
                     $select('style', ['bars', 'area', 'line'], 'bars'),
                     $toggle('smooth', false),
                     [...$select('resolution', ['auto', '60', '120', '300', '900', '1800', '3600', '21600', '86400'], 'auto', true), 'sources' => ['external_json']],
-                    $select('split_by', ['none', 'route', 'queue', 'host', 'check', 'environment', 'release', 'project'], 'none', true),
+                    $select('split_by', ['none', 'route', 'queue', 'host', 'check', 'activity', 'environment', 'release', 'project'], 'none', true),
                     $select('top', ['5', '10', '20'], '5', true),
                     $number('red'),
                     $toggle('overlay_previous', false, true),

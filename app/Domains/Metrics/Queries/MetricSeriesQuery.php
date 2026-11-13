@@ -27,6 +27,8 @@ use LogicException;
  * summed over queues and the highest over hosts. The database metrics read the results
  * of reported health checks: a check's largest figure per bucket (several hosts report
  * the same database), summed over checks, and the highest share of connections in use.
+ * Activity reads its hourly counts when the buckets are whole hours, the activity itself
+ * (kept for less time) when they are shorter.
  */
 class MetricSeriesQuery
 {
@@ -173,8 +175,37 @@ class MetricSeriesQuery
                 },
                 $this->column($group, nullableEnvironment: true),
             ],
+            Metric::Activity => $this->activity($filter, $window, $group),
             Metric::Apdex, Metric::QueueSize, Metric::QueueWorkers, Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed => throw new LogicException("{$metric->value} has its own query."),
         };
+    }
+
+    /**
+     * Activity of the window: the hourly counts when the buckets are whole hours, the
+     * activity itself when they are shorter.
+     *
+     * ponytail: a window's value with hourly buckets counts its first hour whole, up to an hour too much; read the activity itself if that matters.
+     *
+     * @return array{Builder, literal-string, literal-string, literal-string|null}
+     */
+    private function activity(MetricFilter $filter, MetricWindow $window, ?MetricGroup $group): array
+    {
+        $hourly = $window->bucketSeconds % 3600 === 0;
+        $query = $hourly
+            ? DB::table('activity_counts')->where('hour', '>=', $window->from->startOfHour())->where('hour', '<', $window->to)
+            : DB::table('activities')->where('occurred_at', '>=', $window->from)->where('occurred_at', '<', $window->to);
+
+        return [
+            $this->match($query->whereIn('project_id', $filter->projectIds)
+                ->when($filter->environment !== null)->where('environment', $filter->environment), '"group" || \':\' || name', $filter->activity),
+            $hourly ? 'hour' : 'occurred_at',
+            $hourly ? 'SUM(count)' : 'COUNT(*)',
+            match ($group) {
+                MetricGroup::Environment => "COALESCE(environment, '')",
+                MetricGroup::Activity => '"group" || \':\' || name',
+                default => null,
+            },
+        ];
     }
 
     /**
@@ -512,7 +543,7 @@ class MetricSeriesQuery
             MetricGroup::Host => 'host',
             MetricGroup::Queue => 'queue',
             MetricGroup::Release => 'release',
-            MetricGroup::Check, null => null,
+            MetricGroup::Check, MetricGroup::Activity, null => null,
         };
     }
 

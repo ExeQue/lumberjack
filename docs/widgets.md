@@ -78,9 +78,10 @@ Data widgets have a **Scope** section. Each setting uses the screen's value unle
 - **Environment**.
 - **Period** and **Release** (**All**, **Current only** or **Previous**), for widgets over
   a period. **Over** at the top of the inspector also picks the period.
-- **Filter**, for a source that can be narrowed: the route, queue, job, host or database
-  check. `*` matches anything, such as `POST /checkout*`. A route filter also matches
-  route names such as `orders.*`.
+- **Filter**, for a source that can be narrowed: the route, queue, job, host, database
+  check or activity. `*` matches anything, such as `POST /checkout*`. A route filter also
+  matches route names such as `orders.*`. An activity filter is `group:name`, such as
+  `billing:invoice.paid` or `billing:*`.
 - **Domain**, for a source with routes, such as `shop.example.com`.
 
 ### Rotation
@@ -150,6 +151,8 @@ One number, with its trend against an earlier period and a sparkline.
 
 ![The current release as a stat](./screenshots/widget-stat-release.png)
 
+![Activity as a stat, against yesterday](./screenshots/widget-stat-activity.png)
+
 **Shows**:
 
 - **Requests**: requests over the period.
@@ -171,6 +174,8 @@ One number, with its trend against an earlier period and a sparkline.
 - **Database size**, **Database connections**: the latest values from
   [database health checks](./health#database-metrics), added up over the databases in
   scope.
+- **Activity**: how often apps recorded [activity](./activity) in the period. Narrow it
+  to a group or one activity with the filter.
 - **Data source**: a number from a project's data source. See
   [Data source](#data-source).
 
@@ -192,15 +197,20 @@ One value on a half circle, the arc colored by its limits.
 
 ![A gauge of host CPU](./screenshots/widget-gauge.png)
 
+![Orders placed against a target](./screenshots/widget-gauge-activity.png)
+
 **Shows**: **Requests per minute**, **Error rate**, **p95 response time**, **Apdex**,
 **Host CPU**, **Host memory**, **Host disk** (the busiest host), **Queue size**,
-**Database connections in use**, **Health uptime** and **Data source**. The defaults
-match the stat's, plus:
+**Database connections in use**, **Health uptime**, **Activity** and **Data source**. The
+defaults match the stat's, plus:
 
 - **Database connections in use**: the database using the largest share of its maximum.
   Amber at 80%, red at 90%.
 - **Health uptime**: the uptime of the checks in scope over the period. Amber below
   99.9%, red below 99%.
+- **Activity**: how often the activity in scope happened over the period, against a
+  target of your own: set **Red at** (and **Amber at**) to the least you expect, such as
+  50 sign-ups a day. Low values are bad, so the arc turns red when it falls short.
 
 **Scale**:
 
@@ -212,7 +222,7 @@ match the stat's, plus:
 ## Chart
 
 A series over the period, as bars, an area or a line, or one series per route, queue,
-host or project.
+host, activity or project.
 
 ![Requests and errors as an area chart](./screenshots/widget-chart-area.png)
 
@@ -220,17 +230,19 @@ host or project.
 
 ![p95 as bars, the previous period behind them](./screenshots/widget-chart-bars.png)
 
+![Activity split per activity](./screenshots/widget-chart-activity.png)
+
 **Shows**: **Requests and errors** (errors in red), **Requests**, **Requests per
 minute**, **Error rate**, **p95 response time**, **Apdex**, **Users affected**, **Queue
 size**, **Queue workers**, **Queue wait** (how long jobs waited before they ran),
 **Failed jobs**, **Host CPU**, **Host memory**, **Host disk**, **LCP p75**, **Database
-size**, **Database connections** and **Data source**.
+size**, **Database connections**, **Activity** and **Data source**.
 
 **Chart**:
 
 - **Style**: **Bars**, **Area** or **Line**, and **Smooth lines**.
 - **Split by**: **Nothing**, **Route**, **Queue**, **Host**, **Database check**,
-  **Environment**, **Release** or **Project**, one series each. **Series** sets how many:
+  **Activity**, **Environment**, **Release** or **Project**, one series each. **Series** sets how many:
   the top 5, 10 or 20. A split chart always draws lines.
 - **Red at**, and **Draw the red limit** as a dashed line.
 - **Overlay the previous period**, faint behind the current one.

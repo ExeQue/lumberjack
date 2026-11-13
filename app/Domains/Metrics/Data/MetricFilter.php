@@ -8,7 +8,7 @@ use App\Domains\Metrics\Enums\MetricGroup;
 
 /**
  * Which rows a metric is computed from. Route (its URI or its Laravel name), domain,
- * queue, job, host and check (a health check's slug) take a pattern where * stands for
+ * queue, job, host, check (a health check's slug) and activity (group:name) take a pattern where * stands for
  * anything; without one they match exactly. A filter a metric's data does not carry (a route for a queue's size) is left
  * out for that metric.
  */
@@ -28,6 +28,7 @@ final readonly class MetricFilter
         public ?MetricGroup $groupBy = null,
         public ?string $check = null,
         public ?string $domain = null,
+        public ?string $activity = null,
     ) {
     }
 }

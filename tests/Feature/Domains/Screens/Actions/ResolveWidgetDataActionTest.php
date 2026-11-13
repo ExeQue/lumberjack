@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Activity\Models\ActivityCount;
 use App\Domains\Alerts\Models\QueueAlertThreshold;
 use App\Domains\DataSources\Enums\DataSourceFormat;
 use App\Domains\DataSources\Enums\DataSourceShape;
@@ -594,6 +595,30 @@ describe('database checks', function () {
         $data = ($this->resolve)(WidgetType::Health, 'checks', ['checks' => [$this->mysql->uuid]]);
 
         expect($data['check']['metrics'])->toBe(['size_bytes' => 300, 'connections' => 45, 'max_connections' => 50]);
+    });
+});
+
+describe('activity', function () {
+    beforeEach(function () {
+        ActivityCount::factory()->forProject($this->project)->named('billing', 'invoice.paid')->create(['hour' => now()->subHours(2), 'count' => 4]);
+        ActivityCount::factory()->forProject($this->project)->named('users', 'user.signed_up')->create(['hour' => now()->subHour(), 'count' => 3]);
+    });
+
+    it('counts the activity of the period, filtered by group and name', function () {
+        expect(($this->resolve)(WidgetType::Stat, 'activity'))->toMatchArray(['value' => 7.0, 'unit' => 'count', 'period' => '24h'])
+            ->and(($this->resolve)(WidgetType::Stat, 'activity', scope: new WidgetScope(filter: 'billing:*'))['value'])->toBe(4.0);
+    });
+
+    it('turns a gauge red when the activity falls short of its target', function () {
+        expect(($this->resolve)(WidgetType::Gauge, 'activity', ['red' => 5]))->toMatchArray(['value' => 7.0, 'state' => 'ok'])
+            ->and(($this->resolve)(WidgetType::Gauge, 'activity', ['red' => 10]))->toMatchArray(['value' => 7.0, 'state' => 'red']);
+    });
+
+    it('charts one series per activity when split', function () {
+        $data = ($this->resolve)(WidgetType::Chart, 'activity', ['split_by' => 'activity']);
+
+        expect(collect($data['series'])->mapWithKeys(fn (array $s): array => [$s['name'] => array_sum(array_column($s['points'], 'v'))])->all())
+            ->toBe(['billing:invoice.paid' => 4.0, 'users:user.signed_up' => 3.0]);
     });
 });
 

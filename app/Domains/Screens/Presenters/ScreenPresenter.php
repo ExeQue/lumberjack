@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Presenters;
 
+use App\Domains\Activity\Models\ActivityCount;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
@@ -216,7 +217,8 @@ class ScreenPresenter
     }
 
     /**
-     * Each project's queue, host, domain and database check names, by project uuid.
+     * Each project's queue, host, domain, database check and activity (group:name) names,
+     * by project uuid.
      *
      * @param  Collection<int, Project>  $projects
      * @return array<string, array<string, list<string>>>
@@ -230,6 +232,7 @@ class ScreenPresenter
             'host' => ProjectAgent::query()->whereIn('project_id', $ids)->distinct()->get(['project_id', 'host as name']),
             'domain' => RequestRun::query()->whereIn('project_id', $ids)->where('occurred_at', '>=', now()->subDays(7))->whereNotNull('domain')->distinct()->get(['project_id', 'domain as name']),
             'check' => HealthCheck::query()->whereIn('project_id', $ids)->whereNotArchived()->whereReportsDatabase()->distinct()->get(['project_id', 'slug as name']),
+            'activity' => ActivityCount::query()->whereIn('project_id', $ids)->where('hour', '>=', now()->subDays(30))->distinct()->selectRaw('project_id, "group" || \':\' || name AS name')->get(),
         ];
         $names = [];
 

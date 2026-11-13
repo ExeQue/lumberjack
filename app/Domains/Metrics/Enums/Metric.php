@@ -8,7 +8,7 @@ namespace App\Domains\Metrics\Enums;
  * Every time series the metrics API serves. Durations are in milliseconds, shares
  * (error rate, host use) are fractions from 0 to 1, sizes in bytes. The database
  * metrics read what reported health checks send as size_bytes, connections and
- * max_connections.
+ * max_connections. Activity counts how often apps recorded an activity.
  */
 enum Metric: string
 {
@@ -36,6 +36,7 @@ enum Metric: string
     case DbSize = 'db_size';
     case DbConnections = 'db_connections';
     case DbConnectionsUsed = 'db_connections_used';
+    case Activity = 'activity';
 
     public function unit(): string
     {
@@ -73,6 +74,7 @@ enum Metric: string
             self::QueueSize, self::QueueWorkers => [MetricGroup::Queue, MetricGroup::Host],
             self::CpuLoad, self::MemoryUsed, self::DiskUsed => [MetricGroup::Host],
             self::DbSize, self::DbConnections, self::DbConnectionsUsed => [MetricGroup::Environment, MetricGroup::Check],
+            self::Activity => [MetricGroup::Environment, MetricGroup::Activity],
         };
     }
 }

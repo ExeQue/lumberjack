@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Domains\Activity\Models\Activity;
+use App\Domains\Activity\Models\ActivityCount;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Jobs\Models\JobRun;
@@ -114,6 +116,31 @@ describe('issues and jobs', function () {
             ->and(collect($requests)->sum('value'))->toEqual(0)
             ->and($p95)->toBe([])
             ->and(($this->value)(Metric::P95))->toBeNull();
+    });
+});
+
+describe('activity', function () {
+    it('sums the hourly counts of the matching activity, split by activity', function () {
+        ActivityCount::factory()->forProject($this->project)->named('billing', 'invoice.paid')->create(['hour' => now()->subHours(2), 'count' => 4]);
+        ActivityCount::factory()->forProject($this->project)->named('billing', 'invoice.sent')->create(['hour' => now()->subHour(), 'count' => 2]);
+        ActivityCount::factory()->forProject($this->project)->named('users', 'user.signed_up')->create(['hour' => now()->subHour(), 'count' => 7]);
+        ActivityCount::factory()->forProject($this->project)->named('billing', 'invoice.paid')->create(['hour' => now()->subDays(2), 'count' => 100]);
+
+        $series = app(MetricSeriesQuery::class)->series(Metric::Activity, new MetricFilter([$this->project->id], activity: 'billing:*', groupBy: MetricGroup::Activity), $this->day);
+
+        expect(($this->value)(Metric::Activity))->toEqual(13)
+            ->and(($this->value)(Metric::Activity, ['activity' => 'billing:*']))->toEqual(6)
+            ->and(($this->value)(Metric::Activity, ['activity' => 'users:user.signed_up']))->toEqual(7)
+            ->and(collect($series)->groupBy('series')->map->sum('value')->all())->toEqual(['billing:invoice.paid' => 4, 'billing:invoice.sent' => 2]);
+    });
+
+    it('counts the activity itself when the buckets are shorter than an hour', function () {
+        Activity::factory()->forProject($this->project)->count(3)->create(['occurred_at' => now()->subMinutes(10)]);
+        Activity::factory()->forProject($this->project)->create(['occurred_at' => now()->subHours(2)]);
+
+        $window = MetricWindow::between(now()->subHour(), now());
+
+        expect(app(MetricSeriesQuery::class)->value(Metric::Activity, new MetricFilter([$this->project->id]), $window))->toEqual(3);
     });
 });
 

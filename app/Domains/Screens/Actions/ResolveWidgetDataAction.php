@@ -1028,6 +1028,7 @@ class ResolveWidgetDataAction
             release: $this->release($projects, $scope),
             groupBy: $group,
             check: $on('check'),
+            activity: $on('activity'),
             domain: $source->filterOn === 'route' && $scope->domain !== null ? mb_strtolower($scope->domain) : null,
         );
     }

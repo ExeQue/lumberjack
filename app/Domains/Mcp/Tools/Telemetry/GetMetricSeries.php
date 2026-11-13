@@ -27,7 +27,7 @@ class GetMetricSeries extends Tool
 
     protected string $name = 'get_metric_series';
 
-    protected string $description = 'A time series of one metric, as the metrics API serves it: points of {t, series, value}, optionally filtered (route, queue, job, host, release, check, domain; * is a wildcard) and split by group_by. Durations are in microseconds, rates and shares from 0 to 1. Defaults to the last 24 hours.';
+    protected string $description = 'A time series of one metric, as the metrics API serves it: points of {t, series, value}, optionally filtered (route, queue, job, host, release, check, domain, activity; * is a wildcard) and split by group_by. Durations are in microseconds, rates and shares from 0 to 1. Defaults to the last 24 hours.';
 
     public function __construct(private readonly MetricSeriesQuery $series)
     {
@@ -49,6 +49,7 @@ class GetMetricSeries extends Tool
             'host' => $schema->string(),
             'release' => $schema->string(),
             'check' => $schema->string()->description('A health check slug, for the db_* metrics.'),
+            'activity' => $schema->string()->description('An activity as group:name, for the activity metric.'),
             'group_by' => $schema->string()->enum(array_column(MetricGroup::cases(), 'value'))->description('One series per value; not every metric can be split by every group.'),
             'top' => $schema->integer()->min(1)->max(50)->description('How many series a split returns, the busiest first. Defaults to 10.'),
         ];

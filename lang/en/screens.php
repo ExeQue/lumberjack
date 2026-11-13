@@ -79,6 +79,7 @@ return [
             'lcp_p75' => 'LCP p75',
             'db_size' => 'Database size',
             'db_connections' => 'Database connections',
+            'activity' => 'Activity',
             'external_json' => 'Data source',
         ],
         'gauge' => [
@@ -92,6 +93,7 @@ return [
             'queue_size' => 'Queue size',
             'db_connections' => 'Database connections in use',
             'health_uptime' => 'Health uptime',
+            'activity' => 'Activity',
             'external_json' => 'Data source',
         ],
         'chart' => [
@@ -112,6 +114,7 @@ return [
             'lcp_p75' => 'LCP p75',
             'db_size' => 'Database size',
             'db_connections' => 'Database connections',
+            'activity' => 'Activity',
             'external_json' => 'Data source',
         ],
         'list' => [

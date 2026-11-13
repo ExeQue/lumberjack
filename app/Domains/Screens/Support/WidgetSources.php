@@ -75,6 +75,7 @@ final class WidgetSources
             new WidgetSource($stat, 'lcp_p75', 'ms', 2500, 4000, metric: Metric::LcpP75, filterOn: 'route'),
             new WidgetSource($stat, 'db_size', 'bytes', metric: Metric::DbSize, filterOn: 'check', snapshot: true),
             new WidgetSource($stat, 'db_connections', 'count', metric: Metric::DbConnections, filterOn: 'check', snapshot: true),
+            new WidgetSource($stat, 'activity', 'count', metric: Metric::Activity, filterOn: 'activity'),
             // A project's data source, read with the widget's JSONPath (see DataSourceValuesQuery).
             new WidgetSource($stat, 'external_json', 'number', snapshot: true),
 
@@ -88,6 +89,8 @@ final class WidgetSources
             new WidgetSource($gauge, 'host_disk', 'ratio', 0.8, 0.9, metric: Metric::DiskUsed, filterOn: 'host', snapshot: true),
             new WidgetSource($gauge, 'queue_size', 'count', 100, 1000, metric: Metric::QueueSize, filterOn: 'queue', snapshot: true),
             new WidgetSource($gauge, 'db_connections', 'ratio', 0.8, 0.9, metric: Metric::DbConnectionsUsed, filterOn: 'check', snapshot: true),
+            // Against a target of the widget's own: red when it falls short.
+            new WidgetSource($gauge, 'activity', 'count', lowIsBad: true, metric: Metric::Activity, filterOn: 'activity'),
             new WidgetSource($gauge, 'health_uptime', 'ratio', 0.999, 0.99, lowIsBad: true),
             new WidgetSource($gauge, 'external_json', 'number', snapshot: true),
 
@@ -109,6 +112,7 @@ final class WidgetSources
             new WidgetSource($chart, 'lcp_p75', 'ms', red: 4000, metric: Metric::LcpP75, filterOn: 'route'),
             new WidgetSource($chart, 'db_size', 'bytes', metric: Metric::DbSize, filterOn: 'check'),
             new WidgetSource($chart, 'db_connections', 'count', metric: Metric::DbConnections, filterOn: 'check'),
+            new WidgetSource($chart, 'activity', 'count', metric: Metric::Activity, filterOn: 'activity'),
             new WidgetSource($chart, 'external_json', 'number'),
 
             // List: rows, worst or newest first.

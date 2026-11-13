@@ -51,6 +51,10 @@ class ActivityReferencesQuery
             ->all();
     }
 
+    /**
+     * @param  literal-string  $type
+     * @param  literal-string  $id
+     */
     private function match(Builder $query, string $type, string $id, string $term): void
     {
         if ($term === '') {

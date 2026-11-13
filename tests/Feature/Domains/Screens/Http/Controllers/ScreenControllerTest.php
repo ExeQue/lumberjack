@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Activity\Models\ActivityCount;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Health\Models\HealthCheck;
@@ -200,12 +201,14 @@ describe('the pages', function () {
 
     it('gives the designer the schema, sources, environments and checks, and filter names per project', function () {
         QueueSample::factory()->for($this->project)->create(['queue' => 'emails', 'sampled_at' => now()]);
+        ActivityCount::factory()->forProject($this->project)->named('billing', 'invoice.paid')->create();
 
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
             ->component('screens/edit')
             ->has('schema.health')
-            ->has('sources.stat', 19)
+            ->has('sources.stat', 20)
             ->where("filters.{$this->project->uuid}.queue", ['emails'])
+            ->where("filters.{$this->project->uuid}.activity", ['billing:invoice.paid'])
             ->has('environments')
             ->has('checks')
             ->where('limits.max_cols', Screen::MAX_COLS));

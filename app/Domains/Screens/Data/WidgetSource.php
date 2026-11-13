@@ -10,12 +10,12 @@ use App\Domains\Screens\Enums\WidgetType;
 /**
  * One thing a widget can show: its unit, default amber and red limits (a value at or
  * past them is amber or red; at or below when low is bad), the metric of the metrics
- * API behind it, and which of the scope's filters (route, queue, job, host, check) it takes.
+ * API behind it, and which of the scope's filters (route, queue, job, host, check, activity) it takes.
  */
 final readonly class WidgetSource
 {
     /**
-     * @param  'route'|'queue'|'job'|'host'|'check'|null  $filterOn  check is a health check's slug
+     * @param  'route'|'queue'|'job'|'host'|'check'|'activity'|null  $filterOn  check is a health check's slug, activity group:name
      */
     public function __construct(
         public WidgetType $type,
@@ -41,7 +41,7 @@ final readonly class WidgetSource
 
     /**
      * What it is about, to group the designer's list: traffic, issues, jobs, infrastructure,
-     * databases, health or external.
+     * databases, activity, health or external.
      */
     public function topic(): string
     {
@@ -51,6 +51,7 @@ final readonly class WidgetSource
             str_contains($this->id, 'job') || str_starts_with($this->id, 'queue') || $this->id === 'scheduled_tasks' => 'jobs',
             str_starts_with($this->id, 'host') || str_starts_with($this->id, 'agents') || $this->id === 'current_release' => 'infrastructure',
             str_starts_with($this->id, 'db_') => 'databases',
+            $this->id === 'activity' => 'activity',
             $this->type === WidgetType::Health || $this->type === WidgetType::Overview || str_starts_with($this->id, 'health') => 'health',
             default => 'traffic',
         };

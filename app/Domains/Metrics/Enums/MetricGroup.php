@@ -15,4 +15,6 @@ enum MetricGroup: string
     case Release = 'release';
     /** A health check, by slug. */
     case Check = 'check';
+    /** An activity, as group:name. */
+    case Activity = 'activity';
 }

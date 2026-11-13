@@ -8,6 +8,7 @@ use App\Domains\Shared\Enums\Period;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use stdClass;
 
 /**
  * Per activity in the period: how often it happened, when last, and a count per bucket for
@@ -54,9 +55,9 @@ class ActivityStatisticsQuery
             ->selectRaw('"group", name, FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?) AS b, COUNT(*) AS c', [$size])
             ->groupByRaw('"group", name, b')
             ->get()
-            ->groupBy(fn (object $row): string => $row->group."\0".$row->name);
+            ->groupBy(fn (stdClass $row): string => $row->group."\0".$row->name);
 
-        return array_values($rows->map(function (object $row) use ($buckets, $start, $period): array {
+        return array_values($rows->map(function (stdClass $row) use ($buckets, $start, $period): array {
             $series = array_fill(0, $period->buckets() + 1, 0);
 
             foreach ($buckets->get($row->group."\0".$row->name) ?? [] as $bucket) {
