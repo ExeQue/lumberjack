@@ -28,7 +28,8 @@ class AboutController
             'version' => $version,
             'revision' => AppVersion::revision(),
             'release_url' => AppVersion::isRelease() ? AppVersion::releaseUrl($version) : null,
-            'changelog_url' => 'https://github.com/ExeQue/lumberjack/blob/main/CHANGELOG.md',
+            'changelog_url' => AppVersion::REPOSITORY_URL.'/blob/main/CHANGELOG.md',
+            'repository_url' => AppVersion::REPOSITORY_URL,
             'docs_url' => config('lumberjack.docs_url'),
             'changelog' => Inertia::defer(fn (): array => Changelog::releases()),
             'update' => $request->user()?->isAdmin() && config('lumberjack.update_check') ? [

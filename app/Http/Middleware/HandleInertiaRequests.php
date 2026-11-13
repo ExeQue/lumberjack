@@ -65,6 +65,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'locale' => app()->getLocale(),
             'app_version' => fn (): string => AppVersion::version(),
+            'repository_url' => AppVersion::REPOSITORY_URL,
             'update_available' => fn (): ?string => $user?->isAdmin() ? AppVersion::updateAvailable() : null,
             // The strings themselves (about 75 KB) are a cached file of their own; the page
             // gets where it is, and the layout preloads it.

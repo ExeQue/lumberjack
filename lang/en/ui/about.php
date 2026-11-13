@@ -19,6 +19,7 @@ return [
         'empty' => 'This build has no changelog.',
     ],
     'docs' => 'Documentation',
+    'source' => 'Source on GitHub',
     'update' => [
         'current' => 'You are on the latest release.',
         'available' => 'Lumberjack :version is available.',

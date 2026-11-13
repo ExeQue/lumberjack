@@ -16,6 +16,9 @@ final class AppVersion
 {
     public const string LATEST_RELEASE_KEY = 'app-version:latest-release';
 
+    /** Where Lumberjack's source lives. */
+    public const string REPOSITORY_URL = 'https://github.com/ExeQue/lumberjack';
+
     private const int GIT_CACHE_SECONDS = 300;
 
     /** "0.1.5", or in a checkout e.g. "v0.1.4-298-g9885421"; "dev" when nothing says. */
@@ -50,7 +53,7 @@ final class AppVersion
 
     public static function releaseUrl(string $version): string
     {
-        return 'https://github.com/ExeQue/lumberjack/releases/tag/v'.ltrim($version, 'v');
+        return self::REPOSITORY_URL.'/releases/tag/v'.ltrim($version, 'v');
     }
 
     /**

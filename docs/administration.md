@@ -175,8 +175,9 @@ choose a new one.
 ## About
 
 Click the version at the bottom of the sidebar to open **About**. It shows the version,
-the commit it was built from, and links to the release notes, the changelog and the
-documentation. Under them, **What's new** lists the changelog the install was built
+the commit it was built from, and links to the release notes, the changelog, the
+documentation and the source on GitHub. The GitHub mark beside the version in the
+sidebar opens the source too. Under them, **What's new** lists the changelog the install was built
 with, one release per section: jump to a version from the row on top, and open or fold
 each. The running release and anything unreleased are open.
 System administrators also see PHP, Laravel, the database and its size, and the queue,

@@ -1,4 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
+import { ConnectorIcon } from '@/components/lj/connectors/connector-icon';
 import {
     Bell,
     BellOff,
@@ -174,6 +175,7 @@ export function Sidebar({ bell = true }: { bell?: boolean }) {
         auth: { user: { name: string } };
         is_admin: boolean;
         app_version: string;
+        repository_url: string;
         update_available: string | null;
     }>();
     const {
@@ -182,6 +184,7 @@ export function Sidebar({ bell = true }: { bell?: boolean }) {
         auth,
         is_admin,
         app_version: appVersion,
+        repository_url: repositoryUrl,
         update_available: updateAvailable,
     } = page.props;
     const project =
@@ -422,21 +425,33 @@ export function Sidebar({ bell = true }: { bell?: boolean }) {
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
-            {/* The running version, small, under the user; it opens About. */}
-            <Link
-                href={about().url}
-                title={t('about.title')}
-                className="-mt-3 shrink-0 truncate px-2.5 font-mono text-[11px] text-ink-3 hover:text-ink-2"
-            >
-                {appVersion}
-                {updateAvailable && (
-                    <span className="ml-1.5 text-amber">
-                        {t('about.update.sidebar', {
-                            version: updateAvailable,
-                        })}
-                    </span>
-                )}
-            </Link>
+            {/* The running version, small, under the user; it opens About, the mark the source. */}
+            <div className="-mt-3 flex shrink-0 items-center gap-2 px-2.5">
+                <Link
+                    href={about().url}
+                    title={t('about.title')}
+                    className="min-w-0 truncate font-mono text-[11px] text-ink-3 hover:text-ink-2"
+                >
+                    {appVersion}
+                    {updateAvailable && (
+                        <span className="ml-1.5 text-amber">
+                            {t('about.update.sidebar', {
+                                version: updateAvailable,
+                            })}
+                        </span>
+                    )}
+                </Link>
+                <a
+                    href={repositoryUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={t('about.source')}
+                    className="ml-auto shrink-0 text-ink-3 hover:text-ink-2"
+                >
+                    <ConnectorIcon connector="github" className="size-3.5" />
+                    <span className="sr-only">{t('about.source')}</span>
+                </a>
+            </div>
         </nav>
     );
 }

@@ -18,6 +18,7 @@ type Props = {
     release_url: string | null;
     changelog_url: string;
     docs_url: string;
+    repository_url: string;
     /** The changelog this build carries, newest first; deferred. */
     changelog?: Release[];
     /** The last check for a newer release; for system administrators, unless checks are off. */
@@ -39,6 +40,7 @@ export default function About({
     release_url: releaseUrl,
     changelog_url: changelogUrl,
     docs_url: docsUrl,
+    repository_url: repositoryUrl,
     changelog,
     update,
     system,
@@ -121,6 +123,18 @@ export default function About({
                             rel="noreferrer"
                         >
                             {t('about.docs')}
+                            <ExternalLink
+                                className="size-3.5"
+                                aria-hidden="true"
+                            />
+                        </a>
+                        <a
+                            href={repositoryUrl}
+                            className={link}
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            {t('about.source')}
                             <ExternalLink
                                 className="size-3.5"
                                 aria-hidden="true"
