@@ -180,9 +180,10 @@ documentation and the source on GitHub. The GitHub mark beside the version in th
 sidebar opens the source too. Under them, **What's new** lists the changelog the install was built
 with, one release per section, the 10 newest first and the rest behind **Show more**:
 jump to a version from the row on top, and open or fold each.
-A release also lists its **Contributors**, read from GitHub when the image is built, each
-linking to their GitHub profile; a git checkout shows **You?** instead, linking to the
-source. The running release and anything unreleased are open.
+**Contributors** lists who made Lumberjack, each linking to their GitHub profile. The
+Docker image carries the list, read from GitHub when it was built. A git checkout reads
+it from GitHub once a day (not with `LUMBERJACK_UPDATE_CHECK=false`) and ends it with
+**You?**, linking to the source. The running release and anything unreleased are open.
 System administrators also see PHP, Laravel, the database and its size, and the queue,
 cache and session drivers.
 

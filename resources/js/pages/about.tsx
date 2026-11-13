@@ -22,7 +22,8 @@ type Props = {
     /** The changelog this build carries, newest first; deferred. */
     changelog?: Release[];
     /** Who contributed, as the release build wrote it; none in a checkout. */
-    contributors: { login: string; url: string; contributions: number }[];
+    /** Who contributed, from the release build or, in a checkout, GitHub; deferred. */
+    contributors?: { people: Contributor[]; checkout: boolean };
     /** The last check for a newer release; for system administrators, unless checks are off. */
     update: {
         latest: { version: string; checked_at: string } | null;
@@ -34,6 +35,8 @@ type Props = {
 };
 
 type Release = { version: string; date: string | null; notes: string };
+
+type Contributor = { login: string; url: string; contributions: number };
 
 /** Which Lumberjack this is and where to read about it. */
 export default function About({
@@ -188,46 +191,14 @@ export default function About({
                         </div>
                     )}
                 </Card>
-                <Card>
-                    <CardHeader
-                        title={t('about.contributors.title')}
-                        description={t('about.contributors.description')}
+                <Deferred data="contributors" fallback={null}>
+                    <Contributors
+                        people={contributors?.people ?? []}
+                        checkout={contributors?.checkout ?? false}
+                        repositoryUrl={repositoryUrl}
+                        linkClass={link}
                     />
-                    <ul className="flex flex-wrap gap-x-5 gap-y-2 px-5 py-4 text-sm">
-                        {/* A checkout has no list of its own: the one reading may be next. */}
-                        {contributors.length === 0 && (
-                            <li>
-                                <a
-                                    href={repositoryUrl}
-                                    className={link}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    {t('about.contributors.you')}
-                                </a>
-                            </li>
-                        )}
-                        {contributors.map((contributor) => (
-                            <li key={contributor.login}>
-                                <a
-                                    href={contributor.url}
-                                    className={link}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    title={t(
-                                        'about.contributors.commits',
-                                        {
-                                            count: contributor.contributions,
-                                        },
-                                        contributor.contributions,
-                                    )}
-                                >
-                                    {contributor.login}
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
-                </Card>
+                </Deferred>
                 <Deferred
                     data="changelog"
                     fallback={
@@ -266,6 +237,65 @@ export default function About({
                 )}
             </PageBody>
         </>
+    );
+}
+
+/** Who made Lumberjack; a checkout adds whoever is reading, as the next one. */
+function Contributors({
+    people,
+    checkout,
+    repositoryUrl,
+    linkClass,
+}: {
+    people: Contributor[];
+    checkout: boolean;
+    repositoryUrl: string;
+    linkClass: string;
+}) {
+    const t = useT();
+
+    if (people.length === 0 && !checkout) {
+        return null;
+    }
+
+    return (
+        <Card>
+            <CardHeader
+                title={t('about.contributors.title')}
+                description={t('about.contributors.description')}
+            />
+            <ul className="flex flex-wrap gap-x-5 gap-y-2 px-5 py-4 text-sm">
+                {people.map((contributor) => (
+                    <li key={contributor.login}>
+                        <a
+                            href={contributor.url}
+                            className={linkClass}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={t(
+                                'about.contributors.commits',
+                                { count: contributor.contributions },
+                                contributor.contributions,
+                            )}
+                        >
+                            {contributor.login}
+                        </a>
+                    </li>
+                ))}
+                {checkout && (
+                    <li>
+                        <a
+                            href={repositoryUrl}
+                            className={linkClass}
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            {t('about.contributors.you')}
+                        </a>
+                    </li>
+                )}
+            </ul>
+        </Card>
     );
 }
 

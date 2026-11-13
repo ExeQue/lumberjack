@@ -33,7 +33,8 @@ class AboutController
             'repository_url' => AppVersion::REPOSITORY_URL,
             'docs_url' => config('lumberjack.docs_url'),
             'changelog' => Inertia::defer(fn (): array => Changelog::releases()),
-            'contributors' => Contributors::all(),
+            // A checkout reads GitHub for them, so after the page and apart from the changelog.
+            'contributors' => Inertia::defer(fn (): array => ['people' => Contributors::all(), 'checkout' => Contributors::built() === null], 'contributors'),
             'update' => $request->user()?->isAdmin() && config('lumberjack.update_check') ? [
                 'latest' => $latest,
                 'url' => $latest !== null ? AppVersion::releaseUrl($latest['version']) : null,

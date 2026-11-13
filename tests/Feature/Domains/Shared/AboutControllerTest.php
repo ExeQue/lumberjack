@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use App\Domains\Shared\Http\Controllers\AboutController;
 use App\Domains\Shared\Support\AppVersion;
+use App\Domains\Shared\Support\Contributors;
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
-covers(AboutController::class, AppVersion::class);
+covers(AboutController::class, Contributors::class, AppVersion::class);
 
 describe('the about page', function () {
     it('names the release the image was built from, with its notes', function () {
@@ -21,11 +23,40 @@ describe('the about page', function () {
                 ->where('release_url', 'https://github.com/ExeQue/lumberjack/releases/tag/v0.2.0')
                 ->where('changelog_url', 'https://github.com/ExeQue/lumberjack/blob/main/CHANGELOG.md')
                 ->where('repository_url', 'https://github.com/ExeQue/lumberjack')
-                ->has('contributors')
+                ->missing('contributors')
                 ->where('system', null));
     });
 
+    it('reads a checkout\'s contributors from GitHub after the page, once a day', function () {
+        config(['lumberjack.update_check' => true]);
+        Http::fake(['api.github.com/repos/ExeQue/lumberjack/contributors*' => Http::response([
+            ['login' => 'ExeQue', 'type' => 'User', 'contributions' => 812],
+            ['login' => 'dependabot[bot]', 'type' => 'Bot', 'contributions' => 40],
+        ])]);
+        $user = User::factory()->inTeam()->create();
+
+        foreach ([1, 2] as $visit) {
+            $this->actingAs($user)->get(route('about'))
+                ->assertInertia(fn (Assert $page) => $page->loadDeferredProps(fn (Assert $reload) => $reload
+                    ->where('contributors.people', [['login' => 'ExeQue', 'url' => 'https://github.com/ExeQue', 'contributions' => 812]])
+                    ->where('contributors.checkout', true)));
+        }
+
+        Http::assertSentCount(1);
+    });
+
+    it('asks GitHub nothing when update checks are off', function () {
+        config(['lumberjack.update_check' => false]);
+        Http::fake();
+
+        $this->actingAs(User::factory()->inTeam()->create())->get(route('about'))
+            ->assertInertia(fn (Assert $page) => $page->loadDeferredProps(fn (Assert $reload) => $reload->where('contributors.people', [])));
+
+        Http::assertNothingSent();
+    });
+
     it('loads the changelog the build carries after the page', function () {
+        config(['lumberjack.update_check' => false]);
         $this->actingAs(User::factory()->inTeam()->create())->get(route('about'))
             ->assertInertia(fn (Assert $page) => $page
                 ->missing('changelog')
