@@ -6,6 +6,7 @@ namespace App\Domains\Activity\Queries;
 
 use App\Domains\Shared\Enums\Period;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -17,11 +18,11 @@ class ActivityStatisticsQuery
 {
     /**
      * @param  array{0: string, 1: string}|null  $event  only this group and name
-     * @param  array{type: string, id: string}|null  $actor
-     * @param  array{type: string, id: string}|null  $subject
+     * @param  list<array{type: string, id: string}>  $actors  any of them
+     * @param  list<array{type: string, id: string}>  $subjects  any of them
      * @return list<array{group: string, name: string, count: int, last_at: string|null, series: list<int>}>
      */
-    public function get(int $projectId, Period $period, ?string $environment = null, ?array $event = null, ?array $actor = null, ?array $subject = null, int $limit = 200): array
+    public function get(int $projectId, Period $period, ?string $environment = null, ?array $event = null, array $actors = [], array $subjects = [], int $limit = 200): array
     {
         $size = $period->bucketSeconds();
         $start = intdiv($period->since()->getTimestamp(), $size);
@@ -31,9 +32,16 @@ class ActivityStatisticsQuery
             ->when($environment !== null)->where('environment', $environment)
             ->when($event !== null)->where('group', $event[0] ?? '')
             ->when($event !== null)->where('name', $event[1] ?? '')
-            ->when($actor !== null)->where('actor_type', $actor['type'] ?? '')
-            ->when($actor !== null)->where('actor_id', $actor['id'] ?? '')
-            ->when($subject !== null)->whereJsonContains('subjects', [$subject]);
+            ->when($actors !== [])->where(function (Builder $q) use ($actors): void {
+                foreach ($actors as $actor) {
+                    $q->orWhere(fn (Builder $one) => $one->where('actor_type', $actor['type'])->where('actor_id', $actor['id']));
+                }
+            })
+            ->when($subjects !== [])->where(function (Builder $q) use ($subjects): void {
+                foreach ($subjects as $subject) {
+                    $q->orWhereJsonContains('subjects', [$subject]);
+                }
+            });
 
         $rows = $base()
             ->selectRaw('"group", name, COUNT(*) AS c, MAX(occurred_at) AS last_at')

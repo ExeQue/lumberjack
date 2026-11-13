@@ -72,7 +72,9 @@ function visibleRows(
             depth,
         })),
         ...[...node.children.entries()]
-            .sort(([a], [b]) => a.localeCompare(b))
+            .sort(([a], [b]) =>
+                a.localeCompare(b, undefined, { numeric: true }),
+            )
             .flatMap(([name, child]): Row[] => {
                 const key = [...parent, name].join(KEY);
 
@@ -116,14 +118,24 @@ export function TreeSelect({
     clearLabel,
     startOpen = false,
     onSearch,
+    multiple = false,
+    pickedLabel,
 }: {
     id: string;
     /** Submits the value with a surrounding form. */
     name?: string;
     label: string;
     options: TreeOption[];
-    value: string;
+    /** The picked value, or the picked values when multiple. */
+    value: string | string[];
+    /**
+     * The value picked, or null to clear. When multiple, the value toggled, and the list
+     * stays open.
+     */
     onChange: (value: string | null) => void;
+    multiple?: boolean;
+    /** How a multiple choice shows when closed, given how many are picked. */
+    pickedLabel?: (count: number) => string;
     placeholder: string;
     searchPlaceholder: string;
     noMatches: string;
@@ -142,10 +154,13 @@ export function TreeSelect({
     const [position, setPosition] = useState<CSSProperties>();
     const [container, setContainer] = useState<HTMLElement>();
     const title = (source: TreeOption) => source.label;
+    const picked = Array.isArray(value) ? value : value ? [value] : [];
+    const isPicked = (candidate: string) => picked.includes(candidate);
+    const first = picked[0] ?? '';
     // A server search may not have the picked value among what it answered.
     const current =
-        options.find((s) => s.value === value) ??
-        (onSearch && value ? { value, label: value } : undefined);
+        options.find((s) => s.value === first) ??
+        (onSearch && first ? { value: first, label: first } : undefined);
     const currentPath = current?.path ?? [];
     const expanded = position !== undefined;
     const [query, setQuery] = useState('');
@@ -280,7 +295,10 @@ export function TreeSelect({
 
     const pick = (uuid: string | null) => {
         onChange(uuid);
-        close();
+
+        if (!multiple || uuid === null) {
+            close();
+        }
     };
     const toggle = (key: string) =>
         setOpen((was) => {
@@ -296,12 +314,12 @@ export function TreeSelect({
         <Command.Item
             key={source.value}
             value={source.value}
-            aria-current={source.value === value ? 'true' : undefined}
+            aria-current={isPicked(source.value) ? 'true' : undefined}
             onSelect={() => pick(source.value)}
             className={rowClass}
             style={indent(depth)}
         >
-            {source.value === value ? (
+            {isPicked(source.value) ? (
                 <>
                     <Check aria-hidden="true" className="size-3.5 shrink-0" />
                     <span className="sr-only">
@@ -324,7 +342,10 @@ export function TreeSelect({
 
     return (
         <>
-            {name && <input type="hidden" name={name} value={value} />}
+            {name &&
+                picked.map((v) => (
+                    <input key={v} type="hidden" name={name} value={v} />
+                ))}
             <button
                 ref={trigger}
                 id={id}
@@ -345,9 +366,13 @@ export function TreeSelect({
                         current ? 'max-w-[70%]' : 'text-ink-3',
                     )}
                 >
-                    {current ? title(current) : placeholder}
+                    {multiple && picked.length > 1 && pickedLabel
+                        ? pickedLabel(picked.length)
+                        : current
+                          ? title(current)
+                          : placeholder}
                 </span>
-                {currentPath.length > 0 && (
+                {currentPath.length > 0 && picked.length === 1 && (
                     <span className="min-w-0 truncate text-xs text-ink-3">
                         {currentPath.join(' > ')}
                     </span>
@@ -362,7 +387,7 @@ export function TreeSelect({
                     <Command
                         ref={panel}
                         shouldFilter={false}
-                        defaultValue={current ? value : undefined}
+                        defaultValue={current ? first : undefined}
                         label={label}
                         className="fixed z-50 flex flex-col rounded-md border border-line-strong bg-panel shadow-lg"
                         style={position}
@@ -392,7 +417,7 @@ export function TreeSelect({
                                 </>
                             ) : (
                                 <>
-                                    {value && clearLabel && (
+                                    {picked.length > 0 && clearLabel && (
                                         <Command.Item
                                             value="none"
                                             onSelect={() => pick(null)}

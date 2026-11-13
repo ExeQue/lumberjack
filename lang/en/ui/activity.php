@@ -33,6 +33,8 @@ return [
         'subject' => 'Subject',
         'actor_placeholder' => 'Any actor',
         'subject_placeholder' => 'Any subject',
+        'actor_count' => ':count actors',
+        'subject_count' => ':count subjects',
         'search' => 'Search by type or key, e.g. user:17',
         'no_matches' => 'Nothing matches in the period',
         // Button
@@ -40,12 +42,8 @@ return [
         // Button
         'subject_any' => 'Any subject',
     ],
-    'filter_actor' => 'Show only :reference',
-    'filter_subject' => 'Show only :reference',
-    // Button
-    'clear_actor' => 'Actor: :reference ×',
-    // Button
-    'clear_subject' => 'Subject: :reference ×',
+    'filter_actor' => 'Filter by :reference too',
+    'filter_subject' => 'Filter by :reference too',
     // Button
     'forget' => 'Forget actor',
     'forget_question' => 'Delete all activity of :reference in this project? Their hourly counts stay.',

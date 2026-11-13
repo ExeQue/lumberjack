@@ -34,7 +34,7 @@ class ActivityController
         return Inertia::render('activity/index', [
             'project' => $presenter->header($project, $request->user()),
             'filters' => $this->activityFilters($request),
-            'activities' => fn (): array => $query->get($project->id, $period, $environment, null, $request->actor(), $request->subject()),
+            'activities' => fn (): array => $query->get($project->id, $period, $environment, null, $request->actors(), $request->subjects()),
         ]);
     }
 
@@ -45,8 +45,8 @@ class ActivityController
     {
         $period = $this->period($request);
         $environment = $this->environment($request);
-        $actor = $request->actor();
-        $subject = $request->subject();
+        $actors = $request->actors();
+        $subjects = $request->subjects();
         $sort = $request->sort();
 
         $page = Activity::query()
@@ -54,10 +54,10 @@ class ActivityController
             ->whereEvent($group, $name)
             ->where('occurred_at', '>=', $period->since())
             ->when($environment !== null)->where('environment', $environment)
-            ->when($actor !== null)->whereActor($actor['type'] ?? '', $actor['id'] ?? '')
-            ->when($subject !== null)->whereSubject($subject['type'] ?? '', $subject['id'] ?? '')
-            ->when($sort === 'actor')->orderBy('actor_type')
-            ->when($sort === 'actor')->orderBy('actor_id')
+            ->when($actors !== [])->whereActorIn($actors)
+            ->when($subjects !== [])->whereSubjectIn($subjects)
+            // Naturally: user 2 before user 10.
+            ->when($sort === 'actor')->orderByRaw('actor_type COLLATE "natural", actor_id COLLATE "natural"')
             // The id breaks ties of a millisecond, so the cursor never skips or repeats one.
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
@@ -68,7 +68,7 @@ class ActivityController
             'project' => $presenter->header($project, $request->user()),
             'filters' => [...$this->activityFilters($request), 'sort' => $sort],
             'event' => ['group' => $group, 'name' => $name],
-            'stats' => fn (): ?array => $query->get($project->id, $period, $environment, [$group, $name], $actor, $subject)[0] ?? null,
+            'stats' => fn (): ?array => $query->get($project->id, $period, $environment, [$group, $name], $actors, $subjects)[0] ?? null,
             'occurrences' => array_map(fn (Activity $a): array => [
                 'id' => $a->id,
                 'at' => $a->occurred_at->format('Y-m-d\TH:i:s.vP'),
@@ -102,19 +102,10 @@ class ActivityController
     }
 
     /**
-     * @return array{period: string, environment: string|null, actor_type: string|null, actor_id: string|null, subject_type: string|null, subject_id: string|null}
+     * @return array{period: string, environment: string|null, actors: list<string>, subjects: list<string>}
      */
     private function activityFilters(ActivityFiltersRequest $request): array
     {
-        $actor = $request->actor();
-        $subject = $request->subject();
-
-        return [
-            ...$this->filters($request),
-            'actor_type' => $actor['type'] ?? null,
-            'actor_id' => $actor['id'] ?? null,
-            'subject_type' => $subject['type'] ?? null,
-            'subject_id' => $subject['id'] ?? null,
-        ];
+        return [...$this->filters($request), 'actors' => $request->actorKeys(), 'subjects' => $request->subjectKeys()];
     }
 }

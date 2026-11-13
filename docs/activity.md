@@ -42,18 +42,19 @@ What goes into the payload is up to the app.
 first, for the period and environment picked at the top. Each shows how often it
 happened, a trend over the period and when it last happened.
 
-To see one actor's or one subject's activity, type it as `type:id` (`user:17`,
-`gallery:5`) into **Actor** or **Subject** above the list. As you type, the field
-suggests the most active ones that match: a type (`gallery`), a key (`5`), or a type and
-the start of a key (`gallery:5`). The counts and trends then cover only that actor or
-subject, and the filter carries over to the occurrences.
+To see only some actors' or subjects' activity, pick them in **Actor** and **Subject**
+above the list. Each opens a list of the most active ones, by type and in natural order
+(`#2` before `#10`). Type to search by type (`gallery`), key (`5`), or type and the start
+of a key (`gallery:5`). Pick as many as you like: any of the picked actors, and any of the
+picked subjects, count. The counts and trends then cover only those, and the filters carry
+over to the occurrences.
 
 Click one to see its occurrences, newest first, 50 at a time:
 
 - **Sort by:** **Newest first**, or **Actor**, which puts each actor's occurrences
-  together.
-- **Actor** and **Subjects:** click one to show only its occurrences, or type one into
-  the fields above the list. The buttons beside them take a filter off again.
+  together, in natural order.
+- **Actor** and **Subjects:** click one to add it to the filters above the list. **Any
+  actor** or **Any subject** at the top of a filter's list takes it off again.
 - **Payload:** click it to see it in full.
 - **Trace:** opens the request or job it was recorded in.
 
@@ -65,7 +66,7 @@ account:
 - **From the app:** `DELETE /api/activity/actor` with the server token and the actor's
   `type` and `id`, see [Ingest and API](./api.md#forgetting-an-actor). The Laravel
   library has `Lumberjack::forgetActor()` for it.
-- **From the Activity page:** filter the occurrences to the actor, then **Forget
+- **From the Activity page:** filter the occurrences to that one actor, then **Forget
   actor**. Team owners and admins only.
 
 The hourly counts stay: they never held the actor.

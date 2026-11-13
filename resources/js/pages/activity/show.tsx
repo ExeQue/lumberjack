@@ -1,9 +1,14 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ActivityFilters,
+    filterQuery,
+    parseReference,
     referenceLabel,
 } from '@/components/lj/activity-filters';
-import type { Reference } from '@/components/lj/activity-filters';
+import type {
+    Reference,
+    ReferenceFilters,
+} from '@/components/lj/activity-filters';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
 import {
@@ -50,13 +55,7 @@ type Occurrence = {
     host: string | null;
 };
 
-type Filters = DashboardFilters & {
-    sort: Sort;
-    actor_type: string | null;
-    actor_id: string | null;
-    subject_type: string | null;
-    subject_id: string | null;
-};
+type Filters = DashboardFilters & ReferenceFilters & { sort: Sort };
 
 type Props = {
     project: ProjectHeader;
@@ -85,10 +84,9 @@ export default function ActivityShow({
     const t = useT();
     const { team } = usePage<{ team: TeamShared }>().props;
     const title = `${event.group}: ${event.name}`;
+    // Forgetting is for one actor at a time.
     const actor =
-        filters.actor_type && filters.actor_id
-            ? { type: filters.actor_type, id: filters.actor_id }
-            : null;
+        filters.actors.length === 1 ? parseReference(filters.actors[0]) : null;
 
     useProjectLive(
         project.uuid,
@@ -97,12 +95,7 @@ export default function ActivityShow({
     );
 
     const apply = (changes: Partial<Filters>) => {
-        const query = Object.fromEntries(
-            Object.entries({ ...filters, ...changes }).filter(
-                ([key, v]) =>
-                    v !== null && v !== '' && !(key === 'sort' && v === 'time'),
-            ),
-        ) as Record<string, string>;
+        const query = filterQuery({ ...filters, ...changes });
 
         router.get(
             activityShow([project.uuid, event.group, event.name], { query })
@@ -121,12 +114,19 @@ export default function ActivityShow({
         ) : (
             <button
                 type="button"
-                onClick={() =>
-                    apply({
-                        [`${kind}_type`]: reference.type,
-                        [`${kind}_id`]: reference.id,
-                    })
-                }
+                onClick={() => {
+                    const key = `${reference.type}:${reference.id}`;
+                    const list =
+                        kind === 'actor' ? filters.actors : filters.subjects;
+
+                    if (!list.includes(key)) {
+                        apply(
+                            kind === 'actor'
+                                ? { actors: [...list, key] }
+                                : { subjects: [...list, key] },
+                        );
+                    }
+                }}
                 title={t(`activity.filter_${kind}`, {
                     reference: referenceLabel(reference),
                 })}
@@ -228,10 +228,7 @@ export default function ActivityShow({
                                                 data: actor,
                                                 preserveScroll: true,
                                                 onSuccess: () =>
-                                                    apply({
-                                                        actor_type: null,
-                                                        actor_id: null,
-                                                    }),
+                                                    apply({ actors: [] }),
                                             },
                                         )
                                     }

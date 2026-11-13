@@ -6,14 +6,31 @@ import { references as referencesRoute } from '@/routes/activity';
 
 export type Reference = { type: string; id: string };
 
+/** Actors and subjects picked, each as type:id; any of them matches. */
 export type ReferenceFilters = {
-    actor_type: string | null;
-    actor_id: string | null;
-    subject_type: string | null;
-    subject_id: string | null;
+    actors: string[];
+    subjects: string[];
 };
 
 type Kind = 'actor' | 'subject';
+
+/**
+ * Filters as a page's query: empty values and the default sort left out, picked actors
+ * and subjects as lists.
+ */
+export function filterQuery(
+    filters: Record<string, string | string[] | null>,
+): Record<string, string | string[]> {
+    return Object.fromEntries(
+        Object.entries(filters).filter(
+            ([key, v]) =>
+                v !== null &&
+                v !== '' &&
+                !(Array.isArray(v) && v.length === 0) &&
+                !(key === 'sort' && v === 'time'),
+        ),
+    ) as Record<string, string | string[]>;
+}
 
 /** Milliseconds after the last key before the server is asked. */
 const SEARCH_DELAY_MS = 200;
@@ -26,7 +43,7 @@ export function referenceLabel(reference: Reference): string {
 }
 
 /** "user:17" split at the first colon. */
-function parseReference(value: string): Reference | null {
+export function parseReference(value: string): Reference | null {
     const at = value.indexOf(':');
 
     return at > 0
@@ -78,7 +95,16 @@ function useReferenceSearch(
                 .then((response) => (response.ok ? response.json() : []))
                 .then((list: string[]) => {
                     if (ticket === latest.current) {
-                        setOptions(list.map(option));
+                        // Naturally, so #2 comes before #10.
+                        setOptions(
+                            list
+                                .toSorted((a, b) =>
+                                    a.localeCompare(b, undefined, {
+                                        numeric: true,
+                                    }),
+                                )
+                                .map(option),
+                        );
                     }
                 })
                 .catch(() => undefined);
@@ -121,15 +147,19 @@ export function ActivityFilters({
         'subject',
         scope,
     );
-    const valueOf = (type: string | null, id: string | null) =>
-        type && id ? `${type}:${id}` : '';
-    const pick = (kind: Kind, value: string | null) => {
-        const reference = value ? parseReference(value) : null;
+    const listOf = (kind: Kind) =>
+        kind === 'actor' ? filters.actors : filters.subjects;
+    // A value toggles in or out; null clears them all.
+    const toggle = (kind: Kind, value: string | null) => {
+        const list = listOf(kind);
+        const next =
+            value === null
+                ? []
+                : list.includes(value)
+                  ? list.filter((v) => v !== value)
+                  : [...list, value];
 
-        onChange({
-            [`${kind}_type`]: reference?.type ?? null,
-            [`${kind}_id`]: reference?.id ?? null,
-        });
+        onChange(kind === 'actor' ? { actors: next } : { subjects: next });
     };
 
     return (
@@ -144,11 +174,16 @@ export function ActivityFilters({
                         id={`activity-${kind}`}
                         label={t(`activity.filters.${kind}`)}
                         options={kind === 'actor' ? actors : subjects}
-                        value={valueOf(
-                            filters[`${kind}_type`],
-                            filters[`${kind}_id`],
-                        )}
-                        onChange={(value) => pick(kind, value)}
+                        value={listOf(kind)}
+                        onChange={(value) => toggle(kind, value)}
+                        multiple
+                        pickedLabel={(count) =>
+                            t(
+                                `activity.filters.${kind}_count`,
+                                { count },
+                                count,
+                            )
+                        }
                         onSearch={
                             kind === 'actor' ? searchActors : searchSubjects
                         }

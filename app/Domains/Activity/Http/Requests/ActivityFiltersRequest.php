@@ -8,11 +8,15 @@ use App\Domains\Projects\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * The Activity pages' filters: one actor, one subject, and how occurrences are sorted.
+ * The Activity pages' filters: any of some actors, any of some subjects (each as
+ * "type:id"), and how occurrences are sorted.
  */
 class ActivityFiltersRequest extends FormRequest
 {
     public const array SORTS = ['time', 'actor'];
+
+    /** Actors or subjects one filter takes at most. */
+    public const int MAX_PICKED = 20;
 
     public function authorize(): bool
     {
@@ -24,12 +28,14 @@ class ActivityFiltersRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
+        $reference = ['string', 'max:200', 'regex:/^[^:]{1,128}:.{1,64}$/'];
+
         return [
             'sort' => ['nullable', 'string', 'in:'.implode(',', self::SORTS)],
-            'actor_type' => ['nullable', 'string', 'max:128', 'required_with:actor_id'],
-            'actor_id' => ['nullable', 'string', 'max:64', 'required_with:actor_type'],
-            'subject_type' => ['nullable', 'string', 'max:128', 'required_with:subject_id'],
-            'subject_id' => ['nullable', 'string', 'max:64', 'required_with:subject_type'],
+            'actors' => ['nullable', 'array', 'max:'.self::MAX_PICKED],
+            'actors.*' => $reference,
+            'subjects' => ['nullable', 'array', 'max:'.self::MAX_PICKED],
+            'subjects.*' => $reference,
         ];
     }
 
@@ -39,29 +45,57 @@ class ActivityFiltersRequest extends FormRequest
     }
 
     /**
-     * @return array{type: string, id: string}|null
+     * @return list<string> as "type:id"
      */
-    public function actor(): ?array
+    public function actorKeys(): array
     {
-        return $this->reference('actor');
+        return $this->picked('actors');
     }
 
     /**
-     * @return array{type: string, id: string}|null
+     * @return list<string> as "type:id"
      */
-    public function subject(): ?array
+    public function subjectKeys(): array
     {
-        return $this->reference('subject');
+        return $this->picked('subjects');
     }
 
     /**
-     * @return array{type: string, id: string}|null
+     * @return list<array{type: string, id: string}>
      */
-    private function reference(string $prefix): ?array
+    public function actors(): array
     {
-        $type = $this->string($prefix.'_type')->toString();
-        $id = $this->string($prefix.'_id')->toString();
+        return self::references($this->actorKeys());
+    }
 
-        return $type !== '' && $id !== '' ? ['type' => $type, 'id' => $id] : null;
+    /**
+     * @return list<array{type: string, id: string}>
+     */
+    public function subjects(): array
+    {
+        return self::references($this->subjectKeys());
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function picked(string $key): array
+    {
+        $values = $this->input($key);
+
+        return is_array($values) ? array_values(array_unique(array_filter($values, 'is_string'))) : [];
+    }
+
+    /**
+     * @param  list<string>  $keys
+     * @return list<array{type: string, id: string}>
+     */
+    private static function references(array $keys): array
+    {
+        return array_map(function (string $key): array {
+            [$type, $id] = explode(':', $key, 2);
+
+            return ['type' => $type, 'id' => $id];
+        }, $keys);
     }
 }

@@ -34,19 +34,24 @@ describe('the activity page', function () {
                 ->where('activities.1.count', 1));
     });
 
-    it('counts only one actor\'s or one subject\'s activity when filtered', function () {
+    it('counts only the picked actors\' or subjects\' activity', function () {
         $this->events->named('gallery', 'image.uploaded')->byActor('user', 1)->onSubject('image', 10)->onSubject('gallery', 5)->count(2)->create();
         $this->events->named('gallery', 'image.uploaded')->byActor('user', 2)->onSubject('image', 11)->onSubject('gallery', 6)->create();
         $this->events->named('auth', 'user.signed_in')->byActor('user', 2)->create();
 
         $index = fn (array $query) => $this->actingAs($this->user)->get(route('activity.index', ['project' => $this->project, ...$query]));
 
-        $index(['actor_type' => 'user', 'actor_id' => '2'])->assertInertia(fn (Assert $page) => $page
+        $index(['actors' => ['user:2']])->assertInertia(fn (Assert $page) => $page
             ->has('activities', 2)
-            ->where('filters.actor_id', '2'));
-        $index(['subject_type' => 'gallery', 'subject_id' => '5'])->assertInertia(fn (Assert $page) => $page
+            ->where('filters.actors', ['user:2']));
+        $index(['subjects' => ['gallery:5']])->assertInertia(fn (Assert $page) => $page
             ->has('activities', 1)
             ->where('activities.0.count', 2));
+        $index(['subjects' => ['gallery:5', 'gallery:6']])->assertInertia(fn (Assert $page) => $page
+            ->where('activities.0.count', 3));
+        $index(['actors' => ['user:1', 'user:2'], 'subjects' => ['image:11']])->assertInertia(fn (Assert $page) => $page
+            ->has('activities', 1)
+            ->where('activities.0.count', 1));
     });
 
     it('is closed to someone outside the team', function () {
@@ -72,31 +77,36 @@ describe('one activity', function () {
                 ->where('stats.count', 2));
     });
 
-    it('sorts by actor, and narrows to one actor or subject', function () {
+    it('sorts by actor naturally, and narrows to the picked actors or subjects', function () {
         $event = $this->events->named('billing', 'order.placed');
-        $event->byActor('user', 2)->onSubject('order', 1)->create();
-        $event->byActor('user', 1)->onSubject('order', 2)->create();
-        $event->byActor('user', 1)->onSubject('cart', 9)->onSubject('order', 1)->create();
+        $event->byActor('user', 10)->onSubject('order', 1)->create();
+        $event->byActor('user', 2)->onSubject('order', 2)->create();
+        $event->byActor('user', 2)->onSubject('cart', 9)->onSubject('order', 1)->create();
 
         $show = fn (array $query) => $this->actingAs($this->user)
             ->get(route('activity.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed', ...$query]));
 
         $show(['sort' => 'actor'])->assertInertia(fn (Assert $page) => $page
-            ->where('occurrences.0.actor.id', '1')
-            ->where('occurrences.1.actor.id', '1')
-            ->where('occurrences.2.actor.id', '2'));
-        $show(['actor_type' => 'user', 'actor_id' => '1'])->assertInertia(fn (Assert $page) => $page->has('occurrences', 2));
-        $show(['subject_type' => 'order', 'subject_id' => '1'])->assertInertia(fn (Assert $page) => $page
+            ->where('occurrences.0.actor.id', '2')
+            ->where('occurrences.1.actor.id', '2')
+            ->where('occurrences.2.actor.id', '10'));
+        $show(['actors' => ['user:2']])->assertInertia(fn (Assert $page) => $page->has('occurrences', 2));
+        $show(['actors' => ['user:2', 'user:10']])->assertInertia(fn (Assert $page) => $page->has('occurrences', 3));
+        $show(['subjects' => ['order:1']])->assertInertia(fn (Assert $page) => $page
             ->has('occurrences', 2)
             ->where('occurrences.0.subjects', [['type' => 'cart', 'id' => '9'], ['type' => 'order', 'id' => '1']])
             ->where('stats.count', 2));
     });
 
-    it('rejects an unknown sort', function () {
+    it('rejects an unknown sort and a malformed actor or subject', function (array $query, string $field) {
         $this->actingAs($this->user)
-            ->get(route('activity.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed', 'sort' => 'payload']))
-            ->assertSessionHasErrors('sort');
-    });
+            ->get(route('activity.show', ['project' => $this->project, 'group' => 'billing', 'name' => 'order.placed', ...$query]))
+            ->assertSessionHasErrors($field);
+    })->with([
+        'a sort' => [['sort' => 'payload'], 'sort'],
+        'an actor without a key' => [['actors' => ['user']], 'actors.0'],
+        'too many subjects' => [['subjects' => array_map(fn (int $i): string => "tag:{$i}", range(1, 21))], 'subjects'],
+    ]);
 });
 
 describe('filter suggestions', function () {

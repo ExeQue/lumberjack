@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ActivityFilters } from '@/components/lj/activity-filters';
+import { ActivityFilters, filterQuery } from '@/components/lj/activity-filters';
 import type { ReferenceFilters } from '@/components/lj/activity-filters';
 import { Relative } from '@/components/lj/relative';
 import { DashboardFilterControls, TopBar } from '@/components/lj/top-bar';
@@ -62,16 +62,10 @@ export default function ActivityIndex({ project, filters, activities }: Props) {
         }, {}),
     ).toSorted(([a], [b]) => a.localeCompare(b));
 
-    const query = Object.fromEntries(
-        Object.entries(filters).filter(([, v]) => v !== null && v !== ''),
-    ) as Record<string, string>;
+    const query = filterQuery(filters);
 
     const apply = (changes: Partial<Filters>) => {
-        const next = Object.fromEntries(
-            Object.entries({ ...filters, ...changes }).filter(
-                ([, v]) => v !== null && v !== '',
-            ),
-        ) as Record<string, string>;
+        const next = filterQuery({ ...filters, ...changes });
 
         router.get(
             activityIndex(project.uuid, { query: next }).url,

@@ -35,6 +35,50 @@ class ActivityBuilder extends Builder
     /**
      * Done to this subject, among any others.
      */
+    /**
+     * Done by any of these actors.
+     *
+     * @param  list<array{type: string, id: string}>  $actors
+     */
+    public function whereActorIn(array $actors): self
+    {
+        return $this->where(function (self $q) use ($actors): void {
+            foreach ($actors as $actor) {
+                $q->orWhereActor($actor['type'], $actor['id']);
+            }
+        });
+    }
+
+    /**
+     * @param  list<array{type: string, id: string}>  $actors
+     */
+    public function orWhereActorIn(array $actors): self
+    {
+        return $this->orWhere(fn (self $q) => $q->whereActorIn($actors));
+    }
+
+    /**
+     * Done to any of these subjects.
+     *
+     * @param  list<array{type: string, id: string}>  $subjects
+     */
+    public function whereSubjectIn(array $subjects): self
+    {
+        return $this->where(function (self $q) use ($subjects): void {
+            foreach ($subjects as $subject) {
+                $q->orWhereSubject($subject['type'], $subject['id']);
+            }
+        });
+    }
+
+    /**
+     * @param  list<array{type: string, id: string}>  $subjects
+     */
+    public function orWhereSubjectIn(array $subjects): self
+    {
+        return $this->orWhere(fn (self $q) => $q->whereSubjectIn($subjects));
+    }
+
     public function whereSubject(string $type, string $id): self
     {
         return $this->whereJsonContains('subjects', [['type' => $type, 'id' => $id]]);
