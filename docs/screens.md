@@ -101,7 +101,11 @@ Click the grid's background, press Escape, or use **Screen settings** in the too
 
 - **Name**.
 - **Projects**, environment and period: what every widget shows unless it picks its own.
-  No project ticked means every project of the team, new ones included.
+  No project ticked means every project of the team, new ones included. Ticked projects
+  are also a limit: a widget can then only pick among them, its health checks, data
+  sources and filter names come from them alone, and **All of the screen's projects**
+  replaces **All in the team**. A widget that pointed at another project before shows
+  nothing until it is set again. A share link names only the screen's projects.
 - **Time zone**: for the clock and the theme schedule. Empty means each TV uses its own.
 - **Show header**, and **Show the clock in the header** in 24 or 12 hours. The header
   shows the screen's name, projects and period, how many widgets need attention, whether

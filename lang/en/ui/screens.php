@@ -285,6 +285,7 @@ return [
         'screen_default' => 'Screen default',
         'screen_timezone' => 'The screen\'s time zone',
         'all_projects' => 'All in the team',
+        'all_screen_projects' => 'All of the screen\'s projects',
         'all_environments' => 'All environments',
         'no_checks' => 'The team has no health checks yet.',
         'checks_hint' => 'None picked: every check of the projects, new ones included. One picked: that check alone, with its uptime and timeline.',

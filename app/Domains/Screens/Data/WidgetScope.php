@@ -15,6 +15,12 @@ use App\Domains\Shared\Enums\Period;
 final readonly class WidgetScope
 {
     /**
+     * A project uuid no project has: a widget that points only outside its screen's
+     * projects covers this one, so it shows nothing rather than every project.
+     */
+    public const string NO_PROJECT = '00000000-0000-0000-0000-000000000000';
+
+    /**
      * @param  list<string>  $projects  project uuids
      */
     public function __construct(

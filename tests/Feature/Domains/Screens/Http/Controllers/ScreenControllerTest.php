@@ -6,6 +6,7 @@ use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
+use App\Domains\Jobs\Models\QueueSample;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Actions\CountScreenViewersAction;
@@ -197,14 +198,14 @@ describe('the pages', function () {
             ->where('projects.0.uuid', $this->project->uuid));
     });
 
-    it('gives the designer the schema, sources, environments and checks', function () {
+    it('gives the designer the schema, sources, environments and checks, and filter names per project', function () {
+        QueueSample::factory()->for($this->project)->create(['queue' => 'emails', 'sampled_at' => now()]);
+
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
             ->component('screens/edit')
             ->has('schema.health')
             ->has('sources.stat', 19)
-            ->has('filters.queue')
-            ->has('filters.host')
-            ->has('filters.check')
+            ->where("filters.{$this->project->uuid}.queue", ['emails'])
             ->has('environments')
             ->has('checks')
             ->where('limits.max_cols', Screen::MAX_COLS));

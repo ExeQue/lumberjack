@@ -28,7 +28,7 @@ beforeEach(function () {
 });
 
 describe('a screen\'s data', function () {
-    it('takes each widget\'s own scope over the screen\'s', function () {
+    it('takes each widget\'s own scope over the screen\'s, within the screen\'s projects', function () {
         $action = app(ResolveScreenDataAction::class);
 
         $default = $action->scope($this->screen, $this->screen->widgets[0]);
@@ -37,7 +37,7 @@ describe('a screen\'s data', function () {
         expect($default->projects)->toBe([$this->project->uuid])
             ->and($default->environment)->toBe('production')
             ->and($default->period)->toBe(Period::Week)
-            ->and($own->projects)->toBe([])
+            ->and($own->projects)->toBe([$this->project->uuid])
             ->and($own->environment)->toBeNull()
             ->and($own->period)->toBe(Period::Hour);
     });
@@ -124,8 +124,19 @@ describe('a screen\'s data', function () {
         app(ResolveScreenDataAction::class)->execute($this->screen);
 
         expect($scopes['requests'])->toBe(['GET /checkout*', 'staging', [$this->project->uuid], Period::Week])
-            ->and($scopes['queue_size'])->toBe(['bulk', 'staging', [], Period::Week]);
+            ->and($scopes['queue_size'])->toBe(['bulk', 'staging', [$this->project->uuid], Period::Week]);
     });
+
+    it('keeps a widget\'s projects within the screen\'s when the screen names any', function (array $ceiling, array $own, array $expected) {
+        expect(ResolveScreenDataAction::projectsWithin($ceiling, $own))->toBe($expected);
+    })->with([
+        'a screen of the whole team, a widget of all' => [[], [], []],
+        'a screen of the whole team, a widget of one' => [[], ['b'], ['b']],
+        'a scoped screen, a widget of all' => [['a', 'b'], [], ['a', 'b']],
+        'a scoped screen, a widget of one of its' => [['a', 'b'], ['b'], ['b']],
+        'a scoped screen, a widget partly outside' => [['a', 'b'], ['b', 'c'], ['b']],
+        'a scoped screen, a widget wholly outside' => [['a'], ['c'], [WidgetScope::NO_PROJECT]],
+    ]);
 
     it('keeps the widget\'s filter from a value that filters something else', function () {
         $this->screen->update(['widgets' => [

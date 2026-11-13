@@ -5,7 +5,8 @@ screen's grid. The designer's palette has two groups:
 
 - **Data** widgets (Stat, Gauge, Chart, List, Health, Project overview, SLO) show
   something Lumberjack measured. Each picks what it shows under **Shows** and uses the
-  screen's projects, environment and period unless it sets its own.
+  screen's projects, environment and period unless it sets its own. When the screen has
+  projects ticked, a widget's own projects are among them.
 - **Layout** widgets (Clock and text, Countdown, Message, QR code, Image, video or page)
   show their own settings. They have no source, scope or period.
 

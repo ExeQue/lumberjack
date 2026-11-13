@@ -38,9 +38,19 @@ import { MAX_SLIDES, MAX_ZONES, ROTATING_KINDS } from './types';
 export type Catalog = {
     schema: Schema;
     sources: Sources;
+    /** The projects a widget may pick: the screen's, or the team's when it names none. */
     projects: { uuid: string; name: string }[];
+    /** Every project of the team, for the screen's own settings. */
+    teamProjects: { uuid: string; name: string }[];
+    /** Whether the screen names projects, which then bound every widget. */
+    scoped: boolean;
     environments: string[];
-    checks: { uuid: string; name: string; project: string | null }[];
+    checks: {
+        uuid: string;
+        name: string;
+        project: string | null;
+        project_uuid?: string | null;
+    }[];
     /** The team's data sources, which External JSON values and calendars pick from. */
     data_sources?: {
         uuid: string;
@@ -50,6 +60,7 @@ export type Catalog = {
         shape?: 'number' | 'series' | 'list' | 'table' | null;
         environment?: string | null;
         project: string | null;
+        project_uuid?: string | null;
         /** The group its app files it under, such as "Events > Storage". */
         group?: string | null;
         /** The connected app it comes from, which roots it in the tree. */
@@ -899,7 +910,9 @@ export function WidgetInspector({
                                     : t('screens.inspector.screen_default')}
                             </option>
                             <option value={ALL}>
-                                {t('screens.inspector.all_projects')}
+                                {catalog.scoped
+                                    ? t('screens.inspector.all_screen_projects')
+                                    : t('screens.inspector.all_projects')}
                             </option>
                             {catalog.projects.map((p) => (
                                 <option key={p.uuid} value={p.uuid}>
@@ -1258,7 +1271,9 @@ export function WidgetInspector({
         value === undefined
             ? t('screens.inspector.screen_default')
             : value.length === 0
-              ? t('screens.inspector.all_projects')
+              ? catalog.scoped
+                  ? t('screens.inspector.all_screen_projects')
+                  : t('screens.inspector.all_projects')
               : (catalog.projects.find((p) => p.uuid === value[0])?.name ??
                 value[0]);
     const environmentLabel = (value: string | undefined) =>
@@ -1787,7 +1802,7 @@ export function ScreenSettings({
                 <legend className="mb-1.5 text-[13px] font-medium">
                     {t('screens.settings.projects')}
                 </legend>
-                {catalog.projects.map((p) => (
+                {catalog.teamProjects.map((p) => (
                     <label
                         key={p.uuid}
                         className="flex items-center gap-2 text-[13px] text-ink-2"

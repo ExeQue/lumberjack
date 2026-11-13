@@ -131,7 +131,7 @@ class ResolveWidgetDataAction
 
         $data = match (true) {
             $source->id === 'external_json' => $this->external($team, $type, $scope, $options, $limits, $aggregatesOnly),
-            $source->id === 'calendar' => $this->calendar($team, $options, $aggregatesOnly),
+            $source->id === 'calendar' => $this->calendar($team, $scope, $options, $aggregatesOnly),
             $type === WidgetType::Stat => $this->stat($source, $projects, $scope, $options, $limits),
             $type === WidgetType::Gauge => $this->gauge($source, $projects, $scope, $options, $limits),
             $type === WidgetType::Chart => $this->chart($source, $projects, $scope, $options, $aggregatesOnly),
@@ -849,7 +849,7 @@ class ResolveWidgetDataAction
      */
     private function external(Team $team, WidgetType $type, WidgetScope $scope, array $options, array $limits, bool $aggregatesOnly): array
     {
-        $source = $this->dataSource($team, $options);
+        $source = $this->dataSource($team, $options, $scope);
 
         if ($source?->format === DataSourceFormat::Connected) {
             return $this->connected($team, $source, $type, $scope, $options, $limits, $aggregatesOnly);
@@ -961,9 +961,9 @@ class ResolveWidgetDataAction
      * @param  array<string, mixed>  $options
      * @return array<string, mixed>
      */
-    private function calendar(Team $team, array $options, bool $aggregatesOnly): array
+    private function calendar(Team $team, WidgetScope $scope, array $options, bool $aggregatesOnly): array
     {
-        $source = $this->dataSource($team, $options);
+        $source = $this->dataSource($team, $options, $scope);
         $timezone = (string) ($options['timezone'] ?? config('app.timezone'));
         $today = now($timezone)->startOfDay();
         $from = $today->subDays(max(0, (int) ($options['days_before'] ?? 0)));
@@ -994,16 +994,18 @@ class ResolveWidgetDataAction
     }
 
     /**
-     * The team's data source the options pick (data_source), null for none or another team's.
+     * The team's data source the options pick (data_source), null for none, another team's,
+     * or one of a project outside the scope's (a screen's projects are its ceiling).
      *
      * @param  array<string, mixed>  $options
      */
-    private function dataSource(Team $team, array $options): ?DataSource
+    private function dataSource(Team $team, array $options, WidgetScope $scope): ?DataSource
     {
         $uuid = $options['data_source'] ?? null;
+        $projects = $team->projects->when($scope->projects !== [])->whereIn('uuid', $scope->projects)->modelKeys();
         $source = is_string($uuid) && Str::isUuid($uuid)
-            ? $this->memo->remember("data-source:{$team->id}:{$uuid}", fn (): DataSource|false => DataSource::query()
-                ->whereIn('project_id', $team->projects->modelKeys())->where('uuid', $uuid)->first() ?? false)
+            ? $this->memo->remember("data-source:{$team->id}:{$uuid}:".implode(',', $projects), fn (): DataSource|false => DataSource::query()
+                ->whereIn('project_id', $projects)->where('uuid', $uuid)->first() ?? false)
             : false;
 
         return $source instanceof DataSource ? $source : null;

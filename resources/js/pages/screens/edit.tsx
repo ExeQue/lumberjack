@@ -105,7 +105,8 @@ type Props = {
     environments: string[];
     checks: Catalog['checks'];
     data_sources: Catalog['data_sources'];
-    filters?: Catalog['filters'];
+    /** Known filter names per project uuid, then per kind. */
+    filters?: Record<string, Record<string, string[]>>;
     limits: {
         min_cols: number;
         max_cols: number;
@@ -478,16 +479,40 @@ export default function EditScreen(props: Props) {
     // One save at a time: a later one diffs against what the earlier one stored.
     const inFlight = useRef(false);
     const { schema, sources } = props;
+    // The screen's projects bound what its widgets can pick; none named means the team's.
+    const allowed = screen.scope.projects;
+    const inScope = (uuid: string | null | undefined) =>
+        allowed.length === 0 || (uuid != null && allowed.includes(uuid));
+    const filters: Record<string, string[]> = {};
+
+    for (const [project, kinds] of Object.entries(props.filters ?? {})) {
+        if (inScope(project)) {
+            for (const [kind, names] of Object.entries(kinds)) {
+                filters[kind] = [...(filters[kind] ?? []), ...names];
+            }
+        }
+    }
+
+    for (const kind of Object.keys(filters)) {
+        filters[kind] = [...new Set(filters[kind])].toSorted((a, b) =>
+            a.localeCompare(b, undefined, { numeric: true }),
+        );
+    }
+
     const catalog: Catalog = {
         schema,
         sources,
-        projects: props.projects,
+        projects: props.projects.filter((p) => inScope(p.uuid)),
+        teamProjects: props.projects,
+        scoped: allowed.length > 0,
         environments: props.environments,
-        checks: props.checks,
-        data_sources: props.data_sources,
+        checks: props.checks.filter((c) => inScope(c.project_uuid)),
+        data_sources: props.data_sources?.filter((s) =>
+            inScope(s.project_uuid),
+        ),
         screen: props.screen.uuid,
         periods: PERIODS,
-        filters: props.filters,
+        filters,
     };
     // The data follows what is saved, so a widget refetches once its new settings are stored.
     const { data } = useScreenData(

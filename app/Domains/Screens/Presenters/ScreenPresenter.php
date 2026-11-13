@@ -12,6 +12,7 @@ use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Models\ProjectAgent;
 use App\Domains\Projects\Queries\ProjectEnvironmentsQuery;
+use App\Domains\Screens\Actions\ResolveScreenDataAction;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Display;
 use App\Domains\Screens\Models\Screen;
@@ -23,6 +24,7 @@ use App\Domains\Screens\Support\WidgetSources;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Models\Team;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 
 class ScreenPresenter
 {
@@ -83,7 +85,7 @@ class ScreenPresenter
     }
 
     /**
-     * Everything the kiosk draws from: the screen, its team's projects, the widget
+     * Everything the kiosk draws from: the screen, the projects it can show, the widget
      * catalog, and where it reads data and hears about changes, which differ for a
      * signed-in kiosk, a paired display and a share link. A theme forces the display's.
      *
@@ -102,7 +104,8 @@ class ScreenPresenter
         return [
             'screen' => $this->present($shown),
             'team' => ['name' => $screen->team->name],
-            'projects' => $this->projects($screen->team),
+            // Only the projects the screen can show: a share link names no others.
+            'projects' => $this->screenProjects($screen),
             ...$this->catalog(),
             'data_url' => $source['data_url'],
             'channel' => $source['channel'],
@@ -146,6 +149,19 @@ class ScreenPresenter
     {
         return array_values($team->projects()->orderBy('name')->get(['id', 'uuid', 'name'])
             ->map(fn (Project $p): array => ['uuid' => $p->uuid, 'name' => $p->name])->all());
+    }
+
+    /**
+     * The projects a screen's widgets can cover: those it names, or all of its team's.
+     *
+     * @return list<array{uuid: string, name: string}>
+     */
+    public function screenProjects(Screen $screen): array
+    {
+        $ceiling = ResolveScreenDataAction::screenProjects($screen);
+        $projects = $this->projects($screen->team);
+
+        return $ceiling === [] ? $projects : array_values(array_filter($projects, fn (array $p): bool => in_array($p['uuid'], $ceiling, true)));
     }
 
     /**
@@ -200,6 +216,33 @@ class ScreenPresenter
     }
 
     /**
+     * Each project's queue, host, domain and database check names, by project uuid.
+     *
+     * @param  Collection<int, Project>  $projects
+     * @return array<string, array<string, list<string>>>
+     */
+    private function filterNames(Collection $projects): array
+    {
+        $ids = $projects->modelKeys();
+        $uuids = $projects->pluck('uuid', 'id');
+        $kinds = [
+            'queue' => QueueSample::query()->whereIn('project_id', $ids)->where('sampled_at', '>=', now()->subDays(7))->distinct()->get(['project_id', 'queue as name']),
+            'host' => ProjectAgent::query()->whereIn('project_id', $ids)->distinct()->get(['project_id', 'host as name']),
+            'domain' => RequestRun::query()->whereIn('project_id', $ids)->where('occurred_at', '>=', now()->subDays(7))->whereNotNull('domain')->distinct()->get(['project_id', 'domain as name']),
+            'check' => HealthCheck::query()->whereIn('project_id', $ids)->whereNotArchived()->whereReportsDatabase()->distinct()->get(['project_id', 'slug as name']),
+        ];
+        $names = [];
+
+        foreach ($kinds as $kind => $rows) {
+            foreach ($rows as $row) {
+                $names[(string) $uuids[$row->getAttribute('project_id')]][$kind][] = (string) $row->getAttribute('name');
+            }
+        }
+
+        return $names;
+    }
+
+    /**
      * What the designer offers to pick from besides the catalog: the team's environments,
      * health checks and data sources, and the grid's limits.
      *
@@ -213,20 +256,13 @@ class ScreenPresenter
             ...$this->catalog(),
             'environments' => $this->environments->forProjects($projects),
             'checks' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->get(['uuid', 'project_id', 'name', 'slug', 'type', 'config'])
-                ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name])->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all(),
+                ->map(fn (HealthCheck $c): array => ['uuid' => $c->uuid, 'name' => $c->displayName(), 'project' => $projects->find($c->project_id)?->name, 'project_uuid' => $projects->find($c->project_id)?->uuid])->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all(),
             // External values pick one; names, formats and the app's host, never a full URL or header.
             'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->with('dataSourceConnection:id,url,kind,environment,name')->orderBy('name')->get(['uuid', 'project_id', 'name', 'group_path', 'format', 'shape', 'environment', 'data_source_connection_id'])
-                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'group' => $s->pickerGroup(), 'host' => $s->pickerHost(), 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' && $s->dataSourceConnection?->isFor(ConnectionKind::App) !== false ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name, 'periods' => $s->dataSourceConnection !== null ? array_map(fn (Period $p): string => $p->value, $s->dataSourceConnection->kind->periods()) : null])->values()->all(),
-            // Names a filter can pick from, so a queue, host, domain or database check is chosen, not typed.
-            'filters' => [
-                'queue' => QueueSample::query()->whereIn('project_id', $projects->modelKeys())->where('sampled_at', '>=', now()->subDays(7))
-                    ->distinct()->orderBy('queue')->pluck('queue')->all(),
-                'host' => ProjectAgent::query()->whereIn('project_id', $projects->modelKeys())->distinct()->orderBy('host')->pluck('host')->all(),
-                'domain' => RequestRun::query()->whereIn('project_id', $projects->modelKeys())->where('occurred_at', '>=', now()->subDays(7))->whereNotNull('domain')
-                    ->distinct()->orderBy('domain')->pluck('domain')->all(),
-                'check' => HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->whereReportsDatabase()
-                    ->distinct()->orderBy('slug')->pluck('slug')->all(),
-            ],
+                ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'group' => $s->pickerGroup(), 'host' => $s->pickerHost(), 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' && $s->dataSourceConnection?->isFor(ConnectionKind::App) !== false ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name, 'project_uuid' => $projects->find($s->project_id)?->uuid, 'periods' => $s->dataSourceConnection !== null ? array_map(fn (Period $p): string => $p->value, $s->dataSourceConnection->kind->periods()) : null])->values()->all(),
+            // Names a filter can pick from, so a queue, host, domain or database check is chosen, not
+            // typed; per project uuid, so the designer offers only those of the screen's projects.
+            'filters' => $this->filterNames($projects),
             'limits' => ['min_cols' => Screen::MIN_COLS, 'max_cols' => Screen::MAX_COLS, 'min_rows' => Screen::MIN_ROWS, 'max_rows' => Screen::MAX_ROWS, 'max_widgets' => WidgetSchema::MAX_WIDGETS],
         ];
     }

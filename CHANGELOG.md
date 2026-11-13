@@ -10,6 +10,7 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ### Changed
 
+- A screen with projects ticked limits its widgets to them: the designer offers only those projects, and only their health checks, data sources and filter names, and a widget's own projects are cut down to the screen's when it shows (one pointing only elsewhere shows nothing). A screen with no project ticked still offers every project of the team. A share link names only the screen's projects.
 - The test workflow can be run by hand from the Actions tab.
 
 ## [0.8.0] - 2026-11-11

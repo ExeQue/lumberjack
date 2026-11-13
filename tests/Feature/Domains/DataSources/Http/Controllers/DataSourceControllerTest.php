@@ -96,7 +96,7 @@ describe('the page', function () {
         $screen = Screen::factory()->for($this->project->team)->create();
 
         $response = $this->actingAs($this->member)->get(route('screens.edit', $screen))
-            ->assertInertia(fn (Assert $page) => $page->where('data_sources', [['uuid' => $this->source->uuid, 'name' => 'Orders API', 'format' => 'json', 'group' => null, 'host' => null, 'shape' => null, 'environment' => null, 'project' => $this->project->name, 'periods' => null]]));
+            ->assertInertia(fn (Assert $page) => $page->where('data_sources', [['uuid' => $this->source->uuid, 'name' => 'Orders API', 'format' => 'json', 'group' => null, 'host' => null, 'shape' => null, 'environment' => null, 'project' => $this->project->name, 'project_uuid' => $this->project->uuid, 'periods' => null]]));
 
         expect($response->getContent())->not->toContain('t0p-s3cret')
             ->and($response->getContent())->not->toContain('example.com/stats.json');

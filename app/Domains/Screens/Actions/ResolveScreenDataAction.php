@@ -109,7 +109,9 @@ class ResolveScreenDataAction
     }
 
     /**
-     * The widget's own scope over the screen's default.
+     * The widget's own scope over the screen's default. The screen's projects, when it
+     * names any, are a ceiling: a widget covers only those of its own that are among them,
+     * and all of them when it names none.
      *
      * @param  array<string, mixed>  $widget
      */
@@ -120,13 +122,42 @@ class ResolveScreenDataAction
         $environment = $own['environment'] ?? $default['environment'] ?? null;
 
         return WidgetScope::fromArray([
-            'projects' => $own['projects'] ?? $default['projects'] ?? [],
+            'projects' => self::projectsWithin(self::screenProjects($screen), (array) ($own['projects'] ?? [])),
             'environment' => $environment === WidgetSchema::ALL_ENVIRONMENTS ? null : $environment,
             'period' => $own['period'] ?? $default['period'] ?? null,
             'release' => $own['release'] ?? null,
             'filter' => $own['filter'] ?? null,
             'domain' => $own['domain'] ?? null,
         ]);
+    }
+
+    /**
+     * The project uuids a screen limits its widgets to; none for the whole team.
+     *
+     * @return list<string>
+     */
+    public static function screenProjects(Screen $screen): array
+    {
+        return array_values(array_filter((array) ($screen->scope['projects'] ?? []), 'is_string'));
+    }
+
+    /**
+     * A widget's projects within the screen's: the screen's when it names none, those it
+     * shares with them when it does, and NO_PROJECT when it shares none.
+     *
+     * @param  list<string>  $ceiling  the screen's, none for the whole team
+     * @param  array<mixed>  $own  the widget's, none for the screen's
+     * @return list<string>
+     */
+    public static function projectsWithin(array $ceiling, array $own): array
+    {
+        $own = array_values(array_filter($own, 'is_string'));
+
+        if ($ceiling === [] || $own === []) {
+            return $own === [] ? $ceiling : $own;
+        }
+
+        return array_values(array_intersect($own, $ceiling)) ?: [WidgetScope::NO_PROJECT];
     }
 
     private function filterOn(WidgetType $type, string $source): ?string
@@ -186,8 +217,9 @@ class ResolveScreenDataAction
     private function calendarEvents(Screen $screen, array $options, bool $aggregatesOnly): array
     {
         $uuid = $options['data_source'] ?? null;
+        $ceiling = self::screenProjects($screen);
         $source = is_string($uuid) ? DataSource::query()
-            ->whereIn('project_id', $screen->team->projects->modelKeys())
+            ->whereIn('project_id', $screen->team->projects->when($ceiling !== [])->whereIn('uuid', $ceiling)->modelKeys())
             ->where('uuid', $uuid)
             ->where('format', DataSourceFormat::Ical)
             ->first() : null;
