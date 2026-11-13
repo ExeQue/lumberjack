@@ -7,7 +7,7 @@ activity trail and for simple analytics: how often something happens, and when.
 
 ## Recording an event
 
-The [Laravel library](./libraries.md) records an event with `Lumberjack::event()`; its
+The [Laravel library](./libraries.md) records an event with `Lumberjack::activity()`, or from your own event classes; its
 docs show the options. In the raw ingest API an event is an event of type `event` in a
 batch, see [Event events](./api.md#event-events).
 

@@ -6,7 +6,7 @@ return [
     'title' => 'Events',
     'description' => '{0} No events in the period.|{1} 1 kind of event in the period.|[2,*] :count kinds of events in the period.',
     'empty_title' => 'No events yet',
-    'empty_body' => 'Record what happens in your app with Lumberjack::event(\'order.placed\')->send(), optionally with a group, an actor, a subject and a payload.',
+    'empty_body' => 'Record what happens in your app with Lumberjack::activity(\'order.placed\')->send(), optionally with a group, an actor, a subject and a payload.',
     'trend_label' => ':count events in the period',
     'columns' => [
         'event' => 'Event',
