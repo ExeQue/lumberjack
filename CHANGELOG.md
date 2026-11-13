@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-13
+
 ### Added
 
 - **Packagist** connector: one Composer package per connection, picked from a search of Packagist as it is typed (no key needed). Its page shows the downloads over 1, 7 or 30 days against the days before, the downloads in all, favers, dependents, suggesters and GitHub stars, the downloads per day, the period's downloads by major version, the latest releases, and the security advisories against the package. Packagist publishes a day once it is over, so the page says through which day. The downloads, downloads per day, downloads in all, favers, dependents and the number of advisories are data sources for screens.
@@ -252,7 +254,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/ExeQue/lumberjack/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/ExeQue/lumberjack/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/ExeQue/lumberjack/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/ExeQue/lumberjack/compare/v0.6.0...v0.6.1
