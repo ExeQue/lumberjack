@@ -20,9 +20,10 @@ Visitors and traffic of a website.
 
 The work on a code repository and its pipelines.
 
-| Connector             | What it reads                                                                                    | Tags                     |
-| --------------------- | ------------------------------------------------------------------------------------------------ | ------------------------ |
-| [GitHub](./github.md) | The pull requests, commits, workflow runs, releases, issues and security alerts of a repository. | `Development` `Security` |
+| Connector                   | What it reads                                                                                    | Tags                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------ |
+| [GitHub](./github.md)       | The pull requests, commits, workflow runs, releases, issues and security alerts of a repository. | `Development` `Security` |
+| [Packagist](./packagist.md) | The downloads, versions in use, releases and security advisories of a Composer package.          | `Development` `Security` |
 
 ### Forms
 
@@ -71,7 +72,7 @@ never shown again, and only ever sent to the address given, over https. A privat
 refused unless `LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE=true`.
 
 A connector can be connected as often as needed, such as one Umami website, one mosparo
-project, one GitHub repository or one Vipps MobilePay ledger each time. With more than one, a picker beside the page's title switches between them.
+project, one GitHub repository, one Vipps MobilePay ledger or one Packagist package each time. With more than one, a picker beside the page's title switches between them.
 
 ## The connector's page
 
@@ -90,8 +91,8 @@ A connector's sources are filed under its name and the connection's name in the 
 folded away until opened. They are read from the service only while a screen shows them, like
 an app's [connected sources](../data-sources.md#connected-sources).
 
-A service that cannot answer for every period offers only those it can: mosparo counts whole
-days and Vipps MobilePay books whole days, so their sources have no hour.
+A service that cannot answer for every period offers only those it can: mosparo and Packagist
+count whole days and Vipps MobilePay books whole days, so their sources have no hour.
 
 ## Missing a service?
 

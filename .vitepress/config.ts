@@ -167,6 +167,10 @@ export default defineConfig({
                                         text: 'GitHub',
                                         link: '/docs/connectors/github',
                                     },
+                                    {
+                                        text: 'Packagist',
+                                        link: '/docs/connectors/packagist',
+                                    },
                                 ],
                             },
                             {

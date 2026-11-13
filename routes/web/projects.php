@@ -27,6 +27,7 @@ Route::prefix('projects/{project}')->scopeBindings()->middleware(['can:view,proj
         require __DIR__.'/projects/connectors/github.php';
         require __DIR__.'/projects/connectors/mobilepay.php';
         require __DIR__.'/projects/connectors/mosparo.php';
+        require __DIR__.'/projects/connectors/packagist.php';
         require __DIR__.'/projects/connectors/umami.php';
     });
     require __DIR__.'/projects/data-sources.php';

@@ -8,6 +8,7 @@ use App\Domains\Connectors\GitHub\Data\GitHubConfig;
 use App\Domains\Connectors\MobilePay\Data\MobilePayConfig;
 use App\Domains\Connectors\MobilePay\Data\MobilePayCredentials;
 use App\Domains\Connectors\Mosparo\Data\MosparoConfig;
+use App\Domains\Connectors\Packagist\Data\PackagistConfig;
 use App\Domains\Connectors\Umami\Data\UmamiConfig;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
@@ -41,6 +42,22 @@ class DataSourceConnectionFactory extends Factory
             'pull_token' => null,
             'name' => 'Shop',
             'config' => new UmamiConfig($websiteId, null, 'umami_key'),
+        ]);
+    }
+
+    /**
+     * A Packagist package, read without credentials.
+     */
+    public function packagist(string $package = 'acme/widgets'): static
+    {
+        return $this->state(fn (): array => [
+            'kind' => ConnectionKind::Packagist,
+            'environment' => ConnectionKind::Packagist->environment(),
+            'url' => 'https://packagist.org',
+            'pull_token' => null,
+            'name' => $package,
+            'timezone' => 'UTC',
+            'config' => new PackagistConfig($package),
         ]);
     }
 

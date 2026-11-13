@@ -6,6 +6,7 @@ import { ConnectorIcon } from '@/components/lj/connectors/connector-icon';
 import { GitHubConnectDialog } from '@/components/lj/connectors/github/connect';
 import { MobilePayConnectDialog } from '@/components/lj/connectors/mobilepay/connect';
 import { MosparoConnectDialog } from '@/components/lj/connectors/mosparo/connect';
+import { PackagistConnectDialog } from '@/components/lj/connectors/packagist/connect';
 import { UmamiConnectDialog } from '@/components/lj/connectors/umami/connect';
 import { WithRelative } from '@/components/lj/relative';
 import { TopBar } from '@/components/lj/top-bar';
@@ -72,6 +73,7 @@ const CONNECT_DIALOGS: Record<
     mosparo: MosparoConnectDialog,
     github: GitHubConnectDialog,
     mobilepay: MobilePayConnectDialog,
+    packagist: PackagistConnectDialog,
 };
 
 const ISSUES_URL = 'https://github.com/ExeQue/lumberjack/issues';

@@ -33,7 +33,7 @@ AI agents work with your issues over MCP.
   stay quiet while it lasts.
 - **Search your logs**, or watch them live.
 - **Put a status screen on the wall.** Design a dashboard and show it on any TV, with
-  figures from GitHub, Vipps MobilePay, Umami or mosparo beside your own.
+  figures from GitHub, Packagist, Vipps MobilePay, Umami or mosparo beside your own.
 - **Watch an app in any language.** Send traces and logs from an OpenTelemetry SDK or
   collector.
 - **Let an AI agent read your errors.** Agents can triage issues, write notes, open issues in
@@ -88,8 +88,8 @@ straight to the [ingest API](https://exeque.github.io/lumberjack/docs/api) or ov
 - [Health](https://exeque.github.io/lumberjack/docs/health)
 - [Finding things](https://exeque.github.io/lumberjack/docs/finding-things): search, filters and the command palette.
 - [Status screens](https://exeque.github.io/lumberjack/docs/screens) and [widgets](https://exeque.github.io/lumberjack/docs/widgets)
-- [Connectors](https://exeque.github.io/lumberjack/docs/connectors/): figures from GitHub, Vipps MobilePay, Umami and
-  mosparo.
+- [Connectors](https://exeque.github.io/lumberjack/docs/connectors/): figures from GitHub, Packagist, Vipps MobilePay,
+  Umami and mosparo.
 - [MCP](https://exeque.github.io/lumberjack/docs/mcp)
 - [Metrics API](https://exeque.github.io/lumberjack/docs/metrics-api): read figures from Grafana, Prometheus or a script.
 - [Ingest and API](https://exeque.github.io/lumberjack/docs/api): the endpoints SDKs and agents send to, and their limits.

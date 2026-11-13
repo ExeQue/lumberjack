@@ -400,6 +400,98 @@ return [
         ],
     ],
 
+    // Packagist: a Composer package's downloads, read through Packagist's public API.
+    'packagist' => [
+        'title' => 'Packagist',
+        'description' => 'Downloads of :name as Packagist counts them, per day.',
+        'error_title' => 'Packagist could not be read',
+        // The picker of which connected package the page shows.
+        'package' => 'Package',
+        // Under the cards: Packagist publishes a day once it is over.
+        'through' => 'Downloads through :date; Packagist publishes a day once it is over.',
+        'open' => 'On Packagist',
+        'repository' => 'Repository',
+
+        'cards' => [
+            'downloads' => 'Downloads',
+            'total' => 'Downloads in all',
+            'monthly' => 'Last 30 days',
+            'favers' => 'Favers',
+            'dependents' => 'Dependents',
+            'suggesters' => 'Suggesters',
+            'stars' => 'GitHub stars',
+            'advisories' => 'Security advisories',
+        ],
+
+        'series' => [
+            'title' => 'Downloads',
+            'description' => 'Per day, as Packagist counts them.',
+            'summary' => ':count downloads over the period',
+        ],
+
+        'majors' => [
+            'title' => 'Versions in use',
+            'description' => 'Downloads over the period by major version.',
+            'major' => 'Version',
+            'downloads' => 'Downloads',
+            'share' => 'Share',
+            'empty' => 'No downloads in the period.',
+        ],
+
+        'releases' => [
+            'title' => 'Releases',
+            'description' => 'The latest tagged versions.',
+            'version' => 'Version',
+            'released' => 'Released',
+            'empty' => 'No tagged release yet.',
+        ],
+
+        'advisories' => [
+            'title' => 'Security advisories',
+            'description' => 'Known vulnerabilities in the package, from Packagist\'s advisory database.',
+            'advisory' => 'Advisory',
+            'affected' => 'Affected versions',
+            'severity' => 'Severity',
+            'reported' => 'Reported',
+            'empty' => 'No known security advisories.',
+            'severities' => ['critical' => 'Critical', 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low', 'unknown' => 'Unknown'],
+        ],
+
+        'not_connected' => [
+            'description' => 'Downloads, versions in use, releases and advisories of a Composer package.',
+            'title' => 'Connect Packagist',
+            'body' => 'Pick a package on Packagist. Its figures show here and as data sources for screens. Packagist is public, so no key is needed.',
+            'members' => 'No package is connected. A team owner or admin can connect one.',
+        ],
+
+        'connect' => [
+            'package' => 'Package',
+            'package_hint' => 'Search by name, or type it as vendor/package.',
+            'placeholder' => 'Pick a package',
+            'search' => 'Search Packagist',
+            'no_matches' => 'No package matches',
+            // Buttons.
+            'submit' => 'Connect',
+            'cancel' => 'Cancel',
+        ],
+
+        // Packagist counts whole days: 24 hours is the last day it published.
+        'periods' => ['24h' => '1 d', '7d' => '7 d', '30d' => '30 d'],
+        'tabs' => [
+            'label' => 'Packagist sections',
+            'overview' => 'Overview',
+            'versions' => 'Versions',
+            'advisories' => 'Advisories',
+            'connection' => 'Connection',
+        ],
+        'settings' => [
+            'body' => ':package on packagist.org.',
+            // Buttons.
+            'add' => 'Connect another package',
+            'disconnect_question' => 'Disconnect this package? Its data sources are removed, and widgets showing them go empty.',
+        ],
+    ],
+
     // Umami: a website's visitors, read through Umami's API.
     'umami' => [
         'title' => 'Umami',

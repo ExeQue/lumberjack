@@ -16,6 +16,10 @@ return [
             'label' => 'Vipps MobilePay',
             'description' => 'Sales, refunds, fees and payouts from a Vipps MobilePay ledger.',
         ],
+        'packagist' => [
+            'label' => 'Packagist',
+            'description' => 'Downloads, versions in use, releases and security advisories of a Composer package.',
+        ],
         'mosparo' => [
             'label' => 'mosparo',
             'description' => 'Valid and spam form submissions from a mosparo project.',
@@ -219,6 +223,31 @@ return [
             'too_large' => 'mosparo\'s answer was larger than Lumberjack reads.',
             'unknown_source' => 'mosparo has no such source.',
             'secret_unreadable' => 'The mosparo keys cannot be decrypted (was APP_KEY changed?). Connect mosparo again.',
+        ],
+    ],
+
+    // Packagist: a Composer package's downloads and advisories, read through Packagist's public API.
+    'packagist' => [
+        // Flash message after connecting.
+        'connected' => 'Packagist connected: :name. Its sources show up under Data sources within a minute.',
+
+        // The data sources a Packagist package offers screens.
+        'sources' => [
+            'downloads' => 'Downloads',
+            'downloads_series' => 'Downloads per day',
+            'total_downloads' => 'Downloads in all',
+            'favers' => 'Favers',
+            'dependents' => 'Dependents',
+            'advisories' => 'Security advisories',
+        ],
+
+        // Why asking Packagist failed, shown on the connection, its sources and the Packagist page.
+        'errors' => [
+            'not_found' => 'Packagist has no such package. Check its name, vendor/package.',
+            'unreachable' => 'Packagist could not be reached. It is asked again shortly.',
+            'rate_limited' => 'Packagist asks to slow down. It is asked again shortly.',
+            'status' => 'Packagist answered with HTTP :status.',
+            'unknown_source' => 'Packagist has no such source.',
         ],
     ],
 

@@ -39,7 +39,7 @@ describe('a project without Umami', function () {
 
     it('lists Umami on the Connectors page as not connected', function () {
         $this->actingAs($this->member)->get(route('connectors.index', $this->project))
-            ->assertInertia(fn (Assert $page) => $page->where('connectors.2.key', 'umami')->where('connectors.2.connections', []));
+            ->assertInertia(fn (Assert $page) => $page->where('connectors.3.key', 'umami')->where('connectors.3.connections', []));
     });
 });
 

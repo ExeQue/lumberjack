@@ -52,6 +52,7 @@ import { index as connectorsIndex } from '@/routes/connectors';
 import { index as githubIndex } from '@/routes/connectors/github';
 import { index as mobilepayIndex } from '@/routes/connectors/mobilepay';
 import { index as mosparoIndex } from '@/routes/connectors/mosparo';
+import { index as packagistIndex } from '@/routes/connectors/packagist';
 import { index as umamiIndex } from '@/routes/connectors/umami';
 import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
 
@@ -90,7 +91,7 @@ type ConnectedRow = {
 type ConnectionRow = {
     uuid: string;
     /** An app pulled by signature, or a service read through its API. */
-    kind: 'app' | 'umami' | 'mosparo' | 'github' | 'mobilepay';
+    kind: 'app' | 'umami' | 'mosparo' | 'github' | 'mobilepay' | 'packagist';
     /** A service's website or project, as it is shown. */
     name: string | null;
     environment: string;
@@ -275,6 +276,7 @@ const SERVICE_PAGES = {
     mosparo: mosparoIndex,
     github: githubIndex,
     mobilepay: mobilepayIndex,
+    packagist: packagistIndex,
 };
 
 /** Changing an app's address and rotating its pull token; an Umami connection has neither. */

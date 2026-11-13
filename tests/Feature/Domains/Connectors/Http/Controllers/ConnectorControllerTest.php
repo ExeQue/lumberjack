@@ -26,7 +26,7 @@ describe('the catalog', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('connectors/index')
-                ->where('connectors', fn ($rows): bool => collect($rows)->pluck('key')->all() === ['github', 'mosparo', 'umami', 'mobilepay'])
+                ->where('connectors', fn ($rows): bool => collect($rows)->pluck('key')->all() === ['github', 'mosparo', 'packagist', 'umami', 'mobilepay'])
                 ->where('connectors.0.label', 'GitHub')
                 ->where('connectors.0.description', __('connectors.catalog.github.description'))
                 ->where('connectors.0.tags', ['development', 'security'])
@@ -47,7 +47,7 @@ describe('the catalog', function () {
         $this->actingAs($this->member)->get(route('connectors.index', $this->project))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('connectors', fn ($rows): bool => collect($rows)->pluck('key')->all() === ['umami', 'mobilepay', 'github', 'mosparo'])
+                ->where('connectors', fn ($rows): bool => collect($rows)->pluck('key')->all() === ['umami', 'mobilepay', 'github', 'mosparo', 'packagist'])
                 ->where('connectors.0.connections', fn ($rows): bool => collect($rows)->pluck('name')->all() === ['Blog', 'Shop'])
                 ->where('connectors.0.connections.0', [
                     'uuid' => $blog->uuid,

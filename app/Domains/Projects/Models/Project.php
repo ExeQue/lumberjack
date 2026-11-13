@@ -163,6 +163,16 @@ class Project extends Model
     }
 
     /**
+     * The Packagist packages it reads, one connection each, by name.
+     *
+     * @return HasMany<DataSourceConnection, $this>
+     */
+    public function packagistConnections(): HasMany
+    {
+        return $this->hasMany(DataSourceConnection::class)->where('kind', ConnectionKind::Packagist)->orderBy('name')->orderBy('id');
+    }
+
+    /**
      * The Vipps MobilePay ledgers it reads, one connection each, by name.
      *
      * @return HasMany<DataSourceConnection, $this>

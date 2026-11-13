@@ -11,6 +11,7 @@ use App\Domains\Connectors\MobilePay\Data\MobilePayConfig;
 use App\Domains\Connectors\MobilePay\Data\MobilePayCredentials;
 use App\Domains\Connectors\Mosparo\Data\MosparoConfig;
 use App\Domains\Connectors\Mosparo\Data\MosparoCredentials;
+use App\Domains\Connectors\Packagist\Data\PackagistConfig;
 use App\Domains\Connectors\Umami\Data\UmamiConfig;
 use App\Domains\Connectors\Umami\Data\UmamiCredentials;
 use App\Domains\Connectors\Umami\Models\UtmLabel;
@@ -47,7 +48,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $next_check_at
  * @property ConnectionKind $kind
  * @property string|null $name a service's website or project, as it is shown
- * @property UmamiConfig|MosparoConfig|GitHubConfig|MobilePayConfig|null $config a service's settings and credentials, encrypted
+ * @property UmamiConfig|MosparoConfig|GitHubConfig|MobilePayConfig|PackagistConfig|null $config a service's settings and credentials, encrypted
  * @property-read Project $project
  */
 #[Fillable(['project_id', 'kind', 'environment', 'url', 'timezone', 'pull_token', 'pull_token_previous', 'uses_previous', 'last_checked_at', 'last_ok_at', 'last_error', 'next_check_at', 'name', 'config'])]
@@ -244,6 +245,18 @@ class DataSourceConnection extends Model
         $config = $this->config;
 
         return $config instanceof MobilePayConfig ? $config : new MobilePayConfig(new MobilePayCredentials('', '', '', ''), '', '');
+    }
+
+    /**
+     * Its Packagist package.
+     *
+     * @throws DecryptException
+     */
+    public function packagistConfig(): PackagistConfig
+    {
+        $config = $this->config;
+
+        return $config instanceof PackagistConfig ? $config : new PackagistConfig('');
     }
 
     /** What it is called on a page: an app's environment, a service's website or project. */

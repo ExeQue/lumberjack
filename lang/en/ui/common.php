@@ -33,6 +33,7 @@ return [
         'toggle_group' => 'Show or hide the pages under :group',
         'umami' => 'Umami',
         'mosparo' => 'mosparo',
+        'packagist' => 'Packagist',
         'github' => 'GitHub',
         'mobilepay' => 'Vipps MobilePay',
         'releases' => 'Releases',

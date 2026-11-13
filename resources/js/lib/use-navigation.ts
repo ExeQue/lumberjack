@@ -31,6 +31,7 @@ import { index as connectorsIndex } from '@/routes/connectors';
 import { index as githubIndex } from '@/routes/connectors/github';
 import { index as mobilepayIndex } from '@/routes/connectors/mobilepay';
 import { index as mosparoIndex } from '@/routes/connectors/mosparo';
+import { index as packagistIndex } from '@/routes/connectors/packagist';
 import { index as umamiIndex } from '@/routes/connectors/umami';
 import { displays as teamDisplays, show as teamShow } from '@/routes/team';
 import { show as teamRetention } from '@/routes/team/retention';
@@ -73,6 +74,7 @@ const CONNECTOR_PAGES: Record<
     mosparo: ['common.nav.mosparo', mosparoIndex],
     github: ['common.nav.github', githubIndex],
     mobilepay: ['common.nav.mobilepay', mobilepayIndex],
+    packagist: ['common.nav.packagist', packagistIndex],
 };
 
 /**
@@ -311,6 +313,7 @@ const sections: Record<string, (project: string) => { url: string }> = {
     mosparo: (project) => mosparoIndex({ project }),
     github: (project) => githubIndex({ project }),
     mobilepay: (project) => mobilepayIndex({ project }),
+    packagist: (project) => packagistIndex({ project }),
     releases: releasesIndex,
     jobs: jobsIndex,
     schedule: scheduleIndex,

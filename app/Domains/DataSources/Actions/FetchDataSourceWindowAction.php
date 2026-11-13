@@ -8,6 +8,7 @@ use App\Domains\Connectors\Exceptions\ConnectorsExceptionInterface;
 use App\Domains\Connectors\GitHub\Actions\PullGitHubSourceAction;
 use App\Domains\Connectors\MobilePay\Actions\PullMobilePaySourceAction;
 use App\Domains\Connectors\Mosparo\Actions\PullMosparoSourceAction;
+use App\Domains\Connectors\Packagist\Actions\PullPackagistSourceAction;
 use App\Domains\Connectors\Umami\Actions\PullUmamiSourceAction;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Enums\DataSourceShape;
@@ -45,6 +46,7 @@ class FetchDataSourceWindowAction
         private readonly SendSignedPullAction $send,
         private readonly PullUmamiSourceAction $pullUmami,
         private readonly PullMosparoSourceAction $pullMosparo,
+        private readonly PullPackagistSourceAction $pullPackagist,
         private readonly PullGitHubSourceAction $pullGitHub,
         private readonly PullMobilePaySourceAction $pullMobilePay,
         private readonly RunHealthCheckAction $runHealthCheckAction,
@@ -148,6 +150,7 @@ class FetchDataSourceWindowAction
                 ConnectionKind::Mosparo => $this->pullMosparo->execute($source, $from, $until, $timezone),
                 ConnectionKind::GitHub => $this->pullGitHub->execute($source, $from, $until, $window->bucket, $timezone),
                 ConnectionKind::MobilePay => $this->pullMobilePay->execute($source, $from, $until, $timezone),
+                ConnectionKind::Packagist => $this->pullPackagist->execute($source, $from, $until),
                 default => throw new ProbeFailedException(__('data_sources.errors.no_answer')),
             };
         } catch (DecryptException) {
