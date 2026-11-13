@@ -22,6 +22,8 @@ return [
         'title' => 'Contributors',
         'description' => 'The people who made this release, most contributions first.',
         'commits' => '{1} 1 contribution|[2,*] :count contributions',
+        // A link to the source, where a checkout's list of contributors would be.
+        'you' => 'You?',
     ],
     'docs' => 'Documentation',
     'source' => 'Source on GitHub',

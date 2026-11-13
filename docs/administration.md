@@ -181,7 +181,8 @@ sidebar opens the source too. Under them, **What's new** lists the changelog the
 with, one release per section, the 10 newest first and the rest behind **Show more**:
 jump to a version from the row on top, and open or fold each.
 A release also lists its **Contributors**, read from GitHub when the image is built, each
-linking to their GitHub profile; a git checkout has none. The running release and anything unreleased are open.
+linking to their GitHub profile; a git checkout shows **You?** instead, linking to the
+source. The running release and anything unreleased are open.
 System administrators also see PHP, Laravel, the database and its size, and the queue,
 cache and session drivers.
 

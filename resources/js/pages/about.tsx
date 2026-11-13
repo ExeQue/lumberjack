@@ -188,35 +188,46 @@ export default function About({
                         </div>
                     )}
                 </Card>
-                {contributors.length > 0 && (
-                    <Card>
-                        <CardHeader
-                            title={t('about.contributors.title')}
-                            description={t('about.contributors.description')}
-                        />
-                        <ul className="flex flex-wrap gap-x-5 gap-y-2 px-5 py-4 text-sm">
-                            {contributors.map((contributor) => (
-                                <li key={contributor.login}>
-                                    <a
-                                        href={contributor.url}
-                                        className={link}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        title={t(
-                                            'about.contributors.commits',
-                                            {
-                                                count: contributor.contributions,
-                                            },
-                                            contributor.contributions,
-                                        )}
-                                    >
-                                        {contributor.login}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    </Card>
-                )}
+                <Card>
+                    <CardHeader
+                        title={t('about.contributors.title')}
+                        description={t('about.contributors.description')}
+                    />
+                    <ul className="flex flex-wrap gap-x-5 gap-y-2 px-5 py-4 text-sm">
+                        {/* A checkout has no list of its own: the one reading may be next. */}
+                        {contributors.length === 0 && (
+                            <li>
+                                <a
+                                    href={repositoryUrl}
+                                    className={link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    {t('about.contributors.you')}
+                                </a>
+                            </li>
+                        )}
+                        {contributors.map((contributor) => (
+                            <li key={contributor.login}>
+                                <a
+                                    href={contributor.url}
+                                    className={link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title={t(
+                                        'about.contributors.commits',
+                                        {
+                                            count: contributor.contributions,
+                                        },
+                                        contributor.contributions,
+                                    )}
+                                >
+                                    {contributor.login}
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                </Card>
                 <Deferred
                     data="changelog"
                     fallback={
