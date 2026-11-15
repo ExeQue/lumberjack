@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { curve } from '@/components/lj/screen/lib';
 import {
     bucketLabel,
+    tipAlign,
     Card,
     CardHeader,
     Label,
@@ -43,7 +44,7 @@ const HEIGHT = 120;
  * One line with an area per host. A dot marks where a line starts and stops, and a
  * bucket no host reported is shaded, so a short line reads as "little data".
  */
-function HostChart({
+export function HostChart({
     title,
     series,
     period,
@@ -194,7 +195,12 @@ function HostChart({
                                             />
                                         ),
                                 )}
-                                <div className="pointer-events-none absolute top-0 left-1/2 z-10 hidden -translate-x-1/2 -translate-y-full rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block">
+                                <div
+                                    className={cn(
+                                        'pointer-events-none absolute top-0 z-10 hidden -translate-y-full rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block',
+                                        tipAlign(i, buckets.length),
+                                    )}
+                                >
                                     <div className="text-ink-3">
                                         {bucketLabel(bucket.t, period)}
                                     </div>

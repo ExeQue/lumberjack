@@ -16,6 +16,7 @@ import {
     thClass,
     Sparkline,
     spreadTips,
+    tipAlign,
 } from '@/components/lj/ui';
 import { SampleNote } from '@/components/lj/sample-note';
 import {
@@ -720,7 +721,7 @@ function HourlyChart({
                     aria-label={label}
                     className="flex h-[120px] min-w-0 flex-1 items-end gap-[3px]"
                 >
-                    {hourly.map((h) => (
+                    {hourly.map((h, i) => (
                         <div
                             key={h.t}
                             className="group relative flex h-full flex-1 items-end"
@@ -743,7 +744,10 @@ function HourlyChart({
                                 </div>
                             )}
                             <span
-                                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block"
+                                className={cn(
+                                    'pointer-events-none absolute bottom-full z-10 mb-1 hidden rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block',
+                                    tipAlign(i, hourly.length),
+                                )}
                                 aria-hidden="true"
                             >
                                 {tip(h)}

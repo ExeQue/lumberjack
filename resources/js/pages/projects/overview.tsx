@@ -14,6 +14,7 @@ import {
     PageTitle,
     StatCard,
     useMaintenanceShades,
+    tipAlign,
 } from '@/components/lj/ui';
 import type { Tone } from '@/components/lj/ui';
 import { SampleNote } from '@/components/lj/sample-note';
@@ -284,7 +285,12 @@ function LatencyChart({
                                                     />
                                                 ),
                                         )}
-                                        <span className="pointer-events-none absolute top-0 left-1/2 z-10 hidden -translate-x-1/2 -translate-y-full rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block">
+                                        <span
+                                            className={cn(
+                                                'pointer-events-none absolute top-0 z-10 hidden -translate-y-full rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block',
+                                                tipAlign(i, series.length),
+                                            )}
+                                        >
                                             {bucketLabel(p.t, period)}
                                             {p.p95 === null
                                                 ? ' · -'

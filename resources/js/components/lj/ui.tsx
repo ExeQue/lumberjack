@@ -447,7 +447,12 @@ export function Sparkline({
                             style={{ left: `${i * step}%`, width: `${step}%` }}
                         >
                             <div className="absolute inset-y-0 left-1/2 hidden w-px bg-line-strong group-hover:block" />
-                            <span className="pointer-events-none absolute top-0 left-1/2 z-10 hidden -translate-x-1/2 -translate-y-full rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block">
+                            <span
+                                className={cn(
+                                    'pointer-events-none absolute top-0 z-10 hidden -translate-y-full rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block',
+                                    tipAlign(i, values.length),
+                                )}
+                            >
                                 {tips[i]}
                             </span>
                         </div>
@@ -506,7 +511,10 @@ export function Bars({
                     />
                     {tips?.[i] && (
                         <span
-                            className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block"
+                            className={cn(
+                                'pointer-events-none absolute bottom-full z-10 mb-1 hidden rounded border border-line-strong bg-panel-2 px-2 py-1 font-mono text-[11px] whitespace-nowrap text-ink shadow-lg group-hover:block',
+                                tipAlign(i, values.length),
+                            )}
                             aria-hidden="true"
                         >
                             {tips[i]}
@@ -581,6 +589,18 @@ const periodMs: Record<string, number> = {
     '7d': 604_800_000,
     '30d': 2_592_000_000,
 };
+
+/**
+ * Where a chart's hover label sits over bucket i of count: centered, but opening
+ * inward toward an edge, so it never reaches outside the chart and widens the page.
+ */
+export function tipAlign(i: number, count: number): string {
+    return i < count / 4
+        ? 'left-1/2'
+        : i > (count * 3) / 4
+          ? 'right-1/2'
+          : 'left-1/2 -translate-x-1/2';
+}
 
 /** Hover texts for plain values in buckets over a period, the last one holding now. */
 export function spreadTips(
