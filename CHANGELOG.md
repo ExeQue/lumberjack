@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-15
+
 ### Added
 
 - **Mail domain** health check: reads from DNS what receiving mail servers look up about a domain that sends mail and says what they would object to. It fails without an SPF record or with several, on one that does not parse, includes a domain without SPF or needs more than 10 DNS lookups with its includes, on `+all`, without a valid DMARC policy, on a missing or revoked DKIM key for the selectors named, on a null MX and on a mail server address whose reverse DNS does not point back; it warns on `?all`, an SPF record without an end, a DMARC policy weaker than the one set (quarantine by default) or applied to part of the mail, and a domain without MX records. A subdomain without a DMARC record takes its parent's. Sends no mail. Available to the MCP tools as type `mail`.
@@ -263,7 +265,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/ExeQue/lumberjack/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/ExeQue/lumberjack/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/ExeQue/lumberjack/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/ExeQue/lumberjack/compare/v0.6.1...v0.7.0
