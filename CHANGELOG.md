@@ -4,6 +4,15 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- **Mail domain** health check: reads from DNS what receiving mail servers look up about a domain that sends mail and says what they would object to. It fails without an SPF record or with several, on one that does not parse, includes a domain without SPF or needs more than 10 DNS lookups with its includes, on `+all`, without a valid DMARC policy, on a missing or revoked DKIM key for the selectors named, on a null MX and on a mail server address whose reverse DNS does not point back; it warns on `?all`, an SPF record without an end, a DMARC policy weaker than the one set (quarantine by default) or applied to part of the mail, and a domain without MX records. A subdomain without a DMARC record takes its parent's. Sends no mail. Available to the MCP tools as type `mail`.
+- `LUMBERJACK_HEALTH_DNS_SERVERS` names the name servers DNS and mail domain checks ask, for servers whose own resolver gives no answer to large lookups.
+
+### Changed
+
+- **DNS** checks tell a lookup that got no answer from a record that is missing: a resolver that is down or refuses fails the check with **The lookup of ... got no answer** instead of **No records**. Lookups give a name server 3 seconds, take answers too large for UDP over TCP, and no longer read `/etc/hosts` or the search domains of `resolv.conf`, so a check of a short internal name needs the full name.
+
 ## [0.9.0] - 2026-11-13
 
 ### Added

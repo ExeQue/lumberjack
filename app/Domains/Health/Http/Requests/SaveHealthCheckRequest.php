@@ -10,6 +10,7 @@ use App\Domains\DataSources\Support\JsonPath;
 use App\Domains\Health\Actions\RunHealthCheckAction;
 use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Models\HealthCheck;
+use App\Domains\Health\Support\MailDomainInspector;
 use App\Domains\Health\Support\SmtpProbe;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Enums\Period;
@@ -35,6 +36,7 @@ class SaveHealthCheckRequest extends FormRequest
         'heartbeat' => ['grace_minutes'],
         'domain' => ['domain', 'warn_days', 'fail_days'],
         'smtp' => ['host', 'port', 'encryption', 'timeout_s'],
+        'mail' => ['domain', 'dkim_selectors', 'min_policy'],
         'data_source' => ['data_source', 'path', 'period', 'operator', 'warn', 'fail'],
     ];
 
@@ -187,6 +189,11 @@ class SaveHealthCheckRequest extends FormRequest
                 'config.port' => ['required', 'integer', 'min:1', 'max:65535'],
                 'config.encryption' => ['nullable', Rule::in([SmtpProbe::ENCRYPTION_STARTTLS, SmtpProbe::ENCRYPTION_TLS, SmtpProbe::ENCRYPTION_NONE])],
                 'config.timeout_s' => ['nullable', 'integer', 'min:1', 'max:'.RunHealthCheckAction::MAX_TIMEOUT_S],
+            ],
+            HealthCheckType::Mail => [
+                'config.domain' => ['required', 'string', 'max:253', 'regex:/^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/'],
+                'config.dkim_selectors' => ['nullable', 'string', 'max:200', 'regex:/^\s*[A-Za-z0-9._-]+(\s*,\s*[A-Za-z0-9._-]+){0,'.(MailDomainInspector::MAX_SELECTORS - 1).'}\s*$/'],
+                'config.min_policy' => ['nullable', Rule::in(MailDomainInspector::POLICIES)],
             ],
             HealthCheckType::Dns => [
                 'config.name' => ['required', 'string', 'max:253', 'regex:/^[A-Za-z0-9._-]+$/'],

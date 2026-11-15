@@ -182,6 +182,21 @@ describe('adding and editing checks', function () {
         ])->assertSessionHasErrors(['interval_minutes', 'config.port']);
     });
 
+    it('takes the DKIM selectors of a mail domain check, at most five', function (string $selectors, bool $accepted) {
+        $response = $this->actingAs($this->admin)->post(route('health.store', $this->project), [
+            'type' => 'mail', 'interval_minutes' => 60, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 5,
+            'config' => ['domain' => 'news.example.com', 'dkim_selectors' => $selectors, 'min_policy' => 'reject'],
+        ]);
+
+        $accepted ? $response->assertSessionHasNoErrors() : $response->assertSessionHasErrors('config.dkim_selectors');
+        expect(HealthCheck::query()->where('type', HealthCheckType::Mail)->exists())->toBe($accepted);
+    })->with([
+        'one' => ['dkim', true],
+        'five, spaced' => ['dkim, s1,s2 , key-2026, a.b', true],
+        'six' => ['a,b,c,d,e,f', false],
+        'not a selector' => ['dkim; drop', false],
+    ]);
+
     it('is refused to a member who cannot administer the project', function () {
         $this->actingAs($this->member)->post(route('health.store', $this->project), [
             'type' => 'dns', 'name' => 'Mail', 'interval_minutes' => 60, 'degrade_after' => 2, 'recover_after' => 5, 'down_after' => 5, 'config' => ['name' => 'example.com', 'record_type' => 'MX'],

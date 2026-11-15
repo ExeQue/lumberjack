@@ -122,6 +122,26 @@ const configFields: Record<HealthCheckType, ConfigField[]> = {
         },
         { key: 'timeout_s', type: 'number', placeholder: '10' },
     ],
+    mail: [
+        {
+            key: 'domain',
+            type: 'text',
+            required: true,
+            placeholder: 'example.com',
+        },
+        {
+            key: 'dkim_selectors',
+            type: 'text',
+            hint: true,
+            placeholder: 'dkim',
+        },
+        {
+            key: 'min_policy',
+            type: 'select',
+            hint: true,
+            options: ['quarantine', 'reject', 'none'],
+        },
+    ],
     data_source: [
         { key: 'data_source', type: 'source', required: true },
         {

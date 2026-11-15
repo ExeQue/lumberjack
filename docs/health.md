@@ -73,7 +73,7 @@ away a check that will not report again, for example after you renamed its slug.
 
 ## Checks Lumberjack runs
 
-**Add check** offers eight types. Each runs every 1, 5, 15 or 60 minutes and can have an
+**Add check** offers nine types. Each runs every 1, 5, 15 or 60 minutes and can have an
 environment label. Only team owners and admins add, edit, archive and delete checks.
 
 | Type              | Checks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -85,6 +85,7 @@ environment label. Only team owners and admins add, edit, archive and delete che
 | Heartbeat         | A dead man's switch: your cron job or backup calls a secret URL when it is done; the check fails when no call came within its interval plus a grace.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Domain expiry     | When a domain's registration runs out: warns a number of days before and fails close to it. Read from RDAP, or whois where the registry has no RDAP (`.dk`, `.io`, `.se`). Some registries publish no date (`.de`, `.eu`), and then the check fails and says so. Answers are kept for 6 hours.                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | SMTP server       | Greets a mail server, checks that it answers and offers the encryption you chose, and verifies its certificate. Sends no mail. Many hosts block outgoing port 25, so prefer 587 or 465.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Mail domain       | What receiving mail servers look up about a domain that sends mail, read from DNS: MX records, one SPF record that does not let anyone send, a DMARC policy, the DKIM keys of the selectors you name, and reverse DNS of the mail servers that points back to them. Fails or warns as listed under [Mail domain](#mail-domain). Sends no mail.                                                                                                                                                                                                                                                                                                                                                                          |
 | Data source value | A number from one of the project's [data sources](./data-sources) against a warn and a fail limit. A JSON or Prometheus source is read at a path after each fetch; a source from Umami, mosparo, GitHub, Vipps MobilePay, Packagist or a connected app that answers with one number is read over a period (an hour, a day, 7 or 30 days) after each pull, and the check keeps that period pulled, as a screen showing it would. The check's own interval only notices a source no longer fetched in time: two of the source's fetch intervals and a minute, for a connected source two of its pulls and a minute. It fails when the fetch failed or there is no number, and records the value, so its history shows it. |
 
 | Type              | Fields (default)                                                                                                                                                                                                                              |
@@ -96,6 +97,7 @@ environment label. Only team owners and admins add, edit, archive and delete che
 | Heartbeat         | Grace (0 to 1,440 minutes; 5)                                                                                                                                                                                                                 |
 | Domain expiry     | Domain, warn days before expiry (30), fail days before expiry (7)                                                                                                                                                                             |
 | SMTP server       | Host, port, encryption (STARTTLS, TLS or None; STARTTLS), timeout (1 to 15 s; 10)                                                                                                                                                             |
+| Mail domain       | Domain, DKIM selectors (up to 5, separated by commas), weakest DMARC policy (none, quarantine or reject; quarantine)                                                                                                                          |
 | Data source value | Data source; path (a JSONPath, or a selector for Prometheus) for a fetched source, or period for a connected one; breached when the value is (>, >=, <, <=, =, !=; >), warn at, fail at. Without limits the source only has to give a number. |
 
 Every check also has a description and the thresholds described under
@@ -109,6 +111,47 @@ or `POST` without a body, at most 60 times a minute:
 ```bash
 php artisan backup:run && curl -fsS -m 10 https://lumberjack.example.com/api/health/ping/...
 ```
+
+### Mail domain
+
+A mail domain check takes the domain after the `@` of the addresses you send from, which
+may be a subdomain. One result lists everything it found, and the worst finding decides:
+
+| Looked up   | Fails when                                                                                                                                                                          | Warns when                                                                    |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| MX          | The domain refuses mail (a null MX)                                                                                                                                                 | There are no MX records, as for a domain that only sends                      |
+| Reverse DNS | An address of a mail server has no PTR record, or none whose name points back to it                                                                                                 |                                                                               |
+| SPF         | There is no SPF record, more than one, one that does not parse, an include or redirect without a valid SPF record, more than 10 DNS lookups with its includes, or it ends in `+all` | It ends in `?all`, has neither `all` nor `redirect`, or has terms after `all` |
+| DMARC       | There is no record, more than one, or no valid policy                                                                                                                               | The policy is weaker than the one you set, or `pct` is under 100              |
+| DKIM        | A selector has no key, or its key is revoked (an empty `p`)                                                                                                                         |                                                                               |
+
+- DNS cannot list a domain's DKIM selectors, so name the ones you sign with (mailcow's is
+  `dkim` unless changed); without any, DKIM is not checked.
+- A domain without a DMARC record of its own takes the nearest parent's, and that record's
+  `sp` policy when it has one.
+- Reverse DNS is checked for the addresses of the first three mail servers. Mail sent
+  through another server than the domain's MX is not covered.
+- SPF includes and redirects are followed, and their lookups counted the way a receiver
+  counts them. What an included record of another domain could do better is not reported.
+- The check does not look at block lists or tell whether mail arrives. Pair it with an SMTP server check to know the server answers.
+
+### Name servers
+
+DNS and mail domain checks ask the name servers of the server's `/etc/resolv.conf`. A
+lookup that gets no answer fails the check and says so, so a resolver that is down is
+never read as a record that is missing.
+
+A domain's TXT records are often too large for one UDP packet and are then asked for over
+TCP, which some container resolvers refuse (Podman's among them); the check then fails
+with **The lookup of TXT example.com got no answer**. Name servers that answer can be set
+instead, separated by commas:
+
+```dotenv
+LUMBERJACK_HEALTH_DNS_SERVERS=1.1.1.1,9.9.9.9
+```
+
+Record lookups read neither `/etc/hosts` nor the search domains of `resolv.conf`, so a DNS
+check takes a full name.
 
 ### Private networks
 

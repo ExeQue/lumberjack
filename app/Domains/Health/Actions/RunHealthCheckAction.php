@@ -17,6 +17,7 @@ use App\Domains\Health\Exceptions\HealthExceptionInterface;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Support\DnsResolver;
 use App\Domains\Health\Support\DomainExpiryLookup;
+use App\Domains\Health\Support\MailDomainInspector;
 use App\Domains\Health\Support\NetworkGuard;
 use App\Domains\Health\Support\SmtpProbe;
 use App\Domains\Health\Support\TcpProbe;
@@ -55,6 +56,7 @@ class RunHealthCheckAction
         private readonly TlsCertificateReader $tls,
         private readonly DomainExpiryLookup $domains,
         private readonly SmtpProbe $smtp,
+        private readonly MailDomainInspector $mailDomains,
         private readonly DataSourceValuesQuery $values,
         private readonly ConnectedDataSourceQuery $connected,
         private readonly RecordHealthResultAction $recordHealthResultAction,
@@ -77,6 +79,7 @@ class RunHealthCheckAction
                 HealthCheckType::Heartbeat => $this->heartbeat($check),
                 HealthCheckType::Domain => $this->domain($check),
                 HealthCheckType::Smtp => $this->smtp($check),
+                HealthCheckType::Mail => $this->mail($check),
                 HealthCheckType::DataSource => $this->dataSource($check, $afterFetch),
                 null => null,
             };
@@ -203,6 +206,13 @@ class RunHealthCheckAction
         $ms = round((hrtime(true) - $started) / 1e6, 1);
 
         return new HealthResultData(HealthResultStatus::Ok, __('health.results.smtp_ok', ['ms' => $ms, 'greeting' => $greeting]), ['latency_ms' => $ms]);
+    }
+
+    private function mail(HealthCheck $check): HealthResultData
+    {
+        $selectors = preg_split('/[\s,]+/', (string) $check->setting('dkim_selectors', ''), flags: PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return $this->mailDomains->inspect((string) $check->setting('domain'), $selectors, (string) $check->setting('min_policy', 'quarantine'));
     }
 
     private function tcp(HealthCheck $check): HealthResultData

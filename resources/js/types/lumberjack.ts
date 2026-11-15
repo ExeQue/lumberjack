@@ -281,6 +281,7 @@ export type HealthCheckType =
     | 'heartbeat'
     | 'domain'
     | 'smtp'
+    | 'mail'
     | 'data_source';
 
 export type HealthHost = {

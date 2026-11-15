@@ -18,6 +18,20 @@ return [
 
     'allow_private' => (bool) env('LUMBERJACK_HEALTH_ALLOW_PRIVATE', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Name servers for DNS and mail domain checks
+    |--------------------------------------------------------------------------
+    |
+    | The addresses the record lookups of DNS and mail domain checks are sent
+    | to, separated by commas. Empty means the servers of /etc/resolv.conf. Set
+    | it where those give no answer to large lookups: a domain's TXT records
+    | often need TCP, which some container resolvers refuse.
+    |
+    */
+
+    'dns_servers' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('LUMBERJACK_HEALTH_DNS_SERVERS', ''))))),
+
     // Connected apps are pulled on addresses anyone administering a project can enter, so
     // private ones are refused even with the setting above on, unless this says otherwise.
     'data_sources_allow_private' => (bool) env('LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE', false),

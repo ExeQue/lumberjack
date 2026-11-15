@@ -101,6 +101,7 @@ trait UsesHealthChecks
                 .'heartbeat: grace_minutes (5). '
                 .'domain: domain (required), warn_days (30), fail_days (7). '
                 .'smtp: host, port (both required), encryption (STARTTLS, TLS, None; STARTTLS), timeout_s (10). '
+                .'mail: domain (required), dkim_selectors (comma-separated, at most 5; without any DKIM is not checked), min_policy (none, quarantine, reject; quarantine; a weaker DMARC policy warns). '
                 .'data_source: data_source (uuid of a data source of the project with a number: json, prometheus, or a connected one of shape number; required), path (JSONPath, or a Prometheus selector; required for json and prometheus), period (1h, 24h, 7d, 30d, as the connection answers for; required for a connected source, which the check then keeps pulled); operator (>, >=, <, <=, =, !=; >), warn, fail (numbers; the value breaching fail fails, breaching warn warns). Judged after each fetch of the source; fails when the source fails or is not fetched in time.'
             ),
         ];

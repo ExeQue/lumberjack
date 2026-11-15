@@ -100,6 +100,7 @@ the mail settings in `lumberjack/.env.docker`.
                 HORIZON_PULL_PROCESSES: ${HORIZON_PULL_PROCESSES:-2}
                 LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE: ${LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE:-false}
                 LUMBERJACK_HEALTH_ALLOW_PRIVATE: ${LUMBERJACK_HEALTH_ALLOW_PRIVATE:-false}
+                LUMBERJACK_HEALTH_DNS_SERVERS: ${LUMBERJACK_HEALTH_DNS_SERVERS:-}
                 ALERTS_WEBHOOKS_ALLOW_PRIVATE: ${ALERTS_WEBHOOKS_ALLOW_PRIVATE:-false}
                 MAIL_MAILER: ${MAIL_MAILER:-smtp}
                 MAIL_HOST: ${MAIL_HOST:-}
@@ -246,6 +247,7 @@ the mail settings in `lumberjack/.env.docker`.
 | `SESSION_SECURE_COOKIE`                  | from `APP_URL`                     | `true` when `APP_URL` starts with `https://`: the session cookie is then only sent over HTTPS                                                                                                      |
 | `ALERTS_WEBHOOKS_ALLOW_PRIVATE`          | `false`                            | Allow alert channels to [private addresses](./alerts#channels)                                                                                                                                     |
 | `LUMBERJACK_HEALTH_ALLOW_PRIVATE`        | `false`                            | Allow health checks of [private addresses](./health#private-networks)                                                                                                                              |
+| `LUMBERJACK_HEALTH_DNS_SERVERS`          |                                    | The [name servers](./health#name-servers) DNS and mail domain checks ask, separated by commas; the server's own when empty                                                                         |
 | `LUMBERJACK_DATA_SOURCES_ALLOW_PRIVATE`  | `false`                            | Let connected data sources pull from private addresses.                                                                                                                                            |
 | `LUMBERJACK_UPDATE_CHECK`                | `true`                             | Ask GitHub for [newer releases](./administration#update-check)                                                                                                                                     |
 | `REVERB_CLIENT_HOST`, `_PORT`, `_SCHEME` | from `APP_URL`                     | Where browsers open the live-update WebSocket, when it is not `APP_URL`                                                                                                                            |

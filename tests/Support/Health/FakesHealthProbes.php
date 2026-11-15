@@ -43,6 +43,28 @@ trait FakesHealthProbes
         });
     }
 
+    /**
+     * A zone: the records of each "TYPE name", such as 'TXT _dmarc.example.com'. Every other lookup finds nothing.
+     *
+     * @param  array<string, list<string>>  $zone
+     */
+    public function fakeDnsZone(array $zone): void
+    {
+        $this->app->instance(DnsResolver::class, new class ($zone) extends DnsResolver {
+            /**
+             * @param  array<string, list<string>>  $zone
+             */
+            public function __construct(private readonly array $zone)
+            {
+            }
+
+            public function records(string $name, string $type): array
+            {
+                return $this->zone[$type.' '.$name] ?? [];
+            }
+        });
+    }
+
     public function fakeTcp(?string $error = null): void
     {
         $this->app->instance(TcpProbe::class, new class ($error) extends TcpProbe {

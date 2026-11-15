@@ -31,6 +31,7 @@ describe('the name of a health check', function () {
         'tcp' => [HealthCheckType::Tcp, ['host' => 'db.internal', 'port' => 5432], 'TCP: db.internal:5432'],
         'domain' => [HealthCheckType::Domain, ['domain' => 'eazy.photo'], 'Domain: eazy.photo'],
         'smtp' => [HealthCheckType::Smtp, ['host' => 'mail.eazy.photo', 'port' => 587], 'SMTP: mail.eazy.photo:587'],
+        'mail' => [HealthCheckType::Mail, ['domain' => 'eazy.photo'], 'Mail: eazy.photo'],
         'dns' => [HealthCheckType::Dns, ['name' => 'eazy.photo', 'record_type' => 'MX'], 'DNS: eazy.photo (MX)'],
     ]);
 

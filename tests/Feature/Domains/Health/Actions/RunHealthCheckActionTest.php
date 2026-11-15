@@ -11,9 +11,11 @@ use App\Domains\Health\Actions\RunHealthCheckAction;
 use App\Domains\Health\Actions\SaveHealthCheckAction;
 use App\Domains\Health\Enums\HealthCheckType;
 use App\Domains\Health\Enums\HealthResultStatus;
+use App\Domains\Health\Exceptions\ProbeFailedException;
 use App\Domains\Health\Jobs\RunHealthCheck;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Models\HealthCheckResult;
+use App\Domains\Health\Support\DnsResolver;
 use App\Domains\Health\Support\NetworkGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -193,6 +195,20 @@ describe('ssl, tcp and dns checks', function () {
     });
 });
 
+describe('a lookup that gets no answer', function () {
+    it('fails the check with why, instead of reading it as no records', function (HealthCheckType $type, array $config) {
+        $this->mock(DnsResolver::class)->shouldReceive('records')->andThrow(new ProbeFailedException('The lookup of TXT example.com got no answer: Connection refused'));
+
+        $result = ($this->run)($type, $config);
+
+        expect($result->status)->toBe(HealthResultStatus::Failed)
+            ->and($result->message)->toBe('The lookup of TXT example.com got no answer: Connection refused');
+    })->with([
+        'a dns check' => [HealthCheckType::Dns, ['name' => 'example.com', 'record_type' => 'TXT']],
+        'a mail domain check' => [HealthCheckType::Mail, ['domain' => 'example.com']],
+    ]);
+});
+
 describe('heartbeat checks', function () {
     it('fails once no ping came within the interval and its grace', function () {
         $check = HealthCheck::factory()->monitored(HealthCheckType::Heartbeat, ['grace_minutes' => 5])->create(['interval_minutes' => 15, 'last_ping_at' => now()]);
@@ -302,6 +318,21 @@ describe('smtp checks', function () {
         $this->fakeSmtp();
 
         expect(($this->run)(HealthCheckType::Smtp, ['host' => 'mail.internal', 'port' => 25])->status)->toBe(HealthResultStatus::Failed);
+    });
+});
+
+describe('mail domain checks', function () {
+    it('reads the domain, the selectors and the weakest policy from the settings', function () {
+        $this->fakeDnsZone([
+            'TXT example.com' => ['v=spf1 mx -all'],
+            'TXT _dmarc.example.com' => ['v=DMARC1; p=quarantine'],
+            'TXT dkim._domainkey.example.com' => ['v=DKIM1; k=rsa; p=MIIB'],
+        ]);
+
+        $result = ($this->run)(HealthCheckType::Mail, ['domain' => 'example.com', 'dkim_selectors' => 'dkim, s2', 'min_policy' => 'reject']);
+
+        expect($result->status)->toBe(HealthResultStatus::Failed)
+            ->and($result->message)->toBe('No DKIM key for selector s2. No MX records. The DMARC policy is quarantine, weaker than reject.');
     });
 });
 

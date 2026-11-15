@@ -17,6 +17,9 @@ enum HealthCheckType: string
     case Domain = 'domain';
     case Smtp = 'smtp';
 
+    /** What receivers look up about a domain that sends mail: MX, SPF, DMARC, DKIM and reverse DNS. Looks up DNS, connects to nothing. */
+    case Mail = 'mail';
+
     /** Holds a number a data source of the project answered against limits; reads what was fetched, connects to nothing. */
     case DataSource = 'data_source';
 
