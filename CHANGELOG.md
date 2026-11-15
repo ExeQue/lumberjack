@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-15
+
 ### Changed
 
 - **Administration > System** lists the 10 largest tables with a total of them all under the table, and **Show more** opens every table in a dialog, sorted by size, rows or name.
@@ -287,7 +289,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.11.1...HEAD
+[0.11.1]: https://github.com/ExeQue/lumberjack/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/ExeQue/lumberjack/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/ExeQue/lumberjack/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/ExeQue/lumberjack/compare/v0.8.0...v0.9.0
