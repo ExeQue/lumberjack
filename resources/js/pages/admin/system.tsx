@@ -1,7 +1,9 @@
 import { Head, Link, router, usePoll } from '@inertiajs/react';
+import { useState } from 'react';
 import { HostChart } from '@/components/lj/host-charts';
 import { TopBar } from '@/components/lj/top-bar';
 import {
+    Button,
     Card,
     CardHeader,
     EmptyState,
@@ -14,6 +16,13 @@ import {
     tdClass,
     thClass,
 } from '@/components/lj/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { PageBody } from '@/layouts/lumberjack-layout';
 import {
     formatBytes,
@@ -47,7 +56,7 @@ type Props = {
         bytes: number;
         tables: {
             table: string;
-            label: string | null;
+            label: string;
             bytes: number;
             rows: number;
         }[];
@@ -65,6 +74,9 @@ type Props = {
 
 const PERIODS: SystemPeriod[] = ['1h', '24h', '7d'];
 
+// The tables on the page; a dialog lists them all.
+const LARGEST_TABLES = 10;
+
 // A sampler that missed five minutes is not running.
 const STALE_AFTER_MS = 5 * 60 * 1000;
 
@@ -80,6 +92,102 @@ const toneAt = (value: number | null, warn: number, err: number) =>
             ? ('warn' as const)
             : undefined;
 
+type DatabaseTable = Props['database']['tables'][number];
+
+type TableSort = 'size' | 'rows' | 'name';
+
+// The largest first, names from A on.
+const tableSorts: Record<
+    TableSort,
+    (a: DatabaseTable, b: DatabaseTable) => number
+> = {
+    size: (a, b) => b.bytes - a.bytes,
+    rows: (a, b) => b.rows - a.rows,
+    name: (a, b) => a.label.localeCompare(b.label),
+};
+
+/**
+ * The tables given, under a total of them all: the footer counts every table, also the
+ * ones a short list leaves out.
+ */
+function TablesTable({
+    shown,
+    all,
+}: {
+    shown: DatabaseTable[];
+    all: DatabaseTable[];
+}) {
+    const t = useT();
+    const right = cn(thClass, 'text-right');
+    const total = cn(tdClass, numClass, 'border-b-0');
+
+    return (
+        <div className="overflow-x-auto">
+            <table className={tableClass}>
+                <thead>
+                    <tr>
+                        <th className={thClass}>
+                            {t('admin.system.tables.table')}
+                        </th>
+                        <th className={right}>
+                            {t('admin.system.tables.size')}
+                        </th>
+                        <th className={right}>
+                            {t('admin.system.tables.rows')}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {shown.map((table) => (
+                        <tr key={table.table}>
+                            <td className={tdClass}>
+                                <div>{table.label}</div>
+                                <div className="font-mono text-[11px] text-ink-3">
+                                    {table.table}
+                                </div>
+                            </td>
+                            <td className={cn(tdClass, numClass)}>
+                                {formatBytes(table.bytes)}
+                            </td>
+                            <td className={cn(tdClass, numClass)}>
+                                {formatNumber(table.rows)}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th
+                            scope="row"
+                            className={cn(
+                                tdClass,
+                                'border-b-0 text-left font-medium',
+                            )}
+                        >
+                            {t('admin.system.tables.total', {
+                                count: formatNumber(all.length),
+                            })}
+                        </th>
+                        <td className={cn(total, 'font-medium')}>
+                            {formatBytes(
+                                all.reduce(
+                                    (sum, table) => sum + table.bytes,
+                                    0,
+                                ),
+                            )}
+                        </td>
+                        <td className={cn(total, 'font-medium')}>
+                            {formatNumber(
+                                all.reduce((sum, table) => sum + table.rows, 0),
+                            )}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    );
+}
+
 export default function AdminSystem({
     period,
     latest,
@@ -89,9 +197,11 @@ export default function AdminSystem({
     redis,
 }: Props) {
     const t = useT();
-    usePoll(60_000, {
-        only: ['latest', 'charts', 'database', 'queues', 'redis'],
-    });
+    const [allTables, setAllTables] = useState(false);
+    const [tableSort, setTableSort] = useState<TableSort>('size');
+    // A backlog comes and goes within a minute; the samples are a minute apart anyway.
+    usePoll(10_000, { only: ['queues', 'redis'] });
+    usePoll(60_000, { only: ['latest', 'charts', 'database'] });
 
     const cpu = share(latest?.cpu_load_1m ?? null, latest?.cpu_cores ?? null);
     const memory = share(
@@ -398,62 +508,56 @@ export default function AdminSystem({
                                 </Link>
                             }
                         />
-                        <div className="overflow-x-auto">
-                            <table className={tableClass}>
-                                <thead>
-                                    <tr>
-                                        <th className={thClass}>
-                                            {t('admin.system.tables.table')}
-                                        </th>
-                                        <th
-                                            className={cn(
-                                                thClass,
-                                                'text-right',
-                                            )}
-                                        >
-                                            {t('admin.system.tables.size')}
-                                        </th>
-                                        <th
-                                            className={cn(
-                                                thClass,
-                                                'text-right',
-                                            )}
-                                        >
-                                            {t('admin.system.tables.rows')}
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {database.tables.map((table) => (
-                                        <tr key={table.table}>
-                                            <td className={tdClass}>
-                                                {table.label ?? (
-                                                    <Mono>{table.table}</Mono>
-                                                )}
-                                            </td>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    numClass,
-                                                )}
-                                            >
-                                                {formatBytes(table.bytes)}
-                                            </td>
-                                            <td
-                                                className={cn(
-                                                    tdClass,
-                                                    numClass,
-                                                )}
-                                            >
-                                                {formatNumber(table.rows)}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <TablesTable
+                            shown={database.tables.slice(0, LARGEST_TABLES)}
+                            all={database.tables}
+                        />
+                        {database.tables.length > LARGEST_TABLES && (
+                            <div className="border-t border-line p-2">
+                                <Button
+                                    variant="ghost"
+                                    aria-haspopup="dialog"
+                                    onClick={() => setAllTables(true)}
+                                >
+                                    {t('admin.system.tables.show_more')}
+                                </Button>
+                            </div>
+                        )}
                     </Card>
                 </div>
+                <Dialog open={allTables} onOpenChange={setAllTables}>
+                    <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>
+                                {t('admin.system.tables.all_title')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {t('admin.system.tables.description')}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div>
+                            <Segmented<TableSort>
+                                label={t('admin.system.tables.sort.label')}
+                                value={tableSort}
+                                options={(
+                                    ['size', 'rows', 'name'] as const
+                                ).map((value) => ({
+                                    value,
+                                    label: t(
+                                        `admin.system.tables.sort.${value}`,
+                                    ),
+                                }))}
+                                onChange={setTableSort}
+                            />
+                        </div>
+                        <TablesTable
+                            shown={database.tables.toSorted(
+                                tableSorts[tableSort],
+                            )}
+                            all={database.tables}
+                        />
+                    </DialogContent>
+                </Dialog>
             </PageBody>
         </>
     );

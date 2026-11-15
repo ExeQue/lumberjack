@@ -22,11 +22,12 @@ class AdminSystemController
 
         return Inertia::render('admin/system', [
             'period' => $period->value,
-            'latest' => $status->latest(),
-            'charts' => $status->charts($period),
-            'database' => $status->database(),
-            'queues' => $status->queues(),
-            'redis' => $status->redis(),
+            // Closures, so a reload of the queues alone does not also measure the database.
+            'latest' => fn (): ?array => $status->latest(),
+            'charts' => fn (): array => $status->charts($period),
+            'database' => fn (): array => $status->database(),
+            'queues' => fn (): ?array => $status->queues(),
+            'redis' => fn (): ?array => $status->redis(),
         ]);
     }
 }

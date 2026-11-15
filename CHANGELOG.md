@@ -4,6 +4,17 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Changed
+
+- **Administration > System** lists the 10 largest tables with a total of them all under the table, and **Show more** opens every table in a dialog, sorted by size, rows or name.
+- **Administration > System** reads the queues and Redis again every 10 seconds; the rest of the page still every minute.
+
+### Fixed
+
+- **Administration > System** names every table in words: one that is no retention data type showed as its raw name (`request_counts`), and now reads **Request counts**, with the table's own name under it.
+- The sidebar stays in place while a dialog is open on a page scrolled down; it jumped to the top of the page behind the dialog.
+- Names read from a slug spell **TV**, **UTM** and **MCP** in capitals, in health checks, activity and the table list alike.
+
 ## [0.11.0] - 2026-11-15
 
 ### Added

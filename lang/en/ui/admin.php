@@ -46,13 +46,21 @@ return [
             'unavailable' => 'The queues could not be read: Redis or Horizon does not answer.',
         ],
         'tables' => [
-            'title' => 'Largest tables',
+            'title' => 'Tables',
             'description' => 'What takes up the database. Retention decides how long each kind of data is kept.',
             'table' => 'Data',
             'size' => 'Size',
-            'rows' => 'Rows, about',
+            'rows' => 'Rows (estimate)',
             // Link
             'retention' => 'Change retention',
+            // Button
+            'show_more' => 'Show more',
+            // Button
+            // Dialog title
+            'all_title' => 'All tables',
+            'sort' => ['label' => 'Sort by', 'size' => 'Size', 'rows' => 'Rows', 'name' => 'Name'],
+            // Table footer; every table counts, listed or not
+            'total' => 'Total, :count tables',
         ],
     ],
     'teams' => [

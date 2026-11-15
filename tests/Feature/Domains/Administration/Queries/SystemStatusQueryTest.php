@@ -48,12 +48,15 @@ describe('what is read as the page loads', function () {
         expect(app(SystemStatusQuery::class)->latest()['cpu_load_1m'])->toBe(1.0);
     });
 
-    it('lists the largest tables under the name of the data they keep', function () {
+    it('lists every table, largest first, under the name of the data they keep, or their own as words', function () {
         $database = app(SystemStatusQuery::class)->database();
         $tables = collect($database['tables']);
 
         expect($database['bytes'])->toBeGreaterThan(0)
-            ->and($tables)->not->toBeEmpty()
-            ->and($tables->pluck('bytes')->all())->toBe($tables->pluck('bytes')->sortDesc()->values()->all());
+            ->and($tables->pluck('table'))->toContain('system_samples', 'users', 'migrations')
+            ->and($tables->pluck('bytes')->all())->toBe($tables->pluck('bytes')->sortDesc()->values()->all())
+            ->and($tables->pluck('label'))->each->toMatch('/^[A-Z][^_]*$/')
+            ->and($tables->pluck('label', 'table')->only(['tv_pairings', 'utm_labels', 'mcp_tokens', 'request_runs'])->all())
+            ->toEqualCanonicalizing(['tv_pairings' => 'TV pairings', 'utm_labels' => 'UTM labels', 'mcp_tokens' => 'MCP tokens', 'request_runs' => 'Requests']);
     });
 });

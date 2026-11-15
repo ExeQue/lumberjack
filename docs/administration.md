@@ -164,11 +164,15 @@ of your apps (those are on each project's overview):
   over a minute per core, memory is what is not available to a new program, and disk is
   the disk Lumberjack's own files are on. In a container they are the figures of the
   machine it runs on; a CPU or memory limit on the container itself is not read.
-- **Database** size and its largest tables, each under the name of the data it keeps, so
+- **Database** size and its 10 largest tables with a total of them all (**Show more** opens every table, sorted by size, rows or name), each under
+  the name of the data it keeps, so
   it is plain which [retention](./projects#retention) to shorten when space runs out.
 - **Redis memory**, against its limit when one is set.
 - **Queues:** the jobs waiting, the wait and the workers of each of Lumberjack's own
   queues. A long wait on `ingest` means the pages show what happened a while ago.
+
+The queues and Redis are read again every 10 seconds while the page is open, the rest
+every minute.
 
 A figure turns amber at 80% (CPU load: 70%) and red at 90%. When nothing has been
 sampled for five minutes the page says the scheduler is not running, and it still opens

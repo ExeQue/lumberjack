@@ -32,6 +32,17 @@ describe('the system page', function () {
                 ->has('database.tables'));
     });
 
+    it('reloads the queues without measuring the database again', function () {
+        $this->fakeSystem();
+
+        $this->actingAs($this->admin)->get(route('admin.system'))
+            ->assertInertia(fn (Assert $page) => $page->reloadOnly(['queues', 'redis'], fn (Assert $reload) => $reload
+                ->where('queues.0.name', 'ingest')
+                ->has('redis')
+                ->missing('database')
+                ->missing('charts')));
+    });
+
     it('still opens when Redis is down and nothing was sampled', function () {
         $this->fakeSystem(redisDown: true);
 

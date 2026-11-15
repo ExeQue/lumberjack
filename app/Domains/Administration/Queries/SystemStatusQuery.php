@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Administration\Queries;
 
+use App\Domains\Activity\Models\ActivityLabel;
 use App\Domains\Administration\Models\SystemSample;
 use App\Domains\Administration\Support\SystemProbe;
 use App\Domains\Retention\Enums\RetentionCategory;
@@ -16,9 +17,6 @@ use Illuminate\Support\Facades\DB;
  */
 class SystemStatusQuery
 {
-    /** The largest tables shown; the rest are small. */
-    private const int TABLES = 12;
-
     public function __construct(
         private readonly SystemProbe $probe,
     ) {
@@ -79,10 +77,10 @@ class SystemStatusQuery
     }
 
     /**
-     * The database's size and its largest tables, each under the name of the data it
-     * keeps where the retention page has one.
+     * The database's size and its tables, largest first, each under the name of the data it
+     * keeps where the retention page has one, and otherwise its own name read as activity names are ("tv_pairings" as "TV pairings").
      *
-     * @return array{bytes: int, tables: list<array{table: string, label: string|null, bytes: int, rows: int}>}
+     * @return array{bytes: int, tables: list<array{table: string, label: string, bytes: int, rows: int}>}
      */
     public function database(): array
     {
@@ -98,14 +96,14 @@ class SystemStatusQuery
             ->whereRaw('pg_namespace.nspname = current_schema()')
             ->selectRaw('pg_class.relname AS name, pg_total_relation_size(pg_class.oid) AS bytes, GREATEST(pg_class.reltuples, 0) AS rows')
             ->orderByDesc('bytes')
-            ->limit(self::TABLES)
+            ->orderBy('name')
             ->get();
 
         return [
             'bytes' => (int) DB::scalar('SELECT pg_database_size(current_database())'),
             'tables' => array_values(array_map(fn (object $table): array => [
                 'table' => (string) $table->name,
-                'label' => $labels[$table->name] ?? null,
+                'label' => $labels[$table->name] ?? ActivityLabel::readable((string) $table->name),
                 'bytes' => (int) $table->bytes,
                 'rows' => (int) $table->rows,
             ], $tables->all())),
