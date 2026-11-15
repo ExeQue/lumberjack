@@ -214,9 +214,16 @@
         overflow-y: scroll;
     }
 
-    /* That scrollbar stays while a dialog locks the scroll, so no room is made for it again. */
+    /*
+     * That scrollbar stays while a dialog locks the scroll, so no room is made for it again.
+     * The lock also hides the body's overflow, which here does not reach the viewport (the
+     * html element scrolls) but makes the body what sticky elements stick to: on a page
+     * scrolled down, the sidebar and sticky headers jumped back to the top of the page
+     * behind the dialog. The lock's own wheel and touch handling still holds the page.
+     */
     body[data-scroll-locked] {
         margin-right: 0 !important;
+        overflow: visible !important;
     }
 
     /*
