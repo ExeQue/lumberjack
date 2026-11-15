@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Changed
+
+- The **Mail domain** check's form and docs say what a DKIM selector is entered as (the name only, such as `dkim`) and where to find it.
+
 ## [0.11.1] - 2026-11-15
 
 ### Changed

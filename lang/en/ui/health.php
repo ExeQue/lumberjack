@@ -169,7 +169,7 @@ return [
             'domain_hint' => 'The registered domain, not a subdomain.',
             'encryption' => 'Encryption',
             'dkim_selectors' => 'DKIM selectors',
-            'dkim_selectors_hint' => 'Optional, separated by commas. DNS cannot list them, so without any DKIM is not checked.',
+            'dkim_selectors_hint' => 'Optional. The name only, such as dkim, several separated by commas. DNS cannot list them, so without any DKIM is not checked.',
             'min_policy' => 'Weakest DMARC policy',
             'min_policy_hint' => 'A weaker policy than this warns.',
             'name' => 'Name',

@@ -125,8 +125,12 @@ may be a subdomain. One result lists everything it found, and the worst finding 
 | DMARC       | There is no record, more than one, or no valid policy                                                                                                                               | The policy is weaker than the one you set, or `pct` is under 100              |
 | DKIM        | A selector has no key, or its key is revoked (an empty `p`)                                                                                                                         |                                                                               |
 
-- DNS cannot list a domain's DKIM selectors, so name the ones you sign with (mailcow's is
-  `dkim` unless changed); without any, DKIM is not checked.
+- DNS cannot list a domain's DKIM selectors, so name the ones you sign with; without any,
+  DKIM is not checked. Enter the selector's name only, such as `dkim` (mailcow's, unless
+  changed), not the record's full name (`dkim._domainkey.example.com`) or the key. A mail
+  you sent names it in its `DKIM-Signature` header, as `s=dkim; d=example.com`. Every
+  service that sends mail for the domain signs with a selector of its own: name each,
+  separated by commas, up to five.
 - A domain without a DMARC record of its own takes the nearest parent's, and that record's
   `sp` policy when it has one.
 - Reverse DNS is checked for the addresses of the first three mail servers. Mail sent
