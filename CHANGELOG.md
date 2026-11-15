@@ -4,8 +4,6 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
-## [0.11.2] - 2026-11-15
-
 ### Changed
 
 - The **Mail domain** check's form and docs say what a DKIM selector is entered as (the name only, such as `dkim`) and where to find it.
@@ -295,8 +293,7 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.11.2...HEAD
-[0.11.2]: https://github.com/ExeQue/lumberjack/compare/v0.11.1...v0.11.2
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.11.1...HEAD
 [0.11.1]: https://github.com/ExeQue/lumberjack/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/ExeQue/lumberjack/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/ExeQue/lumberjack/compare/v0.9.0...v0.10.0
