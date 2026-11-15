@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Shared\Mail;
 
+use App\Domains\Administration\Models\SystemSample;
 use App\Domains\Administration\Notifications\AccountMails;
+use App\Domains\Administration\Notifications\SystemDiskNotification;
 use App\Domains\Alerts\Data\BulkStatusChangeAlert;
 use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\IssueAlert;
@@ -81,7 +83,7 @@ final class MailPreviews
         $issue = $this->issue(12, 'RuntimeException', 'Cart total is negative after applying the discount.');
         $stock = $this->issue(7, 'Stock service refused the reservation', 'RuntimeException: Stock service refused the reservation.', 'app/Services/StockClient.php', 41, 212, 48);
         $broken = $this->issue(1, 'Command failed: demo:broken', 'Exited with code 1.', null, null, 24, 0);
-        $mail = fn (IssueAlertNotification|AlertSummaryNotification|TestAlertNotification|MentionedInNoteNotification|IssueAssignmentNotification|TeamInvitationNotification|WatchedIssueNotification $notification): MailMessage => $notification->toMail(new AnonymousNotifiable());
+        $mail = fn (IssueAlertNotification|AlertSummaryNotification|TestAlertNotification|MentionedInNoteNotification|IssueAssignmentNotification|TeamInvitationNotification|WatchedIssueNotification|SystemDiskNotification $notification): MailMessage => $notification->toMail(new AnonymousNotifiable());
 
         return [
             'new-error' => ['label' => 'New error', 'mail' => fn () => $mail(new IssueAlertNotification(
@@ -146,6 +148,7 @@ final class MailPreviews
                 [MailReason::watching('DEMO-1', WatchReason::Resolved->phrase(), WatchLinks::stop($broken, $this->morten)), $this->rule(AlertRuleType::Regression)],
             ))],
             'invitation' => ['label' => 'Invitation', 'mail' => fn () => $mail(new TeamInvitationNotification($this->invitation(), Str::random(48)))],
+            'system-disk' => ['label' => 'Server disk nearly full', 'mail' => fn () => $mail(new SystemDiskNotification(new SystemSample(['disk_used_bytes' => 147 * 1024 ** 3, 'disk_total_bytes' => 160 * 1024 ** 3])))],
             'password-reset' => ['label' => 'Password reset', 'mail' => fn () => app(AccountMails::class)->resetMail($this->morten, Str::random(64))],
             'verify-email' => ['label' => 'Email confirmation', 'mail' => fn () => app(AccountMails::class)->verifyMail($this->morten, url('/email/verify/1/'.sha1('morten@example.com').'?expires=1&signature=preview'))],
         ];

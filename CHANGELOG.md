@@ -4,6 +4,15 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- **Administration > System**: how the server Lumberjack itself runs on is doing. Its CPU load, memory and disk are sampled every minute (`lumberjack:sample-system`) and shown as they are now and over the last hour, day or week, beside the database's size and largest tables, Redis memory, and the jobs waiting, wait and workers of Lumberjack's own queues. The page says when the scheduler has stopped sampling, and opens when Redis does not answer. The samples are kept 7 days, a new retention data type, **Server metrics**, set at the application level.
+- A mail to every administrator when the server's disk is 90% full, sent again only after it has been back under 85%.
+
+### Fixed
+
+- A chart's hover label near the left or right edge opens inward, so it no longer reaches outside the page and makes it scroll sideways.
+
 ## [0.10.0] - 2026-11-15
 
 ### Added

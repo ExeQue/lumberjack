@@ -131,6 +131,14 @@ describe('pruning', function () {
             ->and($this->retentionRows(RetentionCategory::AuditLog))->toBe(1);
     });
 
+    it('prunes the server\'s own metrics after a week unless the application says otherwise', function () {
+        $this->seedRetentionRow(RetentionCategory::SystemSamples, $this->project, now()->subDays(8));
+        $this->seedRetentionRow(RetentionCategory::SystemSamples, $this->project, now()->subDays(6));
+
+        expect(app(PruneApplicationDataAction::class)->execute()['system_samples'])->toBe(1)
+            ->and(RetentionCategory::forTeams())->not->toContain(RetentionCategory::SystemSamples);
+    });
+
     it('prunes notification history, read or not, after 90 days unless the application says otherwise', function () {
         $this->seedRetentionRow(RetentionCategory::Notifications, $this->project, now()->subDays(91));
         $this->seedRetentionRow(RetentionCategory::Notifications, $this->project, now()->subDays(89));

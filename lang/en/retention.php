@@ -23,6 +23,7 @@ return [
         'host_samples' => ['label' => 'Host metrics', 'description' => 'CPU, memory and disk samples from the agent.'],
         'alert_sends' => ['label' => 'Alert history', 'description' => 'Every alert sent, to which channel, and whether it got through.'],
         'audit_log' => ['label' => 'Audit log', 'description' => 'What administrators did on this Lumberjack.'],
+        'system_samples' => ['label' => 'Server metrics', 'description' => 'CPU, memory and disk samples of the server Lumberjack itself runs on.'],
         'notifications' => ['label' => 'Notification history', 'description' => 'Everyone\'s notification center, read and unread alike.'],
     ],
     'levels' => [

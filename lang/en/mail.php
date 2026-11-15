@@ -227,6 +227,18 @@ return [
         'date' => 'j M',
     ],
 
+    'system_disk' => [
+        'subject' => 'The disk of your Lumberjack server is :percent% full',
+        'preheader' => ':free is left. A full disk stops Lumberjack taking anything in.',
+        'title' => 'The server\'s disk is nearly full',
+        'lead' => 'The disk Lumberjack runs on is :percent% full, with :free left. Once it is full, Lumberjack can no longer take in what your apps send. Keeping data for fewer days frees space at the next cleanup.',
+        'stat' => 'of the disk in use',
+        // Button
+        'button' => 'Open System',
+        'retention' => 'Change retention',
+        'footer' => 'You get this because you are an administrator of this Lumberjack. It is sent once, and again only after the disk has been back under 85%.',
+    ],
+
     'reset' => [
         'subject' => 'Reset your Lumberjack password',
         'title' => 'Reset your password',

@@ -73,21 +73,22 @@ New VAPID keys make every browser turn notifications on again.
 
 The scheduler runs these by itself.
 
-| Command                                   | Runs            | What it does                                                           |
-| ----------------------------------------- | --------------- | ---------------------------------------------------------------------- |
-| `lumberjack:mark-stuck-jobs`              | Every minute    | Marks job runs that outlived their timeout as stuck.                   |
-| `lumberjack:mark-missed-tasks`            | Every minute    | Marks scheduled tasks whose run is overdue as missed.                  |
-| `lumberjack:return-ignored-issues`        | Every minute    | Re-opens issues whose ignore period is over.                           |
-| `lumberjack:send-watch-digests`           | Every minute    | Mails watchers the grouped updates on their issues.                    |
-| `lumberjack:check-queue-backlogs`         | Every minute    | Alerts on queues over their backlog threshold, and when they recover.  |
-| `lumberjack:run-health-checks`            | Every minute    | Runs the health checks that are due.                                   |
-| `lumberjack:fetch-data-sources`           | Every minute    | Fetches the [data source](./widgets#data-source) sources that are due. |
-| `lumberjack:notify-offline-agents`        | Every minute    | Tells members who want it when an agent goes offline.                  |
-| `horizon:snapshot`                        | Every 5 minutes | Records queue metrics for the Horizon dashboard.                       |
-| `lumberjack:check-for-update`             | Every 6 hours   | Asks GitHub whether a newer release is out.                            |
-| `model:prune`                             | Every hour      | Deletes agents and health check hosts not seen for 24 hours.           |
-| `lumberjack:archive-silent-health-checks` | Every day       | Archives reported health checks that sent nothing for a week.          |
-| `lumberjack:prune`                        | Every day       | Deletes data older than its retention.                                 |
+| Command                                   | Runs            | What it does                                                                                           |
+| ----------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------ |
+| `lumberjack:mark-stuck-jobs`              | Every minute    | Marks job runs that outlived their timeout as stuck.                                                   |
+| `lumberjack:mark-missed-tasks`            | Every minute    | Marks scheduled tasks whose run is overdue as missed.                                                  |
+| `lumberjack:return-ignored-issues`        | Every minute    | Re-opens issues whose ignore period is over.                                                           |
+| `lumberjack:send-watch-digests`           | Every minute    | Mails watchers the grouped updates on their issues.                                                    |
+| `lumberjack:check-queue-backlogs`         | Every minute    | Alerts on queues over their backlog threshold, and when they recover.                                  |
+| `lumberjack:run-health-checks`            | Every minute    | Runs the health checks that are due.                                                                   |
+| `lumberjack:fetch-data-sources`           | Every minute    | Fetches the [data source](./widgets#data-source) sources that are due.                                 |
+| `lumberjack:notify-offline-agents`        | Every minute    | Tells members who want it when an agent goes offline.                                                  |
+| `lumberjack:sample-system`                | Every minute    | Records the CPU, memory and disk of the server, and mails administrators when the disk is nearly full. |
+| `horizon:snapshot`                        | Every 5 minutes | Records queue metrics for the Horizon dashboard.                                                       |
+| `lumberjack:check-for-update`             | Every 6 hours   | Asks GitHub whether a newer release is out.                                                            |
+| `model:prune`                             | Every hour      | Deletes agents and health check hosts not seen for 24 hours.                                           |
+| `lumberjack:archive-silent-health-checks` | Every day       | Archives reported health checks that sent nothing for a week.                                          |
+| `lumberjack:prune`                        | Every day       | Deletes data older than its retention.                                                                 |
 
 ## Mail
 
@@ -106,6 +107,7 @@ mode where the mail client supports it.
 | Updates on a watched issue              | its [watchers](./issues#watching)                        | notifications |
 | New issues, health checks and the rest  | members who turned on that [mail](./teams#notifications) | notifications |
 | Invitation                              | the invited address                                      | notifications |
+| Server disk nearly full                 | every [administrator](#system)                           | notifications |
 | Password reset, email confirmation      | the account                                              | notifications |
 
 Subjects start with the project in brackets, such as
@@ -144,12 +146,37 @@ or not they are members.
 - **Audit log:** who did what and when, 50 a page. It records teams created, deleted
   or opened, users invited, suspended or reinstated, administration granted or revoked,
   password resets sent and new passwords required.
+- **System:** how the server this Lumberjack runs on is doing. See [System](#system).
 - **Retention:** how long this Lumberjack keeps each kind of data, as the default and
   the maximum for every team. See [Retention](./projects#retention).
 - **Horizon:** the queue dashboard at `/horizon`, also in the command palette. Only
   system administrators can open it.
 
 ![Administration > Retention: the default and maximum for every kind of data](./screenshots/admin-retention.png)
+
+### System
+
+**Administration > System** shows the server Lumberjack itself runs on, not the servers
+of your apps (those are on each project's overview):
+
+- **CPU load, memory and disk** as they were at the last sample, and over the last hour,
+  day or week. The scheduler samples them every minute. CPU load is the load average
+  over a minute per core, memory is what is not available to a new program, and disk is
+  the disk Lumberjack's own files are on. In a container they are the figures of the
+  machine it runs on; a CPU or memory limit on the container itself is not read.
+- **Database** size and its largest tables, each under the name of the data it keeps, so
+  it is plain which [retention](./projects#retention) to shorten when space runs out.
+- **Redis memory**, against its limit when one is set.
+- **Queues:** the jobs waiting, the wait and the workers of each of Lumberjack's own
+  queues. A long wait on `ingest` means the pages show what happened a while ago.
+
+A figure turns amber at 80% (CPU load: 70%) and red at 90%. When nothing has been
+sampled for five minutes the page says the scheduler is not running, and it still opens
+when Redis does not answer.
+
+When the disk is 90% full, every administrator gets one mail. It is sent again only
+after the disk has been back under 85%. The samples are kept 7 days, set as **Server
+metrics** on the Retention page.
 
 ### Accounts come by invitation
 

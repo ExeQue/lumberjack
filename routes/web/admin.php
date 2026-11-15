@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Administration\Http\Controllers\AdminAuditController;
+use App\Domains\Administration\Http\Controllers\AdminSystemController;
 use App\Domains\Administration\Http\Controllers\AdminTeamController;
 use App\Domains\Administration\Http\Controllers\AdminUpdateCheckController;
 use App\Domains\Administration\Http\Controllers\AdminUserController;
@@ -27,6 +28,7 @@ Route::prefix('admin')->middleware(EnsureUserIsAdmin::class)->group(function () 
     Route::put('users/{user}/password-change', [AdminUserController::class, 'requirePasswordChange'])->name('admin.users.password-change');
     Route::post('users/{user}/password-reset', [AdminUserController::class, 'sendReset'])->name('admin.users.reset');
     Route::get('audit', AdminAuditController::class)->name('admin.audit');
+    Route::get('system', AdminSystemController::class)->name('admin.system');
     Route::get('retention', [RetentionController::class, 'show'])->name('admin.retention');
     Route::put('retention', [RetentionController::class, 'application'])->name('admin.retention.update');
 });

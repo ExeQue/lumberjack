@@ -3,6 +3,7 @@ import { useT } from '@/lib/i18n';
 import {
     audit as adminAudit,
     retention as adminRetention,
+    system as adminSystem,
 } from '@/routes/admin';
 import { index as adminTeams } from '@/routes/admin/teams';
 import { index as adminUsers } from '@/routes/admin/users';
@@ -263,6 +264,7 @@ export function useNavigation(
               item(t('admin.nav.teams'), adminTeams().url),
               item(t('admin.nav.users'), adminUsers().url),
               item(t('admin.nav.audit'), adminAudit().url),
+              item(t('admin.nav.system'), adminSystem().url),
               item(t('admin.nav.retention'), adminRetention().url),
               {
                   label: t('admin.nav.horizon'),

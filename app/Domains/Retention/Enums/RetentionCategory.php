@@ -29,6 +29,7 @@ enum RetentionCategory: string
     case CustomAlerts = 'custom_alerts';
     case AuditLog = 'audit_log';
     case Notifications = 'notifications';
+    case SystemSamples = 'system_samples';
 
     public function label(): string
     {
@@ -51,7 +52,7 @@ enum RetentionCategory: string
             self::HealthResults, self::HealthOutages, self::DataSourceFetches => 'health',
             self::QueueSamples, self::HostSamples => 'infrastructure',
             self::AlertSends, self::CustomAlerts => 'alerts',
-            self::AuditLog, self::Notifications => 'administration',
+            self::AuditLog, self::Notifications, self::SystemSamples => 'administration',
         };
     }
 
@@ -65,7 +66,7 @@ enum RetentionCategory: string
             self::Requests, self::Queries, self::Spans, self::Logs, self::HealthResults => 14,
             // Data source history feeds screen charts, whose longest period is 30 days.
             self::WebVitals, self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::QueueSamples, self::DataSourceFetches, self::CustomAlerts, self::Activity => 30,
-            self::HostSamples => 7,
+            self::HostSamples, self::SystemSamples => 7,
             // The hourly counts feed charts and widgets long after the events they count are gone.
             self::HealthOutages, self::AuditLog, self::ActivityCounts => 365,
         };
@@ -76,7 +77,7 @@ enum RetentionCategory: string
      */
     public function applicationOnly(): bool
     {
-        return $this === self::AuditLog || $this === self::Notifications;
+        return in_array($this, [self::AuditLog, self::Notifications, self::SystemSamples], true);
     }
 
     public function table(): string
@@ -102,7 +103,7 @@ enum RetentionCategory: string
             self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::AuditLog, self::Notifications => 'created_at',
             self::HealthResults => 'checked_at',
             self::HealthOutages => 'ended_at',
-            self::QueueSamples, self::HostSamples => 'sampled_at',
+            self::QueueSamples, self::HostSamples, self::SystemSamples => 'sampled_at',
             self::AlertSends => 'sent_at',
             self::DataSourceFetches => 'fetched_at',
             self::ActivityCounts => 'hour',
