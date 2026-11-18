@@ -47,7 +47,19 @@ class ListWidgetTypes extends Tool
         }
 
         return isset($widgets[$type])
-            ? Response::json(['type' => $type, 'schema' => $widgets[$type], 'sources' => $sources[$type] ?? []])
+            ? Response::json(['type' => $type, 'schema' => self::withoutIcons($widgets[$type]), 'sources' => $sources[$type] ?? []])
             : Response::error('Unknown widget type; see list_widget_types without a type.');
+    }
+
+    /**
+     * A type's sections without the pictures its choices have for the designer (the QR
+     * library's SVGs): an agent picks by name and label.
+     *
+     * @param  list<array{id: string, fields: list<array<string, mixed>>}>  $sections
+     * @return list<array{id: string, fields: list<array<string, mixed>>}>
+     */
+    private static function withoutIcons(array $sections): array
+    {
+        return array_map(fn (array $section): array => [...$section, 'fields' => array_map(fn (array $field): array => array_diff_key($field, ['icons' => true]), $section['fields'])], $sections);
     }
 }

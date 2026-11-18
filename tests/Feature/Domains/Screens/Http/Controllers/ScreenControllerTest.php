@@ -393,12 +393,19 @@ describe('saving from the designer', function () {
     });
 
     it('saves what the header shows, and refuses parts it does not have', function () {
-        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['header' => ['hide' => ['logo', 'team', 'logo'], 'title' => '  Ops, 3rd floor ', 'date' => true, 'seconds' => true]])->assertOk();
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['header' => ['hide' => ['logo', 'team', 'logo'], 'title' => '  Ops, 3rd floor ', 'date' => true, 'seconds' => true, 'date_format' => 'custom', 'date_pattern' => ' ddd D. MMM ', 'locale' => 'da', 'size' => 'xl']])->assertOk();
 
-        expect($this->screen->refresh()->header)->toBe(['hide' => ['logo', 'team'], 'title' => 'Ops, 3rd floor', 'date' => true, 'seconds' => true]);
+        expect($this->screen->refresh()->header)->toBe(['hide' => ['logo', 'team'], 'title' => 'Ops, 3rd floor', 'date' => true, 'seconds' => true, 'date_format' => 'custom', 'date_pattern' => 'ddd D. MMM', 'locale' => 'da', 'size' => 'xl']);
 
-        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['header' => ['hide' => ['offline'], 'date' => 'soon']])
-            ->assertJsonValidationErrors(['header.hide.0', 'header.date']);
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['header' => ['hide' => ['offline'], 'date' => 'soon', 'date_format' => 'emoji', 'locale' => 'danish']])
+            ->assertJsonValidationErrors(['header.hide.0', 'header.date', 'header.date_format', 'header.locale']);
+
+        foreach (['Week D' => 'Week', '[Day]' => null, '' => null] as $pattern => $token) {
+            $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['header' => ['date_format' => 'custom', 'date_pattern' => $pattern]])
+                ->assertJsonValidationErrors(['header.date_pattern' => $token === null ? [] : __('ui/screens.validation.date_token', ['token' => $token])]);
+        }
+
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['header' => ['date_format' => 'custom', 'date_pattern' => '[Week of] D. MMMM YYYY']])->assertOk();
     });
 
     it('saves the display\'s aspect and orientation, and refuses others', function () {

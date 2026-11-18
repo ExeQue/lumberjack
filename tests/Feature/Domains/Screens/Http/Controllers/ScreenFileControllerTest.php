@@ -90,7 +90,7 @@ describe('exporting a screen', function () {
 
 describe('importing a screen', function () {
     it('gives an equal screen in another team, its references found by slug', function () {
-        $this->screen->update(['margin' => ScreenSpacing::Small, 'gap' => ScreenSpacing::None, 'header' => ['hide' => ['live'], 'title' => 'Ops', 'date' => true, 'seconds' => false]]);
+        $this->screen->update(['margin' => ScreenSpacing::Small, 'gap' => ScreenSpacing::None, 'header' => ['hide' => ['live'], 'title' => 'Ops', 'date' => true, 'seconds' => false, 'date_format' => 'iso', 'date_pattern' => null, 'locale' => 'browser', 'size' => 'l']]);
         ($this->import)(($this->file)())->assertSessionHasNoErrors()->assertSessionHas('status', 'Screen imported.');
 
         $copy = $this->otherProject->team->screens()->sole();

@@ -51,12 +51,19 @@ class GetScreenDesignGuide extends Tool
         ## Widgets
         {id, type, source, x, y, w, h, title, options, scope}
         - id: unique on the screen, any short string; keep it when moving a widget.
-        - x, y from 0; w, h in cells. Inside the grid, no overlaps.
+        - x, y from 0; w, h in cells. Inside the grid, no overlaps, but for groups.
+        - A group (type group) is one card behind the widgets wholly inside it, on fewer cells than
+          it; those draw no card of their own. Groups nest. Moving a group, move what it holds too.
         - source: an id from list_widget_types, for types that have sources.
         - options: only the keys of the type's fields.
         - scope: over the screen's scope: projects (uuids), environment, period, and for some sources
           release, filter, domain. Empty projects means every project.
         - rotate: on rotating types, source ids or {source, seconds, title, options, scope}.
+
+        ## Screen settings
+        update_screen also sets the room around the grid (margin) and between widgets (gap), and what
+        the header shows (header: parts to hide, a title, the clock's date, its format and language,
+        seconds, size).
 
         ## Data sources
         Use source external_json with options.data_source set to the uuid; a list wants a rows

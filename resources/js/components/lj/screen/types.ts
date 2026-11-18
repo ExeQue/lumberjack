@@ -74,6 +74,17 @@ export const HEADER_PARTS = [
 ] as const;
 export type HeaderPart = (typeof HEADER_PARTS)[number];
 
+/** Screen::DATE_FORMATS. */
+export const DATE_FORMATS = [
+    'short',
+    'long',
+    'medium',
+    'numeric',
+    'iso',
+    'custom',
+] as const;
+export type DateFormat = (typeof DATE_FORMATS)[number];
+
 export type Screen = {
     uuid: string;
     name: string;
@@ -102,6 +113,13 @@ export type Screen = {
         /** The clock's date and seconds. */
         date: boolean;
         seconds: boolean;
+        date_format: DateFormat;
+        /** Tokens for a custom date; see kioskDate(). */
+        date_pattern: string | null;
+        /** Null: the app's language; browser: the TV's; else a tag such as da. */
+        locale: string | null;
+        /** How large the header is drawn: s, m (as before), l or xl. */
+        size: 's' | 'm' | 'l' | 'xl';
     };
     theme: ScreenTheme;
     light_from: string;

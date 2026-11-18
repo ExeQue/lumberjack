@@ -18,6 +18,7 @@ use App\Domains\Screens\Support\ScreenLayout;
 use App\Domains\Screens\Support\WidgetSchema;
 use App\Domains\Shared\Enums\Period;
 use App\Domains\Teams\Models\Team;
+use Closure;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -84,6 +85,16 @@ class ImportScreenAction
             'screen.header.title' => ['nullable', 'string', 'max:100'],
             'screen.header.date' => ['boolean'],
             'screen.header.seconds' => ['boolean'],
+            'screen.header.date_format' => ['string', Rule::in(Screen::DATE_FORMATS)],
+            'screen.header.date_pattern' => ['nullable', 'required_if:screen.header.date_format,custom', 'string', 'max:60', function (string $attribute, mixed $value, Closure $fail): void {
+                $problem = is_string($value) ? Screen::datePatternProblem($value) : null;
+
+                if ($problem !== null) {
+                    $fail($problem === '' ? __('ui/screens.validation.date_empty') : __('ui/screens.validation.date_token', ['token' => $problem]));
+                }
+            }],
+            'screen.header.locale' => ['nullable', 'string', 'regex:'.Screen::LOCALE_PATTERN],
+            'screen.header.size' => ['string', Rule::in(Screen::HEADER_SIZES)],
             'screen.theme' => ['required', Rule::enum(ScreenTheme::class)],
             'screen.light_from' => $time,
             'screen.light_to' => $time,

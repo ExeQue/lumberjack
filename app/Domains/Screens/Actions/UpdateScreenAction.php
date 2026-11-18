@@ -24,7 +24,7 @@ class UpdateScreenAction
      * Name, the display's aspect and orientation and how it fits another, whether the header shows, theme and its schedule, time zone and
      * the default scope; open kiosks follow.
      *
-     * @param  array{name?: string, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, margin?: ScreenSpacing, gap?: ScreenSpacing, show_header?: bool, show_clock?: bool, clock_format?: string, header?: array{hide: list<string>, title: string|null, date: bool, seconds: bool}, theme?: ScreenTheme, light_from?: string, light_to?: string, timezone?: string|null, scope?: array{projects: list<string>, environment: string|null, period: string}}  $settings
+     * @param  array{name?: string, aspect?: ScreenAspect, orientation?: ScreenOrientation, fit?: ScreenFit, margin?: ScreenSpacing, gap?: ScreenSpacing, show_header?: bool, show_clock?: bool, clock_format?: string, header?: array{hide: list<string>, title: string|null, date: bool, seconds: bool, date_format: string, date_pattern: string|null, locale: string|null, size: string}, theme?: ScreenTheme, light_from?: string, light_to?: string, timezone?: string|null, scope?: array{projects: list<string>, environment: string|null, period: string}}  $settings
      */
     public function execute(Screen $screen, array $settings, User|McpToken|null $by = null, ?int $revision = null): Screen
     {

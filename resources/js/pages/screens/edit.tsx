@@ -14,6 +14,7 @@ import {
     KioskStatus,
     PreviewScale,
     kioskClock,
+    kioskDate,
     kioskSubtitle,
     kioskTitle,
 } from '@/components/lj/screen/frame';
@@ -2112,6 +2113,7 @@ export default function EditScreen(props: Props) {
                                         right: (
                                             <KioskStatus
                                                 hide={screen.header.hide}
+                                                date={kioskDate(screen, now)}
                                                 attention={0}
                                                 offline={null}
                                                 clock={
