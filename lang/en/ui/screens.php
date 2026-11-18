@@ -351,6 +351,8 @@ return [
         'locale' => 'Language of the date',
         'locale_app' => 'The app\'s language',
         'locale_browser' => 'The TV\'s own (browser)',
+        'locale_automatic' => 'Automatic',
+        'locale_languages' => 'Languages',
         'fit' => 'On a different screen',
         'fit_hint' => 'A display of another shape than the screen\'s shows it as designed, centered with bars around it, or stretched to fill it.',
         'margin' => 'Margin',
