@@ -131,6 +131,8 @@ Click the grid's background, press Escape, or use **Screen settings** in the too
       the date**: the app's, the TV's own, or one picked.
     - **Time zone**: for the clock and the theme schedule. Empty means each TV uses its own.
 
+![The Display tab](./screenshots/screen-settings-display.png) ![The Look tab](./screenshots/screen-settings-appearance.png) ![The Header tab](./screenshots/screen-settings-time.png)
+
 ### Incident mode
 
 **Show an incident** previews the screen in trouble (an issue escalating, a check down,
