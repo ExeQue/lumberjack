@@ -2230,6 +2230,33 @@ export function ScreenSettings({
                 >
                     <div className="col-span-2 flex flex-col gap-1">
                         <span className="text-xs text-ink-2">
+                            {t('screens.settings.fit')}
+                        </span>
+                        <IconChoice
+                            label={t('screens.settings.fit')}
+                            value={screen.fit}
+                            options={[
+                                {
+                                    value: 'keep',
+                                    label: t('screens.fit.keep'),
+                                    icon: <Shrink />,
+                                },
+                                {
+                                    value: 'fill',
+                                    label: t('screens.fit.fill'),
+                                    icon: <Expand />,
+                                },
+                            ]}
+                            onChange={(v) =>
+                                onChange({ fit: v as Screen['fit'] })
+                            }
+                        />
+                    </div>
+                    <span className={hint}>
+                        {t('screens.settings.fit_hint')}
+                    </span>
+                    <div className="col-span-2 flex flex-col gap-1">
+                        <span className="text-xs text-ink-2">
                             {t('screens.designer.aspect')}
                         </span>
                         <IconChoice
@@ -2285,33 +2312,6 @@ export function ScreenSettings({
                             }
                         />
                     </div>
-                    <div className="col-span-2 flex flex-col gap-1">
-                        <span className="text-xs text-ink-2">
-                            {t('screens.settings.fit')}
-                        </span>
-                        <IconChoice
-                            label={t('screens.settings.fit')}
-                            value={screen.fit}
-                            options={[
-                                {
-                                    value: 'keep',
-                                    label: t('screens.fit.keep'),
-                                    icon: <Shrink />,
-                                },
-                                {
-                                    value: 'fill',
-                                    label: t('screens.fit.fill'),
-                                    icon: <Expand />,
-                                },
-                            ]}
-                            onChange={(v) =>
-                                onChange({ fit: v as Screen['fit'] })
-                            }
-                        />
-                    </div>
-                    <span className={hint}>
-                        {t('screens.settings.fit_hint')}
-                    </span>
                 </div>
             )}
 
