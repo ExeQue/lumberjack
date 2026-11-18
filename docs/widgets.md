@@ -525,7 +525,9 @@ A link, a wifi network or any text as a QR code.
     - **Text**.
 - **Line under the code**: such as "Guest wifi".
 
-Its style is in four sections, each with **Reset** back to Lumberjack's own:
+The codes are drawn with [laravel-qr](https://github.com/ExeQue/laravel-qr), whose modules, eyes
+and filters the style picks from. Its style is in four sections, each with **Reset** back
+to Lumberjack's own:
 
 - **Logo and colors**: **Lumberjack logo in the middle**, the **Code color** (amber by
   default) and a **Background** (none by default, so the tile shows through).
