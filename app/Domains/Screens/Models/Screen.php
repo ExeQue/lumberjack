@@ -69,6 +69,35 @@ class Screen extends Model
     /** Parts of the header a screen can hide; being offline always shows. */
     public const array HEADER_PARTS = ['logo', 'name', 'team', 'projects', 'environment', 'period', 'attention', 'live'];
 
+    /** How the header's clock writes the date: a format the browser words, or custom (date_pattern). */
+    public const array DATE_FORMATS = ['short', 'long', 'medium', 'numeric', 'iso', 'custom'];
+
+    /**
+     * A custom date's pieces: [text] as it is, a token, other letters (not a token, so
+     * refused) or anything else as it is. The tokens as frame.tsx's kioskDate() writes them.
+     */
+    public const string DATE_TOKENS = '/\[[^\]]*\]|YYYY|YY|MMMM|MMM|MM|M|dddd|ddd|DD|D|[A-Za-z]+|[^A-Za-z\[]+|\[/';
+
+    /**
+     * What is wrong with a custom date pattern, as frame.tsx's datePatternProblem(): the
+     * first piece outside [brackets] that is no token, '' when it has no token, else null.
+     */
+    public static function datePatternProblem(string $pattern): ?string
+    {
+        preg_match_all(self::DATE_TOKENS, $pattern, $matches);
+        $pieces = collect($matches[0]);
+        $token = fn (string $piece): bool => preg_match('/^(YYYY|YY|MMMM|MMM|MM|M|dddd|ddd|DD|D)$/', $piece) === 1;
+
+        return $pieces->first(fn (string $piece): bool => ! $token($piece) && preg_match('/^\[.*\]$/', $piece) !== 1 && preg_match('/[A-Za-z\[]/', $piece) === 1)
+            ?? ($pieces->contains($token) ? null : '');
+    }
+
+    /** How large the header is drawn, medium as before. */
+    public const array HEADER_SIZES = ['s', 'm', 'l', 'xl'];
+
+    /** The header's language: browser, or a language tag such as da or en-GB; null is the app's. */
+    public const string LOCALE_PATTERN = '/^(browser|[a-z]{2,3}(-[A-Z]{2})?)$/';
+
     /** What a version of a screen holds; not its identity or share link. */
     public const array DESIGN = ['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'margin', 'gap', 'show_header', 'show_clock', 'clock_format', 'header', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets'];
 
@@ -102,22 +131,29 @@ class Screen extends Model
     }
 
     /**
-     * What the header shows, whole: the parts hidden, a title instead of the name, and
-     * whether the clock has the date and seconds. Stored or given, with anything else
+     * What the header shows, whole: the parts hidden, a title instead of the name, whether
+     * the clock has the date and seconds, how it writes the date and in which language,
+     * and how large it is. Stored or given, with anything else
      * dropped; nothing stored is everything, as before it could be chosen.
      *
      * @param  array<mixed>|null  $given
-     * @return array{hide: list<string>, title: string|null, date: bool, seconds: bool}
+     * @return array{hide: list<string>, title: string|null, date: bool, seconds: bool, date_format: string, date_pattern: string|null, locale: string|null, size: string}
      */
     public static function header(?array $given): array
     {
         $title = trim((string) ($given['title'] ?? ''));
+        $pattern = trim((string) ($given['date_pattern'] ?? ''));
+        $locale = (string) ($given['locale'] ?? '');
 
         return [
             'hide' => array_values(array_unique(array_intersect(array_filter((array) ($given['hide'] ?? []), is_string(...)), self::HEADER_PARTS))),
             'title' => $title !== '' ? $title : null,
             'date' => (bool) ($given['date'] ?? false),
             'seconds' => (bool) ($given['seconds'] ?? false),
+            'date_format' => in_array($given['date_format'] ?? null, self::DATE_FORMATS, true) ? $given['date_format'] : 'short',
+            'date_pattern' => $pattern !== '' ? $pattern : null,
+            'locale' => preg_match(self::LOCALE_PATTERN, $locale) === 1 ? $locale : null,
+            'size' => in_array($given['size'] ?? null, self::HEADER_SIZES, true) ? $given['size'] : 'm',
         ];
     }
 

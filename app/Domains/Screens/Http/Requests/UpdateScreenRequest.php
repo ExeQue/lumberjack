@@ -12,6 +12,7 @@ use App\Domains\Screens\Enums\ScreenSpacing;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Shared\Enums\Period;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -56,6 +57,16 @@ class UpdateScreenRequest extends FormRequest
             'header.title' => ['nullable', 'string', 'max:100'],
             'header.date' => ['boolean'],
             'header.seconds' => ['boolean'],
+            'header.date_format' => ['string', Rule::in(Screen::DATE_FORMATS)],
+            'header.date_pattern' => ['nullable', 'required_if:header.date_format,custom', 'string', 'max:60', function (string $attribute, mixed $value, Closure $fail): void {
+                $problem = is_string($value) ? Screen::datePatternProblem($value) : null;
+
+                if ($problem !== null) {
+                    $fail($problem === '' ? __('ui/screens.validation.date_empty') : __('ui/screens.validation.date_token', ['token' => $problem]));
+                }
+            }],
+            'header.locale' => ['nullable', 'string', 'regex:'.Screen::LOCALE_PATTERN],
+            'header.size' => ['string', Rule::in(Screen::HEADER_SIZES)],
             'light_from' => ['sometimes', 'required', ...$time],
             'light_to' => ['sometimes', 'required', ...$time],
             // Empty: the viewer's own time zone.

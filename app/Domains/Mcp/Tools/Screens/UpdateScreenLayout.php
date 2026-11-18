@@ -23,7 +23,7 @@ class UpdateScreenLayout extends Tool
 
     protected string $name = 'update_screen_layout';
 
-    protected string $description = 'Replaces a screen grid and all its widgets, live on every TV showing it. Send every widget you want to keep. Widgets may not overlap.';
+    protected string $description = 'Replaces a screen grid and all its widgets, live on every TV showing it. Send every widget you want to keep. Widgets may not overlap, but for those wholly inside a group (type group).';
 
     public function __construct(
         private readonly UpdateScreenLayoutAction $update,

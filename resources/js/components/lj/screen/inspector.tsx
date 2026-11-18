@@ -44,6 +44,7 @@ import type {
     RotateItem,
     Schema,
     SchemaField,
+    DateFormat,
     Screen,
     ScreenSpacing,
     Source,
@@ -51,7 +52,14 @@ import type {
     Widget,
     WidgetScope,
 } from './types';
-import { HEADER_PARTS, MAX_SLIDES, MAX_ZONES, ROTATING_KINDS } from './types';
+import { datePatternProblem, kioskDate } from './frame';
+import {
+    DATE_FORMATS,
+    HEADER_PARTS,
+    MAX_SLIDES,
+    MAX_ZONES,
+    ROTATING_KINDS,
+} from './types';
 
 export type Catalog = {
     schema: Schema;
@@ -2144,6 +2152,35 @@ export function WidgetInspector({
 }
 
 /** Settings of the whole screen, shown while no widget is selected. */
+/** Languages a screen's header can write the date in, besides the app's and the TV's. */
+const LOCALES = [
+    'da',
+    'en',
+    'en-GB',
+    'de',
+    'sv',
+    'nb',
+    'fi',
+    'fr',
+    'es',
+    'nl',
+    'it',
+    'pl',
+];
+
+/** A language's name, in the page's language. */
+function languageName(code: string): string {
+    try {
+        return (
+            new Intl.DisplayNames([document.documentElement.lang || 'en'], {
+                type: 'language',
+            }).of(code) ?? code
+        );
+    } catch {
+        return code;
+    }
+}
+
 const SETTINGS_TABS = ['display', 'appearance', 'data', 'time'] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number];
 
@@ -2170,6 +2207,12 @@ export function ScreenSettings({
         lastSettingsTab = id;
         setTab(id);
     };
+    const setProjects = (projects: string[]) =>
+        onChange({ scope: { ...scope, projects } });
+    const patternProblem =
+        screen.header.date_format === 'custom'
+            ? datePatternProblem(screen.header.date_pattern ?? '')
+            : null;
     const setHeader = (changes: Partial<Screen['header']>) =>
         onChange({ header: { ...screen.header, ...changes } });
 
@@ -2431,37 +2474,52 @@ export function ScreenSettings({
                         <span className="text-xs text-ink-2">
                             {t('screens.settings.projects')}
                         </span>
-                        <div className="flex flex-wrap gap-1.5">
-                            {catalog.teamProjects.map((p) => {
-                                const on = scope.projects.includes(p.uuid);
-
-                                return (
-                                    <button
-                                        key={p.uuid}
-                                        type="button"
-                                        aria-pressed={on}
-                                        className={chip(on)}
-                                        onClick={() =>
-                                            onChange({
-                                                scope: {
-                                                    ...scope,
-                                                    projects: on
-                                                        ? scope.projects.filter(
-                                                              (u) =>
-                                                                  u !== p.uuid,
-                                                          )
-                                                        : [
-                                                              ...scope.projects,
-                                                              p.uuid,
-                                                          ],
-                                                },
-                                            })
+                        <div className="grid grid-cols-2 gap-x-2.5 gap-y-2 pt-0.5">
+                            {/* None picked is every project of the team, new ones included. */}
+                            <label className="col-span-2 flex items-center gap-2 text-[13px]">
+                                <Switch
+                                    small
+                                    checked={scope.projects.length === 0}
+                                    label={t('screens.settings.all_projects')}
+                                    onChange={(all) =>
+                                        setProjects(
+                                            all
+                                                ? []
+                                                : catalog.teamProjects.map(
+                                                      (p) => p.uuid,
+                                                  ),
+                                        )
+                                    }
+                                />
+                                {t('screens.settings.all_projects')}
+                            </label>
+                            {catalog.teamProjects.map((p) => (
+                                <label
+                                    key={p.uuid}
+                                    className="flex min-w-0 items-center gap-2 text-[13px]"
+                                >
+                                    <Switch
+                                        small
+                                        checked={scope.projects.includes(
+                                            p.uuid,
+                                        )}
+                                        label={p.name}
+                                        onChange={(on) =>
+                                            setProjects(
+                                                on
+                                                    ? [
+                                                          ...scope.projects,
+                                                          p.uuid,
+                                                      ]
+                                                    : scope.projects.filter(
+                                                          (u) => u !== p.uuid,
+                                                      ),
+                                            )
                                         }
-                                    >
-                                        {p.name}
-                                    </button>
-                                );
-                            })}
+                                    />
+                                    <span className="truncate">{p.name}</span>
+                                </label>
+                            ))}
                         </div>
                     </div>
                     <span className={hint}>
@@ -2539,6 +2597,31 @@ export function ScreenSettings({
                         {t('screens.designer.show_header')}
                     </label>
                     {screen.show_header && (
+                        <div className="col-span-2 flex flex-col gap-1">
+                            <span className="text-xs text-ink-2">
+                                {t('screens.settings.header_size')}
+                            </span>
+                            <IconChoice
+                                label={t('screens.settings.header_size')}
+                                value={screen.header.size}
+                                options={(['s', 'm', 'l', 'xl'] as const).map(
+                                    (size) => ({
+                                        value: size,
+                                        label: t(
+                                            `screens.fields.title_size.options.${size}`,
+                                        ),
+                                        icon: SIZE_GLYPHS[size],
+                                    }),
+                                )}
+                                onChange={(v) =>
+                                    setHeader({
+                                        size: v as Screen['header']['size'],
+                                    })
+                                }
+                            />
+                        </div>
+                    )}
+                    {screen.show_header && (
                         <>
                             <div className="col-span-2 flex flex-col gap-1">
                                 <Label
@@ -2567,38 +2650,42 @@ export function ScreenSettings({
                                 <span className="text-xs text-ink-2">
                                     {t('screens.settings.header_shows')}
                                 </span>
-                                <div className="flex flex-wrap gap-1.5">
+                                <div className="grid grid-cols-2 gap-x-2.5 gap-y-2 pt-0.5">
                                     {HEADER_PARTS.map((part) => {
                                         const on =
                                             !screen.header.hide.includes(part);
+                                        const label = t(
+                                            `screens.settings.header_parts.${part}`,
+                                        );
 
                                         return (
-                                            <button
+                                            <label
                                                 key={part}
-                                                type="button"
-                                                aria-pressed={on}
-                                                className={chip(on)}
-                                                onClick={() =>
-                                                    setHeader({
-                                                        hide: on
-                                                            ? [
-                                                                  ...screen
-                                                                      .header
-                                                                      .hide,
-                                                                  part,
-                                                              ]
-                                                            : screen.header.hide.filter(
-                                                                  (p) =>
-                                                                      p !==
-                                                                      part,
-                                                              ),
-                                                    })
-                                                }
+                                                className="flex items-center gap-2 text-[13px]"
                                             >
-                                                {t(
-                                                    `screens.settings.header_parts.${part}`,
-                                                )}
-                                            </button>
+                                                <Switch
+                                                    small
+                                                    checked={on}
+                                                    label={label}
+                                                    onChange={(show) =>
+                                                        setHeader({
+                                                            hide: show
+                                                                ? screen.header.hide.filter(
+                                                                      (p) =>
+                                                                          p !==
+                                                                          part,
+                                                                  )
+                                                                : [
+                                                                      ...screen
+                                                                          .header
+                                                                          .hide,
+                                                                      part,
+                                                                  ],
+                                                        })
+                                                    }
+                                                />
+                                                {label}
+                                            </label>
                                         );
                                     })}
                                 </div>
@@ -2666,6 +2753,148 @@ export function ScreenSettings({
                                     {t(`screens.settings.clock_${key}`)}
                                 </label>
                             ))}
+                            {screen.header.date && (
+                                <>
+                                    <div className="col-span-2 flex flex-col gap-1">
+                                        <Label
+                                            htmlFor="screen-date-format"
+                                            className="text-xs text-ink-2"
+                                        >
+                                            {t('screens.settings.date_format')}
+                                        </Label>
+                                        <Select
+                                            id="screen-date-format"
+                                            value={screen.header.date_format}
+                                            onChange={(e) =>
+                                                setHeader({
+                                                    date_format: e.target
+                                                        .value as DateFormat,
+                                                })
+                                            }
+                                        >
+                                            {DATE_FORMATS.map((format) => (
+                                                <option
+                                                    key={format}
+                                                    value={format}
+                                                >
+                                                    {format === 'custom'
+                                                        ? t(
+                                                              'screens.settings.date_custom',
+                                                          )
+                                                        : kioskDate(
+                                                              {
+                                                                  ...screen,
+                                                                  header: {
+                                                                      ...screen.header,
+                                                                      date_format:
+                                                                          format,
+                                                                  },
+                                                              },
+                                                              Date.now(),
+                                                          )}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </div>
+                                    {screen.header.date_format === 'custom' && (
+                                        <div className="col-span-2 flex flex-col gap-1">
+                                            <Label
+                                                htmlFor="screen-date-pattern"
+                                                className="text-xs text-ink-2"
+                                            >
+                                                {t(
+                                                    'screens.settings.date_pattern',
+                                                )}
+                                            </Label>
+                                            <Input
+                                                id="screen-date-pattern"
+                                                value={
+                                                    screen.header
+                                                        .date_pattern ?? ''
+                                                }
+                                                placeholder="ddd D. MMM"
+                                                maxLength={60}
+                                                aria-invalid={
+                                                    patternProblem !== null
+                                                }
+                                                aria-describedby="screen-date-pattern-hint"
+                                                onChange={(e) =>
+                                                    setHeader({
+                                                        date_pattern:
+                                                            e.target.value ||
+                                                            null,
+                                                    })
+                                                }
+                                            />
+                                            <span
+                                                id="screen-date-pattern-hint"
+                                                className={cn(
+                                                    'text-xs',
+                                                    patternProblem !== null
+                                                        ? 'text-red'
+                                                        : 'text-ink-3',
+                                                )}
+                                            >
+                                                {patternProblem === null
+                                                    ? t(
+                                                          'screens.settings.date_pattern_hint',
+                                                          {
+                                                              example:
+                                                                  kioskDate(
+                                                                      screen,
+                                                                      Date.now(),
+                                                                  ) ?? '',
+                                                          },
+                                                      )
+                                                    : patternProblem === ''
+                                                      ? t(
+                                                            'screens.validation.date_empty',
+                                                        )
+                                                      : t(
+                                                            'screens.validation.date_token',
+                                                            {
+                                                                token: patternProblem,
+                                                            },
+                                                        )}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="col-span-2 flex flex-col gap-1">
+                                        <Label
+                                            htmlFor="screen-locale"
+                                            className="text-xs text-ink-2"
+                                        >
+                                            {t('screens.settings.locale')}
+                                        </Label>
+                                        <Select
+                                            id="screen-locale"
+                                            value={screen.header.locale ?? ''}
+                                            onChange={(e) =>
+                                                setHeader({
+                                                    locale:
+                                                        e.target.value || null,
+                                                })
+                                            }
+                                        >
+                                            <option value="">
+                                                {t(
+                                                    'screens.settings.locale_app',
+                                                )}
+                                            </option>
+                                            <option value="browser">
+                                                {t(
+                                                    'screens.settings.locale_browser',
+                                                )}
+                                            </option>
+                                            {LOCALES.map((code) => (
+                                                <option key={code} value={code}>
+                                                    {languageName(code)}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </div>
+                                </>
+                            )}
                         </>
                     )}
                     <div className="col-span-2 flex flex-col gap-1">

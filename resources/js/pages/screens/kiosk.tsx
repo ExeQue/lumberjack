@@ -7,6 +7,7 @@ import {
     KioskRotation,
     KioskStatus,
     kioskClock,
+    kioskDate,
     kioskSubtitle,
     kioskTitle,
     reloadSoon,
@@ -179,6 +180,7 @@ export default function Kiosk({
                     right: (
                         <KioskStatus
                             hide={screen.header.hide}
+                            date={kioskDate(screen, now)}
                             attention={attention}
                             offline={
                                 offlineSince === null

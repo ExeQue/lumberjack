@@ -80,6 +80,9 @@ function useWindowSize(): Size {
     return size;
 }
 
+/** How large each header size draws it, medium as before. */
+const HEADER_ZOOM: Record<string, number> = { s: 0.8, m: 1, l: 1.3, xl: 1.65 };
+
 /** How much of the medium margin and gap each spacing is. */
 const SPACING: Record<string, number> = { none: 0, s: 0.5, m: 1, l: 1.6 };
 
@@ -162,7 +165,11 @@ export function KioskFrame({
                 }}
             >
                 {screen.show_header && (
-                    <header className="flex items-center justify-between gap-[1cqw]">
+                    <header
+                        className="flex items-center justify-between gap-[1cqw]"
+                        // Everything in it, text, logo and gaps, at the size picked.
+                        style={{ zoom: HEADER_ZOOM[screen.header.size] ?? 1 }}
+                    >
                         <div className="flex min-w-0 items-center gap-[0.9cqw]">
                             {!screen.header.hide.includes('logo') && (
                                 <span
@@ -263,17 +270,93 @@ export function kioskSubtitle(
         .join(' · ');
 }
 
+/** The language the header writes in: the screen's, the TV's (browser), else the app's. */
+export function kioskLocale(screen: Screen): string {
+    return screen.header.locale === 'browser'
+        ? navigator.language
+        : (screen.header.locale ?? (document.documentElement.lang || 'en'));
+}
+
 /** A time as the screen's clock shows it, in the screen's time zone (else the browser's). */
 export function kioskClock(screen: Screen, at: number): string {
-    return new Intl.DateTimeFormat(document.documentElement.lang || 'en', {
+    return new Intl.DateTimeFormat(kioskLocale(screen), {
         timeZone: screen.timezone ?? undefined,
         hour: '2-digit',
         minute: '2-digit',
         second: screen.header.seconds ? '2-digit' : undefined,
-        weekday: screen.header.date ? 'short' : undefined,
-        day: screen.header.date ? 'numeric' : undefined,
-        month: screen.header.date ? 'short' : undefined,
         hourCycle: screen.clock_format === '12' ? 'h12' : 'h23',
+    }).format(new Date(at));
+}
+
+/** The formats the browser words, by Screen::DATE_FORMATS. */
+const DATE_OPTIONS: Record<string, Intl.DateTimeFormatOptions> = {
+    short: { weekday: 'short', day: 'numeric', month: 'short' },
+    long: { weekday: 'long', day: 'numeric', month: 'long' },
+    medium: { day: 'numeric', month: 'short', year: 'numeric' },
+    numeric: { day: '2-digit', month: '2-digit', year: 'numeric' },
+};
+
+/**
+ * A custom date's pieces, as Screen::DATE_TOKENS reads them: [text] as it is, a token,
+ * other letters (no token: refused) or anything else as it is.
+ */
+const DATE_PIECES =
+    /\[[^\]]*\]|YYYY|YY|MMMM|MMM|MM|M|dddd|ddd|DD|D|[A-Za-z]+|[^A-Za-z[]+|\[/g;
+const DATE_TOKEN = /^(YYYY|YY|MMMM|MMM|MM|M|dddd|ddd|DD|D)$/;
+
+/** A custom pattern's first piece that is no token, '' when it has no token, else null. */
+export function datePatternProblem(pattern: string): string | null {
+    const pieces = pattern.match(DATE_PIECES) ?? [];
+    const unknown = pieces.find(
+        (p) =>
+            !DATE_TOKEN.test(p) && !/^\[.*\]$/.test(p) && /[A-Za-z[]/.test(p),
+    );
+
+    return unknown ?? (pieces.some((p) => DATE_TOKEN.test(p)) ? null : '');
+}
+
+/** The date by the header's clock, as the screen writes it; null without one. */
+export function kioskDate(screen: Screen, at: number): string | null {
+    const { date, date_format: format, date_pattern: pattern } = screen.header;
+
+    if (!date) {
+        return null;
+    }
+
+    const locale = kioskLocale(screen);
+    const timeZone = screen.timezone ?? undefined;
+    const part = (options: Intl.DateTimeFormatOptions, type: string) =>
+        new Intl.DateTimeFormat(locale, { timeZone, ...options })
+            .formatToParts(new Date(at))
+            .find((p) => p.type === type)?.value ?? '';
+    const tokens: Record<string, () => string> = {
+        YYYY: () => part({ year: 'numeric' }, 'year'),
+        YY: () => part({ year: '2-digit' }, 'year'),
+        MMMM: () => part({ month: 'long' }, 'month'),
+        MMM: () => part({ month: 'short' }, 'month'),
+        MM: () => part({ month: '2-digit' }, 'month'),
+        M: () => part({ month: 'numeric' }, 'month'),
+        dddd: () => part({ weekday: 'long' }, 'weekday'),
+        ddd: () => part({ weekday: 'short' }, 'weekday'),
+        DD: () => part({ day: '2-digit' }, 'day'),
+        D: () => part({ day: 'numeric' }, 'day'),
+    };
+
+    if (format === 'iso') {
+        return `${tokens.YYYY()}-${tokens.MM()}-${tokens.DD()}`;
+    }
+
+    if (format === 'custom') {
+        return pattern && datePatternProblem(pattern) === null
+            ? (pattern.match(DATE_PIECES) ?? [])
+                  .map((p) => tokens[p]?.() ?? p.replace(/^\[(.*)\]$/, '$1'))
+                  .join('')
+            : null;
+    }
+
+    return new Intl.DateTimeFormat(locale, {
+        timeZone,
+        ...(DATE_OPTIONS[format] ?? DATE_OPTIONS.short),
     }).format(new Date(at));
 }
 
@@ -342,8 +425,11 @@ export function KioskStatus({
     attention,
     offline,
     clock,
+    date = null,
     hide = [],
 }: {
+    /** The date by the clock, as the screen writes it; null without one. */
+    date?: string | null;
     /** Parts the screen's header hides; being offline always shows. */
     hide?: HeaderPart[];
     attention: number;
@@ -380,6 +466,11 @@ export function KioskStatus({
                         className="size-[0.55cqw] rounded-full bg-(--s-amber)"
                     />
                     {offline}
+                </span>
+            )}
+            {clock !== null && date !== null && (
+                <span className="text-[max(0.9rem,1.3cqw)] whitespace-nowrap text-(--s-ink-2)">
+                    {date}
                 </span>
             )}
             {clock !== null && (

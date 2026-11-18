@@ -44,7 +44,7 @@ class UpdateScreen extends Tool
             'show_header' => $schema->boolean(),
             'show_clock' => $schema->boolean(),
             'clock_format' => $schema->string()->description('24 or 12.'),
-            'header' => $schema->object()->description('{hide: [logo|name|team|projects|environment|period|attention|live], title: a title instead of the name or null, date: bool, seconds: bool}: the clock\'s date and seconds.'),
+            'header' => $schema->object()->description('{hide: [logo|name|team|projects|environment|period|attention|live], title: a title instead of the name or null, date: bool, seconds: bool, date_format: short|long|medium|numeric|iso|custom, date_pattern: tokens for custom (YYYY YY MMMM MMM MM M DD D dddd ddd, [literal text]), locale: null for the app\'s language, browser, or a tag such as da or en-GB, size: s|m|l|xl, how large the header is}: the clock\'s date and seconds.'),
             'light_from' => $schema->string()->description('HH:MM.'),
             'light_to' => $schema->string()->description('HH:MM.'),
             'timezone' => $schema->string()->description('Null: each viewer\'s own.'),
