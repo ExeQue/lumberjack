@@ -7,6 +7,7 @@ const CONNECTED_SHAPES: Record<string, string[]> = {
 };
 
 import { TreeSelect } from '@/components/lj/tree-select';
+import type { TreeOption } from '@/components/lj/tree-select';
 import {
     AlignCenter,
     AlignLeft,
@@ -2152,33 +2153,80 @@ export function WidgetInspector({
 }
 
 /** Settings of the whole screen, shown while no widget is selected. */
-/** Languages a screen's header can write the date in, besides the app's and the TV's. */
+/**
+ * Languages a screen's header can write the date in, besides the app's and the TV's: a
+ * language alone, or by country where they write dates differently.
+ */
 const LOCALES = [
     'da',
-    'en',
-    'en-GB',
-    'de',
     'sv',
     'nb',
     'fi',
-    'fr',
-    'es',
-    'nl',
+    'is',
+    'en-GB',
+    'en-US',
+    'en-AU',
+    'de-DE',
+    'de-AT',
+    'de-CH',
+    'fr-FR',
+    'fr-BE',
+    'fr-CA',
+    'nl-NL',
+    'nl-BE',
+    'es-ES',
+    'es-MX',
+    'pt-PT',
+    'pt-BR',
     'it',
     'pl',
+    'cs',
+    'et',
+    'lv',
+    'lt',
+    'ja',
+    'zh-CN',
 ];
 
-/** A language's name, in the page's language. */
-function languageName(code: string): string {
+/** A language's or country's name, in the page's language. */
+function displayName(code: string, type: 'language' | 'region'): string {
     try {
         return (
             new Intl.DisplayNames([document.documentElement.lang || 'en'], {
-                type: 'language',
+                type,
             }).of(code) ?? code
         );
     } catch {
         return code;
     }
+}
+
+/** The languages for a tree: the TV's own first, a language with countries under its name. */
+function localeOptions(browser: string): TreeOption[] {
+    const base = (code: string) => code.split('-')[0];
+
+    return [
+        { value: 'browser', label: browser },
+        ...LOCALES.map((code) => {
+            const [language, region] = code.split('-');
+            const countries = LOCALES.filter(
+                (c) => base(c) === language,
+            ).length;
+
+            return countries > 1 && region
+                ? {
+                      value: code,
+                      label: displayName(region, 'region'),
+                      path: [displayName(language, 'language')],
+                      keywords: code,
+                  }
+                : {
+                      value: code,
+                      label: displayName(code, 'language'),
+                      keywords: code,
+                  };
+        }),
+    ];
 }
 
 const SETTINGS_TABS = ['display', 'appearance', 'data', 'time'] as const;
@@ -2866,32 +2914,33 @@ export function ScreenSettings({
                                         >
                                             {t('screens.settings.locale')}
                                         </Label>
-                                        <Select
+                                        <TreeSelect
                                             id="screen-locale"
+                                            label={t('screens.settings.locale')}
                                             value={screen.header.locale ?? ''}
-                                            onChange={(e) =>
+                                            options={localeOptions(
+                                                t(
+                                                    'screens.settings.locale_browser',
+                                                ),
+                                            )}
+                                            onChange={(locale) =>
                                                 setHeader({
-                                                    locale:
-                                                        e.target.value || null,
+                                                    locale: locale || null,
                                                 })
                                             }
-                                        >
-                                            <option value="">
-                                                {t(
-                                                    'screens.settings.locale_app',
-                                                )}
-                                            </option>
-                                            <option value="browser">
-                                                {t(
-                                                    'screens.settings.locale_browser',
-                                                )}
-                                            </option>
-                                            {LOCALES.map((code) => (
-                                                <option key={code} value={code}>
-                                                    {languageName(code)}
-                                                </option>
-                                            ))}
-                                        </Select>
+                                            placeholder={t(
+                                                'screens.settings.locale_app',
+                                            )}
+                                            clearLabel={t(
+                                                'screens.settings.locale_app',
+                                            )}
+                                            searchPlaceholder={t(
+                                                'screens.picker.search',
+                                            )}
+                                            noMatches={t(
+                                                'screens.picker.no_matches',
+                                            )}
+                                        />
                                     </div>
                                 </>
                             )}
