@@ -2201,12 +2201,21 @@ function displayName(code: string, type: 'language' | 'region'): string {
     }
 }
 
-/** The languages for a tree: the TV's own first, a language with countries under its name. */
-function localeOptions(browser: string): TreeOption[] {
+/**
+ * The languages for a tree: the app's and the TV's own under Automatic (app stands for
+ * none), then every language, those with countries by country under its name.
+ */
+function localeOptions(
+    automatic: string,
+    app: string,
+    browser: string,
+    languages: string,
+): TreeOption[] {
     const base = (code: string) => code.split('-')[0];
 
     return [
-        { value: 'browser', label: browser },
+        { value: 'app', label: app, path: [automatic] },
+        { value: 'browser', label: browser, path: [automatic] },
         ...LOCALES.map((code) => {
             const [language, region] = code.split('-');
             const countries = LOCALES.filter(
@@ -2217,12 +2226,13 @@ function localeOptions(browser: string): TreeOption[] {
                 ? {
                       value: code,
                       label: displayName(region, 'region'),
-                      path: [displayName(language, 'language')],
+                      path: [languages, displayName(language, 'language')],
                       keywords: code,
                   }
                 : {
                       value: code,
                       label: displayName(code, 'language'),
+                      path: [languages],
                       keywords: code,
                   };
         }),
@@ -2917,21 +2927,33 @@ export function ScreenSettings({
                                         <TreeSelect
                                             id="screen-locale"
                                             label={t('screens.settings.locale')}
-                                            value={screen.header.locale ?? ''}
+                                            value={
+                                                screen.header.locale ?? 'app'
+                                            }
                                             options={localeOptions(
                                                 t(
+                                                    'screens.settings.locale_automatic',
+                                                ),
+                                                t(
+                                                    'screens.settings.locale_app',
+                                                ),
+                                                t(
                                                     'screens.settings.locale_browser',
+                                                ),
+                                                t(
+                                                    'screens.settings.locale_languages',
                                                 ),
                                             )}
                                             onChange={(locale) =>
                                                 setHeader({
-                                                    locale: locale || null,
+                                                    locale:
+                                                        locale &&
+                                                        locale !== 'app'
+                                                            ? locale
+                                                            : null,
                                                 })
                                             }
                                             placeholder={t(
-                                                'screens.settings.locale_app',
-                                            )}
-                                            clearLabel={t(
                                                 'screens.settings.locale_app',
                                             )}
                                             searchPlaceholder={t(
