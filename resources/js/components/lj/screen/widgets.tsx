@@ -222,6 +222,9 @@ const TITLE_SIZE: Record<string, string> = {
     xl: 'calc(var(--lj-cell-font) * 1.7)',
 };
 
+/** A group's title line, as tall as its font times this (screen.css). */
+const GROUP_TITLE_LINE = 1.2;
+
 const TEXT_SCALE: Record<string, number> = {
     auto: 1,
     s: 0.85,
@@ -365,6 +368,8 @@ export type TileProps = {
     incident?: boolean;
     designer?: boolean;
     flash?: boolean;
+    /** The groups holding the tile, which draw its card: it has none of its own. */
+    holders?: Widget[];
     /** Extra content above the tile's own: the designer's badge and resize handle. */
     decoration?: ReactNode;
     /** In the tile's top right corner, the period label moving aside: the designer's gear. */
@@ -372,6 +377,29 @@ export type TileProps = {
     /** Told the tile's status whenever it changes, for the kiosk's flash and count. */
     onStatus?: (id: string, status: Status) => void;
 } & Omit<ComponentProps<'div'>, 'children'>;
+
+/**
+ * How far down a widget on a group's top row starts: below the group's top padding and
+ * title line, for each group holding it whose title shows.
+ */
+function titleInset(
+    schema: Schema,
+    holders: Widget[],
+    widget: Widget,
+): string | undefined {
+    const above = holders
+        .filter(
+            (g) =>
+                g.y === widget.y &&
+                option<boolean>(schema, g, 'show_title') !== false,
+        )
+        .map(
+            (g) =>
+                `0.8 * var(--lj-cell-font) + ${TITLE_SIZE[option<string>(schema, g, 'title_size') ?? 'm']} * ${GROUP_TITLE_LINE}`,
+        );
+
+    return above.length > 0 ? `calc(${above.join(' + ')})` : undefined;
+}
 
 /**
  * One tile of a screen, the same in the designer and on the TV. Its type draws the data
@@ -389,6 +417,7 @@ export function WidgetTile({
     incident = false,
     designer = false,
     flash = false,
+    holders = [],
     decoration,
     corner,
     onStatus,
@@ -472,7 +501,9 @@ export function WidgetTile({
               single ??
               source?.label ??
               t(`screens.kinds.${widget.type}`));
-    const showTitle = opt<boolean>('show_title') !== false;
+    // An empty cell has no title.
+    const showTitle =
+        opt<boolean>('show_title') !== false && widget.type !== 'empty';
 
     useEffect(() => {
         onStatus?.(widget.id, status);
@@ -530,7 +561,9 @@ export function WidgetTile({
 
     let body: ReactNode = null;
 
-    if (widget.type === 'empty') {
+    if (widget.type === 'group') {
+        body = null;
+    } else if (widget.type === 'empty') {
         body = designer ? (
             <span className="m-auto text-[0.8em] text-(--s-ink-4)">
                 {t('screens.kinds.empty')}
@@ -608,7 +641,11 @@ export function WidgetTile({
             className={cn('lj-tile', className)}
             data-kind={widget.type}
             // No card: no background or border while calm; a problem still brings them.
-            data-plain={opt<boolean>('card') === false || undefined}
+            data-plain={
+                holders.length > 0 ||
+                opt<boolean>('card') === false ||
+                undefined
+            }
             // Media to the tile's edges; its title and line keep their room.
             data-bare={
                 (widget.type === 'media' &&
@@ -625,6 +662,7 @@ export function WidgetTile({
             style={{
                 gridColumn: `${widget.x + 1} / span ${widget.w}`,
                 gridRow: `${widget.y + 1} / span ${widget.h}`,
+                marginTop: titleInset(schema, holders, stored),
                 textAlign: align,
                 ['--lj-text-scale' as string]: TEXT_SCALE[textSize] ?? 1,
                 visibility: hidden && !designer ? 'hidden' : undefined,
@@ -633,18 +671,14 @@ export function WidgetTile({
             }}
         >
             {decoration}
-            {(corner ||
-                (showTitle &&
-                    widget.type !== 'empty' &&
-                    title &&
-                    cornerText)) && (
+            {(corner || (showTitle && title && cornerText)) && (
                 // The corner label, as far from the top as from the right edge, with the
                 // designer's gear taking its place while it shows.
                 <span
                     className="pointer-events-none absolute z-20 flex"
                     style={{ top: CORNER_INSET, right: CORNER_INSET }}
                 >
-                    {showTitle && widget.type !== 'empty' && title && (
+                    {showTitle && title && (
                         <span
                             key={`${keys[index] ?? ''}:corner`}
                             className={cn(
@@ -670,7 +704,7 @@ export function WidgetTile({
                     )}
                 </span>
             )}
-            {showTitle && widget.type !== 'empty' && title && (
+            {showTitle && title && (
                 // Invisible twins of the label keep room for it on the right, and on the
                 // left too for a centered title, so that stays centered on the tile.
                 <div

@@ -41,6 +41,17 @@ describe('overlaps', function () use ($box) {
     it('lets widgets touch', function () use ($box) {
         expect(ScreenLayout::overlapping([$box(2, 2, 0, 0), $box(2, 2, 2, 0), $box(4, 1, 0, 2)]))->toBe([]);
     });
+
+    it('lets a group hold widgets and groups wholly inside it, smaller than it', function () use ($box) {
+        $group = fn (int $w, int $h, int $x, int $y): array => [...$box($w, $h, $x, $y), 'type' => 'group'];
+
+        expect(ScreenLayout::overlapping([$group(3, 2, 0, 0), $box(1, 1, 0, 0), $box(2, 2, 1, 0)]))->toBe([])
+            ->and(ScreenLayout::overlapping([$box(1, 1, 2, 1), $group(3, 2, 0, 0)]))->toBe([])
+            ->and(ScreenLayout::overlapping([$group(2, 2, 0, 0), $box(2, 1, 1, 0)]))->toBe([1])
+            ->and(ScreenLayout::overlapping([$group(3, 2, 0, 0), $group(2, 2, 1, 0), $box(1, 1, 2, 1)]))->toBe([])
+            ->and(ScreenLayout::overlapping([$group(1, 1, 0, 0), $box(1, 1, 0, 0)]))->toBe([1])
+            ->and(ScreenLayout::overlapping([$group(2, 2, 0, 0), $group(2, 2, 0, 0)]))->toBe([1]);
+    });
 });
 
 describe('templates', function () {

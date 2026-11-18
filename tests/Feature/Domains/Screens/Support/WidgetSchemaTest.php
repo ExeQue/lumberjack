@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Screens\Enums\WidgetType;
+use App\Domains\Screens\Support\ScreenQr;
 use App\Domains\Screens\Support\WidgetSchema;
 use Illuminate\Support\Facades\Validator;
 
@@ -17,7 +18,7 @@ describe('the schema', function () {
     })->with(array_values(array_diff(WidgetSchema::types(), ['empty'])));
 
     it('knows every visualization and the layout widgets', function () {
-        expect(WidgetSchema::types())->toBe([...array_map(fn (WidgetType $t): string => $t->value, WidgetType::cases()), 'clock', 'countdown', 'message', 'qr', 'media', 'empty'])
+        expect(WidgetSchema::types())->toBe([...array_map(fn (WidgetType $t): string => $t->value, WidgetType::cases()), 'clock', 'countdown', 'message', 'qr', 'media', 'empty', 'group'])
             ->and(WidgetSchema::sections('empty'))->toBe([])
             ->and(WidgetSchema::sections('pie'))->toBe([]);
     });
@@ -30,7 +31,8 @@ describe('the schema', function () {
                 foreach ($section['fields'] as $field) {
                     expect(__('ui/screens.fields.'.$field['key'].'.label'))->not->toStartWith('ui/');
 
-                    foreach ($field['options'] ?? [] as $value) {
+                    // A QR part's choices come labelled from the QR library.
+                    foreach (isset($field['labels']) ? [] : $field['options'] ?? [] as $value) {
                         if ($field['key'] !== 'period') {
                             expect(__("ui/screens.fields.{$field['key']}.options.{$value}"))->not->toStartWith('ui/');
                         }
@@ -110,6 +112,25 @@ describe('validating a widget', function () {
             ['source' => 'checks', 'seconds' => 5, 'options' => ['checks' => ['9b4b0d6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f'], 'show_uptime' => false]],
             'checks',
         ]]))->toBe([]);
+    });
+});
+
+describe('a QR code\'s style', function () {
+    $qr = fn (array $options): array => ['id' => 'q', 'type' => 'qr', 'w' => 2, 'h' => 2, 'options' => ['url' => 'https://lumberjack.test', ...$options]];
+    $validate = fn (array $widget): array => Validator::make(['w' => $widget], WidgetSchema::rules('w', $widget, 4, 4, []))->errors()->toArray();
+
+    it('takes the library\'s parts, colors and filters, and draws them', function () use ($qr, $validate) {
+        $options = ['qr_logo' => false, 'qr_color' => '#1e1b4b', 'qr_background' => '#ffffff', 'qr_module' => 'dots-medium', 'qr_eyes' => 'custom', 'qr_outer' => 'circle', 'qr_inner' => 'star', 'qr_filters' => ['mixed-rotation', 'eye-tilt']];
+
+        expect($validate($qr($options)))->toBe([])
+            ->and(WidgetSchema::clean($qr($options), 4, 4)['options'])->toBe(['url' => 'https://lumberjack.test', ...$options, 'qr_logo' => false])
+            ->and(ScreenQr::widgetSvg($qr($options)['options']))->not->toBe(ScreenQr::widgetSvg($qr([])['options']))->toContain('#1e1b4b');
+    });
+
+    it('refuses unknown parts, filters that need options, too many filters, and colors phones cannot tell apart', function () use ($qr, $validate) {
+        expect(array_keys($validate($qr(['qr_module' => 'pie', 'qr_filters' => ['palette'], 'qr_color' => 'amber']))))->toContain('w.options.qr_module', 'w.options.qr_filters.0', 'w.options.qr_color')
+            ->and(array_keys($validate($qr(['qr_filters' => ['jitter', 'wave', 'radial', 'eye-tilt']]))))->toContain('w.options.qr_filters')
+            ->and($validate($qr(['qr_color' => '#eeeeee', 'qr_background' => '#ffffff']))['w.options'] ?? [])->toBe([__('ui/screens.validation.qr_unscannable')]);
     });
 });
 

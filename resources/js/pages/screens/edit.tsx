@@ -7,7 +7,6 @@ import type {
     MouseEvent as ReactMouseEvent,
     PointerEvent,
 } from 'react';
-import { RectangleHorizontal, RectangleVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { Relative, useNow } from '@/components/lj/relative';
 import {
@@ -16,6 +15,7 @@ import {
     PreviewScale,
     kioskClock,
     kioskSubtitle,
+    kioskTitle,
 } from '@/components/lj/screen/frame';
 import {
     ScreenSettings,
@@ -25,6 +25,9 @@ import {
 import type { Catalog } from '@/components/lj/screen/inspector';
 import {
     canPlace,
+    groupHolds,
+    layered,
+    moveTo,
     swapGroup,
     swapTarget,
     firstFree,
@@ -162,6 +165,7 @@ const STARTERS: Record<WidgetKind, string | null> = {
     qr: null,
     media: null,
     empty: null,
+    group: null,
 };
 
 /** A transparent pixel, as the drag picture of a tile moved on the grid. */
@@ -256,9 +260,12 @@ type Settings = Pick<
     | 'aspect'
     | 'orientation'
     | 'fit'
+    | 'margin'
+    | 'gap'
     | 'show_header'
     | 'show_clock'
     | 'clock_format'
+    | 'header'
     | 'theme'
     | 'light_from'
     | 'light_to'
@@ -315,9 +322,12 @@ const SETTINGS: (keyof Settings)[] = [
     'aspect',
     'orientation',
     'fit',
+    'margin',
+    'gap',
     'show_header',
     'show_clock',
     'clock_format',
+    'header',
     'theme',
     'light_from',
     'light_to',
@@ -461,7 +471,7 @@ export default function EditScreen(props: Props) {
         w: number;
         h: number;
         ok: boolean;
-        /** Dropping here moves these widgets to the dragged one's old cells. */
+        /** Dropping here moves these widgets too: to the dragged one's old cells, or along with a group. */
         swap?: Record<string, { x: number; y: number }>;
     } | null>(null);
     const resizing = useRef<{
@@ -516,6 +526,10 @@ export default function EditScreen(props: Props) {
         periods: PERIODS,
         filters,
         filterLabels: props.filter_labels ?? {},
+        aspects: props.aspects,
+        grouped: screen.widgets
+            .filter((w) => screen.widgets.some((g) => groupHolds(g, w)))
+            .map((w) => w.id),
     };
     // The data follows what is saved, so a widget refetches once its new settings are stored.
     const { data } = useScreenData(
@@ -652,11 +666,45 @@ export default function EditScreen(props: Props) {
         setSelected(widget.id);
     };
 
-    /** Whether the widget may take that box; the screen's other widgets stay put. */
+    /**
+     * Whether the widget may take that box; the screen's other widgets stay put. A group
+     * keeps all it holds, so it never gets smaller than its widgets.
+     */
     const placeable = (
         id: string | undefined,
-        box: { x: number; y: number; w: number; h: number },
-    ) => canPlace(latest.current.widgets, screen.cols, screen.rows, box, id);
+        box: { x: number; y: number; w: number; h: number; type?: WidgetKind },
+    ) => {
+        const widgets = latest.current.widgets;
+        const widget = widgets.find((w) => w.id === id);
+        const next = { type: widget?.type, ...box };
+
+        return (
+            canPlace(widgets, screen.cols, screen.rows, next, id) &&
+            (!widget ||
+                widgets.every(
+                    (o) => !groupHolds(widget, o) || groupHolds(next, o),
+                ))
+        );
+    };
+
+    /** A widget moved, a group with all it holds, when they all fit there. */
+    const move = (widget: Widget, to: { x: number; y: number }) => {
+        const moves = moveTo(
+            latest.current.widgets,
+            screen.cols,
+            screen.rows,
+            widget,
+            to,
+        );
+
+        if (moves) {
+            setWidgets((widgets) =>
+                widgets.map((w) =>
+                    moves[w.id] ? { ...w, ...moves[w.id] } : w,
+                ),
+            );
+        }
+    };
 
     const remove = (id: string) => {
         setWidgets((widgets) => widgets.filter((w) => w.id !== id));
@@ -773,14 +821,18 @@ export default function EditScreen(props: Props) {
         const fromTop = widget.y > 0 && widget.y + widget.h >= screen.rows;
         const w = Math.max(1, widget.w + (fromLeft ? -dx : dx));
         const h = Math.max(1, widget.h + (fromTop ? -dy : dy));
-        const box = e.shiftKey
-            ? {
-                  x: fromLeft ? widget.x + widget.w - w : widget.x,
-                  y: fromTop ? widget.y + widget.h - h : widget.y,
-                  w,
-                  h,
-              }
-            : { x: widget.x + dx, y: widget.y + dy, w: widget.w, h: widget.h };
+        if (!e.shiftKey) {
+            move(widget, { x: widget.x + dx, y: widget.y + dy });
+
+            return;
+        }
+
+        const box = {
+            x: fromLeft ? widget.x + widget.w - w : widget.x,
+            y: fromTop ? widget.y + widget.h - h : widget.y,
+            w,
+            h,
+        };
 
         if (placeable(widget.id, box)) {
             patch(widget.id, box);
@@ -914,14 +966,31 @@ export default function EditScreen(props: Props) {
 
         const cell = cellAt(e.clientX, e.clientY);
         let box = { x: cell.x - d.dx, y: cell.y - d.dy, w: d.w, h: d.h };
-        let ok = placeable(d.tile, box);
-        let swap: Record<string, { x: number; y: number }> | undefined;
         const moving = d.tile
             ? latest.current.widgets.find((w) => w.id === d.tile)
             : undefined;
+        // A group takes all it holds along.
+        const moves = moving
+            ? moveTo(
+                  latest.current.widgets,
+                  screen.cols,
+                  screen.rows,
+                  moving,
+                  box,
+              )
+            : null;
+        let ok = moving
+            ? moves !== null
+            : placeable(undefined, { ...box, type: d.kind });
+        let swap: Record<string, { x: number; y: number }> | undefined =
+            moves && moving
+                ? Object.fromEntries(
+                      Object.entries(moves).filter(([id]) => id !== moving.id),
+                  )
+                : undefined;
 
         // Onto other widgets: swap places when they fit, the footprint shows where it goes.
-        if (!ok && moving) {
+        if (!ok && moving && moving.type !== 'group') {
             // Whole widgets under the footprint trade places with it as a group.
             const group = swapGroup(
                 latest.current.widgets,
@@ -1031,10 +1100,10 @@ export default function EditScreen(props: Props) {
     const outside = screen.widgets.filter(
         (w) => !fits(w, screen.cols, screen.rows),
     );
-    // Top left to bottom right, so Tab follows the screen.
-    const tiles = screen.widgets
-        .filter(inGrid)
-        .sort((a, b) => a.y - b.y || a.x - b.x);
+    // Top left to bottom right, so Tab follows the screen; groups behind what they hold.
+    const tiles = layered(
+        screen.widgets.filter(inGrid).sort((a, b) => a.y - b.y || a.x - b.x),
+    );
     const current = screen.widgets.find((w) => w.id === selected) ?? null;
     const theme = themeAt(screen, now);
     const [aw, ah] = screen.aspect.split(':').map(Number);
@@ -1141,6 +1210,9 @@ export default function EditScreen(props: Props) {
                     clockFormat={screen.clock_format}
                     pinned={widget.id === selected ? pinned : undefined}
                     incident={incident}
+                    holders={screen.widgets.filter((g) =>
+                        groupHolds(g, widget),
+                    )}
                     designer
                     tabIndex={0}
                     role="button"
@@ -1821,73 +1893,6 @@ export default function EditScreen(props: Props) {
                                     </Select>
                                 </label>
                                 <label className="flex items-center gap-1.5">
-                                    {t('screens.designer.aspect')}
-                                    <Select
-                                        value={screen.aspect}
-                                        onChange={(e) =>
-                                            change((s) => ({
-                                                ...s,
-                                                aspect: e.target.value,
-                                            }))
-                                        }
-                                    >
-                                        {props.aspects.map((a) => (
-                                            <option key={a} value={a}>
-                                                {t(`screens.aspect.${a}`)}
-                                            </option>
-                                        ))}
-                                    </Select>
-                                </label>
-                                <div
-                                    role="group"
-                                    aria-label={t(
-                                        'screens.designer.orientation',
-                                    )}
-                                    className="flex"
-                                >
-                                    {(['landscape', 'portrait'] as const).map(
-                                        (o) => (
-                                            <button
-                                                key={o}
-                                                type="button"
-                                                aria-pressed={
-                                                    screen.orientation === o
-                                                }
-                                                aria-label={t(
-                                                    `screens.orientation.${o}`,
-                                                )}
-                                                title={t(
-                                                    `screens.orientation.${o}`,
-                                                )}
-                                                className={cn(
-                                                    'flex h-8 w-8 items-center justify-center border border-line first:rounded-l-md last:rounded-r-md',
-                                                    screen.orientation === o
-                                                        ? 'bg-amber text-amber-ink'
-                                                        : 'bg-rail text-ink-2 hover:text-ink',
-                                                )}
-                                                onClick={() =>
-                                                    change((s) => ({
-                                                        ...s,
-                                                        orientation: o,
-                                                    }))
-                                                }
-                                            >
-                                                {o === 'landscape' ? (
-                                                    <RectangleHorizontal
-                                                        aria-hidden="true"
-                                                        className="size-4"
-                                                    />
-                                                ) : (
-                                                    <RectangleVertical
-                                                        aria-hidden="true"
-                                                        className="size-4"
-                                                    />
-                                                )}
-                                            </button>
-                                        ),
-                                    )}
-                                </div>
-                                <label className="flex items-center gap-1.5">
                                     {t('screens.designer.preview_at')}
                                     <Select
                                         value={previewValue}
@@ -2097,7 +2102,7 @@ export default function EditScreen(props: Props) {
                                     view={view}
                                     theme={theme}
                                     header={{
-                                        title: screen.name,
+                                        title: kioskTitle(screen),
                                         subtitle: kioskSubtitle(
                                             screen,
                                             props.team.name,
@@ -2106,6 +2111,7 @@ export default function EditScreen(props: Props) {
                                         ),
                                         right: (
                                             <KioskStatus
+                                                hide={screen.header.hide}
                                                 attention={0}
                                                 offline={null}
                                                 clock={

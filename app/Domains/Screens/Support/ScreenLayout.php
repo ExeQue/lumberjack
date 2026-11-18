@@ -69,32 +69,68 @@ final class ScreenLayout
     }
 
     /**
-     * Indexes of widgets that cover a cell an earlier widget already covers.
+     * Indexes of widgets that cover a cell an earlier widget already covers, besides a
+     * widget lying wholly inside a group.
      *
      * @param  list<array<string, mixed>>  $widgets  positioned
      * @return list<int>
      */
     public static function overlapping(array $widgets): array
     {
-        $taken = [];
+        $kept = [];
         $overlapping = [];
 
         foreach ($widgets as $i => $widget) {
-            $x = (int) $widget['x'];
-            $y = (int) $widget['y'];
-            $w = max(1, (int) $widget['w']);
-            $h = max(1, (int) $widget['h']);
-
-            if (! self::free($taken, $x, $y, $w, $h)) {
+            if (collect($kept)->contains(fn (array $other): bool => self::clash($widget, $other))) {
                 $overlapping[] = $i;
 
                 continue;
             }
 
-            self::take($taken, $x, $y, $w, $h);
+            $kept[] = $widget;
         }
 
         return $overlapping;
+    }
+
+    /**
+     * Whether a group holds a widget, a group too: one wholly inside it, on fewer cells (a
+     * 1 x 1 group holds nothing). The group draws one card behind the widgets it holds.
+     *
+     * @param  array<string, mixed>  $group  positioned
+     * @param  array<string, mixed>  $widget  positioned
+     */
+    public static function holds(array $group, array $widget): bool
+    {
+        [$g, $w] = [self::box($group), self::box($widget)];
+
+        return ($group['type'] ?? null) === 'group' && $w !== $g
+            && $w['x'] >= $g['x'] && $w['y'] >= $g['y']
+            && $w['x'] + $w['w'] <= $g['x'] + $g['w'] && $w['y'] + $w['h'] <= $g['y'] + $g['h'];
+    }
+
+    /**
+     * Whether two widgets cover a common cell, unless one is a group holding the other.
+     *
+     * @param  array<string, mixed>  $a
+     * @param  array<string, mixed>  $b
+     */
+    private static function clash(array $a, array $b): bool
+    {
+        [$p, $q] = [self::box($a), self::box($b)];
+        $apart = $p['x'] >= $q['x'] + $q['w'] || $q['x'] >= $p['x'] + $p['w']
+            || $p['y'] >= $q['y'] + $q['h'] || $q['y'] >= $p['y'] + $p['h'];
+
+        return ! $apart && ! self::holds($a, $b) && ! self::holds($b, $a);
+    }
+
+    /**
+     * @param  array<string, mixed>  $widget  positioned
+     * @return array{x: int, y: int, w: int, h: int}
+     */
+    private static function box(array $widget): array
+    {
+        return ['x' => (int) $widget['x'], 'y' => (int) $widget['y'], 'w' => max(1, (int) $widget['w']), 'h' => max(1, (int) $widget['h'])];
     }
 
     /** @param  array<string, mixed>  $widget */

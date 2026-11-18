@@ -30,7 +30,7 @@ describe('the widget gallery seed', function () {
         $projects = [(string) $this->project->uuid];
 
         expect(collect($screen->widgets)->pluck('type')->unique()->sort()->values()->all())
-            ->toBe(collect(WidgetSchema::types())->reject(fn (string $type): bool => $type === 'empty')->sort()->values()->all());
+            ->toBe(collect(WidgetSchema::types())->reject(fn (string $type): bool => in_array($type, ['empty', 'group'], true))->sort()->values()->all());
 
         foreach ($screen->widgets as $widget) {
             $validator = Validator::make(['widget' => $widget], WidgetSchema::rules('widget', $widget, $screen->cols, $screen->rows, $projects));

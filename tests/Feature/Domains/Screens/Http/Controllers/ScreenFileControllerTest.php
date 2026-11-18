@@ -8,6 +8,7 @@ use App\Domains\Screens\Actions\CopyScreenToTeamAction;
 use App\Domains\Screens\Actions\ExportScreenAction;
 use App\Domains\Screens\Actions\ImportScreenAction;
 use App\Domains\Screens\Data\ScreenImport;
+use App\Domains\Screens\Enums\ScreenSpacing;
 use App\Domains\Screens\Http\Controllers\ScreenFileController;
 use App\Domains\Screens\Http\Requests\CopyScreenRequest;
 use App\Domains\Screens\Http\Requests\ImportScreenRequest;
@@ -89,6 +90,7 @@ describe('exporting a screen', function () {
 
 describe('importing a screen', function () {
     it('gives an equal screen in another team, its references found by slug', function () {
+        $this->screen->update(['margin' => ScreenSpacing::Small, 'gap' => ScreenSpacing::None, 'header' => ['hide' => ['live'], 'title' => 'Ops', 'date' => true, 'seconds' => false]]);
         ($this->import)(($this->file)())->assertSessionHasNoErrors()->assertSessionHas('status', 'Screen imported.');
 
         $copy = $this->otherProject->team->screens()->sole();
@@ -96,8 +98,8 @@ describe('importing a screen', function () {
 
         expect($copy->uuid)->not->toBe($original->uuid)
             ->and($copy->share_key)->toBeNull()
-            ->and($copy->only(['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'theme', 'light_from', 'light_to', 'timezone']))
-            ->toEqual($original->only(['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'theme', 'light_from', 'light_to', 'timezone']))
+            ->and($copy->only(['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'margin', 'gap', 'header', 'show_header', 'show_clock', 'theme', 'light_from', 'light_to', 'timezone']))
+            ->toEqual($original->only(['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'margin', 'gap', 'header', 'show_header', 'show_clock', 'theme', 'light_from', 'light_to', 'timezone']))
             ->and($copy->scope)->toBe(['projects' => [$this->otherProject->uuid], 'environment' => 'production', 'period' => '7d'])
             ->and($copy->widgets[3]['options']['checks'])->toBe([$this->otherCheck->uuid, $this->otherWebsite->uuid])
             ->and($copy->widgets[3]['rotate'][0]['scope']['projects'])->toBe([$this->otherProject->uuid])
@@ -149,6 +151,16 @@ describe('importing a screen', function () {
         ($this->import)($file)->assertSessionHasNoErrors();
 
         expect(array_column($this->otherProject->team->screens()->sole()->widgets, 'id'))->toBe(['requests', 'requests-2', 'clock', 'health']);
+    });
+
+    it('gives a file from before margin and gap the medium ones', function () {
+        $this->screen->update(['margin' => ScreenSpacing::Large, 'gap' => ScreenSpacing::Small]);
+        $file = ($this->file)();
+        unset($file['screen']['margin'], $file['screen']['gap']);
+
+        ($this->import)($file)->assertSessionHasNoErrors();
+
+        expect($this->otherProject->team->screens()->sole()->only(['margin', 'gap']))->toBe(['margin' => ScreenSpacing::Medium, 'gap' => ScreenSpacing::Medium]);
     });
 
     it('trusts no uuid in the file, not even one of the team', function () {

@@ -9,6 +9,7 @@ use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
+use App\Domains\Screens\Enums\ScreenSpacing;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Teams\Models\Team;
@@ -29,6 +30,8 @@ class ScreenFactory extends Factory
             'aspect' => ScreenAspect::Wide,
             'orientation' => ScreenOrientation::Landscape,
             'fit' => ScreenFit::Keep,
+            'margin' => ScreenSpacing::Medium,
+            'gap' => ScreenSpacing::Medium,
             'show_header' => true,
             'show_clock' => true,
             'clock_format' => '24',

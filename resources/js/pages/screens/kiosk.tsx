@@ -8,10 +8,11 @@ import {
     KioskStatus,
     kioskClock,
     kioskSubtitle,
+    kioskTitle,
     reloadSoon,
     rotationFromUrl,
 } from '@/components/lj/screen/frame';
-import { fits, themeAt } from '@/components/lj/screen/lib';
+import { fits, groupHolds, layered, themeAt } from '@/components/lj/screen/lib';
 import type {
     Schema,
     Screen,
@@ -173,10 +174,11 @@ export default function Kiosk({
                 idle={idle}
                 shift={[dx, dy]}
                 header={{
-                    title: screen.name,
+                    title: kioskTitle(screen),
                     subtitle: kioskSubtitle(screen, team.name, projects, t),
                     right: (
                         <KioskStatus
+                            hide={screen.header.hide}
                             attention={attention}
                             offline={
                                 offlineSince === null
@@ -234,7 +236,7 @@ export default function Kiosk({
                         )}
                     </div>
                 ) : (
-                    shown.map((widget) => (
+                    layered(shown).map((widget) => (
                         <WidgetTile
                             key={widget.id}
                             data-widget={widget.id}
@@ -246,8 +248,13 @@ export default function Kiosk({
                             timezone={screen.timezone}
                             clockFormat={screen.clock_format}
                             flash={flashing[widget.id]}
+                            holders={shown.filter((g) => groupHolds(g, widget))}
                             onStatus={onStatus}
-                            aria-hidden={widget.type === 'empty' || undefined}
+                            aria-hidden={
+                                widget.type === 'empty' ||
+                                widget.type === 'group' ||
+                                undefined
+                            }
                         />
                     ))
                 )}

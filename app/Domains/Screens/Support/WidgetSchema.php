@@ -11,7 +11,12 @@ use App\Domains\Screens\Models\Screen;
 use App\Domains\Shared\Enums\Period;
 use Closure;
 use DateTimeZone;
+use ExeQue\Qr\Exceptions\ScanSafetyException;
+use ExeQue\Qr\Facades\Qr;
+use ExeQue\Qr\Qr as QrManager;
 use Illuminate\Validation\Rule;
+use ReflectionClass;
+use Throwable;
 
 /**
  * The shape of a status screen widget and the options each type takes: one schema that
@@ -47,7 +52,7 @@ final class WidgetSchema
     ];
 
     /** Widgets drawn by the client alone, without a source. */
-    public const array LAYOUT_TYPES = ['clock', 'countdown', 'message', 'qr', 'media', 'empty'];
+    public const array LAYOUT_TYPES = ['clock', 'countdown', 'message', 'qr', 'media', 'empty', 'group'];
 
     /** Types that can rotate through several sources on one tile. */
     public const array ROTATING_TYPES = ['stat', 'gauge', 'chart', 'list', 'health'];
@@ -56,6 +61,12 @@ final class WidgetSchema
     public const array REPEATING_TYPES = ['health'];
 
     public const int MAX_WIDGETS = 48;
+
+    /** Filters of the QR library that need options of their own (colors, shapes, regions), so none here. */
+    private const array QR_FILTERS_WITH_OPTIONS = ['mixed-shape', 'palette', 'gradient-fill', 'by-role', 'region', 'eye-palette', 'compound'];
+
+    /** Filters on one QR code, at most. */
+    public const int MAX_QR_FILTERS = 3;
 
     /** Addresses one media widget shows in turn. */
     public const int MAX_SLIDES = 20;
@@ -287,6 +298,8 @@ final class WidgetSchema
                 }],
                 // A local date and time, as an <input type="datetime-local"> gives it.
                 'datetime' => ['nullable', 'date_format:Y-m-d\TH:i'],
+                'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+                'choices' => ['nullable', 'array', 'max:'.($field['max'] ?? count($field['options']))],
                 'textarea' => ['nullable', 'string', 'max:500'],
                 default => ['nullable', 'string', 'max:200'],
             };
@@ -294,6 +307,23 @@ final class WidgetSchema
             if ($field['type'] === 'checks') {
                 $rules["{$attribute}.*"] = ['string', 'uuid'];
             }
+
+            if ($field['type'] === 'choices') {
+                $rules["{$attribute}.*"] = ['string', Rule::in($field['options'])];
+            }
+        }
+
+        // A QR code's colors and filters must still scan: drawn once as the TV will, on a link.
+        if ($type === 'qr') {
+            $rules["{$prefix}.options"][] = function (string $attribute, mixed $value, Closure $fail): void {
+                try {
+                    ScreenQr::widgetSvg([...(array) $value, 'content' => 'link', 'url' => 'https://lumberjack.example/a/link/of/some/length']);
+                } catch (ScanSafetyException) {
+                    $fail(__('ui/screens.validation.qr_unscannable'));
+                } catch (Throwable) {
+                    // A name it does not know: the field's own rule says so.
+                }
+            };
         }
 
         return $rules;
@@ -395,12 +425,45 @@ final class WidgetSchema
             $options[$key] = match ($field['type']) {
                 'toggle' => (bool) $value,
                 'number' => (float) $value,
-                'checks' => array_values(array_unique(array_map('strval', (array) $value))),
+                'checks', 'choices' => array_values(array_unique(array_map('strval', (array) $value))),
                 default => (string) $value,
             };
         }
 
         return $options;
+    }
+
+    /**
+     * A pick of the QR library's parts (modules, eyes, filters): every one it has, each with
+     * the icon it ships and its label. With custom, the eyes can also be picked part by part.
+     *
+     * @return array<string, mixed>
+     */
+    private static function qrPicker(string $key, string $kind, ?string $default, bool $custom = false): array
+    {
+        $manifest = Qr::manifest();
+        $names = array_values(array_diff(array_map(strval(...), array_keys($manifest[$kind])), $kind === 'filters' ? self::QR_FILTERS_WITH_OPTIONS : []));
+        $folder = dirname((string) (new ReflectionClass(QrManager::class))->getFileName(), 2).'/resources/icons/'.match ($kind) {
+            'outerEyes' => 'outer-eyes',
+            'innerEyes' => 'inner-eyes',
+            default => $kind,
+        };
+        $icons = collect($names)
+            ->mapWithKeys(fn (string $name): array => [$name => @file_get_contents("{$folder}/{$name}.svg") ?: null])
+            ->filter()
+            ->all();
+        $labels = collect($names)->mapWithKeys(fn (string $name): array => [$name => $manifest['labels'][$manifest['locales'][0]][$kind][$name] ?? $name])->all();
+
+        return [
+            'key' => $key,
+            'type' => 'select',
+            'options' => $custom ? [...$names, 'custom'] : $names,
+            'icons' => $icons,
+            'labels' => $custom ? [...$labels, 'custom' => __('ui/screens.fields.'.$key.'.custom')] : $labels,
+            'default' => $default,
+            'data' => true,
+            'span' => 2,
+        ];
     }
 
     /**
@@ -606,6 +669,20 @@ final class WidgetSchema
                     ]),
                     $text('caption', 2),
                 ]),
+                // The QR library's style, a section each: closed, the grids are long.
+                $section('qr_look', [
+                    $toggle('qr_logo', true, true),
+                    // Unset: the brand amber, no background; swatch is what the color picker opens on.
+                    ['key' => 'qr_color', 'type' => 'color', 'default' => null, 'swatch' => config('qr.colors.amber'), 'data' => true, 'span' => 1],
+                    ['key' => 'qr_background', 'type' => 'color', 'default' => null, 'swatch' => '#ffffff', 'data' => true, 'span' => 1],
+                ]),
+                $section('qr_modules', [self::qrPicker('qr_module', 'modules', 'rounded')]),
+                $section('qr_eyes', [
+                    self::qrPicker('qr_eyes', 'eyes', 'mix', custom: true),
+                    [...self::qrPicker('qr_outer', 'outerEyes', 'rounded'), 'when' => ['qr_eyes' => ['custom']]],
+                    [...self::qrPicker('qr_inner', 'innerEyes', 'soft'), 'when' => ['qr_eyes' => ['custom']]],
+                ]),
+                $section('qr_filters', [[...self::qrPicker('qr_filters', 'filters', null), 'type' => 'choices', 'max' => self::MAX_QR_FILTERS]]),
                 $display(false),
             ],
             'media' => [
@@ -622,6 +699,14 @@ final class WidgetSchema
                 $display(false),
             ],
             'empty' => [],
+            // One card behind the widgets wholly inside it (ScreenLayout::holds()), its title off at first.
+            'group' => [
+                $section('display', [
+                    $toggle('show_title', false),
+                    $select('title_size', ['s', 'm', 'l', 'xl'], 'm'),
+                    $select('align', ['left', 'center'], 'left'),
+                ]),
+            ],
         ];
     }
 }

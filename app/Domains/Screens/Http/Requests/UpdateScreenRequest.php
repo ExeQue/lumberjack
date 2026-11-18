@@ -7,6 +7,7 @@ namespace App\Domains\Screens\Http\Requests;
 use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
+use App\Domains\Screens\Enums\ScreenSpacing;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Shared\Enums\Period;
@@ -43,9 +44,17 @@ class UpdateScreenRequest extends FormRequest
             'aspect' => ['sometimes', 'required', Rule::enum(ScreenAspect::class)],
             'orientation' => ['sometimes', 'required', Rule::enum(ScreenOrientation::class)],
             'fit' => ['sometimes', 'required', Rule::enum(ScreenFit::class)],
+            'margin' => ['sometimes', 'required', Rule::enum(ScreenSpacing::class)],
+            'gap' => ['sometimes', 'required', Rule::enum(ScreenSpacing::class)],
             'show_header' => ['sometimes', 'required', 'boolean'],
             'show_clock' => ['sometimes', 'required', 'boolean'],
             'clock_format' => ['sometimes', 'required', Rule::in(['24', '12'])],
+            'header' => ['sometimes', 'required', 'array'],
+            'header.hide' => ['array'],
+            'header.hide.*' => ['string', Rule::in(Screen::HEADER_PARTS)],
+            'header.title' => ['nullable', 'string', 'max:100'],
+            'header.date' => ['boolean'],
+            'header.seconds' => ['boolean'],
             'light_from' => ['sometimes', 'required', ...$time],
             'light_to' => ['sometimes', 'required', ...$time],
             // Empty: the viewer's own time zone.
@@ -76,7 +85,7 @@ class UpdateScreenRequest extends FormRequest
     {
         $settings = array_intersect_key($input, array_flip(['name', 'light_from', 'light_to', 'timezone', 'clock_format']));
 
-        foreach (['theme' => ScreenTheme::class, 'aspect' => ScreenAspect::class, 'orientation' => ScreenOrientation::class, 'fit' => ScreenFit::class] as $key => $enum) {
+        foreach (['theme' => ScreenTheme::class, 'aspect' => ScreenAspect::class, 'orientation' => ScreenOrientation::class, 'fit' => ScreenFit::class, 'margin' => ScreenSpacing::class, 'gap' => ScreenSpacing::class] as $key => $enum) {
             if (array_key_exists($key, $input)) {
                 $settings[$key] = $enum::from((string) $input[$key]);
             }
@@ -86,6 +95,10 @@ class UpdateScreenRequest extends FormRequest
             if (array_key_exists($key, $input)) {
                 $settings[$key] = filter_var($input[$key], FILTER_VALIDATE_BOOLEAN);
             }
+        }
+
+        if (array_key_exists('header', $input)) {
+            $settings['header'] = Screen::header((array) $input['header']);
         }
 
         if (array_key_exists('scope', $input)) {

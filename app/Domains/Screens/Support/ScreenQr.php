@@ -7,6 +7,7 @@ namespace App\Domains\Screens\Support;
 use ExeQue\Qr\Builders\Rendered;
 use ExeQue\Qr\Facades\Qr;
 use ExeQue\Qr\Rendering\ScanSafety;
+use ExeQue\Qr\Validation\StyleRule;
 
 /**
  * The QR codes Lumberjack draws, in the `lumberjack` style of config/qr.php: amber on
@@ -50,10 +51,43 @@ final class ScreenQr
             default => $value('url') === '' ? null : Qr::url($value('url')),
         };
 
-        // Transparent, so the tile shows through. Amber has too little contrast for the
-        // guard on white, so that one guard is off; the rest still apply. The mark has
-        // no plate.
-        return $qr?->style('lumberjack')->background(null)->scanSafety(new ScanSafety(minContrast: null, inverted: null))->logo(file: resource_path('images/qr-mark.svg'), size: self::LOGO_SIZE, shape: 'circle')->svg()->contents();
+        if ($qr === null) {
+            return null;
+        }
+
+        // Transparent unless a background is picked, so the tile shows through. Without
+        // one there is nothing to measure the colors against, so the contrast guard is
+        // off; a code lighter than its ground is fine on a dark screen. The rest apply.
+        $background = $value('qr_background') ?: null;
+        $qr = $qr->style(StyleRule::toStyle(self::style($options), base: 'lumberjack'))
+            ->background($background)
+            ->scanSafety(new ScanSafety(minContrast: $background === null ? null : 3.0, inverted: null));
+
+        // The mark has no plate.
+        return (($options['qr_logo'] ?? true) ? $qr->logo(file: resource_path('images/qr-mark.svg'), size: self::LOGO_SIZE, shape: 'circle') : $qr)
+            ->svg()
+            ->contents();
+    }
+
+    /**
+     * A QR code widget's style options (WidgetSchema's qr_style section) as the library's
+     * style input, over the `lumberjack` style: the same modules and eyes when none are picked.
+     *
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    private static function style(array $options): array
+    {
+        $paint = $options['qr_color'] ?? null;
+        $eyes = ($options['qr_eyes'] ?? 'mix') === 'custom'
+            ? ['outer' => ['shape' => $options['qr_outer'] ?? 'rounded'], 'inner' => ['shape' => $options['qr_inner'] ?? 'soft']]
+            : ['preset' => $options['qr_eyes'] ?? 'mix'];
+
+        return array_filter([
+            'modules' => array_filter(['shape' => $options['qr_module'] ?? 'rounded', 'paint' => $paint]),
+            'eyes' => array_filter([...$eyes, 'paint' => $paint]),
+            'filters' => array_map(fn (string $name): array => ['name' => $name], (array) ($options['qr_filters'] ?? [])),
+        ]);
     }
 
     /**

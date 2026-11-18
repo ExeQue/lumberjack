@@ -8,6 +8,7 @@ use App\Domains\Screens\Eloquent\Builders\ScreenBuilder;
 use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
+use App\Domains\Screens\Enums\ScreenSpacing;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Teams\Models\Team;
 use Carbon\CarbonImmutable;
@@ -39,6 +40,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $show_header whether the TV shows the name, scope, live state and clock above the grid
  * @property bool $show_clock whether that header shows the clock
  * @property string $clock_format '24' or '12' hours
+ * @property array<string, mixed>|null $header what the header shows; see header()
+ * @property ScreenSpacing $margin the room around the grid
+ * @property ScreenSpacing $gap the room between widgets
  * @property ScreenTheme $theme
  * @property string $light_from HH:MM
  * @property string $light_to HH:MM
@@ -52,7 +56,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'clock_format', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets', 'share_key', 'share_key_hash', 'share_titles'])]
+#[Fillable(['team_id', 'name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'margin', 'gap', 'show_header', 'show_clock', 'clock_format', 'header', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets', 'share_key', 'share_key_hash', 'share_titles'])]
 #[Hidden(['share_key', 'share_key_hash'])]
 #[UseEloquentBuilder(ScreenBuilder::class)]
 #[UseFactory(ScreenFactory::class)]
@@ -62,8 +66,11 @@ class Screen extends Model
     use HasFactory;
     use HasUuids;
 
+    /** Parts of the header a screen can hide; being offline always shows. */
+    public const array HEADER_PARTS = ['logo', 'name', 'team', 'projects', 'environment', 'period', 'attention', 'live'];
+
     /** What a version of a screen holds; not its identity or share link. */
-    public const array DESIGN = ['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'show_header', 'show_clock', 'clock_format', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets'];
+    public const array DESIGN = ['name', 'cols', 'rows', 'aspect', 'orientation', 'fit', 'margin', 'gap', 'show_header', 'show_clock', 'clock_format', 'header', 'theme', 'light_from', 'light_to', 'timezone', 'scope', 'widgets'];
 
     public const int MIN_COLS = 2;
 
@@ -94,17 +101,40 @@ class Screen extends Model
         return 'uuid';
     }
 
+    /**
+     * What the header shows, whole: the parts hidden, a title instead of the name, and
+     * whether the clock has the date and seconds. Stored or given, with anything else
+     * dropped; nothing stored is everything, as before it could be chosen.
+     *
+     * @param  array<mixed>|null  $given
+     * @return array{hide: list<string>, title: string|null, date: bool, seconds: bool}
+     */
+    public static function header(?array $given): array
+    {
+        $title = trim((string) ($given['title'] ?? ''));
+
+        return [
+            'hide' => array_values(array_unique(array_intersect(array_filter((array) ($given['hide'] ?? []), is_string(...)), self::HEADER_PARTS))),
+            'title' => $title !== '' ? $title : null,
+            'date' => (bool) ($given['date'] ?? false),
+            'seconds' => (bool) ($given['seconds'] ?? false),
+        ];
+    }
+
     protected function casts(): array
     {
         return [
             'aspect' => ScreenAspect::class,
             'orientation' => ScreenOrientation::class,
             'fit' => ScreenFit::class,
+            'margin' => ScreenSpacing::class,
+            'gap' => ScreenSpacing::class,
             'show_header' => 'boolean',
             'show_clock' => 'boolean',
             'theme' => ScreenTheme::class,
             'cols' => 'integer',
             'rows' => 'integer',
+            'header' => 'array',
             'scope' => 'array',
             'widgets' => 'array',
             'share_key' => 'encrypted',

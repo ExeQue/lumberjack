@@ -10,6 +10,7 @@ use App\Domains\Screens\Data\ScreenImport;
 use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
+use App\Domains\Screens\Enums\ScreenSpacing;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Support\ScreenFile;
@@ -70,10 +71,19 @@ class ImportScreenAction
             'screen.aspect' => ['required', Rule::enum(ScreenAspect::class)],
             'screen.orientation' => ['required', Rule::enum(ScreenOrientation::class)],
             'screen.fit' => ['required', Rule::enum(ScreenFit::class)],
+            // Files from before they could be chosen have neither.
+            'screen.margin' => ['sometimes', Rule::enum(ScreenSpacing::class)],
+            'screen.gap' => ['sometimes', Rule::enum(ScreenSpacing::class)],
             'screen.show_header' => ['required', 'boolean'],
             // Files from before the clock could be hidden show it.
             'screen.show_clock' => ['sometimes', 'boolean'],
             'screen.clock_format' => ['sometimes', 'in:24,12'],
+            'screen.header' => ['sometimes', 'array'],
+            'screen.header.hide' => ['array'],
+            'screen.header.hide.*' => ['string', Rule::in(Screen::HEADER_PARTS)],
+            'screen.header.title' => ['nullable', 'string', 'max:100'],
+            'screen.header.date' => ['boolean'],
+            'screen.header.seconds' => ['boolean'],
             'screen.theme' => ['required', Rule::enum(ScreenTheme::class)],
             'screen.light_from' => $time,
             'screen.light_to' => $time,
@@ -213,9 +223,12 @@ class ImportScreenAction
                 'aspect' => ScreenAspect::from((string) $file['aspect']),
                 'orientation' => ScreenOrientation::from((string) $file['orientation']),
                 'fit' => ScreenFit::from((string) $file['fit']),
+                'margin' => ScreenSpacing::from((string) ($file['margin'] ?? ScreenSpacing::Medium->value)),
+                'gap' => ScreenSpacing::from((string) ($file['gap'] ?? ScreenSpacing::Medium->value)),
                 'show_header' => (bool) $file['show_header'],
                 'show_clock' => (bool) ($file['show_clock'] ?? true),
                 'clock_format' => in_array($file['clock_format'] ?? null, ['24', '12'], true) ? $file['clock_format'] : '24',
+                'header' => Screen::header(is_array($file['header'] ?? null) ? $file['header'] : null),
                 'theme' => ScreenTheme::from((string) $file['theme']),
                 'light_from' => (string) $file['light_from'],
                 'light_to' => (string) $file['light_to'],
