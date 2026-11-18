@@ -7,8 +7,8 @@ screen's grid. The designer's palette has two groups:
   something Lumberjack measured. Each picks what it shows under **Shows** and uses the
   screen's projects, environment and period unless it sets its own. When the screen has
   projects ticked, a widget's own projects are among them.
-- **Layout** widgets (Clock and text, Countdown, Message, QR code, Image, video or page)
-  show their own settings. They have no source, scope or period.
+- **Layout** widgets (Clock and text, Countdown, Message, QR code, Image, video or page,
+  Group) show their own settings. They have no source, scope or period.
 
 The screenshots on this page come from the **Widget gallery** screen. Run
 `php artisan db:seed --class=ShowcaseWidgetsSeeder` to add it to the Local Team of a
@@ -57,7 +57,8 @@ The default, and **Align** center with **Vertically** in the middle.
 
 - **Green border while all is ok** (data widgets).
 - **Show card**: when off, the tile has no background or border while all is well. They
-  come back when it is degraded, down or recovering.
+  come back when it is degraded, down or recovering. A widget in a [group](#group) has no
+  card of its own; the group draws one.
 
     ![A health check with the default green border](./screenshots/widget-display-ok.png) ![The same check without the green border](./screenshots/widget-display-no-ok-border.png) ![The same check without a card](./screenshots/widget-display-no-card.png)
 
@@ -524,6 +525,18 @@ A link, a wifi network or any text as a QR code.
     - **Text**.
 - **Line under the code**: such as "Guest wifi".
 
+Its style is in four sections, each with **Reset** back to Lumberjack's own:
+
+- **Logo and colors**: **Lumberjack logo in the middle**, the **Code color** (amber by
+  default) and a **Background** (none by default, so the tile shows through).
+- **Modules**: the shape of the code's dots, such as squares, dots, hearts or flowing.
+- **Eyes**: the three corner squares, as one of the sets, or **Outer and inner apart**.
+- **Filters**: up to 3, such as mixed rotation, jitter or a wave, applied in the order
+  picked.
+
+A style phones could not read reliably, such as colors too close together or filters too
+strong, is refused when saved.
+
 Share links show the code too, wifi password included.
 
 ## Image, video or page
@@ -550,6 +563,14 @@ take turns as a slideshow.
 
 The address must be http or https, reachable from the TV, and https when Lumberjack runs
 on https. Pages that forbid framing stay blank.
+
+## Group
+
+One card behind other widgets, so they read as one. A widget belongs to a group while it
+lies wholly inside it, on fewer cells than the group; it keeps its place on the grid and
+draws no card of its own. Groups nest. Drag a group by the space between its widgets to
+move it with all it holds; it cannot be made smaller than its widgets. Its title is off
+by default.
 
 ## Empty cell
 

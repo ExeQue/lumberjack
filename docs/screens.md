@@ -78,16 +78,17 @@ every kiosk, paired TV and share link that shows the screen reload its page.
   size swaps them.
 - **Resize**: drag any edge or corner. A widget only grows into free cells.
 - **Remove**: select the widget and press Delete.
+- **Group**: add a [Group](./widgets#group) and drop widgets on it. The group draws one
+  card behind the widgets wholly inside it; drag it by the space between them to move it
+  with all it holds.
 
 ![Dragging a widget onto a free cell](./screenshots/screen-designer-drop.png)
 
 ### The grid
 
-A screen is a grid of 2 to 12 columns and 2 to 12 rows. A widget's size in cells is its
-size on the TV.
+A screen is a grid of 2 to 12 columns and 2 to 12 rows, set in the toolbar. A widget's
+size in cells is its size on the TV.
 
-- **Aspect** is the shape of the display: 16:9 (the default), 16:10, 4:3, 21:9 or 32:9,
-  landscape or portrait.
 - **Preview at** shows the screen at a given resolution: **Fit** (the default), the size
   each TV showing the screen reports, common resolutions for the aspect, or **Custom**.
   It is a setting of your browser, not of the screen.
@@ -97,22 +98,38 @@ not show on the TV until you place them again or remove them.
 
 ### Screen settings
 
-Click the grid's background, press Escape, or use **Screen settings** in the toolbar:
+Click the grid's background, press Escape, or use **Screen settings** in the toolbar. The
+**Name** is at the top, the rest in four tabs:
 
-- **Name**.
-- **Projects**, environment and period: what every widget shows unless it picks its own.
-  No project ticked means every project of the team, new ones included. Ticked projects
-  are also a limit: a widget can then only pick among them, its health checks, data
-  sources and filter names come from them alone, and **All of the screen's projects**
-  replaces **All in the team**. A widget that pointed at another project before shows
-  nothing until it is set again. A share link names only the screen's projects.
-- **Time zone**: for the clock and the theme schedule. Empty means each TV uses its own.
-- **Show header**, and **Show the clock in the header** in 24 or 12 hours. The header
-  shows the screen's name, projects and period, how many widgets need attention, whether
-  it is live, and the time.
-- The [theme](#theme).
-- **On a different screen**: on a display of another shape, **Keep its shape** (the
-  default) centers the screen with bars around it, and **Fill the display** stretches it.
+- **Display**:
+    - **On a different screen**: on a display of another shape, **Keep its shape** (the
+      default) centers the screen with bars around it, and **Fill the display** stretches it.
+    - **Aspect**, the shape of the display: 16:9 (the default), 16:10, 4:3, 21:9, 43:18 or
+      32:9, and **Orientation**, landscape or portrait.
+- **Look**:
+    - The [theme](#theme).
+    - **Margin**, the room around the grid, and **Spacing**, the room between widgets:
+      **None**, **Small**, **Medium** (the default) or **Large**. With no spacing, tiles
+      have square corners and neighbours share one border.
+- **Data**: **All projects**, or the projects picked, the environment and the period: what
+  every widget shows unless it picks its own. **All projects** takes in new ones too.
+  Picked projects are also a limit: a widget can then only pick among them, its health
+  checks, data sources and filter names come from them alone, and **All of the screen's
+  projects** replaces **All in the team**. A widget that pointed at another project before
+  shows nothing until it is set again. A share link names only the screen's projects.
+- **Header**:
+    - **Show header**, its **Header size** (small, medium, large or huge), and a
+      **Title** of its own instead of the screen's name.
+    - **Shows**: the logo, the title, the team, the projects, the environment, the period,
+      how many widgets need attention, and whether it is live. Each can be turned off; when
+      a TV is offline, that always shows. With nothing under the title, the title is as
+      large as the clock.
+    - **Show the clock in the header**, in 24 or 12 hours, with **Seconds** and the
+      **Date**. The date takes a format (such as Tue 18 Nov, 18.11.2026 or 2026-11-18) or
+      **Own format** from tokens: `YYYY` or `YY` year, `MMMM`, `MMM`, `MM` or `M` month,
+      `dddd` or `ddd` weekday, `DD` or `D` day, other text in `[brackets]`. **Language of
+      the date**: the app's, the TV's own, or one picked.
+    - **Time zone**: for the clock and the theme schedule. Empty means each TV uses its own.
 
 ### Incident mode
 
