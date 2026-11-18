@@ -134,7 +134,7 @@ return [
         'subject' => 'Subject',
         'details' => 'Details',
         'empty' => 'Nothing yet',
-        'empty_body' => 'Every administrator action is recorded here: teams created, opened or deleted, users invited, suspended or reinstated, administration granted or revoked, password resets, and changes to public stats, shared status screens and paired TVs.',
+        'empty_body' => 'Every administrator action is recorded here: teams created, opened or deleted, users invited, suspended or reinstated, administration granted or revoked, password resets, and changes to public stats, shared status screens and paired TVs, and projects moved between teams.',
         'actions' => [
             'team_created' => 'Created team',
             'team_deleted' => 'Deleted team',
@@ -156,6 +156,7 @@ return [
             'screen_unshared' => 'Stopped sharing a status screen',
             'display_paired' => 'Paired a TV',
             'display_removed' => 'Removed a TV',
+            'project_moved' => 'Moved a project to another team',
         ],
     ],
     'retention' => [

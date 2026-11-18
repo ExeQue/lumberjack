@@ -5,13 +5,21 @@ import {
     retentionFormData,
     retentionPayload,
 } from '@/components/lj/retention-table';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ExternalLink, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ChannelsCard, RulesCard } from '@/components/lj/alerts';
 import type { Channel as AlertChannel } from '@/components/lj/alerts';
 import { ConfirmButton } from '@/components/lj/confirm-button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { CopyButton } from '@/components/lj/copy-text';
 import {
     Tooltip,
@@ -57,6 +65,7 @@ import {
 } from '@/routes/log-channels';
 import {
     destroy as projectDestroy,
+    move as projectMove,
     retention as retentionUpdate,
     publicStats,
     rotatePublicKey,
@@ -144,6 +153,13 @@ type SourceMap = {
     uploaded_at: string;
 };
 type JobOverride = { job_class: string; days: number };
+/** A team the project can move to, with the slug and issue prefix it would have there. */
+type MoveTarget = {
+    uuid: string;
+    name: string;
+    slug: string;
+    issue_prefix: string;
+};
 type Repository = {
     provider: string;
     repository: string;
@@ -166,6 +182,7 @@ type Props = {
     /** Deferred: counted after the page shows. */
     retention_stats?: RetentionStats;
     job_overrides: JobOverride[];
+    move_targets: MoveTarget[];
     repository: Repository;
     triage: TriageProvider[];
     alerts: {
@@ -2485,7 +2502,168 @@ function RepositorySection({ project, repository }: Props) {
     );
 }
 
-function DangerSection({ project }: Props) {
+function MoveProject({
+    project,
+    targets,
+}: {
+    project: ProjectHeader;
+    targets: MoveTarget[];
+}) {
+    const t = useT();
+    const [open, setOpen] = useState(false);
+    const [target, setTarget] = useState<MoveTarget | undefined>(targets[0]);
+    const [slug, setSlug] = useState(target?.slug ?? '');
+    const [prefix, setPrefix] = useState(target?.issue_prefix ?? '');
+    const pick = (next: MoveTarget | undefined) => {
+        setTarget(next);
+        setSlug(next?.slug ?? '');
+        setPrefix(next?.issue_prefix ?? '');
+    };
+
+    return (
+        <div className="flex flex-col gap-2">
+            <h3 className="text-[13px] font-medium">
+                {t('settings.danger.move_title')}
+            </h3>
+            <p className="text-ink-2">
+                {t('settings.danger.move_description')}
+            </p>
+            {targets.length === 0 ? (
+                <p className="text-xs text-ink-3">
+                    {t('settings.danger.move_no_teams')}
+                </p>
+            ) : (
+                <div>
+                    <Button
+                        onClick={() => {
+                            pick(targets[0]);
+                            setOpen(true);
+                        }}
+                    >
+                        {t('settings.danger.move')}
+                    </Button>
+                </div>
+            )}
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent>
+                    <Form
+                        {...projectMove.form(project.uuid)}
+                        onSuccess={() => setOpen(false)}
+                        className="flex flex-col gap-4"
+                    >
+                        {({ errors, processing }) => (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>
+                                        {t(
+                                            'settings.danger.move_dialog_title',
+                                            {
+                                                name: project.name,
+                                            },
+                                        )}
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        {t('settings.danger.move_consequences')}
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <ul className="list-disc pl-5 text-xs text-ink-2">
+                                    <li>{t('settings.danger.move_screens')}</li>
+                                    <li>{t('settings.danger.move_alerts')}</li>
+                                    <li>{t('settings.danger.move_tokens')}</li>
+                                    <li>{t('settings.danger.move_people')}</li>
+                                </ul>
+                                <Field
+                                    label={t('settings.danger.move_team')}
+                                    htmlFor="move-team"
+                                    error={errors.team}
+                                >
+                                    <Select
+                                        id="move-team"
+                                        name="team"
+                                        value={target?.uuid ?? ''}
+                                        onChange={(e) =>
+                                            pick(
+                                                targets.find(
+                                                    (x) =>
+                                                        x.uuid ===
+                                                        e.target.value,
+                                                ),
+                                            )
+                                        }
+                                    >
+                                        {targets.map((x) => (
+                                            <option key={x.uuid} value={x.uuid}>
+                                                {x.name}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </Field>
+                                <Field
+                                    label={t('settings.general.slug')}
+                                    htmlFor="move-slug"
+                                    hint={t('settings.danger.move_suggested')}
+                                    error={errors.slug}
+                                >
+                                    <Input
+                                        id="move-slug"
+                                        name="slug"
+                                        className="font-mono"
+                                        value={slug}
+                                        onChange={(e) =>
+                                            setSlug(e.target.value)
+                                        }
+                                        required
+                                        maxLength={100}
+                                        spellCheck={false}
+                                    />
+                                </Field>
+                                <Field
+                                    label={t('projects.issue_prefix')}
+                                    htmlFor="move-issue-prefix"
+                                    error={errors.issue_prefix}
+                                >
+                                    <Input
+                                        id="move-issue-prefix"
+                                        name="issue_prefix"
+                                        className="w-40 font-mono uppercase"
+                                        value={prefix}
+                                        onChange={(e) =>
+                                            setPrefix(
+                                                e.target.value
+                                                    .toUpperCase()
+                                                    .replace(/[^A-Z0-9]/g, ''),
+                                            )
+                                        }
+                                        required
+                                        minLength={2}
+                                        maxLength={8}
+                                        spellCheck={false}
+                                    />
+                                </Field>
+                                <DialogFooter>
+                                    <Button onClick={() => setOpen(false)}>
+                                        {t('common.cancel')}
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        variant="danger"
+                                        disabled={processing || !target}
+                                    >
+                                        {t('settings.danger.move_confirm', {
+                                            team: target?.name ?? '',
+                                        })}
+                                    </Button>
+                                </DialogFooter>
+                            </>
+                        )}
+                    </Form>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
+
+function DangerSection({ project, move_targets }: Props) {
     const t = useT();
     const [confirming, setConfirming] = useState(false);
     const [typed, setTyped] = useState('');
@@ -2493,6 +2671,7 @@ function DangerSection({ project }: Props) {
 
     return (
         <Section id="danger" title={t('settings.danger.title')} danger>
+            <MoveProject project={project} targets={move_targets} />
             <p className="text-ink-2">{t('settings.danger.description')}</p>
             {!confirming ? (
                 <div>

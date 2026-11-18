@@ -31,6 +31,8 @@ use App\Domains\Retention\Models\RetentionPolicy;
 use App\Domains\Retention\Presenters\RetentionPresenter;
 use App\Domains\Shared\Support\Scrubber;
 use App\Domains\SourceMaps\Models\SourceMap;
+use App\Domains\Teams\Models\Team;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -107,6 +109,7 @@ class ProjectSettingsController
             ],
             // One entry per agent provider; Claude is the first.
             'triage' => [app(ClaudeTriageWorkflow::class)->describe($project, url('/'))],
+            'move_targets' => $this->moveTargets($request->user(), $project),
             'repository' => $repository === null ? null : [
                 'provider' => $repository->provider->value,
                 'repository' => $repository->repository,
@@ -115,6 +118,36 @@ class ProjectSettingsController
                 'allow_public' => $repository->allow_public,
             ],
         ]);
+    }
+
+    /**
+     * The teams the user may move the project to, each with the slug and issue prefix it
+     * would have there: its own, or with a number added where the team has them already.
+     *
+     * @return list<array{uuid: string, name: string, slug: string, issue_prefix: string}>
+     */
+    private function moveTargets(User $user, Project $project): array
+    {
+        $teams = ($user->isAdmin() ? Team::query()->get() : $user->teams)
+            ->filter(fn (Team $team): bool => $user->can('move', [$project, $team]))
+            ->sortBy('name');
+        $taken = Project::query()->whereIn('team_id', $teams->modelKeys())->get(['team_id', 'slug', 'issue_prefix'])->groupBy('team_id');
+
+        return array_values($teams->map(function (Team $team) use ($project, $taken): array {
+            $projects = $taken->get($team->id, collect());
+            $slug = $project->slug;
+            $prefix = $project->issuePrefix();
+
+            for ($n = 2; $projects->contains('slug', $slug); $n++) {
+                $slug = $project->slug.'-'.$n;
+            }
+
+            for ($n = 2; $projects->contains('issue_prefix', $prefix); $n++) {
+                $prefix = mb_substr($project->issuePrefix(), 0, 8 - strlen((string) $n)).$n;
+            }
+
+            return ['uuid' => $team->uuid, 'name' => $team->name, 'slug' => $slug, 'issue_prefix' => $prefix];
+        })->all());
     }
 
     public function update(UpdateProjectRequest $request, Project $project, UpdateProjectAction $action): RedirectResponse

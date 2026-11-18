@@ -18,6 +18,7 @@ Route::post('projects', [ProjectController::class, 'store'])->name('projects.sto
 Route::prefix('projects/{project}')->scopeBindings()->middleware(['can:view,project', FollowProjectTeam::class])->group(function () {
     Route::get('/', OverviewController::class)->name('projects.show');
     Route::delete('/', [ProjectController::class, 'destroy'])->name('projects.destroy');
+    Route::put('team', [ProjectController::class, 'move'])->name('projects.move');
 
     require __DIR__.'/projects/issues.php';
     require __DIR__.'/projects/performance.php';
