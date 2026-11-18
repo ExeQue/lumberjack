@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-18
+
 ### Added
 
 - **Group** widget on status screens: one card behind the widgets wholly inside it, which then draw no card of their own (**Show card** is locked off). Groups nest, a group moves with all it holds when dragged by the space between its widgets, and it cannot be made smaller than them. Its title is off by default.
@@ -305,7 +307,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.11.1...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/ExeQue/lumberjack/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/ExeQue/lumberjack/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/ExeQue/lumberjack/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/ExeQue/lumberjack/compare/v0.9.0...v0.10.0
