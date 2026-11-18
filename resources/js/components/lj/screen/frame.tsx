@@ -181,7 +181,15 @@ export function KioskFrame({
                             )}
                             <div className="flex min-w-0 flex-col">
                                 {!screen.header.hide.includes('name') && (
-                                    <h1 className="truncate text-[max(1rem,1.5cqw)] leading-tight font-bold">
+                                    <h1
+                                        className={cn(
+                                            'truncate leading-tight font-bold',
+                                            // Alone on its line, as large as the clock.
+                                            header.subtitle
+                                                ? 'text-[max(1rem,1.5cqw)]'
+                                                : 'text-[max(1.25rem,2.1cqw)]',
+                                        )}
+                                    >
                                         {header.title}
                                     </h1>
                                 )}
