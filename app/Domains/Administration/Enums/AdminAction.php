@@ -20,6 +20,7 @@ enum AdminAction: string
     case PublicStatsRotated = 'public_stats_rotated';
     case PublicStatsChanged = 'public_stats_changed';
     case PublicStatsDisabled = 'public_stats_disabled';
+    case ProjectMoved = 'project_moved';
     case ScreenShared = 'screen_shared';
     case ScreenShareChanged = 'screen_share_changed';
     case ScreenShareRotated = 'screen_share_rotated';

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Screens\Http\Requests;
 
+use App\Domains\Screens\Data\WidgetScope;
 use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
@@ -61,7 +62,8 @@ class UpdateScreenRequest extends FormRequest
             'timezone' => ['sometimes', 'nullable', 'timezone:all_with_bc', 'not_in:Factory'],
             'scope' => ['sometimes', 'required', 'array'],
             'scope.projects' => ['present_with:scope', 'array'],
-            'scope.projects.*' => ['string', Rule::in($screen->team->projects()->pluck('uuid')->all())],
+            // NO_PROJECT: what is left when its last project moved to another team.
+            'scope.projects.*' => ['string', Rule::in([...$screen->team->projects()->pluck('uuid')->all(), WidgetScope::NO_PROJECT])],
             'scope.environment' => ['nullable', 'string', 'max:64'],
             'scope.period' => ['required_with:scope', Rule::enum(Period::class)],
         ];

@@ -313,5 +313,20 @@ return [
         'type_name' => 'Type :name to confirm',
         // Button
         'confirm' => 'Delete project permanently',
+        'move_title' => 'Move to another team',
+        'move_description' => 'Moves the project with all its data, issues, keys and settings to another team you administer. Its SDKs keep sending as they do.',
+        'move_no_teams' => 'You administer no other team to move it to.',
+        // Button
+        'move' => 'Move to another team…',
+        'move_dialog_title' => 'Move :name to another team',
+        'move_consequences' => 'What ties the project to this team is let go:',
+        'move_screens' => 'Status screens of this team stop showing it; a widget that showed only this project shows nothing.',
+        'move_alerts' => 'Links to this team\'s alert rules and channels are removed; the project then follows the new team\'s. Its own rules and channels go with it.',
+        'move_tokens' => 'MCP tokens lose access to it, here and in the new team, until they are given it.',
+        'move_people' => 'Assignees and watchers who are not in the new team are cleared. History is kept.',
+        'move_team' => 'Team',
+        'move_suggested' => 'A number is added where the team has the slug or issue prefix already.',
+        // Button
+        'move_confirm' => 'Move to :team',
     ],
 ];

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Screens\Support;
 
 use App\Domains\Screens\Actions\ResolveWidgetDataAction;
+use App\Domains\Screens\Data\WidgetScope;
 use App\Domains\Screens\Enums\ReleaseScope;
 use App\Domains\Screens\Enums\WidgetType;
 use App\Domains\Screens\Models\Screen;
@@ -219,6 +220,8 @@ final class WidgetSchema
     {
         $type = is_array($widget) && is_string($widget['type'] ?? null) ? $widget['type'] : '';
         $data = WidgetType::tryFrom($type);
+        // A scope left with no project when one moved to another team keeps NO_PROJECT; it saves as it is.
+        $projects = [...$projects, WidgetScope::NO_PROJECT];
         $source = fn (string $attribute, mixed $value, Closure $fail) => $data !== null && is_string($value) && WidgetSources::has($data, $value)
             ? null
             : $fail(__('ui/screens.validation.source'));

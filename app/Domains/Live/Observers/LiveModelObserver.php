@@ -166,8 +166,14 @@ class LiveModelObserver
 
     private function projectChanged(Project $project, bool $createdOrDeleted): void
     {
-        if ($createdOrDeleted || $project->wasChanged(['name', 'slug'])) {
+        if ($createdOrDeleted || $project->wasChanged(['name', 'slug', 'team_id'])) {
             $this->team->execute($project->team_id, TeamChangeKind::Projects);
+        }
+
+        // Moved to another team: the old one lists it no more.
+        if ($project->wasChanged('team_id')) {
+            $this->team->execute((int) $project->getPrevious()['team_id'], TeamChangeKind::Projects);
+            $this->admin->execute(AdminChangeKind::Teams);
         }
 
         if ($createdOrDeleted) {
