@@ -537,6 +537,10 @@ Its style is in four sections, each with **Reset** back to Lumberjack's own:
 A style phones could not read reliably, such as colors too close together or filters too
 strong, is refused when saved.
 
+![Medium dots, circle and heart eyes and mixed rotation](./screenshots/widget-qr-styled.png) ![Flowing modules and leaf eyes in navy on white, without the logo](./screenshots/widget-qr-colors.png)
+
+![A QR code's style in the designer](./screenshots/screen-designer-qr-style.png)
+
 Share links show the code too, wifi password included.
 
 ## Image, video or page
@@ -571,6 +575,8 @@ lies wholly inside it, on fewer cells than the group; it keeps its place on the 
 draws no card of its own. Groups nest. Drag a group by the space between its widgets to
 move it with all it holds; it cannot be made smaller than its widgets. Its title is off
 by default.
+
+![A group titled Checkout holding a stat and a gauge](./screenshots/widget-group.png)
 
 ## Empty cell
 

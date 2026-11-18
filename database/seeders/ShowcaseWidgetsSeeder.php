@@ -16,7 +16,7 @@ use Illuminate\Database\Seeder;
 
 /**
  * The Local Team's "Widget gallery": one widget of every type and its main variants, the
- * screen docs/widgets.md takes its screenshots of (npm run docs:screenshots). An 8 x 17
+ * screen docs/widgets.md takes its screenshots of (npm run docs:screenshots). An 8 x 19
  * grid that fills its display: 1920 px wide, its cells are as wide as an 8-column screen's
  * on a 1920 x 1080 TV, and square. Its calendar is a data source of Storefront whose feed is
  * written again on every run, relative to now; a gallery screen already there is kept.
@@ -28,7 +28,7 @@ class ShowcaseWidgetsSeeder extends Seeder
     /** Eight columns as on a 1920 x 1080 TV with four rows; the gallery has more rows of the same size. */
     private const int COLS = 8;
 
-    private const int ROWS = 17;
+    private const int ROWS = 19;
 
     private const string TIMEZONE = 'Europe/Copenhagen';
 
@@ -126,7 +126,7 @@ class ShowcaseWidgetsSeeder extends Seeder
     }
 
     /**
-     * Rows of tiles on the 8 x 17 grid, named by type and variant.
+     * Rows of tiles on the 8 x 19 grid, named by type and variant.
      *
      * @return list<array<string, mixed>>
      */
@@ -195,6 +195,15 @@ class ShowcaseWidgetsSeeder extends Seeder
             $widget('stat-activity', 'stat', 'activity', 5, 14, 2, 1, 'Carts abandoned', ['compare' => 'yesterday', ...$centered], [...$storefront, 'filter' => 'cart:cart.abandoned']),
             $widget('list-activity', 'list', 'top_activity', 0, 15, 4, 2, 'Storefront activity', ['show_project' => false], $storefront),
             $widget('list-activity-latest', 'list', 'latest_activity', 4, 15, 4, 2, options: [], scope: $storefront),
+
+            // A group with its title, behind the two tiles it holds; they draw no card of their own.
+            $widget('group', 'group', null, 0, 17, 4, 2, 'Checkout', ['show_title' => true]),
+            $widget('group-requests', 'stat', 'requests', 0, 17, 2, 2, options: ['compare' => 'yesterday', ...$centered], scope: $storefront),
+            $widget('group-errors', 'gauge', 'error_rate', 2, 17, 2, 2, scope: $storefront),
+
+            // QR codes in a style of their own: modules, eyes apart, colors and a filter.
+            $widget('qr-styled', 'qr', null, 4, 17, 2, 2, options: ['url' => 'https://lumberjack.test', 'caption' => 'Status page', 'qr_module' => 'dots-medium', 'qr_eyes' => 'custom', 'qr_outer' => 'circle', 'qr_inner' => 'heart', 'qr_filters' => ['mixed-rotation']]),
+            $widget('qr-colors', 'qr', null, 6, 17, 2, 2, options: ['url' => 'https://lumberjack.test', 'caption' => 'Our docs', 'qr_logo' => false, 'qr_color' => '#1e1b4b', 'qr_background' => '#ffffff', 'qr_module' => 'flowing-soft', 'qr_eyes' => 'leaf']),
         ];
     }
 }

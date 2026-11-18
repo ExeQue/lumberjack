@@ -73,9 +73,16 @@ const click = async (selector) => {
     await sleep(600);
 };
 
-// Webhook URLs carry ids and tokens; show only where they point.
+// Webhook URLs carry ids and tokens; show only where they point. Only the app shows: a dev
+// toolbar in a corner is hidden.
 const mask = () =>
     page.evaluate(() => {
+        // A dev toolbar (Monocle's button) sits beside the body, on the page itself.
+        for (const el of document.documentElement.children) {
+            if (el !== document.head && el !== document.body) {
+                el.style.visibility = 'hidden';
+            }
+        }
         const walker = document.createTreeWalker(
             document.body,
             NodeFilter.SHOW_TEXT,
@@ -164,7 +171,7 @@ const pairCode = await page
 
 // It fills its display: 1920 px wide gives each cell the width an 8-column screen has on a
 // 1920 x 1080 TV, and rows as tall as that make a 1 x 1 tile square.
-const galleryView = { width: 1920, height: 240 * 17 };
+const galleryView = { width: 1920, height: 240 * 19 };
 // Health first: the seeded checks' agents report no more, and go stale within minutes.
 const galleryTiles = [
     'health-cards',
@@ -192,6 +199,9 @@ const galleryTiles = [
     'countdown',
     'countdown-calendar',
     'qr-wifi',
+    'qr-styled',
+    'qr-colors',
+    'group',
     'media-image',
     'message',
     'message-ticker',
@@ -385,6 +395,35 @@ const shots = {
     'screen-designer-display': {
         path: screen,
         before: () => click('[aria-label="Display settings"]'),
+    },
+    // The screen's settings, a shot per tab.
+    ...Object.fromEntries(
+        ['display', 'appearance', 'time'].map((tab) => [
+            `screen-settings-${tab}`,
+            {
+                path: screen,
+                before: () => click(`#screen-tab-${tab}-button`),
+                element: `aside:has(#screen-tab-${tab}-button)`,
+            },
+        ]),
+    ),
+    // A styled QR code of the gallery in the designer, its style sections open.
+    'screen-designer-qr-style': {
+        path: gallery ? `${gallery}/edit` : null,
+        before: async () => {
+            await click('[data-widget="qr-styled"]');
+            await page.evaluate(() => {
+                for (const details of document.querySelectorAll(
+                    'aside details',
+                )) {
+                    details.open = /Logo and colors|Eyes/.test(
+                        details.querySelector('summary')?.textContent ?? '',
+                    );
+                }
+            });
+            await sleep(600);
+        },
+        element: 'aside:has(details)',
     },
     'screen-designer-incident': {
         path: screen,

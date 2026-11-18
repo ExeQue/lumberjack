@@ -29,9 +29,9 @@ settings of the selected widget on the right.
 
 ![The designer](../screenshots/screen-designer.png)
 
-1. Click the grid's background for the screen's settings: the **projects**,
-   **environment** and **period** the widgets show, and **Columns**, **Rows** and
-   **Aspect** to match the TV.
+1. Set **Columns** and **Rows** in the toolbar. Click the grid's background for the
+   screen's settings: the **Aspect** to match the TV under **Display**, and the
+   **projects**, **environment** and **period** the widgets show under **Data**.
 2. Drag a widget type onto a free cell, or click it to add it in the first free spot.
    Drag a widget's edges to resize it.
 3. Pick what a widget shows under **Shows**, such as a **Stat** with **Error rate** or a

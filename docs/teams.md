@@ -6,11 +6,11 @@ the teams they are members of; system administrators see every team, see
 
 ## Roles
 
-| Role   | Can                                                                                                                                                                                   |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Owner  | Everything an admin can, and transfer ownership. One per team.                                                                                                                        |
-| Admin  | Create projects, change their settings, manage members, invitations, API and MCP tokens, alerts and retention. Pair TVs, manage displays, share screens by link and reload a display. |
-| Member | See every project of the team and work on its issues: status, assignee, labels, notes, watching. See, design and delete status screens, and reload the TVs showing one.               |
+| Role   | Can                                                                                                                                                                                                                                |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Owner  | Everything an admin can, and transfer ownership. One per team.                                                                                                                                                                     |
+| Admin  | Create projects, change their settings, move them to another team they are admin of, manage members, invitations, API and MCP tokens, alerts and retention. Pair TVs, manage displays, share screens by link and reload a display. |
+| Member | See every project of the team and work on its issues: status, assignee, labels, notes, watching. See, design and delete status screens, and reload the TVs showing one.                                                            |
 
 ## The team page
 

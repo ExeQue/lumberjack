@@ -6,6 +6,7 @@ use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Support\Ical;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Models\Screen;
+use App\Domains\Screens\Support\ScreenLayout;
 use App\Domains\Screens\Support\WidgetSchema;
 use App\Domains\Teams\Models\Team;
 use Carbon\CarbonImmutable;
@@ -30,7 +31,7 @@ describe('the widget gallery seed', function () {
         $projects = [(string) $this->project->uuid];
 
         expect(collect($screen->widgets)->pluck('type')->unique()->sort()->values()->all())
-            ->toBe(collect(WidgetSchema::types())->reject(fn (string $type): bool => in_array($type, ['empty', 'group'], true))->sort()->values()->all());
+            ->toBe(collect(WidgetSchema::types())->reject(fn (string $type): bool => $type === 'empty')->sort()->values()->all());
 
         foreach ($screen->widgets as $widget) {
             $validator = Validator::make(['widget' => $widget], WidgetSchema::rules('widget', $widget, $screen->cols, $screen->rows, $projects));
@@ -38,12 +39,7 @@ describe('the widget gallery seed', function () {
             expect($validator->errors()->all())->toBe([], "{$widget['id']} does not validate");
         }
 
-        $cells = collect($screen->widgets)->flatMap(fn (array $widget): array => collect(range($widget['x'], $widget['x'] + $widget['w'] - 1))
-            ->crossJoin(range($widget['y'], $widget['y'] + $widget['h'] - 1))
-            ->map(fn (array $cell): string => implode(',', $cell))
-            ->all());
-
-        expect($cells->duplicates()->all())->toBe([], 'widgets overlap');
+        expect(ScreenLayout::overlapping($screen->widgets))->toBe([], 'widgets overlap');
     });
 
     it('gives the calendar widgets a feed with an event on now and more to come', function () {
