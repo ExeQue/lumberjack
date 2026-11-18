@@ -149,6 +149,7 @@ return [
         'qr' => 'QR code',
         'media' => 'Image, video or page',
         'empty' => 'Empty cell',
+        'group' => 'Group',
     ],
 
     // What each type is for, under its name in the palette.
@@ -166,6 +167,7 @@ return [
         'qr' => 'A link, the guest wifi or any text to scan',
         'media' => 'A picture or camera, a video, YouTube or a web page',
         'empty' => 'Blank space; not shown on the TV',
+        'group' => 'One card behind the widgets you put on it',
     ],
 
     'palette' => [
@@ -242,6 +244,8 @@ return [
         'external' => 'External',
     ],
     'inspector' => [
+        'card_in_group' => 'The group it lies in draws the card.',
+        'reset' => 'Reset',
         'label' => 'Settings',
         'period' => 'Over',
         'period_screen' => 'Screen default',
@@ -291,6 +295,7 @@ return [
         'no_checks' => 'The team has no health checks yet.',
         'checks_hint' => 'None picked: every check of the projects, new ones included. One picked: that check alone, with its uptime and timeline.',
         'empty_hint' => 'Keeps this space empty on the TV. Resize it to make a gap of any size.',
+        'group_hint' => 'Drop widgets on it to show them as one card. Drag it between them to move it with all it holds.',
     ],
 
     // The display a screen is designed for: its shape, then which way it stands.
@@ -322,8 +327,39 @@ return [
         'timezone_hint' => 'For the clock and for switching between light and dark. Empty: each TV uses its own (the browser\'s) time zone.',
         'browser_timezone' => 'The browser\'s time zone',
         'show_clock' => 'Show the clock in the header',
+        'header_title' => 'Title',
+        'header_shows' => 'Shows',
+        'header_shows_hint' => 'Lit parts show. Offline always shows, so stale numbers never pass for live ones.',
+        'header_parts' => [
+            'logo' => 'Logo',
+            'name' => 'Title',
+            'team' => 'Team',
+            'projects' => 'Projects',
+            'environment' => 'Environment',
+            'period' => 'Period',
+            'attention' => 'Problems',
+            'live' => 'Live',
+        ],
+        'clock_date' => 'Date',
+        'clock_seconds' => 'Seconds',
         'fit' => 'On a different screen',
         'fit_hint' => 'A display of another shape than the screen\'s shows it as designed, centered with bars around it, or stretched to fill it.',
+        'margin' => 'Margin',
+        'gap' => 'Spacing',
+        'schedule_short' => 'Day and night',
+        'sections' => [
+            'display' => 'Display',
+            'appearance' => 'Look',
+            'data' => 'Data',
+            'time' => 'Header',
+        ],
+    ],
+    // How much room a screen leaves around its grid and between its widgets.
+    'spacing' => [
+        'none' => 'None',
+        's' => 'Small',
+        'm' => 'Medium',
+        'l' => 'Large',
     ],
 
     'sections' => [
@@ -338,6 +374,10 @@ return [
         'countdown' => 'Countdown',
         'message' => 'Message',
         'qr' => 'QR code',
+        'qr_look' => 'Logo and colors',
+        'qr_modules' => 'Modules',
+        'qr_eyes' => 'Eyes',
+        'qr_filters' => 'Filters',
         'media' => 'Media',
         'rotation' => 'Rotation',
         'scope' => 'Scope',
@@ -468,6 +508,14 @@ return [
         'security' => ['label' => 'Security', 'options' => ['WPA' => 'WPA', 'WEP' => 'WEP', 'nopass' => 'None']],
         'hidden_network' => ['label' => 'Hidden network'],
         'qr_text' => ['label' => 'Text', 'placeholder' => 'Anything a phone should read'],
+        'qr_logo' => ['label' => 'Lumberjack logo in the middle'],
+        'qr_color' => ['label' => 'Code color', 'unset' => 'Amber', 'reset' => 'Back to amber'],
+        'qr_background' => ['label' => 'Background', 'unset' => 'None', 'reset' => 'No background'],
+        'qr_module' => ['label' => 'Modules'],
+        'qr_eyes' => ['label' => 'Eyes', 'custom' => 'Outer and inner apart'],
+        'qr_outer' => ['label' => 'Outer eye'],
+        'qr_inner' => ['label' => 'Inner eye'],
+        'qr_filters' => ['label' => 'Filters', 'hint' => 'Up to :max, applied in the order picked.'],
         'caption' => ['label' => 'Line under the code', 'placeholders' => ['link' => 'Our status page', 'wifi' => 'Guest wifi', 'text' => 'Scan me', 'image' => 'The loading dock', 'video' => 'This week\'s release', 'page' => 'Grafana']],
         'media' => ['label' => 'Shows', 'options' => ['image' => 'An image or camera', 'video' => 'A video', 'page' => 'A web page or YouTube']],
         'media_url' => ['label' => 'Addresses', 'placeholder' => 'https://', 'hint' => 'Several show in turn, the same one on every TV at once.'],
@@ -834,5 +882,6 @@ return [
         'source' => 'This widget cannot show that.',
         'duplicate_id' => 'Two widgets have the same id.',
         'overlap' => 'This widget covers a cell another widget already uses.',
+        'qr_unscannable' => 'Phones could not read this code reliably: pick colors further apart, or fewer or milder filters.',
     ],
 ];

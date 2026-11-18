@@ -20,6 +20,7 @@ use App\Domains\Screens\Actions\UpdateScreenWidgetAction;
 use App\Domains\Screens\Enums\ScreenAspect;
 use App\Domains\Screens\Enums\ScreenFit;
 use App\Domains\Screens\Enums\ScreenOrientation;
+use App\Domains\Screens\Enums\ScreenSpacing;
 use App\Domains\Screens\Enums\ScreenTemplate;
 use App\Domains\Screens\Enums\ScreenTheme;
 use App\Domains\Screens\Enums\WidgetType;
@@ -391,16 +392,27 @@ describe('saving from the designer', function () {
         ])->assertJsonValidationErrors(['light_from', 'timezone', 'theme', 'clock_format']);
     });
 
+    it('saves what the header shows, and refuses parts it does not have', function () {
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['header' => ['hide' => ['logo', 'team', 'logo'], 'title' => '  Ops, 3rd floor ', 'date' => true, 'seconds' => true]])->assertOk();
+
+        expect($this->screen->refresh()->header)->toBe(['hide' => ['logo', 'team'], 'title' => 'Ops, 3rd floor', 'date' => true, 'seconds' => true]);
+
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['header' => ['hide' => ['offline'], 'date' => 'soon']])
+            ->assertJsonValidationErrors(['header.hide.0', 'header.date']);
+    });
+
     it('saves the display\'s aspect and orientation, and refuses others', function () {
-        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '32:9', 'orientation' => 'portrait', 'fit' => 'fill', 'show_header' => false])->assertOk();
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '32:9', 'orientation' => 'portrait', 'fit' => 'fill', 'margin' => 'none', 'gap' => 'l', 'show_header' => false])->assertOk();
 
         expect($this->screen->refresh()->aspect)->toBe(ScreenAspect::SuperUltrawide)
             ->and($this->screen->orientation)->toBe(ScreenOrientation::Portrait)
             ->and($this->screen->fit)->toBe(ScreenFit::Fill)
+            ->and($this->screen->margin)->toBe(ScreenSpacing::None)
+            ->and($this->screen->gap)->toBe(ScreenSpacing::Large)
             ->and($this->screen->show_header)->toBeFalse();
 
-        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '9:16', 'orientation' => 'upside-down', 'fit' => 'zoom', 'show_header' => 'maybe'])
-            ->assertJsonValidationErrors(['aspect', 'orientation', 'fit', 'show_header']);
+        $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['aspect' => '9:16', 'orientation' => 'upside-down', 'fit' => 'zoom', 'margin' => 'xl', 'gap' => '2', 'show_header' => 'maybe'])
+            ->assertJsonValidationErrors(['aspect', 'orientation', 'fit', 'margin', 'gap', 'show_header']);
     });
 
     it('hides the clock and leaves the time zone to the browser', function () {

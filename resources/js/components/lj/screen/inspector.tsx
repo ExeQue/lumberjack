@@ -7,7 +7,24 @@ const CONNECTED_SHAPES: Record<string, string[]> = {
 };
 
 import { TreeSelect } from '@/components/lj/tree-select';
-import { Plus, Settings, X } from 'lucide-react';
+import {
+    AlignCenter,
+    AlignLeft,
+    AlignVerticalJustifyCenter,
+    AlignVerticalJustifyStart,
+    Expand,
+    Moon,
+    Plus,
+    RectangleHorizontal,
+    RectangleVertical,
+    Scaling,
+    Shrink,
+    SlidersHorizontal,
+    Sun,
+    SunMoon,
+    Settings,
+    X,
+} from 'lucide-react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import {
@@ -28,12 +45,13 @@ import type {
     Schema,
     SchemaField,
     Screen,
+    ScreenSpacing,
     Source,
     Sources,
     Widget,
     WidgetScope,
 } from './types';
-import { MAX_SLIDES, MAX_ZONES, ROTATING_KINDS } from './types';
+import { HEADER_PARTS, MAX_SLIDES, MAX_ZONES, ROTATING_KINDS } from './types';
 
 export type Catalog = {
     schema: Schema;
@@ -75,6 +93,10 @@ export type Catalog = {
     filters?: Record<string, string[]>;
     /** What some filter names are shown as, by name. */
     filterLabels?: Record<string, string>;
+    /** Widgets a group holds: the group draws their card. */
+    grouped?: string[];
+    /** The shapes a screen can have, such as 16:9 (ScreenAspect). */
+    aspects?: string[];
 };
 
 const ALL = '*';
@@ -86,6 +108,216 @@ const chip = (on: boolean) =>
             ? 'border-amber bg-amber/15 text-amber'
             : 'border-line-strong bg-rail text-ink-2 hover:text-ink',
     );
+
+/** A letter as large as each text size draws, relative to the others. */
+const SIZE_GLYPHS: Record<string, ReactNode> = Object.fromEntries(
+    Object.entries({ s: 11, m: 14, l: 17, xl: 20 }).map(([size, px]) => [
+        size,
+        <span className="leading-none font-semibold" style={{ fontSize: px }}>
+            A
+        </span>,
+    ]),
+);
+
+/** Options picked from icons that show what each does, with the icon per value. */
+const CHOICE_ICONS: Record<string, Record<string, ReactNode>> = {
+    align: { left: <AlignLeft />, center: <AlignCenter /> },
+    valign: {
+        top: <AlignVerticalJustifyStart />,
+        middle: <AlignVerticalJustifyCenter />,
+    },
+    text_size: { auto: <Scaling />, ...SIZE_GLYPHS },
+    title_size: SIZE_GLYPHS,
+};
+
+/** Room around the grid or between widgets, per ScreenSpacing, in the icons' units. */
+const SPACING_ROOM: Record<ScreenSpacing, number> = {
+    none: 0,
+    s: 1.5,
+    m: 3,
+    l: 4.5,
+};
+
+/**
+ * A screen's margin or gap as a picture: a widget inset that far in the screen, or two
+ * widgets that far apart (square and on one line at none, as the screen draws them).
+ */
+function SpacingIcon({
+    kind,
+    value,
+}: {
+    kind: 'margin' | 'gap';
+    value: ScreenSpacing;
+}) {
+    const room = SPACING_ROOM[value];
+    const w = (14 - room) / 2;
+
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.25}
+            aria-hidden="true"
+        >
+            {kind === 'margin' ? (
+                <>
+                    <rect x={1} y={1} width={14} height={14} rx={2} />
+                    <rect
+                        x={1.6 + room}
+                        y={1.6 + room}
+                        width={12.8 - 2 * room}
+                        height={12.8 - 2 * room}
+                        rx={room === 0 ? 1.4 : 1}
+                        fill="currentColor"
+                        fillOpacity={0.45}
+                        stroke="none"
+                    />
+                </>
+            ) : (
+                <>
+                    <rect
+                        x={1}
+                        y={3}
+                        width={w}
+                        height={10}
+                        rx={room === 0 ? 0 : 1.5}
+                    />
+                    <rect
+                        x={1 + w + room}
+                        y={3}
+                        width={w}
+                        height={10}
+                        rx={room === 0 ? 0 : 1.5}
+                    />
+                </>
+            )}
+        </svg>
+    );
+}
+
+/** A screen's shape as a picture: a frame of its width over its height. */
+function AspectIcon({ ratio }: { ratio: number }) {
+    const w = ratio >= 1 ? 14 : 14 * ratio;
+    const h = ratio >= 1 ? 14 / ratio : 14;
+
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.25}
+            aria-hidden="true"
+        >
+            <rect x={8 - w / 2} y={8 - h / 2} width={w} height={h} rx={1.5} />
+        </svg>
+    );
+}
+
+/**
+ * Values as icons, each over its name, the picked ones lit: a row of a few, or a grid of
+ * many (the QR library's parts). Several values make it a pick of several.
+ */
+function IconChoice({
+    label,
+    value,
+    options,
+    onChange,
+    grid = false,
+}: {
+    label: string;
+    value: string | string[];
+    options: { value: string; label: string; icon: ReactNode }[];
+    onChange: (value: string) => void;
+    grid?: boolean;
+}) {
+    const many = Array.isArray(value);
+    const on = (v: string) => (many ? value.includes(v) : v === value);
+    const box = useRef<HTMLDivElement>(null);
+
+    // A scrolling grid shows what is picked, the first time it shows (its section opened).
+    useEffect(() => {
+        const el = box.current;
+
+        if (!el) {
+            return;
+        }
+
+        const seen = new ResizeObserver(() => {
+            if (el.clientHeight === 0) {
+                return;
+            }
+
+            seen.disconnect();
+            const first = el.querySelector<HTMLElement>(
+                '[aria-checked="true"], [aria-pressed="true"]',
+            );
+
+            if (first) {
+                el.scrollTop =
+                    first.getBoundingClientRect().top -
+                    el.getBoundingClientRect().top -
+                    4;
+            }
+        });
+        seen.observe(el);
+
+        return () => seen.disconnect();
+    }, []);
+
+    return (
+        <div
+            ref={box}
+            role={many ? 'group' : 'radiogroup'}
+            aria-label={label}
+            className={cn(
+                'gap-0.5 rounded-md border border-line-strong bg-rail p-0.5',
+                // A long grid scrolls: about three rows show.
+                grid
+                    ? 'grid max-h-[13rem] grid-cols-4 overflow-y-auto overscroll-contain'
+                    : 'flex',
+            )}
+        >
+            {options.map((o) => (
+                <button
+                    key={o.value}
+                    type="button"
+                    role={many ? undefined : 'radio'}
+                    aria-checked={many ? undefined : on(o.value)}
+                    aria-pressed={many ? on(o.value) : undefined}
+                    title={o.label}
+                    onClick={() => onChange(o.value)}
+                    className={cn(
+                        'flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1 rounded-[5px] px-1 pt-1.5 pb-1',
+                        grid ? '[&_svg]:size-6' : '[&_svg]:size-4',
+                        on(o.value)
+                            ? 'bg-amber/15 text-amber'
+                            : 'text-ink-3 hover:text-ink',
+                    )}
+                >
+                    <span
+                        aria-hidden="true"
+                        className={cn(
+                            'flex items-center',
+                            grid ? 'h-7' : 'h-5',
+                        )}
+                    >
+                        {o.icon}
+                    </span>
+                    <span
+                        className={cn(
+                            'w-full text-center text-[11px] leading-tight',
+                            // A grid's names are longer: two lines rather than cut off.
+                            grid ? 'line-clamp-2 break-words' : 'truncate',
+                        )}
+                    >
+                        {o.label}
+                    </span>
+                </button>
+            ))}
+        </div>
+    );
+}
 
 function Section({
     title,
@@ -501,6 +733,137 @@ export function WidgetInspector({
             );
         }
 
+        // The QR library's parts come with pictures of their own, as SVG it ships.
+        const pictures = field.icons
+            ? Object.fromEntries(
+                  Object.entries(field.icons).map(([v, svg]) => [
+                      v,
+                      <span dangerouslySetInnerHTML={{ __html: svg }} />,
+                  ]),
+              )
+            : undefined;
+        const icons = CHOICE_ICONS[field.key] ?? pictures;
+        // A field's name, with a way back to the default once it is changed.
+        const labelWithReset = (key: string, changed: boolean) => (
+            <span className="flex items-center justify-between gap-2 text-xs text-ink-2">
+                {fieldLabel(key)}
+                {changed && (
+                    <button
+                        type="button"
+                        className="text-ink-3 underline hover:text-ink"
+                        onClick={() => target.set(key, null)}
+                    >
+                        {t('screens.inspector.reset')}
+                    </button>
+                )}
+            </span>
+        );
+        const optionLabel = (v: string) =>
+            field.labels?.[v] ?? t(`screens.fields.${field.key}.options.${v}`);
+
+        if (field.type === 'color') {
+            const color = typeof raw === 'string' ? raw : null;
+
+            return (
+                <div
+                    key={field.key}
+                    className={cn('flex flex-col gap-1', span)}
+                >
+                    <Label
+                        htmlFor={id(field.key)}
+                        className="text-xs text-ink-2"
+                    >
+                        {fieldLabel(field.key)}
+                    </Label>
+                    <div className="flex items-center gap-1.5">
+                        <input
+                            id={id(field.key)}
+                            type="color"
+                            value={color ?? field.swatch ?? '#000000'}
+                            onChange={(e) =>
+                                target.set(field.key, e.target.value)
+                            }
+                            className="h-8 w-10 shrink-0 cursor-pointer rounded border border-line-strong bg-rail p-0.5"
+                        />
+                        {color ? (
+                            <button
+                                type="button"
+                                className="truncate text-xs text-ink-3 underline hover:text-ink"
+                                onClick={() => target.set(field.key, null)}
+                            >
+                                {t(`screens.fields.${field.key}.reset`)}
+                            </button>
+                        ) : (
+                            <span className="truncate text-xs text-ink-3">
+                                {t(`screens.fields.${field.key}.unset`)}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        if (field.type === 'choices' && icons) {
+            const picked = Array.isArray(raw) ? raw : [];
+            const max = field.max ?? Infinity;
+
+            return (
+                <div key={field.key} className="col-span-2 flex flex-col gap-1">
+                    {labelWithReset(field.key, picked.length > 0)}
+                    <IconChoice
+                        grid
+                        label={fieldLabel(field.key)}
+                        value={picked}
+                        options={(field.options ?? []).map((v) => ({
+                            value: v,
+                            label: optionLabel(v),
+                            icon: icons[v],
+                        }))}
+                        onChange={(v) => {
+                            const next = picked.includes(v)
+                                ? picked.filter((p) => p !== v)
+                                : [...picked, v].slice(-max);
+
+                            target.set(
+                                field.key,
+                                next.length > 0 ? next : null,
+                            );
+                        }}
+                    />
+                    <span className="text-xs text-ink-3">
+                        {t(`screens.fields.${field.key}.hint`, { max })}
+                    </span>
+                </div>
+            );
+        }
+
+        if (icons && field.type === 'select' && !scope && !inherited) {
+            return (
+                <div key={field.key} className="col-span-2 flex flex-col gap-1">
+                    {labelWithReset(
+                        field.key,
+                        raw !== undefined && raw !== null,
+                    )}
+                    <IconChoice
+                        grid={(field.options ?? []).length > 5}
+                        label={fieldLabel(field.key)}
+                        value={String(raw ?? field.default)}
+                        options={(field.options ?? []).map((v) => ({
+                            value: v,
+                            label: optionLabel(v),
+                            icon: icons[v] ?? <SlidersHorizontal />,
+                        }))}
+                        onChange={(v) =>
+                            target.set(
+                                field.key,
+                                v === field.default ? null : v,
+                            )
+                        }
+                    />
+                </div>
+            );
+        }
+
         // An External JSON value's paths are set in a dialog, summed up here.
         // A connected source's answer has no history to compare with or to draw.
         if (connected && ['compare', 'sparkline'].includes(field.key)) {
@@ -642,6 +1005,10 @@ export function WidgetInspector({
                           source?.low_is_bad ??
                           false)
                         : option<boolean>(schema, widget, field.key) === true;
+                // In a group the group's card is the one drawn: none of its own to show.
+                const lockedOff =
+                    field.key === 'card' &&
+                    (catalog.grouped ?? []).includes(widget.id);
 
                 return (
                     <label
@@ -654,7 +1021,8 @@ export function WidgetInspector({
                     >
                         <Switch
                             small
-                            checked={effective}
+                            checked={effective && !lockedOff}
+                            disabled={lockedOff}
                             onChange={() =>
                                 setOption(
                                     field.key,
@@ -666,7 +1034,15 @@ export function WidgetInspector({
                             }
                             label={fieldLabel(field.key)}
                         />
-                        {fieldLabel(field.key)}
+                        <span
+                            title={
+                                lockedOff
+                                    ? t('screens.inspector.card_in_group')
+                                    : undefined
+                            }
+                        >
+                            {fieldLabel(field.key)}
+                        </span>
                     </label>
                 );
             }
@@ -1335,9 +1711,9 @@ export function WidgetInspector({
 
     const value = (
         <>
-            {widget.type === 'empty' && (
+            {(widget.type === 'empty' || widget.type === 'group') && (
                 <p className="text-[13px] text-ink-2">
-                    {t('screens.inspector.empty_hint')}
+                    {t(`screens.inspector.${widget.type}_hint`)}
                 </p>
             )}
 
@@ -1768,6 +2144,12 @@ export function WidgetInspector({
 }
 
 /** Settings of the whole screen, shown while no widget is selected. */
+const SETTINGS_TABS = ['display', 'appearance', 'data', 'time'] as const;
+type SettingsTab = (typeof SETTINGS_TABS)[number];
+
+/** The settings tab open last, kept while the designer is open: back from a widget, it is still there. */
+let lastSettingsTab: SettingsTab = 'display';
+
 export function ScreenSettings({
     screen,
     catalog,
@@ -1782,9 +2164,17 @@ export function ScreenSettings({
 }) {
     const t = useT();
     const scope = screen.scope;
+    const hint = 'col-span-2 text-xs text-ink-3';
+    const [tab, setTab] = useState(lastSettingsTab);
+    const pickTab = (id: SettingsTab) => {
+        lastSettingsTab = id;
+        setTab(id);
+    };
+    const setHeader = (changes: Partial<Screen['header']>) =>
+        onChange({ header: { ...screen.header, ...changes } });
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
                 <h2 className="text-[15px] font-semibold">
                     {t('screens.settings.title')}
@@ -1804,227 +2194,501 @@ export function ScreenSettings({
                     onChange={(e) => onChange({ name: e.target.value })}
                 />
             </div>
-            <fieldset className="flex flex-col gap-1.5">
-                <legend className="mb-1.5 text-[13px] font-medium">
-                    {t('screens.settings.projects')}
-                </legend>
-                {catalog.teamProjects.map((p) => (
-                    <label
-                        key={p.uuid}
-                        className="flex items-center gap-2 text-[13px] text-ink-2"
+
+            <div
+                role="tablist"
+                aria-label={t('screens.settings.title')}
+                className="flex border-b border-line"
+            >
+                {SETTINGS_TABS.map((id) => (
+                    <button
+                        key={id}
+                        id={`screen-tab-${id}-button`}
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === id}
+                        aria-controls={`screen-tab-${id}`}
+                        onClick={() => pickTab(id)}
+                        className={cn(
+                            '-mb-px flex-1 cursor-pointer border-b-2 px-1 pb-2 text-[13px] font-medium',
+                            tab === id
+                                ? 'border-amber text-ink'
+                                : 'border-transparent text-ink-3 hover:text-ink',
+                        )}
                     >
-                        <input
-                            type="checkbox"
-                            checked={scope.projects.includes(p.uuid)}
+                        {t(`screens.settings.sections.${id}`)}
+                    </button>
+                ))}
+            </div>
+
+            {tab === 'display' && (
+                <div
+                    role="tabpanel"
+                    id="screen-tab-display"
+                    aria-labelledby="screen-tab-display-button"
+                    className="grid grid-cols-2 gap-2.5"
+                >
+                    <div className="col-span-2 flex flex-col gap-1">
+                        <span className="text-xs text-ink-2">
+                            {t('screens.designer.aspect')}
+                        </span>
+                        <IconChoice
+                            grid
+                            label={t('screens.designer.aspect')}
+                            value={screen.aspect}
+                            options={(catalog.aspects ?? [screen.aspect]).map(
+                                (a) => {
+                                    const [w, h] = a.split(':').map(Number);
+
+                                    return {
+                                        value: a,
+                                        label: t(`screens.aspect.${a}`),
+                                        icon: (
+                                            <AspectIcon
+                                                ratio={
+                                                    screen.orientation ===
+                                                    'portrait'
+                                                        ? h / w
+                                                        : w / h
+                                                }
+                                            />
+                                        ),
+                                    };
+                                },
+                            )}
+                            onChange={(v) => onChange({ aspect: v })}
+                        />
+                    </div>
+                    <div className="col-span-2 flex flex-col gap-1">
+                        <span className="text-xs text-ink-2">
+                            {t('screens.designer.orientation')}
+                        </span>
+                        <IconChoice
+                            label={t('screens.designer.orientation')}
+                            value={screen.orientation}
+                            options={(['landscape', 'portrait'] as const).map(
+                                (o) => ({
+                                    value: o,
+                                    label: t(`screens.orientation.${o}`),
+                                    icon:
+                                        o === 'landscape' ? (
+                                            <RectangleHorizontal />
+                                        ) : (
+                                            <RectangleVertical />
+                                        ),
+                                }),
+                            )}
+                            onChange={(v) =>
+                                onChange({
+                                    orientation: v as Screen['orientation'],
+                                })
+                            }
+                        />
+                    </div>
+                    <div className="col-span-2 flex flex-col gap-1">
+                        <span className="text-xs text-ink-2">
+                            {t('screens.settings.fit')}
+                        </span>
+                        <IconChoice
+                            label={t('screens.settings.fit')}
+                            value={screen.fit}
+                            options={[
+                                {
+                                    value: 'keep',
+                                    label: t('screens.fit.keep'),
+                                    icon: <Shrink />,
+                                },
+                                {
+                                    value: 'fill',
+                                    label: t('screens.fit.fill'),
+                                    icon: <Expand />,
+                                },
+                            ]}
+                            onChange={(v) =>
+                                onChange({ fit: v as Screen['fit'] })
+                            }
+                        />
+                    </div>
+                    <span className={hint}>
+                        {t('screens.settings.fit_hint')}
+                    </span>
+                </div>
+            )}
+
+            {tab === 'appearance' && (
+                <div
+                    role="tabpanel"
+                    id="screen-tab-appearance"
+                    aria-labelledby="screen-tab-appearance-button"
+                    className="grid grid-cols-2 gap-2.5"
+                >
+                    <div className="col-span-2 flex flex-col gap-1">
+                        <span className="text-xs text-ink-2">
+                            {t('screens.designer.theme')}
+                        </span>
+                        <IconChoice
+                            label={t('screens.designer.theme')}
+                            value={screen.theme}
+                            options={[
+                                {
+                                    value: 'dark',
+                                    label: t('screens.theme.dark'),
+                                    icon: <Moon />,
+                                },
+                                {
+                                    value: 'light',
+                                    label: t('screens.theme.light'),
+                                    icon: <Sun />,
+                                },
+                                {
+                                    value: 'schedule',
+                                    label: t('screens.settings.schedule_short'),
+                                    icon: <SunMoon />,
+                                },
+                            ]}
+                            onChange={(v) =>
+                                onChange({ theme: v as Screen['theme'] })
+                            }
+                        />
+                    </div>
+                    {screen.theme === 'schedule' && (
+                        <>
+                            {(['light_from', 'light_to'] as const).map(
+                                (key) => (
+                                    <div
+                                        key={key}
+                                        className="flex flex-col gap-1"
+                                    >
+                                        <Label
+                                            htmlFor={`screen-${key}`}
+                                            className="text-xs text-ink-2"
+                                        >
+                                            {t(`screens.designer.${key}`)}
+                                        </Label>
+                                        <Input
+                                            id={`screen-${key}`}
+                                            type="time"
+                                            value={screen[key]}
+                                            onChange={(e) =>
+                                                e.target.value &&
+                                                onChange({
+                                                    [key]: e.target.value,
+                                                })
+                                            }
+                                        />
+                                    </div>
+                                ),
+                            )}
+                            <span className={hint}>
+                                {t('screens.theme.schedule')} ·{' '}
+                                {t('screens.designer.now_theme', {
+                                    theme: t(`screens.theme.${theme}`),
+                                })}
+                            </span>
+                        </>
+                    )}
+                    {(['margin', 'gap'] as const).map((key) => (
+                        <div
+                            key={key}
+                            className="col-span-2 flex flex-col gap-1"
+                        >
+                            <span className="text-xs text-ink-2">
+                                {t(`screens.settings.${key}`)}
+                            </span>
+                            <IconChoice
+                                label={t(`screens.settings.${key}`)}
+                                value={screen[key]}
+                                options={(['none', 's', 'm', 'l'] as const).map(
+                                    (s) => ({
+                                        value: s,
+                                        label: t(`screens.spacing.${s}`),
+                                        icon: (
+                                            <SpacingIcon kind={key} value={s} />
+                                        ),
+                                    }),
+                                )}
+                                onChange={(v) =>
+                                    onChange({ [key]: v as ScreenSpacing })
+                                }
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {tab === 'data' && (
+                <div
+                    role="tabpanel"
+                    id="screen-tab-data"
+                    aria-labelledby="screen-tab-data-button"
+                    className="grid grid-cols-2 gap-2.5"
+                >
+                    <div
+                        role="group"
+                        aria-label={t('screens.settings.projects')}
+                        className="col-span-2 flex flex-col gap-1"
+                    >
+                        <span className="text-xs text-ink-2">
+                            {t('screens.settings.projects')}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                            {catalog.teamProjects.map((p) => {
+                                const on = scope.projects.includes(p.uuid);
+
+                                return (
+                                    <button
+                                        key={p.uuid}
+                                        type="button"
+                                        aria-pressed={on}
+                                        className={chip(on)}
+                                        onClick={() =>
+                                            onChange({
+                                                scope: {
+                                                    ...scope,
+                                                    projects: on
+                                                        ? scope.projects.filter(
+                                                              (u) =>
+                                                                  u !== p.uuid,
+                                                          )
+                                                        : [
+                                                              ...scope.projects,
+                                                              p.uuid,
+                                                          ],
+                                                },
+                                            })
+                                        }
+                                    >
+                                        {p.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    <span className={hint}>
+                        {t('screens.settings.projects_hint')}
+                    </span>
+                    <div className="flex flex-col gap-1">
+                        <Label
+                            htmlFor="screen-env"
+                            className="text-xs text-ink-2"
+                        >
+                            {t('screens.fields.environment.label')}
+                        </Label>
+                        <Select
+                            id="screen-env"
+                            value={scope.environment ?? ''}
                             onChange={(e) =>
                                 onChange({
                                     scope: {
                                         ...scope,
-                                        projects: e.target.checked
-                                            ? [...scope.projects, p.uuid]
-                                            : scope.projects.filter(
-                                                  (u) => u !== p.uuid,
-                                              ),
+                                        environment: e.target.value || null,
                                     },
                                 })
                             }
+                        >
+                            <option value="">
+                                {t('screens.inspector.all_environments')}
+                            </option>
+                            {catalog.environments.map((env) => (
+                                <option key={env} value={env}>
+                                    {env}
+                                </option>
+                            ))}
+                        </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <Label
+                            htmlFor="screen-period"
+                            className="text-xs text-ink-2"
+                        >
+                            {t('screens.fields.period.label')}
+                        </Label>
+                        <Select
+                            id="screen-period"
+                            value={scope.period}
+                            onChange={(e) =>
+                                onChange({
+                                    scope: { ...scope, period: e.target.value },
+                                })
+                            }
+                        >
+                            {catalog.periods.map((p) => (
+                                <option key={p} value={p}>
+                                    {t(`screens.periods.${p}`)}
+                                </option>
+                            ))}
+                        </Select>
+                    </div>
+                </div>
+            )}
+
+            {tab === 'time' && (
+                <div
+                    role="tabpanel"
+                    id="screen-tab-time"
+                    aria-labelledby="screen-tab-time-button"
+                    className="grid grid-cols-2 gap-2.5"
+                >
+                    <label className="col-span-2 flex items-center gap-2 text-[13px]">
+                        <Switch
+                            small
+                            checked={screen.show_header}
+                            onChange={(on) => onChange({ show_header: on })}
+                            label={t('screens.designer.show_header')}
                         />
-                        {p.name}
+                        {t('screens.designer.show_header')}
                     </label>
-                ))}
-                <span className="text-xs text-ink-3">
-                    {t('screens.settings.projects_hint')}
-                </span>
-            </fieldset>
-            <div className="grid grid-cols-2 gap-2.5">
-                <div className="flex flex-col gap-1">
-                    <Label htmlFor="screen-env" className="text-xs text-ink-2">
-                        {t('screens.fields.environment.label')}
-                    </Label>
-                    <Select
-                        id="screen-env"
-                        value={scope.environment ?? ''}
-                        onChange={(e) =>
-                            onChange({
-                                scope: {
-                                    ...scope,
-                                    environment: e.target.value || null,
-                                },
-                            })
-                        }
-                    >
-                        <option value="">
-                            {t('screens.inspector.all_environments')}
-                        </option>
-                        {catalog.environments.map((env) => (
-                            <option key={env} value={env}>
-                                {env}
-                            </option>
-                        ))}
-                    </Select>
-                </div>
-                <div className="flex flex-col gap-1">
-                    <Label
-                        htmlFor="screen-period"
-                        className="text-xs text-ink-2"
-                    >
-                        {t('screens.fields.period.label')}
-                    </Label>
-                    <Select
-                        id="screen-period"
-                        value={scope.period}
-                        onChange={(e) =>
-                            onChange({
-                                scope: { ...scope, period: e.target.value },
-                            })
-                        }
-                    >
-                        {catalog.periods.map((p) => (
-                            <option key={p} value={p}>
-                                {t(`screens.periods.${p}`)}
-                            </option>
-                        ))}
-                    </Select>
-                </div>
-            </div>
-            <div className="flex flex-col gap-1.5">
-                <Label htmlFor="screen-tz">
-                    {t('screens.settings.timezone')}
-                </Label>
-                <TimezoneSelect
-                    id="screen-tz"
-                    value={screen.timezone ?? ''}
-                    emptyLabel={t('screens.settings.browser_timezone')}
-                    onChange={(zone) => onChange({ timezone: zone || null })}
-                />
-                <span className="text-xs text-ink-3">
-                    {t('screens.settings.timezone_hint')}
-                </span>
-            </div>
-            <label className="flex items-center gap-2 text-[13px]">
-                <Switch
-                    small
-                    checked={screen.show_header}
-                    onChange={(on) => onChange({ show_header: on })}
-                    label={t('screens.designer.show_header')}
-                />
-                {t('screens.designer.show_header')}
-            </label>
-            {screen.show_header && (
-                <label className="flex items-center gap-2 text-[13px]">
-                    <Switch
-                        small
-                        checked={screen.show_clock}
-                        onChange={(on) => onChange({ show_clock: on })}
-                        label={t('screens.settings.show_clock')}
-                    />
-                    {t('screens.settings.show_clock')}
-                </label>
-            )}
-            {screen.show_header && screen.show_clock && (
-                <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="screen-clock-format">
-                        {t('screens.fields.format.label')}
-                    </Label>
-                    <Select
-                        id="screen-clock-format"
-                        value={screen.clock_format}
-                        onChange={(e) =>
-                            onChange({
-                                clock_format: e.target.value as '24' | '12',
-                            })
-                        }
-                    >
-                        {(['24', '12'] as const).map((format) => (
-                            <option key={format} value={format}>
-                                {t(`screens.fields.format.options.${format}`)}
-                            </option>
-                        ))}
-                    </Select>
-                </div>
-            )}
-            <div className="flex flex-col gap-1.5">
-                <Label htmlFor="screen-theme">
-                    {t('screens.designer.theme')}
-                </Label>
-                <Select
-                    id="screen-theme"
-                    value={screen.theme}
-                    onChange={(e) =>
-                        onChange({ theme: e.target.value as Screen['theme'] })
-                    }
-                >
-                    {(['dark', 'light', 'schedule'] as const).map((th) => (
-                        <option key={th} value={th}>
-                            {t(`screens.theme.${th}`)}
-                        </option>
-                    ))}
-                </Select>
-                {screen.theme === 'schedule' && (
-                    <>
-                        <div className="grid grid-cols-2 gap-2.5">
-                            <div className="flex flex-col gap-1">
+                    {screen.show_header && (
+                        <>
+                            <div className="col-span-2 flex flex-col gap-1">
                                 <Label
-                                    htmlFor="screen-light-from"
+                                    htmlFor="screen-header-title"
                                     className="text-xs text-ink-2"
                                 >
-                                    {t('screens.designer.light_from')}
+                                    {t('screens.settings.header_title')}
                                 </Label>
                                 <Input
-                                    id="screen-light-from"
-                                    type="time"
-                                    value={screen.light_from}
+                                    id="screen-header-title"
+                                    value={screen.header.title ?? ''}
+                                    placeholder={screen.name}
+                                    maxLength={100}
                                     onChange={(e) =>
-                                        e.target.value &&
-                                        onChange({ light_from: e.target.value })
+                                        setHeader({
+                                            title: e.target.value || null,
+                                        })
                                     }
                                 />
                             </div>
-                            <div className="flex flex-col gap-1">
-                                <Label
-                                    htmlFor="screen-light-to"
-                                    className="text-xs text-ink-2"
-                                >
-                                    {t('screens.designer.light_to')}
-                                </Label>
-                                <Input
-                                    id="screen-light-to"
-                                    type="time"
-                                    value={screen.light_to}
-                                    onChange={(e) =>
-                                        e.target.value &&
-                                        onChange({ light_to: e.target.value })
+                            <div
+                                role="group"
+                                aria-label={t('screens.settings.header_shows')}
+                                className="col-span-2 flex flex-col gap-1"
+                            >
+                                <span className="text-xs text-ink-2">
+                                    {t('screens.settings.header_shows')}
+                                </span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {HEADER_PARTS.map((part) => {
+                                        const on =
+                                            !screen.header.hide.includes(part);
+
+                                        return (
+                                            <button
+                                                key={part}
+                                                type="button"
+                                                aria-pressed={on}
+                                                className={chip(on)}
+                                                onClick={() =>
+                                                    setHeader({
+                                                        hide: on
+                                                            ? [
+                                                                  ...screen
+                                                                      .header
+                                                                      .hide,
+                                                                  part,
+                                                              ]
+                                                            : screen.header.hide.filter(
+                                                                  (p) =>
+                                                                      p !==
+                                                                      part,
+                                                              ),
+                                                    })
+                                                }
+                                            >
+                                                {t(
+                                                    `screens.settings.header_parts.${part}`,
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <span className="text-xs text-ink-3">
+                                    {t('screens.settings.header_shows_hint')}
+                                </span>
+                            </div>
+                            <label className="col-span-2 flex items-center gap-2 text-[13px]">
+                                <Switch
+                                    small
+                                    checked={screen.show_clock}
+                                    onChange={(on) =>
+                                        onChange({ show_clock: on })
+                                    }
+                                    label={t('screens.settings.show_clock')}
+                                />
+                                {t('screens.settings.show_clock')}
+                            </label>
+                        </>
+                    )}
+                    {screen.show_header && screen.show_clock && (
+                        <>
+                            <div className="col-span-2 flex flex-col gap-1">
+                                <span className="text-xs text-ink-2">
+                                    {t('screens.fields.format.label')}
+                                </span>
+                                <IconChoice
+                                    label={t('screens.fields.format.label')}
+                                    value={screen.clock_format}
+                                    options={(['24', '12'] as const).map(
+                                        (format) => ({
+                                            value: format,
+                                            label: t(
+                                                `screens.fields.format.options.${format}`,
+                                            ),
+                                            icon: (
+                                                <span className="text-[13px] leading-none font-semibold">
+                                                    {format}
+                                                </span>
+                                            ),
+                                        }),
+                                    )}
+                                    onChange={(v) =>
+                                        onChange({
+                                            clock_format: v as '24' | '12',
+                                        })
                                     }
                                 />
                             </div>
-                        </div>
-                        <span className="text-xs text-ink-3">
-                            {t('screens.designer.now_theme', {
-                                theme: t(`screens.theme.${theme}`),
-                            })}
-                        </span>
-                    </>
-                )}
-            </div>
-            <div className="flex flex-col gap-1.5">
-                <Label htmlFor="screen-fit">{t('screens.settings.fit')}</Label>
-                <Select
-                    id="screen-fit"
-                    value={screen.fit}
-                    onChange={(e) =>
-                        onChange({ fit: e.target.value as Screen['fit'] })
-                    }
-                >
-                    {(['keep', 'fill'] as const).map((f) => (
-                        <option key={f} value={f}>
-                            {t(`screens.fit.${f}`)}
-                        </option>
-                    ))}
-                </Select>
-                <span className="text-xs text-ink-3">
-                    {t('screens.settings.fit_hint')}
-                </span>
-            </div>
+                            {(['date', 'seconds'] as const).map((key) => (
+                                <label
+                                    key={key}
+                                    className="flex items-center gap-2 text-[13px]"
+                                >
+                                    <Switch
+                                        small
+                                        checked={screen.header[key]}
+                                        onChange={(on) =>
+                                            setHeader({ [key]: on })
+                                        }
+                                        label={t(
+                                            `screens.settings.clock_${key}`,
+                                        )}
+                                    />
+                                    {t(`screens.settings.clock_${key}`)}
+                                </label>
+                            ))}
+                        </>
+                    )}
+                    <div className="col-span-2 flex flex-col gap-1">
+                        <Label
+                            htmlFor="screen-tz"
+                            className="text-xs text-ink-2"
+                        >
+                            {t('screens.settings.timezone')}
+                        </Label>
+                        <TimezoneSelect
+                            id="screen-tz"
+                            value={screen.timezone ?? ''}
+                            emptyLabel={t('screens.settings.browser_timezone')}
+                            onChange={(zone) =>
+                                onChange({ timezone: zone || null })
+                            }
+                        />
+                    </div>
+                    <span className={hint}>
+                        {t('screens.settings.timezone_hint')}
+                    </span>
+                </div>
+            )}
         </div>
     );
 }

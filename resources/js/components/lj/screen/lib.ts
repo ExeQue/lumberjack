@@ -565,7 +565,7 @@ export function newWidgetId(): string {
     return 'w' + Math.random().toString(36).slice(2, 10);
 }
 
-type Box = Pick<Widget, 'x' | 'y' | 'w' | 'h'>;
+type Box = Pick<Widget, 'x' | 'y' | 'w' | 'h'> & { type?: WidgetKind };
 
 /** Whether a widget lies inside the grid, so the TV shows it. */
 export function fits(box: Box, cols: number, rows: number): boolean {
@@ -577,7 +577,25 @@ export function fits(box: Box, cols: number, rows: number): boolean {
     );
 }
 
-/** Whether no widget but `except` covers a cell of the box, inside the grid or not. */
+/**
+ * Whether a group holds a widget, a group too: one wholly inside it, on fewer cells (a
+ * 1 x 1 group holds nothing). ScreenLayout::holds().
+ */
+export function groupHolds(group: Box, box: Box): boolean {
+    return (
+        group.type === 'group' &&
+        (box.w < group.w || box.h < group.h) &&
+        box.x >= group.x &&
+        box.y >= group.y &&
+        box.x + box.w <= group.x + group.w &&
+        box.y + box.h <= group.y + group.h
+    );
+}
+
+/**
+ * Whether no widget but `except` covers a cell of the box, inside the grid or not; a
+ * group holding the box, or held by it, is no obstacle.
+ */
 export function isFree(widgets: Widget[], box: Box, except?: string): boolean {
     return widgets.every(
         (o) =>
@@ -585,8 +603,46 @@ export function isFree(widgets: Widget[], box: Box, except?: string): boolean {
             o.x >= box.x + box.w ||
             box.x >= o.x + o.w ||
             o.y >= box.y + box.h ||
-            box.y >= o.y + o.h,
+            box.y >= o.y + o.h ||
+            groupHolds(o, box) ||
+            groupHolds(box, o),
     );
+}
+
+/**
+ * Widgets in the order they are drawn: groups first, outer before inner, so each lies
+ * behind what it holds; the others keep their order.
+ */
+export function layered(widgets: Widget[]): Widget[] {
+    const order = (w: Widget) => (w.type === 'group' ? -w.w * w.h : 0);
+
+    return [...widgets].sort((a, b) => order(a) - order(b));
+}
+
+/**
+ * A widget moved to a top left, a group with all it holds: the new top left of each, or
+ * null when one would leave the grid or land on another widget.
+ */
+export function moveTo(
+    widgets: Widget[],
+    cols: number,
+    rows: number,
+    widget: Widget,
+    to: { x: number; y: number },
+): Record<string, { x: number; y: number }> | null {
+    const going = widgets.filter(
+        (o) => o.id === widget.id || groupHolds(widget, o),
+    );
+    const rest = widgets.filter((o) => !going.includes(o));
+    const moved = going.map((o) => ({
+        ...o,
+        x: o.x + to.x - widget.x,
+        y: o.y + to.y - widget.y,
+    }));
+
+    return moved.every((o) => canPlace(rest, cols, rows, o))
+        ? Object.fromEntries(moved.map((o) => [o.id, { x: o.x, y: o.y }]))
+        : null;
 }
 
 /** Whether a widget can go there: inside the grid, on cells no other widget covers. */
@@ -685,9 +741,11 @@ export function swapTarget(
     moving: Widget,
     cell: { x: number; y: number },
 ): string | null {
+    // A group under the pointer is where the widget goes, not one to trade places with.
     const other = widgets.find(
         (o) =>
             o.id !== moving.id &&
+            o.type !== 'group' &&
             cell.x >= o.x &&
             cell.x < o.x + o.w &&
             cell.y >= o.y &&

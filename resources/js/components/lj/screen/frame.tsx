@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode, Ref } from 'react';
 import { LogMark } from '@/components/lj/logo';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import type { Screen } from './types';
+import type { HeaderPart, Screen } from './types';
 
 type Size = { w: number; h: number };
 
@@ -80,6 +80,9 @@ function useWindowSize(): Size {
     return size;
 }
 
+/** How much of the medium margin and gap each spacing is. */
+const SPACING: Record<string, number> = { none: 0, s: 0.5, m: 1, l: 1.6 };
+
 /**
  * A screen as the TV shows it, header and grid, laid out at a display's size: the
  * kiosk's whole window, or the designer's preview of a resolution. Everything inside
@@ -122,6 +125,7 @@ export function KioskFrame({
     const turned = kiosk && !view && rotation !== 0;
     const size = view ?? windowSize;
     const box = fitBox(size, ratioOf(screen), screen.fit);
+    const margin = SPACING[screen.margin] ?? 1;
 
     return (
         <div
@@ -148,8 +152,10 @@ export function KioskFrame({
             data-idle={kiosk ? idle : undefined}
         >
             <div
-                className="[container-type:size] flex flex-none flex-col gap-[1.2cqw] px-[2.3cqw] py-[1.9cqw] transition-transform duration-1000"
+                className="[container-type:size] flex flex-none flex-col gap-[1.2cqw] px-(--lj-margin-x) py-(--lj-margin-y) transition-transform duration-1000"
                 style={{
+                    ['--lj-margin-x' as string]: `${2.3 * margin}cqw`,
+                    ['--lj-margin-y' as string]: `${1.9 * margin}cqw`,
                     width: box.w,
                     height: box.h,
                     transform: `translate(${shift[0]}px, ${shift[1]}px)`,
@@ -158,19 +164,25 @@ export function KioskFrame({
                 {screen.show_header && (
                     <header className="flex items-center justify-between gap-[1cqw]">
                         <div className="flex min-w-0 items-center gap-[0.9cqw]">
-                            <span
-                                aria-hidden="true"
-                                className="flex size-[max(1.75rem,2.3cqw)] items-center justify-center rounded-[0.5cqw] bg-(--s-panel) [&_svg]:size-[max(1.1rem,1.5cqw)]"
-                            >
-                                <LogMark />
-                            </span>
-                            <div className="flex min-w-0 flex-col">
-                                <h1 className="truncate text-[max(1rem,1.5cqw)] leading-tight font-bold">
-                                    {header.title}
-                                </h1>
-                                <span className="truncate text-[max(0.75rem,0.85cqw)] text-(--s-ink-2)">
-                                    {header.subtitle}
+                            {!screen.header.hide.includes('logo') && (
+                                <span
+                                    aria-hidden="true"
+                                    className="flex size-[max(1.75rem,2.3cqw)] items-center justify-center rounded-[0.5cqw] bg-(--s-panel) [&_svg]:size-[max(1.1rem,1.5cqw)]"
+                                >
+                                    <LogMark />
                                 </span>
+                            )}
+                            <div className="flex min-w-0 flex-col">
+                                {!screen.header.hide.includes('name') && (
+                                    <h1 className="truncate text-[max(1rem,1.5cqw)] leading-tight font-bold">
+                                        {header.title}
+                                    </h1>
+                                )}
+                                {header.subtitle && (
+                                    <span className="truncate text-[max(0.75rem,0.85cqw)] text-(--s-ink-2)">
+                                        {header.subtitle}
+                                    </span>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-[1.3cqw]">
@@ -184,7 +196,7 @@ export function KioskFrame({
                     (screen.show_header ? (
                         banner
                     ) : (
-                        <div className="pointer-events-none absolute inset-x-[2.3cqw] top-[1.9cqw] z-30">
+                        <div className="pointer-events-none absolute inset-x-(--lj-margin-x) top-(--lj-margin-y) z-30">
                             {banner}
                         </div>
                     ))}
@@ -193,13 +205,15 @@ export function KioskFrame({
                     <main
                         ref={gridRef}
                         {...gridProps}
+                        data-gap={screen.gap}
                         className={cn(
-                            'lj-grid grid min-h-0 flex-1 gap-[0.9cqw] transition-opacity',
+                            'lj-grid grid min-h-0 flex-1 transition-opacity',
                             gridProps.className,
                         )}
                         style={{
                             ['--lj-cols' as string]: screen.cols,
                             ['--lj-rows' as string]: screen.rows,
+                            gap: `${0.9 * (SPACING[screen.gap] ?? 1)}cqw`,
                             gridTemplateColumns: `repeat(${screen.cols}, minmax(0, 1fr))`,
                             gridTemplateRows: `repeat(${screen.rows}, minmax(0, 1fr))`,
                             ...gridProps.style,
@@ -215,7 +229,12 @@ export function KioskFrame({
     );
 }
 
-/** The header's second line: team, projects, environment and period of the screen. */
+/** The header's title: its own, else the screen's name. */
+export function kioskTitle(screen: Screen): string {
+    return screen.header.title ?? screen.name;
+}
+
+/** The header's second line: team, projects, environment and period of the screen, those it shows. */
 export function kioskSubtitle(
     screen: Screen,
     team: string,
@@ -228,13 +247,20 @@ export function kioskSubtitle(
                   .filter((p) => screen.scope.projects.includes(p.uuid))
                   .map((p) => p.name)
             : [t('screens.kiosk.all_projects')];
+    const parts: [HeaderPart, string][] = [
+        ['team', team],
+        ['projects', names.join(', ')],
+        [
+            'environment',
+            screen.scope.environment ?? t('screens.kiosk.all_environments'),
+        ],
+        ['period', t(`screens.periods.${screen.scope.period}`)],
+    ];
 
-    return [
-        team,
-        names.join(', '),
-        screen.scope.environment ?? t('screens.kiosk.all_environments'),
-        t(`screens.periods.${screen.scope.period}`),
-    ].join(' · ');
+    return parts
+        .filter(([part]) => !screen.header.hide.includes(part))
+        .map(([, text]) => text)
+        .join(' · ');
 }
 
 /** A time as the screen's clock shows it, in the screen's time zone (else the browser's). */
@@ -243,6 +269,10 @@ export function kioskClock(screen: Screen, at: number): string {
         timeZone: screen.timezone ?? undefined,
         hour: '2-digit',
         minute: '2-digit',
+        second: screen.header.seconds ? '2-digit' : undefined,
+        weekday: screen.header.date ? 'short' : undefined,
+        day: screen.header.date ? 'numeric' : undefined,
+        month: screen.header.date ? 'short' : undefined,
         hourCycle: screen.clock_format === '12' ? 'h12' : 'h23',
     }).format(new Date(at));
 }
@@ -312,7 +342,10 @@ export function KioskStatus({
     attention,
     offline,
     clock,
+    hide = [],
 }: {
+    /** Parts the screen's header hides; being offline always shows. */
+    hide?: HeaderPart[];
     attention: number;
     /** "Offline since 12:03", or null while live. */
     offline: string | null;
@@ -323,19 +356,23 @@ export function KioskStatus({
 
     return (
         <>
-            {attention > 0 && offline === null && (
-                <span className="rounded-full bg-(--s-red) px-[0.85cqw] py-[0.4cqw] text-[max(0.75rem,0.95cqw)] font-bold whitespace-nowrap text-(--s-ground)">
-                    {t('screens.kiosk.attention', {}, attention)}
-                </span>
-            )}
+            {attention > 0 &&
+                offline === null &&
+                !hide.includes('attention') && (
+                    <span className="rounded-full bg-(--s-red) px-[0.85cqw] py-[0.4cqw] text-[max(0.75rem,0.95cqw)] font-bold whitespace-nowrap text-(--s-ground)">
+                        {t('screens.kiosk.attention', {}, attention)}
+                    </span>
+                )}
             {offline === null ? (
-                <span className="flex items-center gap-[0.4cqw] text-[max(0.75rem,0.85cqw)] text-(--s-green)">
-                    <span
-                        aria-hidden="true"
-                        className="size-[0.55cqw] rounded-full bg-(--s-green)"
-                    />
-                    {t('screens.kiosk.live')}
-                </span>
+                !hide.includes('live') && (
+                    <span className="flex items-center gap-[0.4cqw] text-[max(0.75rem,0.85cqw)] text-(--s-green)">
+                        <span
+                            aria-hidden="true"
+                            className="size-[0.55cqw] rounded-full bg-(--s-green)"
+                        />
+                        {t('screens.kiosk.live')}
+                    </span>
+                )
             ) : (
                 <span className="flex items-center gap-[0.4cqw] text-[max(0.75rem,0.95cqw)] font-semibold text-(--s-amber)">
                     <span

@@ -40,7 +40,8 @@ export type WidgetKind =
     | 'message'
     | 'qr'
     | 'media'
-    | 'empty';
+    | 'empty'
+    | 'group';
 
 export type WidgetScope = {
     projects?: string[];
@@ -57,6 +58,22 @@ export type ScreenTheme = 'dark' | 'light' | 'schedule';
 /** ScreenAspect: the display's shape, landscape; ScreenOrientation turns it on its side. */
 export type ScreenOrientation = 'landscape' | 'portrait';
 
+/** None, small, medium (what screens had before it could be chosen) or large. */
+export type ScreenSpacing = 'none' | 's' | 'm' | 'l';
+
+/** Parts of the header a screen can hide; being offline always shows. Screen::HEADER_PARTS. */
+export const HEADER_PARTS = [
+    'logo',
+    'name',
+    'team',
+    'projects',
+    'environment',
+    'period',
+    'attention',
+    'live',
+] as const;
+export type HeaderPart = (typeof HEADER_PARTS)[number];
+
 export type Screen = {
     uuid: string;
     name: string;
@@ -67,12 +84,25 @@ export type Screen = {
     orientation: ScreenOrientation;
     /** On a display of another shape: keep the screen's (bars around it) or fill it. */
     fit: 'keep' | 'fill';
+    /** Room around the grid; see ScreenSpacing. */
+    margin: ScreenSpacing;
+    /** Room between widgets; see ScreenSpacing. */
+    gap: ScreenSpacing;
     /** Whether the TV shows the name, scope, live state and clock above the grid. */
     show_header: boolean;
     /** Whether that header shows the clock. */
     show_clock: boolean;
     /** The header's clock: '24' or '12' hours. */
     clock_format: '24' | '12';
+    /** What the header shows; see Screen::header(). */
+    header: {
+        hide: HeaderPart[];
+        /** Instead of the screen's name; null: the name. */
+        title: string | null;
+        /** The clock's date and seconds. */
+        date: boolean;
+        seconds: boolean;
+    };
     theme: ScreenTheme;
     light_from: string;
     light_to: string;
@@ -99,11 +129,21 @@ export type SchemaField = {
         | 'textarea'
         | 'number'
         | 'checks'
+        | 'color'
+        | 'choices'
         | 'data_source'
         | 'timezone'
         | 'projects'
         | 'environment';
     options?: string[];
+    /** An SVG picture per option (the QR library's parts), picked from a grid of them. */
+    icons?: Record<string, string>;
+    /** Each option's label, where it comes with the options (the QR library's). */
+    labels?: Record<string, string>;
+    /** Choices: how many may be picked. */
+    max?: number;
+    /** A color field: what the picker opens on while unset. */
+    swatch?: string;
     /** The options under headings: group id to its values. */
     groups?: Record<string, string[]>;
     default: string | boolean | null;
@@ -167,6 +207,7 @@ export const LAYOUT_KINDS: WidgetKind[] = [
     'qr',
     'media',
     'empty',
+    'group',
 ];
 export const ROTATING_KINDS: WidgetKind[] = [
     'stat',
