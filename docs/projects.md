@@ -277,6 +277,22 @@ or through MCP.
 
 Lumberjack warns 14 days before the token expires.
 
+## Moving a project to another team
+
+**Move to another team** in the **Danger zone** moves the project with its data, tokens and
+connections to a team you are owner or admin of; you must be owner or admin of its team
+too. A slug or issue prefix the other team already has is replaced in the dialog. The move
+also:
+
+- moves the project's own alert rules and channels, and drops links to the old team's;
+  the project then follows the new team's rules and channels;
+- takes the project out of MCP tokens: give a token access again where it should have it;
+- takes it out of the old team's screens; a screen or widget left with no project shows
+  nothing;
+- clears assignees and watchers of its issues who are not in the new team.
+
+Each move is in the [audit log](./administration).
+
 ## Deleting a project
 
 The **Danger zone** deletes the project and all its data, after you type the project's

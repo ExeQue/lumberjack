@@ -4,8 +4,20 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- **Group** widget on status screens: one card behind the widgets wholly inside it, which then draw no card of their own (**Show card** is locked off). Groups nest, a group moves with all it holds when dragged by the space between its widgets, and it cannot be made smaller than them. Its title is off by default.
+- A screen's **Margin** around the grid and **Spacing** between its widgets: none, small, medium (as before) or large. With no spacing, tiles have square corners and neighbours share one border.
+- The **QR code** widget's style: the Lumberjack logo on or off, the code's color and a background, its modules, its eyes as a set or outer and inner apart, and up to 3 filters, each picked from pictures of the QR library's own parts, with **Reset** per section. A style phones could not read reliably is refused when saved.
+- What a screen's header shows: the logo, the title (or a title of its own), team, projects, environment, period, the count of widgets needing attention and the live state can each be turned off; offline always shows. The header comes in four sizes, and its title grows to the clock's size with nothing under it. The clock can show seconds and the date, in a format of five or one of its own from tokens (`ddd D. MMM`), in the app's language, the TV's own, or one picked.
+- **Move to another team** in a project's danger zone, for owners and admins of both teams. The project's own alert rules and channels go with it; links to the old team's rules and channels, MCP token access, the old team's screens' references and assignees or watchers outside the new team are dropped. A taken slug or issue prefix is replaced in the dialog, and each move is in the audit log.
+- MCP: `update_screen` sets `margin`, `gap` and `header`; the design guide covers groups and these settings.
+
 ### Changed
 
+- Screen settings are in tabs (**Display**, **Look**, **Data**, **Header**); **Aspect** and **Orientation** moved there from the designer's toolbar.
+- Spacing, alignment, text and title sizes, theme, fit, aspect and orientation are picked from pictures of what they do, and a screen's projects and header parts from switches.
+- `list_widget_types` leaves out the designer's pictures of the QR code's parts.
 - The **Mail domain** check's form and docs say what a DKIM selector is entered as (the name only, such as `dkim`) and where to find it.
 
 ## [0.11.1] - 2026-11-15
