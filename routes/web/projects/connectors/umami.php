@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::get('umami/{dataSourceConnection?}', UmamiController::class)->name('connectors.umami.index');
-Route::post('umami/websites', [UmamiConnectionController::class, 'websites'])->middleware('throttle:20,1')->name('connectors.umami.websites');
+Route::post('umami/websites', [UmamiConnectionController::class, 'websites'])->middleware('throttle:20,1,connectors.umami.websites')->name('connectors.umami.websites');
 Route::post('umami/connection', [UmamiConnectionController::class, 'store'])->name('connectors.umami.connection.store');
-Route::get('umami/{dataSourceConnection}/websites', [UmamiConnectionController::class, 'savedWebsites'])->middleware('throttle:20,1')->name('connectors.umami.connection.websites');
+Route::get('umami/{dataSourceConnection}/websites', [UmamiConnectionController::class, 'savedWebsites'])->middleware('throttle:20,1,connectors.umami.connection.websites')->name('connectors.umami.connection.websites');
 Route::post('umami/{dataSourceConnection}/websites', [UmamiConnectionController::class, 'add'])->name('connectors.umami.connection.add');
 Route::put('umami/{dataSourceConnection}', [UmamiConnectionController::class, 'update'])->name('connectors.umami.connection.update');
 Route::put('umami/{dataSourceConnection}/utm-labels', [UmamiConnectionController::class, 'label'])->name('connectors.umami.utm-labels.update');

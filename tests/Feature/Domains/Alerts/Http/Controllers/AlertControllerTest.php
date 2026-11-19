@@ -108,6 +108,19 @@ describe('sending a test', function () {
         Http::assertSentCount(6);
     });
 
+    it('keeps its own count, so searching the project does not use the tests up', function () {
+        Http::fake(['93.184.215.14/*' => Http::response(null, 204)]);
+        ['user' => $admin, 'project' => $project] = $this->memberWithProject(TeamRole::Admin);
+        $channel = app(SaveNotificationChannelAction::class)->execute($project->team, ChannelType::Webhook, 'Deploy hook', ['url' => 'https://93.184.215.14/hook'], project: $project);
+
+        foreach (range(1, 10) as $ignored) {
+            $this->actingAs($admin)->getJson(route('projects.search', [$project, 'q' => 'xy']))->assertOk();
+        }
+
+        $this->actingAs($admin)->post(route('alerts.channels.test', $channel))->assertRedirect();
+        Http::assertSentCount(1);
+    });
+
     it('says why a webhook test did not go through', function () {
         Http::fake(['93.184.215.14/*' => Http::response('nope', 405)]);
         ['user' => $admin, 'project' => $project] = $this->memberWithProject(TeamRole::Admin);

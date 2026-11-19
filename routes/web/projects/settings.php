@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
  * A project's settings, its search, and its alert rules. Loaded inside the project group.
  */
 
-Route::get('search', SearchController::class)->middleware('throttle:120,1')->name('projects.search');
+Route::get('search', SearchController::class)->middleware('throttle:120,1,projects.search')->name('projects.search');
 
 Route::get('settings', [ProjectSettingsController::class, 'edit'])->name('projects.settings');
 Route::put('settings', [ProjectSettingsController::class, 'update'])->name('projects.settings.update');

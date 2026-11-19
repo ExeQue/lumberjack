@@ -25,7 +25,7 @@ Route::get('commands', CommandController::class)->name('commands.index');
 Route::delete('schedule/{scheduledTask}', [ScheduleController::class, 'destroy'])->name('schedule.destroy');
 Route::get('logs', LogController::class)->name('logs.index');
 Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
-Route::get('activity/references', [ActivityController::class, 'references'])->middleware('throttle:120,1')->name('activity.references');
+Route::get('activity/references', [ActivityController::class, 'references'])->middleware('throttle:120,1,activity.references')->name('activity.references');
 Route::delete('activity/actor', [ActivityActorController::class, 'forget'])->name('activity.actor.destroy');
 Route::put('activity/labels', [ActivityLabelController::class, 'update'])->name('activity.labels.update');
 Route::get('activity/{group}/{name}', [ActivityController::class, 'show'])

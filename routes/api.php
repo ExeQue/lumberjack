@@ -31,7 +31,7 @@ Route::middleware(AuthenticateProjectToken::class)->group(function () {
     Route::post('ingest/sourcemaps', [SourceMapController::class, 'store'])->middleware('throttle:sourcemaps')->name('ingest.sourcemaps');
 
     // The app forgets one actor's activity, such as when the account behind it is deleted. See docs/activity.md.
-    Route::delete('activity/actor', [ActivityActorController::class, 'destroy'])->middleware('throttle:60,1')->name('activity.actor.forget');
+    Route::delete('activity/actor', [ActivityActorController::class, 'destroy'])->middleware('throttle:60,1,activity.actor.forget')->name('activity.actor.forget');
 
     // The app reads its health check states back, e.g. when its agent is not running.
     Route::get('health', HealthStatesController::class)->middleware('throttle:health-states')->name('health.states');
@@ -43,7 +43,7 @@ Route::options('ingest/browser', [IngestController::class, 'browserPreflight'])-
 // A heartbeat check's secret URL: cron jobs and backups call it when they are done.
 Route::match(['get', 'post'], 'health/ping/{token}', HealthPingController::class)
     ->where('token', '[a-f0-9]{40}')
-    ->middleware('throttle:60,1')
+    ->middleware('throttle:60,1,health.ping')
     ->name('health.ping');
 
 // The read-only metrics API (Grafana, Prometheus, the status screen): with a team token,

@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Fixed
+
+- A page that asks often, such as a status screen or the project search, no longer uses up the limit of other actions: each rate-limited action, such as sending a test alert, now counts on its own.
+
 ## [0.12.0] - 2026-11-18
 
 ### Added

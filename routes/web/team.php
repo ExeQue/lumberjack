@@ -33,7 +33,7 @@ Route::get('team/alerts', [AlertController::class, 'index'])->name('alerts.index
 Route::post('team/alerts/channels', [AlertController::class, 'storeChannel'])->name('alerts.channels.store');
 Route::put('team/alerts/channels/{channel}', [AlertController::class, 'updateChannel'])->name('alerts.channels.update');
 Route::delete('team/alerts/channels/{channel}', [AlertController::class, 'destroyChannel'])->name('alerts.channels.destroy');
-Route::post('team/alerts/channels/{channel}/test', [AlertController::class, 'testChannel'])->middleware('throttle:6,1')->name('alerts.channels.test');
+Route::post('team/alerts/channels/{channel}/test', [AlertController::class, 'testChannel'])->middleware('throttle:6,1,alerts.channels.test')->name('alerts.channels.test');
 Route::put('team/alerts/rules/{rule}', [AlertController::class, 'updateRule'])->name('alerts.rules.update');
 Route::post('team/alerts/topics', [AlertController::class, 'storeTopic'])->name('alerts.topics.store');
 Route::delete('team/alerts/topics/{rule}', [AlertController::class, 'destroyTopic'])->name('alerts.topics.destroy');
