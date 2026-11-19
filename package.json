@@ -76,6 +76,9 @@
         "lightningcss-win32-x64-msvc": "^1.29.1"
     },
     "overrides": {
-        "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0"
+        "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
+        "vitepress": {
+            "vite": "^5.4.21"
+        }
     }
 }
