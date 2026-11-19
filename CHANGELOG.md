@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Fixed
+
+- The film in the README opens on the docs site, where it plays; GitHub only offered it as a download.
+
 ## [0.14.0] - 2026-11-19
 
 ### Added
