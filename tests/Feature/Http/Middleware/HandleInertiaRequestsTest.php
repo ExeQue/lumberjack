@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Commands\Models\CommandRun;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Enums\JobRunStatus;
@@ -31,6 +32,23 @@ describe('the sidebar project', function () {
             ->assertInertia(fn (Assert $page) => $page
                 ->where('sidebar_project.uuid', $project->uuid)
                 ->where('sidebar_project.counts', ['issues' => 2, 'jobs' => 2, 'schedule' => 0, 'health' => 0, 'commands' => 0]));
+    });
+
+    it('counts the commands whose last run failed', function () {
+        $project = Project::factory()->create();
+        $user = User::factory()->inTeam($project->team)->create();
+
+        CommandRun::factory()->for($project)->failed()->command('shop:sync')->create();
+        CommandRun::factory()->for($project)->failed()->command('shop:sync')->create();
+        CommandRun::factory()->for($project)->failed()->command('shop:import')->create(['created_at' => now()->subWeek()]);
+        CommandRun::factory()->for($project)->failed()->command('shop:prune')->create();
+        CommandRun::factory()->for($project)->command('shop:prune')->create();
+        CommandRun::factory()->failed()->command('shop:prune')->create();
+
+        $this->actingAs($user)
+            ->get(route('issues.index', $project))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('sidebar_project.counts.commands', 2));
     });
 
     it('lists each connected connector with its connections by name, leaving out apps and other projects', function () {

@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Changed
+
+- The number next to **Commands** in the sidebar counts the commands whose last run failed, instead of every failed run in the last day, so a command that runs fine again drops off at once.
+
 ### Fixed
 
 - The film in the README opens on the docs site, where it plays; GitHub only offered it as a download.

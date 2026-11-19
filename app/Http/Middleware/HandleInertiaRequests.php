@@ -144,7 +144,8 @@ class HandleInertiaRequests extends Middleware
                     ->whereStatus(JobRunStatus::Failed, JobRunStatus::Stuck)->count(),
                 'schedule' => ScheduledTask::query()->where('project_id', $project->id)->whereNeedsAttention()->count(),
                 'health' => HealthCheck::query()->where('project_id', $project->id)->whereNotArchived()->whereUnhealthy()->count(),
-                'commands' => CommandRun::query()->where('project_id', $project->id)->where('created_at', '>=', now()->subDay())
+                // Commands whose last run failed: one that runs fine again drops off.
+                'commands' => CommandRun::query()->where('project_id', $project->id)->whereLatestOfItsCommand()
                     ->where('status', CommandRunStatus::Failed->value)->count(),
             ]),
         ];

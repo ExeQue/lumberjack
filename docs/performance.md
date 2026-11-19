@@ -163,6 +163,8 @@ gone from the app, with its runs.
 Each command shows its runs, failures, average and longest duration, last run and
 status. The latest runs below show their arguments and options, exit code and host.
 Click a command to open its runs in a dialog.
+The number next to **Commands** in the sidebar counts the commands whose last run failed;
+a command drops off once it runs fine again.
 Queue workers are not listed.
 
 ## Logs

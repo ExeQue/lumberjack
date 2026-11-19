@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Commands\Models;
 
+use App\Domains\Commands\Eloquent\Builders\CommandRunBuilder;
 use App\Domains\Commands\Enums\CommandRunStatus;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Projects\Models\Project;
@@ -11,6 +12,7 @@ use Carbon\CarbonImmutable;
 use Database\Factories\CommandRunFactory;
 use Illuminate\Database\Eloquent\Attributes\DateFormat;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -43,6 +45,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 #[DateFormat('Y-m-d H:i:s.v')]
 #[UseFactory(CommandRunFactory::class)]
+#[UseEloquentBuilder(CommandRunBuilder::class)]
 class CommandRun extends Model
 {
     /** @use HasFactory<CommandRunFactory> */
