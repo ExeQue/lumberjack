@@ -1,0 +1,5 @@
+/node_modules
+/out
+# Licensed sounds: allowed in the film, not on their own. See docs/development.md.
+/public/music.mp3
+/public/alarm.mp3

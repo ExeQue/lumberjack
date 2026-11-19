@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- A tour of Lumberjack on film (1:49) at the top of the README and the docs: one night from the first alert to the fix. It is made with Remotion in `video/` and lands in `art/`.
+
 ## [0.13.1] - 2026-11-19
 
 ### Fixed

@@ -1,0 +1,28 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "name": "lumberjack-promo",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "sounds": "node sounds.mjs",
+        "prestudio": "node sounds.mjs",
+        "studio": "remotion studio src/index.ts --port 3001 --no-open",
+        "prerender": "node sounds.mjs",
+        "render": "remotion render src/index.ts Promo ../art/lumberjack-promo.mp4 --crf=23",
+        "poster": "remotion still src/index.ts Poster ../art/lumberjack-promo.jpg --frame=252 --image-format=jpeg --jpeg-quality=85",
+        "build": "npm run render && npm run poster",
+        "still": "remotion still src/index.ts Promo out/still.png"
+    },
+    "dependencies": {
+        "@remotion/cli": "4.0.545",
+        "@remotion/google-fonts": "4.0.545",
+        "@remotion/transitions": "4.0.545",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+        "remotion": "4.0.545"
+    },
+    "devDependencies": {
+        "@types/react": "^19.2.0",
+        "typescript": "^5.9.0"
+    }
+}

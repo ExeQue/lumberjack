@@ -1,3 +1,4 @@
+import { copyFile, mkdir } from 'node:fs/promises';
 import { defineConfig } from 'vitepress';
 
 const base = process.env.DOCS_BASE ?? '/lumberjack/';
@@ -55,6 +56,15 @@ export default defineConfig({
     // README.md is the front page here, and stays the front page on GitHub.
     rewrites: {
         'README.md': 'index.md',
+    },
+
+    // The README links the promo film on the site, which only copies what pages import.
+    async buildEnd({ outDir }) {
+        await mkdir(`${outDir}/art`, { recursive: true });
+        await copyFile(
+            new URL('../art/lumberjack-promo.mp4', import.meta.url),
+            `${outDir}/art/lumberjack-promo.mp4`,
+        );
     },
 
     vite: {

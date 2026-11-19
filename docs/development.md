@@ -131,42 +131,43 @@ for f in docs/screenshots/*.png; do convert "$f" -dither None -colors 256 "PNG8:
 
 ## Promo video
 
-`npm run docs:video` makes a 90-second film of Lumberjack: the app in a browser window, with
-titles, zooms, highlights and transitions. It needs `ffmpeg` with libx264.
+The promo video is a [Remotion](https://www.remotion.dev) project in `video/`, with its own
+`package.json`, so the app's dependencies stay untouched. Every page in the film is drawn in
+React from the app's own colors, fonts and pages; it does not need Lumberjack running or seeded.
+The film and its poster are committed in `art/`, and the README shows the poster linked to the
+film, which the docs site serves beside its pages.
 
 ```bash
-php artisan migrate:fresh --seed   # the film is cut for the showcase data
-npm run docs:video                 # storage/app/promo/lumberjack-promo.mp4
+npm run docs:video   # art/lumberjack-promo.mp4 and art/lumberjack-promo.jpg
+
+cd video
+npm run studio       # preview and scrub at http://localhost:3001
+npm run render       # only the film
+npm run poster       # only the poster
+npm run still -- --frame=1800   # one frame as video/out/still.png
 ```
 
-It runs in two steps, and each can run alone:
+Remotion brings its own Chrome and ffmpeg. The film is 1920 x 1080 at 60 frames a second.
 
-1. `node scripts/promo/capture.mjs` signs in and takes sharp stills of the pages, and notes
-   where in them the film points (`storage/app/promo/shots`). It only opens pages and
-   dialogs. Seed right before it: the seeded health checks go stale within minutes.
-2. `node scripts/promo/render.mjs` draws the film frame by frame over those stills and
-   encodes it at 1920 x 1080 and 60 frames a second. Lumberjack does not have to run for it.
+It follows one night: the Payments API goes down at 03:01, the alert reaches Slack, Teams,
+Discord and phones, the issue and its trace show why, an agent fixes it over MCP, and the
+overview is green again. Short scenes on background work, logs, AI usage and status screens
+follow.
 
-The film itself is `scripts/promo/stage.js` (texts, timing, camera) and
-`scripts/promo/stage.css` (its look). While you work on it:
+- `src/Promo.tsx` puts the scenes in order and plays the music.
+- `src/scenes/` has one file per scene, each with its texts, timing and camera. Each page in it
+  is drawn after the real one, so check a scene against the app when that page changes.
+- `src/ui.tsx` has the building blocks: the browser window, the app's sidebar, cards, tables,
+  charts, highlights and the cursor. `src/theme.ts` has the colors.
 
-```bash
-node scripts/promo/render.mjs --at 12,28.5,37   # single frames, as storage/app/promo/at-<seconds>.jpg
-node scripts/promo/render.mjs --from 31 --to 41 --fps 30 --out /tmp/part.mp4
-```
+The sounds come from Pixabay: the music, ["Electronic Tension" by leberch](https://pixabay.com/music/mystery-electronic-tension-255438/),
+and the alarm clock under the opening, ["Alarm Clock" by ecfike](https://pixabay.com/sound-effects/alarm-clock-90867/).
+The Pixabay Content License allows them in the film but not handed out on their own, so they are
+not in the repository: `npm run sounds` (run before the studio and every render) fetches them into
+`video/public/`. Without them the film renders silent apart from its notification sounds.
 
-Or open `storage/app/promo/stage.html#play` in a browser after one render to watch it play;
-`#play=31` starts at 31 seconds.
-
-Capturing reads the same environment variables as the screenshots, with `maja@lumberjack` as
-the default `DOCS_EMAIL`. Rendering reads `CHROME_PATH` and:
-
-| Variable      | Default              | Used for                  |
-| ------------- | -------------------- | ------------------------- |
-| `FFMPEG_PATH` | `ffmpeg` on the PATH | The ffmpeg to encode with |
-
-In the film the demo team is called Nordic Goods. Only the stills say so; nothing is
-changed in the database.
+Remotion is free for individuals and companies of up to three people; larger companies need
+a [company license](https://www.remotion.pro/license).
 
 ## Docs site
 

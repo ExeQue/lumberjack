@@ -14,7 +14,7 @@
         "docs:build": "vitepress build .",
         "docs:preview": "vitepress preview .",
         "docs:screenshots": "node scripts/docs-screenshots.mjs",
-        "docs:video": "node scripts/promo/capture.mjs && node scripts/promo/render.mjs"
+        "docs:video": "npm --prefix video install && npm --prefix video run build"
     },
     "dependencies": {
         "@inertiajs/react": "^3.11.0",
