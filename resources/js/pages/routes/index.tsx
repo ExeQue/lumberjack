@@ -18,6 +18,7 @@ import {
     spreadTips,
     tipAlign,
 } from '@/components/lj/ui';
+import { KindBadge } from '@/components/lj/kind-badge';
 import { SampleNote } from '@/components/lj/sample-note';
 import {
     Dialog,
@@ -38,9 +39,11 @@ import { useProjectLive } from '@/lib/use-project-live';
 import { show as projectShow } from '@/routes/projects';
 import { index as routesIndex } from '@/routes/routes';
 import { show as traceShow } from '@/routes/traces';
+import { REQUEST_KINDS } from '@/types/lumberjack';
 import type {
     DashboardFilters,
     ProjectHeader,
+    RequestKind,
     RouteStat,
     TeamShared,
 } from '@/types/lumberjack';
@@ -52,12 +55,16 @@ type Filters = DashboardFilters & {
     method: string;
     domain: string | null;
     route_domain: string | null;
+    /** A kind to narrow the table to; 'none' is ordinary requests. */
+    kind: RequestKind | 'none' | null;
+    route_kind: RequestKind | null;
 };
 
 type Detail = {
     method: string;
     route: string;
     domain: string | null;
+    kind: RequestKind | null;
     route_name: string | null;
     hourly: { t: string; p50: number | null; p95: number | null }[];
     slowest: {
@@ -130,15 +137,26 @@ export default function RoutesIndex({
     const isSelected = (r: RouteStat) =>
         r.route === filters.route &&
         r.method === filters.method &&
+        r.kind === filters.route_kind &&
         (r.domain === null || r.domain === (filters.route_domain ?? ''));
     const pick = (r: RouteStat) =>
         isSelected(r)
-            ? apply({ route: '', method: '', route_domain: null }, [
-                  'detail',
-                  'filters',
-              ])
+            ? apply(
+                  {
+                      route: '',
+                      method: '',
+                      route_domain: null,
+                      route_kind: null,
+                  },
+                  ['detail', 'filters'],
+              )
             : apply(
-                  { route: r.route, method: r.method, route_domain: r.domain },
+                  {
+                      route: r.route,
+                      method: r.method,
+                      route_domain: r.domain,
+                      route_kind: r.kind,
+                  },
                   ['detail', 'filters'],
               );
     const selected = routes.find(isSelected);
@@ -215,6 +233,43 @@ export default function RoutesIndex({
                                         {domains.map((d) => (
                                             <option key={d} value={d}>
                                                 {d}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </>
+                            )}
+                            {(routes.some((r) => r.kind !== null) ||
+                                filters.kind) && (
+                                <>
+                                    <label
+                                        className="sr-only"
+                                        htmlFor="route-kind"
+                                    >
+                                        {t('routes.kind.label')}
+                                    </label>
+                                    <Select
+                                        id="route-kind"
+                                        value={filters.kind ?? ''}
+                                        onChange={(e) =>
+                                            apply({
+                                                kind: (e.target.value ||
+                                                    null) as Filters['kind'],
+                                                route: '',
+                                                method: '',
+                                                route_domain: null,
+                                                route_kind: null,
+                                            })
+                                        }
+                                    >
+                                        <option value="">
+                                            {t('routes.kind.all')}
+                                        </option>
+                                        <option value="none">
+                                            {t('routes.kind.none')}
+                                        </option>
+                                        {REQUEST_KINDS.map((k) => (
+                                            <option key={k} value={k}>
+                                                {t(`routes.kind.${k}`)}
                                             </option>
                                         ))}
                                     </Select>
@@ -317,7 +372,7 @@ export default function RoutesIndex({
 
                                     return (
                                         <tr
-                                            key={`${r.method} ${r.domain ?? ''} ${r.route}`}
+                                            key={`${r.method} ${r.kind ?? ''} ${r.domain ?? ''} ${r.route}`}
                                             className={cn(
                                                 'lj-row hover:bg-panel-2/60',
                                                 active && 'bg-panel-2',
@@ -341,6 +396,11 @@ export default function RoutesIndex({
                                                         {r.method}
                                                     </span>{' '}
                                                     {r.route}
+                                                    {r.kind && (
+                                                        <KindBadge
+                                                            kind={r.kind}
+                                                        />
+                                                    )}
                                                     {/* Wraps whole onto the next line rather than mid-name. */}
                                                     {r.route_name && (
                                                         <span className="ml-2 inline-block text-ink-3">
@@ -466,10 +526,15 @@ export default function RoutesIndex({
                     open={detail !== null}
                     onOpenChange={(open) =>
                         !open &&
-                        apply({ route: '', method: '', route_domain: null }, [
-                            'detail',
-                            'filters',
-                        ])
+                        apply(
+                            {
+                                route: '',
+                                method: '',
+                                route_domain: null,
+                                route_kind: null,
+                            },
+                            ['detail', 'filters'],
+                        )
                     }
                 >
                     {detail && (
@@ -484,6 +549,9 @@ export default function RoutesIndex({
                                             {detail.method}
                                         </span>{' '}
                                         {detail.route}
+                                        {detail.kind && (
+                                            <KindBadge kind={detail.kind} />
+                                        )}
                                         {detail.route_name && (
                                             <span className="ml-2 text-sm text-ink-3">
                                                 {detail.route_name}

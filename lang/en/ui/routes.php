@@ -11,6 +11,15 @@ return [
         'all' => 'All domains',
         'unknown' => 'unknown',
     ],
+    'kind' => [
+        'label' => 'Kind',
+        'all' => 'All kinds',
+        'none' => 'Ordinary requests',
+        'inertia' => 'Inertia',
+        'inertia-partial' => 'Inertia partial',
+        'inertia-prefetch' => 'Inertia prefetch',
+        'livewire' => 'Livewire',
+    ],
     'sort' => [
         'label' => 'Sort',
         'p95' => 'Highest p95',

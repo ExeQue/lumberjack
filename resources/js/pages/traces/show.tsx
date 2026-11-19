@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { HighlightedCode } from '@/components/lj/highlighted-code';
+import { KindBadge } from '@/components/lj/kind-badge';
 import { TopBar } from '@/components/lj/top-bar';
 import {
     Badge,
@@ -16,7 +17,12 @@ import { useT } from '@/lib/i18n';
 import { show as issueShow } from '@/routes/issues';
 import { show as projectShow } from '@/routes/projects';
 import { index as routesIndex } from '@/routes/routes';
-import type { ProjectHeader, TeamShared } from '@/types/lumberjack';
+import type {
+    ProjectHeader,
+    RequestContext,
+    RequestKind,
+    TeamShared,
+} from '@/types/lumberjack';
 
 type Entry = {
     type: 'query' | 'span' | 'log' | 'exception';
@@ -50,6 +56,8 @@ type Props = {
             route: string | null;
             route_name: string | null;
             domain: string | null;
+            kind: RequestKind | null;
+            context: RequestContext | null;
             url: string;
             status: number;
             duration_us: number;
@@ -98,6 +106,7 @@ const toneOf = (entry: Entry): Tone => {
               ? 'warn'
               : 'info';
     if (entry.kind === 'cache') return entry.name === 'miss' ? 'warn' : 'ok';
+    if (entry.kind === 'livewire') return 'info';
     return 'neutral';
 };
 
@@ -143,6 +152,10 @@ export default function TraceShow({ project, trace }: Props) {
             ['mail', count((e) => e.kind === 'mail')],
             ['notification', count((e) => e.kind === 'notification')],
             ['redis', count((e) => e.kind === 'redis')],
+            [
+                'livewire',
+                count((e) => e.kind === 'livewire' && e.name === 'call'),
+            ],
             ['log', count((e) => e.type === 'log')],
             ['exception', count((e) => e.type === 'exception')],
         ] as const
@@ -178,6 +191,9 @@ export default function TraceShow({ project, trace }: Props) {
                             <span className="flex flex-wrap items-baseline gap-2">
                                 <Mono>{request.method}</Mono>
                                 <span>{request.route ?? request.url}</span>
+                                {request.kind && (
+                                    <KindBadge kind={request.kind} />
+                                )}
                                 {request.route_name && (
                                     <span className="font-mono text-sm text-ink-3">
                                         {request.route_name}
@@ -225,6 +241,8 @@ export default function TraceShow({ project, trace }: Props) {
                         ))}
                     </ul>
                 )}
+
+                {request?.context && <ContextCard context={request.context} />}
 
                 <Card aria-labelledby="h-timeline">
                     <CardHeader
@@ -374,4 +392,74 @@ export default function TraceShow({ project, trace }: Props) {
             </span>
         );
     }
+}
+
+function ContextCard({ context }: { context: RequestContext }) {
+    const t = useT();
+    const { livewire, inertia } = context;
+    const props = (
+        [
+            ['only', inertia?.only ?? []],
+            ['except', inertia?.except ?? []],
+            ['reset', inertia?.reset ?? []],
+        ] as const
+    ).filter(([, names]) => names.length > 0);
+
+    return (
+        <Card aria-labelledby="h-context">
+            <CardHeader
+                id="h-context"
+                title={
+                    livewire
+                        ? t('traces.context.livewire')
+                        : t('traces.context.inertia')
+                }
+                description={
+                    livewire?.page
+                        ? t('traces.context.livewire_page', {
+                              page: livewire.page,
+                          })
+                        : undefined
+                }
+            />
+            <dl className="flex flex-col gap-2 px-4 pb-4 font-mono text-xs">
+                {livewire?.components.map((c, i) => (
+                    <div key={i} className="flex flex-wrap gap-x-3 gap-y-1">
+                        <dt className="text-ink" title={c.class ?? undefined}>
+                            {c.name}
+                        </dt>
+                        <dd className="text-ink-2">
+                            {c.calls.join(', ')}
+                            {c.updates > 0 && (
+                                <span className="ml-2 font-sans text-ink-3">
+                                    {t('traces.context.updates', {}, c.updates)}
+                                </span>
+                            )}
+                        </dd>
+                    </div>
+                ))}
+                {inertia?.component && (
+                    <div className="flex flex-wrap gap-x-3">
+                        <dt className="font-sans text-ink-3">
+                            {t('traces.context.component')}
+                        </dt>
+                        <dd className="text-ink">{inertia.component}</dd>
+                    </div>
+                )}
+                {props.map(([key, names]) => (
+                    <div key={key} className="flex flex-wrap gap-x-3">
+                        <dt className="font-sans text-ink-3">
+                            {t(`traces.context.${key}`)}
+                        </dt>
+                        <dd className="text-ink-2">{names.join(', ')}</dd>
+                    </div>
+                ))}
+            </dl>
+            {inertia?.version_mismatch && (
+                <p className="px-4 pb-4 text-xs text-warn">
+                    {t('traces.context.version_mismatch')}
+                </p>
+            )}
+        </Card>
+    );
 }

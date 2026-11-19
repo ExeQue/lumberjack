@@ -18,8 +18,12 @@ use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Jobs\Models\QueueSample;
 use App\Domains\Logs\Models\LogChannel;
 use App\Domains\Logs\Models\LogEntry;
+use App\Domains\Performance\Enums\RequestKind;
+use App\Domains\Performance\Enums\SpanKind;
 use App\Domains\Performance\Models\QueryRun;
 use App\Domains\Performance\Models\RequestRun;
+use App\Domains\Performance\Models\SpanRun;
+use App\Domains\Performance\Support\RequestContext;
 use App\Domains\Projects\Data\AgentClient;
 use App\Domains\Projects\Models\HostSample;
 use App\Domains\Projects\Models\Project;
@@ -433,5 +437,55 @@ describe('extra secret fields', function () {
         ])->assertSessionHasNoErrors();
 
         expect($this->project->refresh()->scrub_keys)->toBe(['cpr', 'iban']);
+    });
+});
+
+describe('request kinds and context', function () {
+    it('stores the kind and context of an Inertia or Livewire request', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'request', 'trace_id' => 't1', 'method' => 'POST', 'route' => 'livewire:cart.checkout@save', 'url' => 'https://x.test/livewire/update', 'status' => 200, 'duration_ms' => 40, 'kind' => 'livewire', 'context' => [
+                'livewire' => ['components' => [['name' => 'cart.checkout', 'class' => 'App\\Livewire\\Checkout', 'calls' => ['save'], 'updates' => 2, 'secret' => 'x']], 'page' => '/cart'],
+                'session' => ['token' => 'never kept'],
+            ]],
+        ]), $this->auth)->assertStatus(202);
+
+        $request = RequestRun::sole();
+
+        expect($request->kind)->toBe(RequestKind::Livewire)
+            ->and($request->context)->toEqual(['livewire' => ['components' => [['name' => 'cart.checkout', 'class' => 'App\\Livewire\\Checkout', 'calls' => ['save'], 'updates' => 2]], 'page' => '/cart']]);
+    });
+
+    it('stores an unknown kind and a context that is no object as an ordinary request', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'request', 'method' => 'GET', 'route' => '/', 'url' => 'https://x.test/', 'status' => 200, 'duration_ms' => 1, 'kind' => 'from-a-newer-sdk', 'context' => 'nope'],
+        ]), $this->auth)->assertStatus(202);
+
+        $request = RequestRun::sole();
+
+        expect($request->kind)->toBeNull()
+            ->and($request->context)->toBeNull();
+    });
+
+    it('cuts the props of an Inertia partial reload to a bounded list', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'request', 'method' => 'GET', 'route' => '/dashboard', 'url' => 'https://x.test/dashboard', 'status' => 200, 'duration_ms' => 1, 'kind' => 'inertia-partial', 'context' => [
+                'inertia' => ['component' => 'Dashboard', 'partial' => true, 'only' => array_map(fn (int $i): string => "prop{$i}", range(1, 80)), 'prefetch' => 'yes'],
+            ]],
+        ]), $this->auth)->assertStatus(202);
+
+        $inertia = RequestRun::sole()->context['inertia'];
+
+        expect($inertia['component'])->toBe('Dashboard')
+            ->and($inertia['partial'])->toBeTrue()
+            ->and($inertia['only'])->toHaveCount(RequestContext::MAX_ITEMS)
+            ->and($inertia['prefetch'])->toBeFalse();
+    });
+
+    it('stores a Livewire call as a span on its trace', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'span', 'trace_id' => 't1', 'kind' => 'livewire', 'name' => 'call', 'target' => 'cart.checkout@save', 'duration_ms' => 12],
+        ]), $this->auth)->assertStatus(202);
+
+        expect(SpanRun::sole()->kind)->toBe(SpanKind::Livewire);
     });
 });

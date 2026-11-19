@@ -24,7 +24,7 @@ class ListRoutes extends Tool
 
     protected string $name = 'list_routes';
 
-    protected string $description = 'Routes with request count, p50/p95/p99 duration in microseconds and 5xx error rate. Use search to narrow to one route.';
+    protected string $description = 'Routes with request count, p50/p95/p99 duration in microseconds and 5xx error rate. Each kind of a route is its own row: an Inertia partial reload or prefetch apart from the full visit; a Livewire update has the component and method as its route. Use search to narrow to one route.';
 
     public function __construct(private readonly RouteStatisticsQuery $routes)
     {

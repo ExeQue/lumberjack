@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Domains\Performance\Enums\RequestKind;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -46,6 +47,32 @@ class RequestRunFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'domain' => $domain,
             'url' => self::url($domain, (string) ($attributes['route'] ?? '/')),
+        ]);
+    }
+
+    /**
+     * An Inertia partial reload of these props, such as the one that loads deferred props.
+     *
+     * @param  list<string>  $only
+     */
+    public function inertiaPartialReload(string $component = 'Dashboard', array $only = ['stats']): static
+    {
+        return $this->state(fn () => [
+            'kind' => RequestKind::InertiaPartial,
+            'context' => ['inertia' => ['component' => $component, 'partial' => true, 'only' => $only, 'except' => [], 'reset' => [], 'prefetch' => false, 'version_mismatch' => false]],
+        ]);
+    }
+
+    /** A Livewire update calling one method, under the route the SDK gives it. */
+    public function livewireCall(string $component, string $method): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'method' => 'POST',
+            'route' => "livewire:{$component}@{$method}",
+            'route_name' => 'livewire.update',
+            'url' => self::url($attributes['domain'] ?? null, '/livewire/update'),
+            'kind' => RequestKind::Livewire,
+            'context' => ['livewire' => ['components' => [['name' => $component, 'class' => null, 'calls' => [$method], 'updates' => 0]], 'page' => '/dashboard']],
         ]);
     }
 

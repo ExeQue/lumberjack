@@ -11,6 +11,8 @@ enum SpanKind: string
 {
     case Cache = 'cache';
     case Http = 'http';
+    /** A Livewire component's call or render; the target is component@method. */
+    case Livewire = 'livewire';
     case Mail = 'mail';
     case Notification = 'notification';
     case Redis = 'redis';

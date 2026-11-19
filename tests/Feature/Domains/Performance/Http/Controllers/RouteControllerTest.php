@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domains\Performance\Http\Controllers\RouteController;
 use App\Domains\Performance\Models\QueryRun;
+use App\Domains\Performance\Models\RequestCount;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Performance\Queries\RouteStatisticsQuery;
 use App\Domains\Performance\Support\RequestTraffic;
@@ -127,4 +128,41 @@ describe('the routes page', function () {
                 ->where('routes.0.domain', null)
                 ->where('routes.0.requests', 5));
     });
+});
+
+describe('request kinds', function () {
+    beforeEach(function () {
+        $this->project = Project::factory()->create();
+        $this->user = User::factory()->inTeam($this->project->team)->create();
+        RequestRun::factory()->for($this->project)->forRoute('GET', '/dashboard')->count(3)->create(['occurred_at' => now()->subMinutes(5)]);
+        RequestRun::factory()->for($this->project)->forRoute('GET', '/dashboard')->inertiaPartialReload()->count(2)->create(['occurred_at' => now()->subMinutes(5)]);
+        RequestRun::factory()->for($this->project)->livewireCall('cart.checkout', 'save')->create(['occurred_at' => now()->subMinutes(5)]);
+        // Counted by the SDK too: a partial reload stays apart from the full visit.
+        RequestCount::query()->create(['project_id' => $this->project->id, 'environment' => 'production', 'minute' => now()->subMinutes(2)->startOfMinute(), 'method' => 'GET', 'domain' => 'example.test', 'route' => '/dashboard', 'kind' => 'inertia-partial', 'status_code' => 200, 'count' => 10, 'duration_us' => 1_000]);
+    });
+
+    it('keeps each kind of a route apart and opens the one picked', function () {
+        $this->actingAs($this->user)
+            ->get(route('routes.index', ['project' => $this->project, 'sort' => 'count', 'route' => '/dashboard', 'method' => 'GET', 'route_kind' => 'inertia-partial']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('routes', 3)
+                ->where('routes.0', fn ($r) => $r['route'] === '/dashboard' && $r['kind'] === 'inertia-partial' && $r['requests'] === 12 && array_sum($r['series']) === 12)
+                ->where('routes.1', fn ($r) => $r['route'] === '/dashboard' && $r['kind'] === null && $r['requests'] === 3)
+                ->where('routes.2', fn ($r) => $r['route'] === 'livewire:cart.checkout@save' && $r['kind'] === 'livewire')
+                ->where('detail.kind', 'inertia-partial')
+                ->has('detail.slowest', 2));
+    });
+
+    it('narrows the table to one kind, or to ordinary requests', function (string $kind, string $route, ?string $expected) {
+        $this->actingAs($this->user)
+            ->get(route('routes.index', ['project' => $this->project, 'kind' => $kind]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.kind', $kind)
+                ->has('routes', 1)
+                ->where('routes.0.route', $route)
+                ->where('routes.0.kind', $expected));
+    })->with([
+        'livewire updates' => ['livewire', 'livewire:cart.checkout@save', 'livewire'],
+        'ordinary requests' => ['none', '/dashboard', null],
+    ]);
 });

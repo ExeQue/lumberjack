@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Performance\Models;
 
+use App\Domains\Performance\Enums\RequestKind;
 use App\Domains\Projects\Models\Project;
 use Carbon\CarbonImmutable;
 use Database\Factories\RequestRunFactory;
@@ -32,9 +33,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float $sample_rate
  * @property bool $sampled
  * @property int|null $memory_peak
+ * @property RequestKind|null $kind null for an ordinary request
+ * @property array<string, mixed>|null $context what the SDK knows beyond the route, see RequestContext
  * @property CarbonImmutable $occurred_at
  */
-#[Fillable(['project_id', 'trace_id', 'environment', 'release', 'host', 'method', 'route', 'route_name', 'domain', 'url', 'status_code', 'duration_us', 'memory_peak', 'sample_rate', 'sampled', 'occurred_at'])]
+#[Fillable(['project_id', 'trace_id', 'environment', 'release', 'host', 'method', 'route', 'route_name', 'domain', 'url', 'status_code', 'duration_us', 'memory_peak', 'kind', 'context', 'sample_rate', 'sampled', 'occurred_at'])]
 #[WithoutTimestamps]
 #[DateFormat('Y-m-d H:i:s.v')]
 #[UseFactory(RequestRunFactory::class)]
@@ -48,6 +51,8 @@ class RequestRun extends Model
         return [
             'sample_rate' => 'float',
             'sampled' => 'boolean',
+            'kind' => RequestKind::class,
+            'context' => 'array',
             'occurred_at' => 'datetime',
         ];
     }

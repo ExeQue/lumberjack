@@ -11,7 +11,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Every request of a window as rows of (environment, method, domain, route, status_code,
+ * Every request of a window as rows of (environment, method, domain, route, kind, status_code,
  * occurred_at, requests, duration_us): the exact per-minute counts where the SDK sends
  * them, and the request runs weighed by their sample rate where it does not (an older SDK).
  *
@@ -33,7 +33,7 @@ final class RequestTraffic
         $firstCounted = $counted()->groupBy('project_id', 'environment')->selectRaw('project_id, environment, MIN(minute) AS first');
 
         $counts = $counted()->when($domain !== null)->where('domain', $domain)
-            ->selectRaw('project_id, environment, method, domain, route, status_code, minute AS occurred_at, count AS requests, duration_us');
+            ->selectRaw('project_id, environment, method, domain, route, kind, status_code, minute AS occurred_at, count AS requests, duration_us');
 
         $weight = Sampling::weight('r');
         $runs = DB::table('request_runs as r')
@@ -45,7 +45,7 @@ final class RequestTraffic
             ->when($domain !== null && $domain !== '')->where('r.domain', $domain)
             ->when($domain === '')->whereNull('r.domain')
             ->where(fn (Builder $q) => $q->whereNull('c.first')->orWhereColumn('r.occurred_at', '<', 'c.first'))
-            ->selectRaw("r.project_id, COALESCE(r.environment, '') AS environment, r.method, COALESCE(r.domain, '') AS domain, COALESCE(r.route, r.url) AS route, r.status_code, r.occurred_at, {$weight} AS requests, {$weight} * r.duration_us AS duration_us");
+            ->selectRaw("r.project_id, COALESCE(r.environment, '') AS environment, r.method, COALESCE(r.domain, '') AS domain, COALESCE(r.route, r.url) AS route, COALESCE(r.kind, '') AS kind, r.status_code, r.occurred_at, {$weight} AS requests, {$weight} * r.duration_us AS duration_us");
 
         return DB::query()->fromSub($counts->unionAll($runs), 'traffic');
     }

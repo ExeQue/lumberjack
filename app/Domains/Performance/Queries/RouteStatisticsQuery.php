@@ -24,14 +24,15 @@ class RouteStatisticsQuery
     public const int APDEX_TARGET_US = 500_000;
 
     /**
-     * @return list<array{method: string, route: string, route_name: string|null, domain: string|null, requests: int, p50: int|null, p95: int|null, p99: int|null, error_rate: float, total_us: int, apdex: float|null, statuses: array{'2xx': int, '3xx': int, '4xx': int, '5xx': int}}>
+     * @param  string|null  $kind  a RequestKind value, '' for ordinary requests, or every kind when null
+     * @return list<array{method: string, route: string, route_name: string|null, domain: string|null, kind: string|null, requests: int, p50: int|null, p95: int|null, p99: int|null, error_rate: float, total_us: int, apdex: float|null, statuses: array{'2xx': int, '3xx': int, '4xx': int, '5xx': int}}>
      */
-    public function get(int $projectId, Period $period, ?string $environment = null, string $sort = 'p95', ?string $search = null, int $limit = 100, ?string $domain = null): array
+    public function get(int $projectId, Period $period, ?string $environment = null, string $sort = 'p95', ?string $search = null, int $limit = 100, ?string $domain = null, ?string $kind = null): array
     {
         // Split by domain only when there is more than one to tell apart and none is picked.
         $split = $domain === null && count($this->domains($projectId, $period, $environment)) > 1;
 
-        return StatisticsCache::remember('routes', $period, [$projectId, $environment, $sort, $search, $limit, $domain, $split], fn (): array => $this->compute($projectId, $period, $environment, $sort, $search, $limit, $domain, $split));
+        return StatisticsCache::remember('routes', $period, [$projectId, $environment, $sort, $search, $limit, $domain, $kind, $split], fn (): array => $this->compute($projectId, $period, $environment, $sort, $search, $limit, $domain, $kind, $split));
     }
 
     /**
@@ -58,11 +59,12 @@ class RouteStatisticsQuery
      * or the runs weighed by their sample rate); percentiles and the Apdex split from the
      * runs the SDK picked, so runs kept only for being slow do not skew them. Apdex scales
      * the picked runs' share of satisfied and tolerated requests to the counted non-5xx ones.
-     * A search matches the route or its name; split, each domain of a route is a row.
+     * A search matches the route or its name; each kind of a route is a row (an Inertia
+     * partial reload is not the full visit), and split, so is each domain.
      *
-     * @return list<array{method: string, route: string, route_name: string|null, domain: string|null, requests: int, p50: int|null, p95: int|null, p99: int|null, error_rate: float, total_us: int, apdex: float|null, statuses: array{'2xx': int, '3xx': int, '4xx': int, '5xx': int}}>
+     * @return list<array{method: string, route: string, route_name: string|null, domain: string|null, kind: string|null, requests: int, p50: int|null, p95: int|null, p99: int|null, error_rate: float, total_us: int, apdex: float|null, statuses: array{'2xx': int, '3xx': int, '4xx': int, '5xx': int}}>
      */
-    private function compute(int $projectId, Period $period, ?string $environment, string $sort, ?string $search, int $limit, ?string $domain, bool $split): array
+    private function compute(int $projectId, Period $period, ?string $environment, string $sort, ?string $search, int $limit, ?string $domain, ?string $kind, bool $split): array
     {
         $since = $period->since();
         $pattern = $search !== null && $search !== '' ? LikePattern::contains($search) : null;
@@ -73,15 +75,18 @@ class RouteStatisticsQuery
             ->where('occurred_at', '>=', $since)
             ->when($environment !== null)->where('environment', $environment)
             ->when($domain !== null && $domain !== '')->where('domain', $domain)
-            ->when($domain === '')->whereNull('domain');
+            ->when($domain === '')->whereNull('domain')
+            ->when($kind !== null && $kind !== '')->where('kind', $kind)
+            ->when($kind === '')->whereNull('kind');
         // The counts carry no route name: a name finds its routes through the runs.
         $named = fn () => $runs()->where('route_name', 'ILIKE', $pattern)->whereNotNull('route')->distinct()->select('route');
         $by = $split ? ', domain' : '';
 
         $traffic = RequestTraffic::query($projectId, $since, null, $environment, $domain)
             ->when($pattern !== null)->where(fn ($q) => $q->where('route', 'ILIKE', $pattern)->orWhereIn('route', $named()))
-            ->groupByRaw("method, route{$by}")
-            ->selectRaw("method, route{$by}, SUM(requests) AS requests, SUM(duration_us) AS total_us,
+            ->when($kind !== null)->where('kind', $kind)
+            ->groupByRaw("method, route, kind{$by}")
+            ->selectRaw("method, route, kind{$by}, SUM(requests) AS requests, SUM(duration_us) AS total_us,
                 COALESCE(SUM(requests) FILTER (WHERE status_code BETWEEN 200 AND 299), 0) AS s2xx,
                 COALESCE(SUM(requests) FILTER (WHERE status_code BETWEEN 300 AND 399), 0) AS s3xx,
                 COALESCE(SUM(requests) FILTER (WHERE status_code BETWEEN 400 AND 499), 0) AS s4xx,
@@ -92,8 +97,8 @@ class RouteStatisticsQuery
         $latency = $runs()
             ->where('sampled', true)
             ->when($pattern !== null)->where(fn ($q) => $q->whereRaw('COALESCE(route, url) ILIKE ?', [$pattern])->orWhere('route_name', 'ILIKE', $pattern))
-            ->groupByRaw("method, COALESCE(route, url){$runDomain}")
-            ->selectRaw("method, COALESCE(route, url) AS route{$runDomain}".($split ? ' AS domain' : '').', MAX(route_name) AS route_name, '
+            ->groupByRaw("method, COALESCE(route, url), COALESCE(kind, ''){$runDomain}")
+            ->selectRaw("method, COALESCE(route, url) AS route, COALESCE(kind, '') AS kind{$runDomain}".($split ? ' AS domain' : '').', MAX(route_name) AS route_name, '
                 .Percentiles::select('duration_us', '0.50', 'p50').', '.Percentiles::select('duration_us', '0.95', 'p95').', '.Percentiles::select('duration_us', '0.99', 'p99').",
                 COUNT(*) FILTER (WHERE status_code < 500) AS ok,
                 COUNT(*) FILTER (WHERE status_code < 500 AND duration_us <= {$target}) AS satisfied,
@@ -111,9 +116,9 @@ class RouteStatisticsQuery
         };
 
         $rows = DB::query()->fromSub($traffic, 't')
-            ->leftJoinSub($latency, 'l', fn ($join) => $join->on('l.method', '=', 't.method')->on('l.route', '=', 't.route')->when($split)->on('l.domain', '=', 't.domain'))
+            ->leftJoinSub($latency, 'l', fn ($join) => $join->on('l.method', '=', 't.method')->on('l.route', '=', 't.route')->on('l.kind', '=', 't.kind')->when($split)->on('l.domain', '=', 't.domain'))
             ->where('t.requests', '>', 0)
-            ->selectRaw('t.method, t.route, '.($split ? 't.domain' : 'NULL AS domain').", l.route_name, t.requests, t.total_us, t.s2xx, t.s3xx, t.s4xx, t.s5xx, l.p50, l.p95, l.p99, {$apdex} AS apdex")
+            ->selectRaw('t.method, t.route, t.kind, '.($split ? 't.domain' : 'NULL AS domain').", l.route_name, t.requests, t.total_us, t.s2xx, t.s3xx, t.s4xx, t.s5xx, l.p50, l.p95, l.p99, {$apdex} AS apdex")
             ->orderByRaw("{$order} DESC NULLS LAST")
             ->limit($limit)
             ->get();
@@ -127,6 +132,7 @@ class RouteStatisticsQuery
                 'route' => (string) $r['route'],
                 'route_name' => $r['route_name'] !== null ? (string) $r['route_name'] : null,
                 'domain' => $r['domain'] !== null ? (string) $r['domain'] : null,
+                'kind' => $r['kind'] !== '' ? (string) $r['kind'] : null,
                 'requests' => (int) round($requests),
                 'p50' => $r['p50'] !== null ? (int) $r['p50'] : null,
                 'p95' => $r['p95'] !== null ? (int) $r['p95'] : null,

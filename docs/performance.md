@@ -64,6 +64,32 @@ When requests came in on more than one domain in the period, a **Domain** picker
 next to the search. With **All domains**, the same route on two domains shows as two
 rows, with a **Domain** column.
 
+### Inertia and Livewire requests
+
+With [Laravel Lumberjack](./libraries) 0.13 or later, the SDK tells Inertia and Livewire
+requests apart from ordinary ones, and each kind of a route is its own row with a badge:
+
+| Kind                 | What it is                                                      |
+| -------------------- | --------------------------------------------------------------- |
+| **Inertia**          | An Inertia visit answered with a page object                    |
+| **Inertia partial**  | A partial reload, such as the request that loads deferred props |
+| **Inertia prefetch** | A visit prefetched before the user asked for it                 |
+| **Livewire**         | A Livewire update, under the component and method it called     |
+
+A partial reload is much lighter than the full visit, so the two would skew each other's
+times in one row. A Livewire update is shown as `livewire:cart.checkout@save` instead of
+`/livewire/update`, so a polling component does not hide a slow `save`. A property update
+without a call shows as `@(update)`, and a request that updated several components at once
+as `livewire:(batch)`.
+
+When any route has a kind, a **Kind** picker appears next to the search: all kinds,
+ordinary requests only, or one kind.
+
+A trace of an Inertia or Livewire request shows what the SDK knew about it: the Inertia
+component and which props a partial reload asked for, or the Livewire components, the
+methods they called and the page they live on. Each Livewire call and render is a step
+on the timeline.
+
 ## Database
 
 ![The Database page: queries grouped by SQL with the share of database time](./screenshots/queries.png)

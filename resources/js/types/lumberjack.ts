@@ -100,9 +100,48 @@ export type IssueNote = {
     created_at: string | null;
 };
 
+/** What kind of request the SDK saw beyond its route; null for an ordinary request. */
+export type RequestKind =
+    | 'inertia'
+    | 'inertia-partial'
+    | 'inertia-prefetch'
+    | 'livewire';
+
+/** What the SDK knows about a request beyond its route. */
+export type RequestContext = {
+    livewire?: {
+        components: {
+            name: string;
+            class: string | null;
+            calls: string[];
+            updates: number;
+        }[];
+        /** The page the components live on. */
+        page: string | null;
+    };
+    inertia?: {
+        component: string | null;
+        partial: boolean;
+        only: string[];
+        except: string[];
+        reset: string[];
+        prefetch: boolean;
+        version_mismatch: boolean;
+    };
+};
+
+export const REQUEST_KINDS: RequestKind[] = [
+    'inertia',
+    'inertia-partial',
+    'inertia-prefetch',
+    'livewire',
+];
+
 export type RouteStat = {
     method: string;
     route: string;
+    /** Each kind of a route is its own row. */
+    kind: RequestKind | null;
     /** The Laravel route name, when the route has one. */
     route_name: string | null;
     /** Set only while the table is split by domain; '' for requests without one. */

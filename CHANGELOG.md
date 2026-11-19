@@ -7,6 +7,7 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 ### Added
 
 - A tour of Lumberjack on film (1:49) at the top of the README and the docs: one night from the first alert to the fix. It is made with Remotion in `video/` and lands in `art/`.
+- Inertia and Livewire requests are told apart: requests and request counts carry a `kind` (`inertia`, `inertia-partial`, `inertia-prefetch`, `livewire`), and each kind of a route is its own row on the Requests page with a badge and a **Kind** picker. A Livewire update arrives as its component and method (`livewire:cart.checkout@save`) instead of `/livewire/update`. A request event can carry a `context` with the Inertia component and partial props or the Livewire components and calls, shown on its trace, and Livewire calls and renders are `livewire` spans on the timeline. An unknown kind is stored as an ordinary request.
 
 ## [0.13.1] - 2026-11-19
 

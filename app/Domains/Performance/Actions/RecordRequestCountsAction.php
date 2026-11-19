@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Performance\Actions;
 
 use App\Domains\Ingest\Data\Envelope;
+use App\Domains\Performance\Enums\RequestKind;
 use App\Domains\Performance\Models\RequestCount;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Adds a batch's request_counts events to the per-minute counts. Under PHP-FPM every
  * request sends its own event with a count of 1, so the batch is summed up first and
- * each minute, method, domain, route and status is one upsert row.
+ * each minute, method, domain, route, kind and status is one upsert row.
  */
 class RecordRequestCountsAction
 {
@@ -43,6 +44,7 @@ class RecordRequestCountsAction
                     'route' => Envelope::short($count['route'] ?? null, 255) ?? '/',
                     // Counts from an older SDK carry none.
                     'domain' => Envelope::domain($count['domain'] ?? null) ?? '',
+                    'kind' => RequestKind::fromEvent($count['kind'] ?? null)->value ?? '',
                     'status_code' => max(0, min(999, (int) ($count['status'] ?? 0))),
                 ];
                 $key = implode("\0", $row);
@@ -57,7 +59,7 @@ class RecordRequestCountsAction
         ksort($rows);
 
         foreach (array_chunk(array_values($rows), 500) as $chunk) {
-            RequestCount::query()->upsert($chunk, ['project_id', 'environment', 'minute', 'method', 'domain', 'route', 'status_code'], [
+            RequestCount::query()->upsert($chunk, ['project_id', 'environment', 'minute', 'method', 'domain', 'route', 'kind', 'status_code'], [
                 'count' => DB::raw('request_counts.count + excluded.count'),
                 'duration_us' => DB::raw('request_counts.duration_us + excluded.duration_us'),
             ]);

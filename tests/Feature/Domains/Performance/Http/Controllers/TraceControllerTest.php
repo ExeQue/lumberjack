@@ -50,3 +50,16 @@ describe('a trace', function () {
         $this->actingAs(User::factory()->inTeam()->create())->get(route('traces.show', [$project, 't1']))->assertForbidden();
     });
 });
+
+describe('request context', function () {
+    it('shows the kind of the request and what the SDK knew about it', function () {
+        ['user' => $user, 'project' => $project] = $this->memberWithProject();
+        RequestRun::factory()->for($project)->livewireCall('cart.checkout', 'save')->create(['trace_id' => 't1']);
+
+        $this->actingAs($user)->get(route('traces.show', [$project, 't1']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('trace.requests.0.kind', 'livewire')
+                ->where('trace.requests.0.context.livewire.components.0.calls', ['save'])
+                ->where('trace.requests.0.context.livewire.page', '/dashboard'));
+    });
+});

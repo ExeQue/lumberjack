@@ -100,3 +100,13 @@ describe('sample rates', function () {
             ->and(ScheduledTaskRun::sole()->sample_rate)->toBe(0.2);
     });
 });
+
+describe('request kinds', function () {
+    it('keeps kinds apart, and counts an unknown kind as an ordinary request', function () {
+        $row = ['method' => 'GET', 'route' => '/dashboard', 'status' => 200, 'count' => 2, 'duration_ms_sum' => 4];
+
+        $this->postJson('/api/ingest', $this->batch([($this->counts)([$row, [...$row, 'kind' => 'inertia-partial'], [...$row, 'kind' => 'from-a-newer-sdk']])]), $this->auth)->assertStatus(202);
+
+        expect(RequestCount::query()->orderBy('kind')->pluck('count', 'kind')->all())->toBe(['' => 4, 'inertia-partial' => 2]);
+    });
+});

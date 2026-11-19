@@ -22,7 +22,9 @@ use App\Domains\Logs\Actions\RecordLogLineAction;
 use App\Domains\Maintenance\Actions\RecordMaintenanceEventAction;
 use App\Domains\Performance\Actions\RecordRequestCountsAction;
 use App\Domains\Performance\Enums\DeviceClass;
+use App\Domains\Performance\Enums\RequestKind;
 use App\Domains\Performance\Enums\SpanKind;
+use App\Domains\Performance\Support\RequestContext;
 use App\Domains\Performance\Support\SqlNormalizer;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Releases\Actions\RecordReleaseAction;
@@ -268,13 +270,15 @@ class ProcessIngestBatchAction
             'status_code' => max(0, min(999, (int) ($event['status'] ?? 0))),
             'duration_us' => Envelope::micros($event['duration_ms'] ?? 0),
             'memory_peak' => isset($event['memory_peak']) && is_numeric($event['memory_peak']) ? (int) $event['memory_peak'] : null,
+            'kind' => RequestKind::fromEvent($event['kind'] ?? null)?->value,
+            'context' => RequestContext::json($event['context'] ?? null),
             ...Envelope::sampling($event),
             'occurred_at' => Envelope::time($event['timestamp'] ?? null)->format('Y-m-d H:i:s.v'),
         ];
     }
 
     /**
-     * A cache read, outgoing call, mail, notification or Redis command on a trace.
+     * A cache read, outgoing call, mail, notification, Redis command or Livewire call on a trace.
      *
      * @param  array<string, mixed>  $event
      * @return array<string, mixed>

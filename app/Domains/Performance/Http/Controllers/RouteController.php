@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Performance\Http\Controllers;
 
+use App\Domains\Performance\Enums\RequestKind;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Performance\Queries\RouteStatisticsQuery;
 use App\Domains\Performance\Support\RequestTraffic;
@@ -38,21 +39,32 @@ class RouteController
         $domain = is_string($domain) && $domain !== '' ? mb_strtolower(mb_substr($domain, 0, 255)) : null;
         $routeDomain = $request->query('route_domain');
         $routeDomain = is_string($routeDomain) && $routeDomain !== '' ? mb_strtolower(mb_substr($routeDomain, 0, 255)) : null;
+        // A kind to narrow the table to ('none' is ordinary requests), and the open route's own.
+        $kind = $this->kind($request->query('kind'));
+        $routeKind = $this->kind($request->query('route_kind')) ?? '';
 
         return Inertia::render('routes/index', [
             'project' => $presenter->header($project, $request->user()),
-            'filters' => [...$this->filters($request), 'sort' => $sort, 'search' => $search, 'route' => $selected, 'method' => $method, 'domain' => $domain, 'route_domain' => $routeDomain],
+            'filters' => [...$this->filters($request), 'sort' => $sort, 'search' => $search, 'route' => $selected, 'method' => $method, 'domain' => $domain, 'route_domain' => $routeDomain, 'kind' => $kind === '' ? 'none' : $kind, 'route_kind' => $routeKind === '' ? null : $routeKind],
             'domains' => fn (): array => $query->domains($project->id, $period, $environment),
-            'routes' => fn (): array => $this->withSeries($project, $period, $environment, $domain, $query->get($project->id, $period, $environment, $sort, $search, domain: $domain)),
+            'routes' => fn (): array => $this->withSeries($project, $period, $environment, $domain, $query->get($project->id, $period, $environment, $sort, $search, domain: $domain, kind: $kind)),
             'sample_rate' => fn (): ?float => $query->sampleRate($project->id, $period, $environment, $domain),
-            'detail' => fn (): ?array => $selected === '' ? null : $this->detail($project, $period, $environment, $domain ?? $routeDomain, $method, $selected),
+            'detail' => fn (): ?array => $selected === '' ? null : $this->detail($project, $period, $environment, $domain ?? $routeDomain, $routeKind, $method, $selected),
         ]);
+    }
+
+    /**
+     * A RequestKind value, '' for 'none' (ordinary requests), or null for anything else.
+     */
+    private function kind(mixed $kind): ?string
+    {
+        return $kind === 'none' ? '' : RequestKind::fromEvent($kind)?->value;
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function detail(Project $project, Period $period, ?string $environment, ?string $domain, string $method, string $route): array
+    private function detail(Project $project, Period $period, ?string $environment, ?string $domain, string $kind, string $method, string $route): array
     {
         $since = $period->since();
         $size = $period->bucketSeconds();
@@ -64,7 +76,9 @@ class RouteController
             ->when(! $named)->whereNull('route')
             ->when(! $named)->where('url', $route)
             ->when($environment !== null)->where('environment', $environment)
-            ->when($domain !== null)->where('domain', $domain);
+            ->when($domain !== null)->where('domain', $domain)
+            ->when($kind !== '')->where('kind', $kind)
+            ->when($kind === '')->whereNull('kind');
 
         // Percentiles from the runs the SDK picked; a run kept only for being slow would skew them.
         $byBucket = DB::table('request_runs')->tap($scope)->where('sampled', true)
@@ -92,6 +106,7 @@ class RouteController
             'method' => $method,
             'route' => $route,
             'domain' => $domain,
+            'kind' => $kind === '' ? null : $kind,
             'route_name' => RequestRun::query()->tap($scope)->whereNotNull('route_name')->latest('occurred_at')->value('route_name'),
             'hourly' => $hourly,
             'slowest' => $slowest->map(fn (RequestRun $r): array => [
@@ -120,15 +135,15 @@ class RouteController
 
         // Cached like the table it belongs to, so a live reload does not group the period again.
         $counts = collect(StatisticsCache::remember('routes-series', $period, [$project->id, $environment, $domain], fn (): array => RequestTraffic::query($project->id, $period->since(), null, $environment, $domain)
-            ->selectRaw('method, route, domain, FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?) AS b, SUM(requests) AS c', [$size])
-            ->groupByRaw('method, route, domain, b')
+            ->selectRaw('method, route, domain, kind, FLOOR(EXTRACT(EPOCH FROM occurred_at) / ?) AS b, SUM(requests) AS c', [$size])
+            ->groupByRaw('method, route, domain, kind, b')
             ->get()
             ->map(fn (object $row): array => (array) $row)
             ->all()))
-            ->groupBy(fn (array $row): string => $row['method'].' '.$row['route']);
+            ->groupBy(fn (array $row): string => $row['method'].' '.$row['kind'].' '.$row['route']);
 
         return array_map(function (array $route) use ($counts, $start, $period): array {
-            $rows = $counts->get($route['method'].' '.$route['route']);
+            $rows = $counts->get($route['method'].' '.($route['kind'] ?? '').' '.$route['route']);
             $series = array_fill(0, $period->buckets() + 1, 0);
 
             foreach ($rows ?? [] as $values) {
