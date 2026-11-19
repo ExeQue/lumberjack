@@ -83,9 +83,13 @@ export function useScreenData(
             w.type === 'qr' ||
             (w.type === 'countdown' && w.options?.counts_to === 'calendar'),
     );
-    const keys = dataWidgets
-        .map((w) => `${w.id}:${dataKey(schema, w)}`)
-        .join('|');
+    // The screen's scope (projects, environment, period) is under every widget's own, so a
+    // change to it refetches them all.
+    const scope = JSON.stringify(screen.scope ?? null);
+    const scopeRef = useRef(scope);
+    scopeRef.current = scope;
+    const keyOf = (w: Widget) => `${dataKey(schema, w)}@${scopeRef.current}`;
+    const keys = dataWidgets.map((w) => `${w.id}:${keyOf(w)}`).join('|');
 
     useEffect(() => {
         widgetsRef.current = dataWidgets;
@@ -106,9 +110,7 @@ export function useScreenData(
             const requests = whole
                 ? [load(url)]
                 : wanted.map((id) => load(url, id));
-            const sent = Object.fromEntries(
-                all.map((w) => [w.id, dataKey(schema, w)]),
-            );
+            const sent = Object.fromEntries(all.map((w) => [w.id, keyOf(w)]));
 
             Promise.all(requests)
                 .then((parts) => {
@@ -150,7 +152,7 @@ export function useScreenData(
     // First load, and a widget whose data settings changed (or that is new) refetches alone.
     useEffect(() => {
         const changed = widgetsRef.current
-            .filter((w) => fetched.current[w.id] !== dataKey(schema, w))
+            .filter((w) => fetched.current[w.id] !== keyOf(w))
             .map((w) => w.id);
 
         if (changed.length === 0) {

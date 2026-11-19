@@ -6,6 +6,7 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ### Fixed
 
+- A screen's widgets show the new period, projects or environment as soon as the screen's are changed in the designer, instead of at their next refresh.
 - A page that asks often, such as a status screen or the project search, no longer uses up the limit of other actions: each rate-limited action, such as sending a test alert, now counts on its own.
 
 ## [0.12.0] - 2026-11-18
