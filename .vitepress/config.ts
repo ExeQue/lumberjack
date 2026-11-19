@@ -1,4 +1,3 @@
-import { copyFile, mkdir } from 'node:fs/promises';
 import { defineConfig } from 'vitepress';
 
 const base = process.env.DOCS_BASE ?? '/lumberjack/';
@@ -58,13 +57,22 @@ export default defineConfig({
         'README.md': 'index.md',
     },
 
-    // The README links the promo film on the site, which only copies what pages import.
-    async buildEnd({ outDir }) {
-        await mkdir(`${outDir}/art`, { recursive: true });
-        await copyFile(
-            new URL('../art/lumberjack-promo.mp4', import.meta.url),
-            `${outDir}/art/lumberjack-promo.mp4`,
-        );
+    // GitHub drops <video>, so the README links its poster to the film; the site plays it in place.
+    // Vue turns a video's src and poster into imported assets, so both are served and built.
+    markdown: {
+        config(md) {
+            md.core.ruler.push('promo-video', (state) => {
+                for (const token of state.tokens) {
+                    if (
+                        token.type === 'html_block' &&
+                        token.content.includes('art/lumberjack-promo.jpg')
+                    ) {
+                        token.content =
+                            '<video controls preload="none" poster="./art/lumberjack-promo.jpg" src="./art/lumberjack-promo.mp4" style="width:100%;border-radius:8px"></video>\n';
+                    }
+                }
+            });
+        },
     },
 
     vite: {

@@ -14,7 +14,7 @@ Lumberjack watches your apps from your own server, whatever they are built with.
 performance data, runs health checks, sends alerts, shows status screens on a TV and lets
 AI agents work with your issues over MCP.
 
-<p align="center"><a href="https://exeque.github.io/lumberjack/art/lumberjack-promo.mp4"><img src="./art/lumberjack-promo.jpg" alt="Watch the tour: one night with Lumberjack, from the alert to the fix (1:49)" width="100%"></a></p>
+<p align="center"><a href="./art/lumberjack-promo.mp4"><img src="./art/lumberjack-promo.jpg" alt="Watch the tour: one night with Lumberjack, from the alert to the fix (1:49)" width="100%"></a></p>
 
 ![The overview of a project: requests, error rate, p95, failed jobs, open issues and health checks](docs/screenshots/overview.png)
 
