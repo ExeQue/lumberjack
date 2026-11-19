@@ -15,6 +15,7 @@ use App\Domains\Ai\Presenters\AiUsagePresenter;
 use App\Domains\Ai\Queries\AiTargetSearchQuery;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Presenters\ProjectPresenter;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,8 @@ class AiPriceController
             ->whereIn('fingerprint', $prices->where('scope', AiPriceScope::Key)->pluck('scope_id')->filter()->unique()->values()->all())
             ->get()->keyBy('fingerprint')->all();
 
+        $firstUsedAt = $project->aiKeys()->min('first_seen_at');
+
         return Inertia::render('ai/prices', [
             'project' => $presenter->header($project, $request->user()),
             'prices' => $prices->map(fn (AiPrice $price): array => AiUsagePresenter::price($price, $byFingerprint))->all(),
@@ -54,6 +57,8 @@ class AiPriceController
                 ->map(fn (object $row): array => ['provider' => (string) $row->provider, 'model' => (string) $row->model])->all(),
             // Suggested as typed; capped like the budgets' search, any other owner can still be typed in full.
             'owners' => $targets->owners($project, ''),
+            // A new price is valid from here by default, so it prices the usage already kept too.
+            'first_used_at' => $firstUsedAt === null ? null : CarbonImmutable::parse($firstUsedAt)->startOfDay()->toIso8601String(),
             'default_payer' => $project->ai_default_payer->value,
             'can_update' => (bool) $request->user()?->can('update', $project),
         ]);

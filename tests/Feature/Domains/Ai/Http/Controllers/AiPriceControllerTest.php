@@ -72,6 +72,18 @@ describe('the prices page', function () {
                 ->where('prices.0.key.uuid', $priced->uuid)
                 ->where('owners', fn ($owners) => collect($owners)->sortBy('type')->values()->all() === [['type' => 'tenant', 'id' => 'a:b'], ['type' => 'user', 'id' => '7']]));
     });
+
+    it('offers the start of the day of the first kept AI call, so a new price covers the usage already there', function () {
+        $this->actingAs($this->member)->get(route('ai.prices.index', ['project' => $this->project]))
+            ->assertInertia(fn (Assert $page) => $page->where('first_used_at', null));
+
+        AiKey::factory()->forProject($this->project)->create(['first_seen_at' => '2026-11-10 14:30:00']);
+        AiKey::factory()->forProject($this->project)->create(['first_seen_at' => '2026-11-12 09:00:00']);
+        AiKey::factory()->create(['first_seen_at' => '2026-11-01 09:00:00']);
+
+        $this->actingAs($this->member)->get(route('ai.prices.index', ['project' => $this->project]))
+            ->assertInertia(fn (Assert $page) => $page->where('first_used_at', '2026-11-10T00:00:00+00:00'));
+    });
 });
 
 describe('adding a price', function () {

@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Fixed
+
+- A new AI price is valid from the start of the day of the oldest AI call kept instead of from now, so usage recorded before it was added gets a cost too. Calls made before a price's **valid from** show no cost; move it back to price them.
+
 ## [0.13.0] - 2026-11-19
 
 ### Added

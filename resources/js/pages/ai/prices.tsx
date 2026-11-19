@@ -54,6 +54,8 @@ type Props = {
     models: Model[];
     /** The key owners used most lately, to suggest as typed. */
     owners: Reference[];
+    /** The start of the day the project's first kept AI call was made, if any. */
+    first_used_at: string | null;
     default_payer: 'us' | 'customer';
     can_update: boolean;
 };
@@ -89,6 +91,7 @@ export default function AiPrices({
     prices,
     models,
     owners,
+    first_used_at,
     default_payer,
     can_update,
 }: Props) {
@@ -366,6 +369,7 @@ export default function AiPrices({
                     price={editing === 'new' ? undefined : editing}
                     owners={owners}
                     models={models}
+                    firstUsedAt={first_used_at}
                     matchText={matchText}
                     onClose={() => setEditing(null)}
                 />
@@ -379,11 +383,13 @@ function PriceDialog({
     price,
     owners,
     models,
+    firstUsedAt,
     matchText,
     onClose,
 }: {
     project: string;
     price?: AiPriceRow;
+    firstUsedAt: string | null;
     owners: Reference[];
     models: Model[];
     matchText: (pattern: string, provider: string | null) => string;
@@ -629,6 +635,7 @@ function PriceDialog({
                                     required
                                     defaultValue={localInput(
                                         price?.valid_from ??
+                                            firstUsedAt ??
                                             new Date().toISOString(),
                                     )}
                                 />

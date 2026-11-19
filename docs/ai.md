@@ -125,7 +125,9 @@ share of the day before it that has gone by of today.
 
 Lumberjack works out what the tokens cost from the [prices](#prices) whenever a page is
 shown; cost is never stored. A price added or corrected later therefore also prices the
-usage recorded before it, from its **valid from** on.
+usage recorded before it, from its **valid from** on. A new price is valid from the start of
+the day of the oldest AI call kept, so it prices all of it; set a later moment for a price
+that changed.
 
 For each model and key, cost is, per million tokens:
 
