@@ -271,9 +271,12 @@ class ShowcaseIssuesSeeder extends Seeder
 
         [$method, $route] = $issue['route'];
         $name = null;
+        $kind = ['kind' => null, 'context' => null];
 
         foreach ($spec['routes'] as $candidate) {
-            $name = $candidate[0] === $method && $candidate[1] === $route ? $candidate[2] : $name;
+            if ($candidate[0] === $method && $candidate[1] === $route && $name === null) {
+                [$name, $kind] = [$candidate[2], Showcase::requestKind($candidate)];
+            }
         }
 
         $status = match (true) {
@@ -297,6 +300,8 @@ class ShowcaseIssuesSeeder extends Seeder
                 'duration_us' => (int) $start->diffInMicroseconds($occurrence['at']) + mt_rand(5_000, 40_000),
                 'memory_peak' => mt_rand(24, 48) * 1024 * 1024,
                 'occurred_at' => $start,
+                ...$kind,
+                ...(str_starts_with($route, 'livewire:') ? ['url' => 'https://'.($spec['domain'] ?? 'example.com').Showcase::path($route)] : []),
             ]);
 
             foreach ($spec['queries'][$method.' '.$route] ?? $spec['queries'][$route] ?? [] as $query) {
@@ -544,7 +549,7 @@ class ShowcaseIssuesSeeder extends Seeder
         $context = match ($issue['kind']) {
             'http', 'browser', 'log' => ['request' => [
                 'method' => $issue['route'][0] ?? 'GET',
-                'url' => 'https://'.($spec['domain'] ?? 'example.com').str_replace(['{slug}', '{order}', '{room}', '{invoice}'], ['oak-desk-lamp', (string) mt_rand(90_000, 99_999), (string) mt_rand(1, 40), 'INV-'.mt_rand(2000, 2999)], $issue['route'][1] ?? '/'),
+                'url' => 'https://'.($spec['domain'] ?? 'example.com').str_replace(['{slug}', '{order}', '{room}', '{invoice}', '{project}'], ['oak-desk-lamp', (string) mt_rand(90_000, 99_999), (string) mt_rand(1, 40), 'INV-'.mt_rand(2000, 2999), (string) mt_rand(100, 400)], Showcase::path($issue['route'][1] ?? '/')),
                 'route' => $issue['route'][1] ?? '/',
                 'ip' => '203.0.113.'.mt_rand(2, 250),
                 'headers' => [

@@ -9,6 +9,9 @@
 // DOCS_PROJECT       the project to show (the seeded Storefront)
 // DOCS_AI_PROJECT    the project whose AI usage to show, by name or /projects/<uuid> (the
 //                    seeded Customer Portal, else DOCS_PROJECT)
+// DOCS_LIVEWIRE_PROJECT, DOCS_INERTIA_PROJECT
+//                    the projects whose Livewire and Inertia requests to show (the seeded
+//                    Helpdesk and Planner)
 // CHROME_PATH        a Chrome or Chromium to use instead of the one Puppeteer downloads
 //
 // It only reads: it opens pages and dialogs but never saves or submits anything.
@@ -140,6 +143,23 @@ if (!aiProject) {
     );
 }
 const ai = `${aiProject ?? project}/ai`;
+// Livewire and Inertia requests, each from a project of its own.
+const projectNamed = (name) =>
+    page.evaluate((n) => {
+        const link = [
+            ...document.querySelectorAll('a[href*="/projects/"]'),
+        ].find((a) => a.textContent?.includes(n));
+        return link ? new URL(link.href).pathname : null;
+    }, name);
+const livewire = await projectNamed(
+    process.env.DOCS_LIVEWIRE_PROJECT ?? 'Helpdesk',
+);
+const inertia = await projectNamed(
+    process.env.DOCS_INERTIA_PROJECT ?? 'Planner',
+);
+const livewireBatch = livewire
+    ? `${livewire}/requests?sort=count&method=POST&route=${encodeURIComponent('livewire:(batch)')}&route_kind=livewire`
+    : null;
 await open(`${project}/issues`);
 // Issues with a stacktrace (the row shows a file and line), those with notes first.
 const issues = await page.evaluate(() =>
@@ -164,6 +184,21 @@ for (const candidate of issues) {
     if (trace) {
         break;
     }
+}
+
+// A trace of a batched Livewire update, one whose queries and spans were kept.
+let livewireTrace = null;
+if (livewireBatch) {
+    await open(livewireBatch);
+    livewireTrace = await page.evaluate(() => {
+        const row = [...document.querySelectorAll('[role=dialog] li')].find(
+            (li) =>
+                /[1-9]\d* quer/.test(li.textContent ?? '') &&
+                li.querySelector('a[href*="/traces/"]'),
+        );
+        const link = row?.querySelector('a[href*="/traces/"]');
+        return link ? new URL(link.href).pathname : null;
+    });
 }
 
 // The first status screen, for the designer and the kiosk.
@@ -323,6 +358,15 @@ const shots = {
     },
     trace: { path: trace },
     routes: { path: `${project}/requests`, fullPage: true },
+    'routes-livewire': {
+        path: livewire ? `${livewire}/requests?sort=count` : null,
+        fullPage: true,
+    },
+    'routes-inertia': {
+        path: inertia ? `${inertia}/requests` : null,
+        fullPage: true,
+    },
+    'trace-livewire': { path: livewireTrace },
     queries: { path: `${project}/database` },
     jobs: { path: `${project}/jobs`, fullPage: true },
     schedule: { path: `${project}/schedule` },

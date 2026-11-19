@@ -76,11 +76,15 @@ requests apart from ordinary ones, and each kind of a route is its own row with 
 | **Inertia prefetch** | A visit prefetched before the user asked for it                 |
 | **Livewire**         | A Livewire update, under the component and method it called     |
 
+![An Inertia app's requests: each page as a visit, a partial reload and a prefetch](./screenshots/routes-inertia.png)
+
 A partial reload is much lighter than the full visit, so the two would skew each other's
 times in one row. A Livewire update is shown as `livewire:cart.checkout@save` instead of
 `/livewire/update`, so a polling component does not hide a slow `save`. A property update
 without a call shows as `@(update)`, and a request that updated several components at once
 as `livewire:(batch)`.
+
+![A Livewire app's requests: the polling bell apart from the reply form's save](./screenshots/routes-livewire.png)
 
 When any route has a kind, a **Kind** picker appears next to the search: all kinds,
 ordinary requests only, or one kind.
@@ -89,6 +93,8 @@ A trace of an Inertia or Livewire request shows what the SDK knew about it: the 
 component and which props a partial reload asked for, or the Livewire components, the
 methods they called and the page they live on. Each Livewire call and render is a step
 on the timeline.
+
+![The trace of a Livewire update of two components, with each call and render](./screenshots/trace-livewire.png)
 
 ## Database
 

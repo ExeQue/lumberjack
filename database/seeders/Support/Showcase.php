@@ -220,6 +220,44 @@ final class Showcase
         return $at->format('Y-m-d H:i:s.v');
     }
 
+    /**
+     * The kind a catalog route was, and the context the SDK sent for it: null for an
+     * ordinary request.
+     *
+     * @param  array<int, mixed>  $route
+     * @return array{kind: string|null, context: array<string, mixed>|null}
+     */
+    public static function requestKind(array $route): array
+    {
+        $extra = $route[5] ?? [];
+        $kind = $extra['kind'] ?? null;
+
+        $context = match (true) {
+            $kind === 'livewire' => ['livewire' => [
+                'components' => array_map(fn (array $c): array => ['name' => $c[0], 'class' => $c[1], 'calls' => $c[2], 'updates' => $c[3]], $extra['components']),
+                'page' => $extra['page'] ?? null,
+            ]],
+            is_string($kind) && str_starts_with($kind, 'inertia') => ['inertia' => [
+                'component' => $extra['component'] ?? null,
+                'partial' => $kind === 'inertia-partial',
+                'only' => $extra['only'] ?? [],
+                'except' => [],
+                'reset' => [],
+                'prefetch' => $kind === 'inertia-prefetch',
+                'version_mismatch' => false,
+            ]],
+            default => null,
+        };
+
+        return ['kind' => $kind, 'context' => $context];
+    }
+
+    /** The path a request to a catalog route went to: Livewire's update route for a Livewire one. */
+    public static function path(string $route): string
+    {
+        return str_starts_with($route, 'livewire:') ? '/livewire/update' : $route;
+    }
+
     private static function bump(float $hour, float $center, float $width): float
     {
         return exp(-(($hour - $center) ** 2) / (2 * $width ** 2));

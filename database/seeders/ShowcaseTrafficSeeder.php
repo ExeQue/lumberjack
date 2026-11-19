@@ -111,7 +111,7 @@ class ShowcaseTrafficSeeder extends Seeder
                 foreach ($sums as $status => [$count, $us]) {
                     $row = $this->template("count|{$environment}|{$i}|{$status}", fn () => Bulk::row(
                         RequestCount::factory()->for($project)->forRoute($route[0], $route[1], $status)->onDomain($this->domain($spec, $route)),
-                        ['environment' => $environment],
+                        ['environment' => $environment, 'kind' => Showcase::requestKind($route)['kind'] ?? ''],
                     ));
                     $row['minute'] = $minute;
                     $row['count'] = $count;
@@ -164,9 +164,10 @@ class ShowcaseTrafficSeeder extends Seeder
     {
         $at = CarbonImmutable::createFromTimestampMs($minute * 1000 + mt_rand(0, 59_999));
         $trace = Showcase::traceId();
-        $row = $this->template("run|{$environment}|{$route[1]}|{$route[0]}", fn () => Bulk::row(
+        // Keyed by kind too: an Inertia route is visited, partially reloaded and prefetched.
+        $row = $this->template("run|{$environment}|{$route[1]}|{$route[0]}|".($route[5]['kind'] ?? ''), fn () => Bulk::row(
             RequestRun::factory()->for($project)->onDomain($this->domain($spec, $route))->forRoute($route[0], $route[1], $route[2]),
-            ['environment' => $environment],
+            ['environment' => $environment, ...Showcase::requestKind($route), ...$this->livewireUrl($spec, $route)],
         ));
         $row['trace_id'] = $trace;
         $row['release'] = Showcase::release($spec, $at);
@@ -218,6 +219,7 @@ class ShowcaseTrafficSeeder extends Seeder
 
         foreach ($spec['spans'][$route[0].' '.$route[1]] ?? $spec['spans'][$route[1]] ?? [] as $s => $span) {
             $factory = match ($span[0]) {
+                'livewire' => SpanRun::factory()->state(['kind' => 'livewire', 'name' => $span[1], 'target' => $span[2], 'attributes' => null]),
                 'http' => SpanRun::factory()->http($span[1], $span[2]),
                 'cache' => SpanRun::factory()->cache(str_replace('{slug}', 'oak-desk-lamp', $span[1]), $span[2]),
                 'mail' => SpanRun::factory()->mail($span[1]),
@@ -228,7 +230,7 @@ class ShowcaseTrafficSeeder extends Seeder
             $row['trace_id'] = $trace;
             $row['occurred_at'] = Showcase::ms($at->addMicroseconds(min($offset, $us)));
 
-            if ($span[0] === 'http') {
+            if ($span[0] === 'http' || $span[0] === 'livewire') {
                 $row['duration_us'] = Showcase::latency($span[3], 0.35);
                 $offset += $row['duration_us'];
             }
@@ -282,6 +284,18 @@ class ShowcaseTrafficSeeder extends Seeder
     private function domain(array $spec, array $route): string
     {
         return $route[5]['domain'] ?? $spec['domain'] ?? '';
+    }
+
+    /**
+     * A Livewire update's url is Livewire's update route, not its component and method.
+     *
+     * @param  array<string, mixed>  $spec
+     * @param  array<int, mixed>  $route
+     * @return array{url?: string}
+     */
+    private function livewireUrl(array $spec, array $route): array
+    {
+        return str_starts_with($route[1], 'livewire:') ? ['url' => 'https://'.$this->domain($spec, $route).Showcase::path($route[1])] : [];
     }
 
     /**

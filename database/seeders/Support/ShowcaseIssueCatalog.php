@@ -33,6 +33,8 @@ final class ShowcaseIssueCatalog
             'fulfillment-worker' => self::worker(),
             'acme-booking' => self::booking(),
             'customer-portal' => self::portal(),
+            'helpdesk' => self::helpdesk(),
+            'planner' => self::planner(),
         ];
     }
 
@@ -357,6 +359,34 @@ final class ShowcaseIssueCatalog
                 ],
                 'kind' => 'http', 'route' => ['GET', '/invoices/{invoice}/pdf'],
                 'state' => 'open', 'from' => 8, 'daily' => 3, 'users' => 1.0, 'labels' => ['customer-facing'],
+            ],
+        ];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private static function helpdesk(): array
+    {
+        return [
+            [
+                'title' => 'Illuminate\\Database\\Eloquent\\ModelNotFoundException',
+                'message' => 'No query results for model [App\\Models\\Ticket] 8812',
+                'frames' => [['app/Livewire/Tickets/ReplyForm.php', 49, 'save', 'App\\Livewire\\Tickets\\ReplyForm']],
+                'kind' => 'http', 'route' => ['POST', 'livewire:tickets.reply-form@save'],
+                'state' => 'open', 'from' => 4, 'daily' => 2, 'users' => 1.0, 'assignee' => 'oskar@lumberjack',
+            ],
+        ];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private static function planner(): array
+    {
+        return [
+            [
+                'title' => 'ErrorException',
+                'message' => 'Attempt to read property "name" on null',
+                'frames' => [['app/Http/Controllers/ProjectController.php', 58, 'timeline', 'App\\Http\\Controllers\\ProjectController']],
+                'kind' => 'http', 'route' => ['GET', '/projects/{project}'],
+                'state' => 'open', 'from' => 3, 'daily' => 4, 'users' => 1.0,
             ],
         ];
     }

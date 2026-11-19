@@ -66,7 +66,7 @@ final class ShowcaseCatalog
      */
     public static function projects(): array
     {
-        return [self::storefront(), self::ordersApi(), self::marketing(), self::worker(), self::booking(), self::portal()];
+        return [self::storefront(), self::ordersApi(), self::marketing(), self::worker(), self::booking(), self::portal(), self::helpdesk(), self::planner()];
     }
 
     /**
@@ -421,6 +421,128 @@ final class ShowcaseCatalog
                 ['reported', 'database:pgsql', 'db'],
                 ['reported', 'cache:redis', 'cache'],
                 ['monitored', 'http', 'Portal', ['url' => 'https://portal.northwind.example/login']],
+            ],
+            'log_channels' => ['default'],
+        ];
+    }
+
+    /**
+     * A Livewire app: most of its traffic is the notification bell polling, and each
+     * update is its own route (livewire:component@method), the components and calls of
+     * each in its context. A Livewire route's extra names the kind and its components:
+     * name, class and the methods it called, and the page they live on.
+     *
+     * @return array<string, mixed>
+     */
+    private static function helpdesk(): array
+    {
+        $livewire = fn (array $components, string $page = '/tickets'): array => ['kind' => 'livewire', 'components' => $components, 'page' => $page];
+        $reply = [
+            ['insert into "replies" ("ticket_id", "user_id", "body", "created_at", "updated_at") values (?, ?, ?, ?, ?) returning "id"', 'app/Livewire/Tickets/ReplyForm.php:52', 2.6],
+            ['update "tickets" set "status" = ?, "updated_at" = ? where "id" = ?', 'app/Livewire/Tickets/ReplyForm.php:58', 1.8],
+        ];
+
+        return [
+            'team' => 'Local Team',
+            'name' => 'Helpdesk',
+            'slug' => 'helpdesk',
+            'prefix' => 'DESK',
+            'domain' => 'desk.example.com',
+            'peak' => 40,
+            'sample_rate' => 0.05,
+            'hosts' => ['production' => ['desk-1', 'desk-2']],
+            'workers' => ['production' => ['desk-1']],
+            'machine' => [4, 8, 60],
+            'releases' => [['3.8.0', 24.0], ['3.8.1', 15.5], ['3.9.0', 4.2]],
+            'routes' => [
+                ['GET', '/tickets', 'tickets.index', 6, 170],
+                ['GET', '/tickets/{ticket}', 'tickets.show', 5, 150, ['404' => 0.01]],
+                ['POST', 'livewire:notifications.bell@$refresh', 'livewire.update', 40, 28, $livewire([['notifications.bell', 'App\\Livewire\\Notifications\\Bell', ['$refresh'], 0]])],
+                ['POST', 'livewire:tickets.table@(update)', 'livewire.update', 9, 140, $livewire([['tickets.table', 'App\\Livewire\\Tickets\\Table', [], 1]])],
+                ['POST', 'livewire:tickets.table@__dispatch:ticket-updated', 'livewire.update', 3, 210, $livewire([['tickets.table', 'App\\Livewire\\Tickets\\Table', ['__dispatch:ticket-updated'], 0]])],
+                ['POST', 'livewire:tickets.reply-form@save', 'livewire.update', 2, 640, ['422' => 0.05, '500' => 0.004, 'slow' => 0.04, ...$livewire([['tickets.reply-form', 'App\\Livewire\\Tickets\\ReplyForm', ['save'], 2]], '/tickets/{ticket}')]],
+                ['POST', 'livewire:(batch)', 'livewire.update', 1.2, 470, $livewire([['tickets.reply-form', 'App\\Livewire\\Tickets\\ReplyForm', ['save'], 1], ['tickets.sidebar', 'App\\Livewire\\Tickets\\Sidebar', ['$refresh'], 0]], '/tickets/{ticket}')],
+                ['POST', '/login', 'login', 1, 210, ['302' => 0.9, '422' => 0.08]],
+            ],
+            'pages' => ['/tickets', '/tickets/{ticket}'],
+            'queries' => [
+                'livewire:notifications.bell@$refresh' => [['select count(*) as aggregate from "notifications" where "notifiable_id" = ? and "read_at" is null', 'app/Livewire/Notifications/Bell.php:24', 1.4]],
+                'livewire:tickets.table@(update)' => [['select * from "tickets" where "subject" ilike ? order by "updated_at" desc limit 25', 'app/Livewire/Tickets/Table.php:61', 48]],
+                'livewire:tickets.reply-form@save' => $reply,
+                'livewire:(batch)' => [...$reply, ['select * from "tickets" where "assignee_id" = ? and "status" = ? order by "updated_at" desc limit 10', 'app/Livewire/Tickets/Sidebar.php:31', 3.4]],
+            ],
+            'spans' => [
+                'livewire:notifications.bell@$refresh' => [['livewire', 'call', 'notifications.bell@$refresh', 4], ['livewire', 'render', 'notifications.bell', 9]],
+                'livewire:tickets.table@(update)' => [['livewire', 'render', 'tickets.table', 70]],
+                'livewire:tickets.table@__dispatch:ticket-updated' => [['livewire', 'call', 'tickets.table@__dispatch:ticket-updated', 120], ['livewire', 'render', 'tickets.table', 70]],
+                'livewire:tickets.reply-form@save' => [['livewire', 'call', 'tickets.reply-form@save', 470], ['mail', 1], ['livewire', 'render', 'tickets.reply-form', 30]],
+                'livewire:(batch)' => [['livewire', 'call', 'tickets.reply-form@save', 330], ['livewire', 'render', 'tickets.reply-form', 30], ['livewire', 'call', 'tickets.sidebar@$refresh', 3], ['livewire', 'render', 'tickets.sidebar', 40]],
+            ],
+            'queues' => ['default' => [['App\\Notifications\\TicketReplied', 260, 0.003]]],
+            'jobs_per_hour' => 30,
+            'backlog' => null,
+            'schedule' => [['artisan tickets:close-stale', '0 3 * * *', 9_000]],
+            'commands' => [['migrate', ['--force' => true]]],
+            'checks' => [
+                ['reported', 'database:pgsql', 'db'],
+                ['monitored', 'http', 'Helpdesk', ['url' => 'https://desk.example.com/login']],
+            ],
+            'log_channels' => ['default'],
+        ];
+    }
+
+    /**
+     * An Inertia app: each page is visited, partially reloaded for its deferred props
+     * and prefetched on hover, and each kind of a route is its own row. An Inertia route's
+     * extra names the kind, the page component and the props a partial reload asked for.
+     *
+     * @return array<string, mixed>
+     */
+    private static function planner(): array
+    {
+        $inertia = fn (string $kind, string $component, array $only = []): array => ['kind' => $kind, 'component' => $component, 'only' => $only];
+
+        return [
+            'team' => 'Local Team',
+            'name' => 'Planner',
+            'slug' => 'planner',
+            'prefix' => 'PLAN',
+            'domain' => 'app.planner.example',
+            'peak' => 25,
+            'sample_rate' => 0.1,
+            'hosts' => ['production' => ['planner-1', 'planner-2']],
+            'workers' => ['production' => ['planner-1']],
+            'machine' => [4, 8, 60],
+            'releases' => [['1.19.0', 26.0], ['1.20.0', 12.0], ['1.20.1', 3.1]],
+            'routes' => [
+                ['GET', '/dashboard', 'dashboard', 6, 160, $inertia('inertia', 'Dashboard')],
+                ['GET', '/dashboard', 'dashboard', 6, 430, $inertia('inertia-partial', 'Dashboard', ['chart'])],
+                ['GET', '/projects', 'projects.index', 8, 180, $inertia('inertia', 'Projects/Index')],
+                ['GET', '/projects/{project}', 'projects.show', 10, 220, $inertia('inertia', 'Projects/Show')],
+                // The deferred timeline: the slow part of the page, loaded after it.
+                ['GET', '/projects/{project}', 'projects.show', 9, 560, ['slow' => 0.01, ...$inertia('inertia-partial', 'Projects/Show', ['timeline', 'stats'])]],
+                ['GET', '/projects/{project}', 'projects.show', 4, 210, $inertia('inertia-prefetch', 'Projects/Show')],
+                ['GET', '/projects/{project}', 'projects.show', 1.2, 380],
+                ['PUT', '/tasks/{task}', 'tasks.update', 4, 190, ['422' => 0.05, ...$inertia('inertia', 'Projects/Show')]],
+                ['POST', '/login', 'login', 1, 210, ['302' => 0.9, '422' => 0.08]],
+            ],
+            'pages' => ['/dashboard', '/projects', '/projects/{project}'],
+            'queries' => [
+                '/projects/{project}' => [
+                    ['select * from "projects" where "id" = ? limit 1', 'app/Http/Controllers/ProjectController.php:34', 1.1],
+                    ['select * from "activities" where "project_id" = ? order by "created_at" desc limit 200', 'app/Http/Controllers/ProjectController.php:52', 160],
+                ],
+                '/dashboard' => [['select date_trunc(\'week\', "completed_at") as week, count(*) as done from "tasks" where "team_id" = ? group by 1', 'app/Http/Controllers/DashboardController.php:27', 120]],
+            ],
+            'spans' => ['/projects/{project}' => [['cache', 'project:{slug}:stats', false]]],
+            'queues' => ['default' => [['App\\Jobs\\SendDigest', 1_200, 0.002]]],
+            'jobs_per_hour' => 12,
+            'backlog' => null,
+            'schedule' => [['artisan digests:send', '0 7 * * 1-5', 14_000]],
+            'commands' => [['migrate', ['--force' => true]]],
+            'checks' => [
+                ['reported', 'database:pgsql', 'db'],
+                ['monitored', 'http', 'Planner', ['url' => 'https://app.planner.example/login']],
             ],
             'log_channels' => ['default'],
         ];
