@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-19
+
 ### Added
 
 - AI usage on status screens: AI cost and AI tokens against the period before (cost by who pays), one AI budget's use with where it is headed, the AI error rate (of one key too), AI cost and tokens per model over time, and the top AI spenders by key, key owner or actor. Keys show by name or short id, never by fingerprint.
@@ -336,7 +338,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/ExeQue/lumberjack/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/ExeQue/lumberjack/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/ExeQue/lumberjack/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/ExeQue/lumberjack/compare/v0.10.0...v0.11.0
