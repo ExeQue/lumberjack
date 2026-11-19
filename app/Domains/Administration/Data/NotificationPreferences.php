@@ -10,7 +10,7 @@ use Override;
 /**
  * How someone hears about what concerns them: about them personally (issues they watch,
  * mentions, assignments) and about the projects they can view (new issues, health
- * checks, queue backlogs, scheduled tasks, agents, releases), each by mail, by a toast
+ * checks, queue backlogs, scheduled tasks, agents, releases, AI budgets and errors), each by mail, by a toast
  * in an open Lumberjack and by a browser push notification. DEFAULTS holds what counts
  * until someone saves their own choice. Alerts a rule sends to a team channel are not
  * affected.
@@ -21,7 +21,7 @@ final readonly class NotificationPreferences implements JsonSerializable
     public const array PERSONAL = ['watching', 'mentions', 'assignments'];
 
     /** Your projects. */
-    public const array PROJECT = ['new_issues', 'health', 'queue_backlogs', 'scheduled_tasks', 'agents', 'releases'];
+    public const array PROJECT = ['new_issues', 'health', 'queue_backlogs', 'scheduled_tasks', 'agents', 'releases', 'ai'];
 
     public const array KINDS = [...self::PERSONAL, ...self::PROJECT];
 
@@ -42,6 +42,7 @@ final readonly class NotificationPreferences implements JsonSerializable
         'scheduled_tasks' => ['mail' => false, 'toast' => true, 'push' => false],
         'agents' => ['mail' => false, 'toast' => true, 'push' => false],
         'releases' => ['mail' => false, 'toast' => true, 'push' => false],
+        'ai' => ['mail' => false, 'toast' => true, 'push' => false],
     ];
 
     /**

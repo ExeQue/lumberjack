@@ -34,6 +34,8 @@ class ShowcaseSeeder extends Seeder
             ShowcaseAlertsSeeder::class,
             ShowcaseCustomAlertsSeeder::class,
             ShowcaseActivitySeeder::class,
+            ShowcaseAiSeeder::class,
+            ShowcaseAiBudgetsSeeder::class,
             ShowcaseScreensSeeder::class,
             ShowcaseWidgetsSeeder::class,
         ]);

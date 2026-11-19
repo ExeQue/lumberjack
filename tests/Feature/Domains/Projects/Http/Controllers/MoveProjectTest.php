@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Domains\Administration\Enums\AdminAction;
 use App\Domains\Administration\Models\AdminAuditEntry;
+use App\Domains\Ai\Models\AiBudget;
+use App\Domains\Ai\Models\AiPrice;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\NotificationChannel;
 use App\Domains\Issues\Models\Issue;
@@ -11,6 +13,7 @@ use App\Domains\Issues\Models\IssueWatcher;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Projects\Actions\MoveProjectToTeamAction;
+use App\Domains\Projects\Exceptions\CurrencyMismatchException;
 use App\Domains\Projects\Http\Controllers\ProjectController;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Projects\Policies\ProjectPolicy;
@@ -48,6 +51,51 @@ describe('moving a project', function () {
             ->and(Occurrence::query()->where('project_id', $this->project->id)->count())->toBe(1);
 
         $this->postJson('/api/ingest', $this->batch([$this->exceptionEvent()]), ['Authorization' => 'Bearer lj_srv_move-token'])->assertStatus(202);
+    });
+
+    it('refuses a team with another currency while the project has AI prices or cost budgets of its own', function (Closure $own) {
+        $own($this->project);
+        $this->to->update(['currency' => 'EUR']);
+
+        ($this->move)()->assertSessionHasErrors(['team' => __('projects.move_currency', ['from' => 'USD', 'to' => 'EUR'])]);
+
+        expect($this->project->refresh()->team_id)->toBe($this->from->id);
+    })->with([
+        'a price' => [fn (Project $project) => AiPrice::factory()->forProject($project)->create()],
+        'a cost budget' => [fn (Project $project) => AiBudget::factory()->forProject($project)->create()],
+    ]);
+
+    it('moves to a team with another currency with a tokens budget', function () {
+        AiBudget::factory()->forProject($this->project)->tokens(1000)->create();
+        $this->to->update(['currency' => 'EUR']);
+
+        ($this->move)()->assertSessionHasNoErrors();
+    });
+
+    it('refuses the move when a currency changed after the request was checked', function () {
+        $this->mock(MoveProjectToTeamAction::class)->shouldReceive('execute')->andThrow(new CurrencyMismatchException('Currencies differ.'));
+
+        ($this->move)()->assertSessionHasErrors(['team' => 'Currencies differ.']);
+    });
+
+    it('checks the currencies again under the locks, against what the database holds then', function () {
+        AiPrice::factory()->forProject($this->project)->create();
+        // The target as the request saw it, before its currency changed.
+        $seen = $this->to->fresh();
+        Team::query()->whereKey($this->to->id)->update(['currency' => 'EUR']);
+
+        expect(fn () => app(MoveProjectToTeamAction::class)->execute($this->project, $seen, 'shop', 'SHOP', $this->user))->toThrow(CurrencyMismatchException::class)
+            ->and($this->project->refresh()->team_id)->toBe($this->from->id);
+    });
+
+    it('takes its own AI prices along and leaves its old team\'s', function () {
+        $own = AiPrice::factory()->forProject($this->project)->create();
+        $teamWide = AiPrice::factory()->forTeamOf($this->project)->create();
+
+        ($this->move)()->assertSessionHasNoErrors();
+
+        expect($own->refresh()->team_id)->toBe($this->to->id)
+            ->and($teamWide->refresh()->team_id)->toBe($this->from->id);
     });
 
     it('is logged once, naming who moved it and both teams', function () {

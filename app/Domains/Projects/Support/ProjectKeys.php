@@ -7,7 +7,7 @@ namespace App\Domains\Projects\Support;
 use Illuminate\Support\Str;
 
 /**
- * The secret server token and the public browser key of a project.
+ * The secret server token, the public browser key and the other keys and secrets of a project.
  */
 final class ProjectKeys
 {
@@ -32,6 +32,14 @@ final class ProjectKeys
     public static function newStatsKey(): string
     {
         return 'ps_'.Str::lower(Str::random(40));
+    }
+
+    /**
+     * The secret AI key fingerprints are made with. Never rotated: a new one gives every key a new fingerprint.
+     */
+    public static function newAiKeySecret(): string
+    {
+        return bin2hex(random_bytes(32));
     }
 
     public static function hash(string $token): string

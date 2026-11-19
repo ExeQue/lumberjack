@@ -4,6 +4,30 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- AI usage on status screens: AI cost and AI tokens against the period before (cost by who pays), one AI budget's use with where it is headed, the AI error rate (of one key too), AI cost and tokens per model over time, and the top AI spenders by key, key owner or actor. Keys show by name or short id, never by fingerprint.
+- AI usage in the metrics API: `ai_calls`, `ai_errors`, `ai_tokens_input`, `ai_tokens_output`, `ai_tokens_cache_read`, `ai_tokens_cache_write`, `ai_tokens_reasoning` and `ai_cost` (in the team's currency, priced as on the AI pages) as series, filtered and split by environment, provider, model, key (by name or short id), owner, actor (per day) and, for cost, payer. The summary carries the AI usage page's totals, and the Prometheus page `lumberjack_ai_calls`, `lumberjack_ai_tokens` and `lumberjack_ai_cost` per environment, provider and model. Only a team token that may use `get_ai_usage` reads them; public stats never do.
+- AI usage tracking: an `ai_call` ingest event records each call an app makes to an AI model, with its provider, model, operation, tokens (input, output, cache read and write, reasoning), duration, status, the key it was made with, the key's owner and the actor who caused it. Prompts and answers are never sent. Calls are added up per hour and per day, per key and per actor.
+- API keys are known only by a fingerprint: the app sends a SHA-256 of provider and key, and Lumberjack keeps an HMAC of it made with a secret of each project's own, which every project gets and existing projects are given.
+- OpenTelemetry GenAI spans (`gen_ai.*`) are stored as AI calls instead of outgoing HTTP spans, with the older `gen_ai.usage.prompt_tokens` and `completion_tokens` read too. Agent and tool spans are skipped, since their model calls already count.
+- **AI usage** page per project: tokens, cost to us and cost to customers, calls and error rate against the period before, cost and tokens over time per model, and the keys, key owners and actors that cost the most, each searchable. A page per key (its prices, who pays for it and its latest calls), per key owner and per actor.
+- **AI prices** per million tokens (input, output, cache read, cache write, reasoning) for the whole team, one project, one key owner or one key, by model name or a pattern such as `claude-*`, valid from a moment on. Cost is worked out when shown, never stored, so a price applies to usage recorded before it too, and a price change in the middle of a period prices each side with its own price.
+- Who pays for a key: us or the customer. A key with an owner is the customer's unless set otherwise; any other key follows the project's default.
+- A **name** for an AI key, given on its page and shown in place of the label the app reports, which calls never change.
+- **Find a key** by pasting it: the browser hashes it and only the hash is sent.
+- A team **currency** (USD by default) that AI prices and cost are in, on the team page. A project with AI prices or cost budgets of its own cannot move to a team with another currency.
+- Retention for **AI calls** (30 days), **Hourly AI usage** and **Daily AI usage** (400 days each), in a group of their own. Keys unused for longer than the AI usage is kept are forgotten. The AI usage totals and keys are kept at least from the start of last month, which AI budgets count.
+- **AI budgets** per project, under **AI usage**, **Budgets**: how much the whole project, a set of keys, of key owners or of actors may use a day or a month, in the team's currency or in tokens, of the usage paid by us, by customers or by anyone, with what each used so far and where it is headed by the period's end. Keys, owners and actors are picked by searching for them: keys of any age, owners and actors of the last 90 days. A key's, key owner's and actor's page shows the budgets that count it.
+- **AI budget** alert rule: tells once per budget and period as a budget passes 80% and 100% (50% too, if ticked) and when it is on course to go over. Muted during maintenance, like the other rules.
+- **AI error rate** alert rule: an AI key with more than 50% of at least 10 calls failing in 15 minutes (all three adjustable, and which environments count), and again when it works.
+- **AI budgets and errors** as a kind in the notification settings, for mail, in app and browser push.
+- MCP tools for AI usage, in a new **AI usage** permission area: `get_ai_usage`, `list_ai_spenders`, `get_ai_key`, `list_ai_budgets` and `list_ai_prices` to read usage, cost, keys, budgets and prices, and `save_ai_budget`, `delete_ai_budget`, `save_ai_price`, `delete_ai_price`, `update_ai_key` and `set_ai_default_payer` to change them, with the same rules and permissions as the pages. Keys are named by uuid or short id only. Existing tokens get None for the new area.
+
+### Changed
+
+- Alert rules are grouped, on the team's Alerts page and in a project's settings: Issues, Releases, Health, Queues and maintenance, AI, Summary and Custom alerts, which holds the custom alert topics. Groups start folded, say how many of their rules are on and stay as each viewer left them; a search by name or description opens the groups it finds rules in. MCP `list_alert_rules` names each rule's group.
+
 ### Fixed
 
 - A screen's widgets show the new period, projects or environment as soon as the screen's are changed in the designer, instead of at their next refresh.

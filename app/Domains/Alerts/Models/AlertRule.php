@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Models;
 
+use App\Domains\Alerts\Data\AiBudgetSettings;
+use App\Domains\Alerts\Data\AiErrorRateSettings;
 use App\Domains\Alerts\Data\QueueBacklogSettings;
 use App\Domains\Alerts\Data\WeeklySummarySettings;
 use App\Domains\Alerts\Eloquent\Builders\AlertRuleBuilder;
@@ -119,6 +121,16 @@ class AlertRule extends Model
     public function weeklySummarySettings(): WeeklySummarySettings
     {
         return WeeklySummarySettings::fromArray($this->settings);
+    }
+
+    public function aiBudgetSettings(): AiBudgetSettings
+    {
+        return AiBudgetSettings::fromArray($this->settings);
+    }
+
+    public function aiErrorRateSettings(): AiErrorRateSettings
+    {
+        return AiErrorRateSettings::fromArray($this->settings);
     }
 
     public function appliesToEnvironment(?string $environment): bool

@@ -115,6 +115,7 @@ export function TreeSelect({
     placeholder,
     searchPlaceholder,
     noMatches,
+    busy = false,
     clearLabel,
     startOpen = false,
     onSearch,
@@ -142,6 +143,8 @@ export function TreeSelect({
     placeholder: string;
     searchPlaceholder: string;
     noMatches: string;
+    /** A server search is still answering: the list is marked busy. */
+    busy?: boolean;
     /** The row that empties the choice; without it one must stay picked. */
     clearLabel?: string;
     startOpen?: boolean;
@@ -163,8 +166,9 @@ export function TreeSelect({
     // A server search may not have the picked value among what it answered.
     const current =
         options.find((s) => s.value === first) ??
-        (onSearch && first
-            ? (optionFor?.(first) ?? { value: first, label: first })
+        (first
+            ? (optionFor?.(first) ??
+              (onSearch ? { value: first, label: first } : undefined))
             : undefined);
     const currentPath = current?.path ?? [];
     const expanded = position !== undefined;
@@ -200,6 +204,12 @@ export function TreeSelect({
                       ),
             ),
     );
+    // Groups a server search answers with after it opened unfold too, when it starts open.
+    useEffect(() => {
+        if (startOpen) {
+            setOpen((was) => new Set([...was, ...allKeys(treeOf(options))]));
+        }
+    }, [startOpen, options]);
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     const matches = onSearch
         ? options
@@ -210,7 +220,7 @@ export function TreeSelect({
               return words.every((word) => text.includes(word));
           });
 
-    // Asked only while open, so a closed field costs nothing.
+    // The field asks only while open; a page that wants answers sooner asks itself.
     useEffect(() => {
         if (expanded) {
             onSearch?.(query);
@@ -234,13 +244,32 @@ export function TreeSelect({
         const frame = dialog?.getBoundingClientRect() ?? {
             left: 0,
             top: 0,
+            bottom: window.innerHeight,
             height: window.innerHeight,
         };
-        const below = window.innerHeight - box.bottom;
-        const above = below < MIN_ROOM && box.top > below;
+        // A dialog that scrolls clips what reaches past its edges, so the room is what is left
+        // inside it; one that does not lets the panel reach into the window.
+        const clips =
+            dialog !== null && getComputedStyle(dialog).overflowY !== 'visible';
+        const bounds = {
+            top: clips ? Math.max(frame.top + dialog.clientTop, 0) : 0,
+            bottom: clips
+                ? Math.min(
+                      frame.top + dialog.clientTop + dialog.clientHeight,
+                      window.innerHeight,
+                  )
+                : window.innerHeight,
+            left: clips ? frame.left + dialog.clientLeft : 0,
+            right: clips
+                ? frame.left + dialog.clientLeft + dialog.clientWidth
+                : window.innerWidth,
+        };
+        const below = bounds.bottom - box.bottom;
+        const roomAbove = box.top - bounds.top;
+        const above = below < MIN_ROOM && roomAbove > below;
         const width = Math.min(
             Math.max(box.width, MIN_WIDTH),
-            window.innerWidth - GAP * 2,
+            bounds.right - bounds.left - GAP * 2,
         );
         // What is picked is unfolded to find, whatever was folded since.
         setOpen(
@@ -253,21 +282,31 @@ export function TreeSelect({
                     ...(startOpen ? allKeys(tree) : []),
                 ]),
         );
+        // A dialog is what the panel is placed in: measured from inside its border, and in its
+        // scrolled content, since a fixed panel in a transformed dialog scrolls along with it.
+        const inner = dialog
+            ? {
+                  top: frame.top + dialog.clientTop - dialog.scrollTop,
+                  height: dialog.clientHeight,
+              }
+            : { top: 0, height: window.innerHeight };
         setContainer(dialog ?? document.body);
         setPosition({
             left:
                 Math.max(
-                    GAP,
-                    Math.min(box.left, window.innerWidth - width - GAP),
-                ) - frame.left,
+                    bounds.left + GAP,
+                    Math.min(box.left, bounds.right - width - GAP),
+                ) -
+                frame.left -
+                (dialog?.clientLeft ?? 0),
             width,
             maxHeight: Math.min(
                 MAX_HEIGHT,
-                (above ? box.top : below) - GAP * 2,
+                (above ? roomAbove : below) - GAP * 2,
             ),
             ...(above
-                ? { bottom: frame.height - (box.top - frame.top) + GAP }
-                : { top: box.bottom - frame.top + GAP }),
+                ? { bottom: inner.height - (box.top - inner.top) + GAP }
+                : { top: box.bottom - inner.top + GAP }),
         });
     };
 
@@ -374,7 +413,9 @@ export function TreeSelect({
                 ref={trigger}
                 id={id}
                 type="button"
-                disabled={!onSearch && options.length === 0 && !value}
+                disabled={
+                    !onSearch && options.length === 0 && picked.length === 0
+                }
                 role="combobox"
                 aria-haspopup="dialog"
                 aria-expanded={expanded}
@@ -423,7 +464,10 @@ export function TreeSelect({
                             placeholder={searchPlaceholder}
                             className="w-full border-b border-line bg-transparent px-3 py-2 text-[13px] text-ink outline-none placeholder:text-ink-3"
                         />
-                        <Command.List className="min-h-0 flex-1 overflow-y-auto p-1">
+                        <Command.List
+                            aria-busy={busy}
+                            className="min-h-0 flex-1 overflow-y-auto p-1"
+                        >
                             {words.length > 0 ? (
                                 <>
                                     {matches.length === 0 && (

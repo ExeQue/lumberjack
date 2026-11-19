@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Ingest\Http\Controllers;
 
+use App\Domains\Ai\Support\AiKeyFingerprint;
 use App\Domains\Health\Queries\HealthChecksQuery;
 use App\Domains\Ingest\Http\Requests\BrowserIngestRequest;
 use App\Domains\Ingest\Http\Requests\HeartbeatRequest;
@@ -22,7 +23,7 @@ class IngestController
 {
     public function store(IngestBatchRequest $request): JsonResponse
     {
-        ProcessIngestBatch::dispatch($request->project()->id, [...$request->validated(), 'events' => $request->input('events')]);
+        ProcessIngestBatch::dispatch($request->project()->id, [...$request->validated(), 'events' => AiKeyFingerprint::seal($request->project(), $request->input('events'))]);
 
         return response()->json(['accepted' => count((array) $request->input('events'))], 202);
     }
@@ -34,7 +35,7 @@ class IngestController
 
         // A bot gets the same answer, so it has no reason to retry; nothing is stored.
         if (! $request->fromBot()) {
-            ProcessIngestBatch::dispatch((int) $project?->id, [...$request->validated(), 'events' => $request->input('events')], fromBrowser: true);
+            ProcessIngestBatch::dispatch((int) $project?->id, [...$request->validated(), 'events' => AiKeyFingerprint::seal(null, $request->input('events'))], fromBrowser: true);
         }
 
         return response()

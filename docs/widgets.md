@@ -154,6 +154,12 @@ One number, with its trend against an earlier period and a sparkline.
 
 ![Activity as a stat, against yesterday](./screenshots/widget-stat-activity.png)
 
+![AI cost against the period before](./screenshots/widget-stat-ai-cost.png)
+
+![AI tokens](./screenshots/widget-stat-ai-tokens.png)
+
+![An AI budget's use](./screenshots/widget-stat-ai-budget.png)
+
 **Shows**:
 
 - **Requests**: requests over the period.
@@ -177,6 +183,23 @@ One number, with its trend against an earlier period and a sparkline.
   scope.
 - **Activity**: how often apps recorded [activity](./activity) in the period. Narrow it
   to a group or one activity with the filter.
+- **AI cost**: what [AI calls](./ai) cost in the period, in the team's currency, against
+  what **Compare with** picks. **Paid by** narrows it to **Us** or **Customers**, the
+  sparkline too.
+- **AI tokens**: the tokens AI calls used in the period. **Tokens** narrows it, and its
+  sparkline, to **Input** or **Output**.
+- **AI budget**: what one [AI budget](./ai#budgets) used of its amount in its current
+  day or month, with its share, where it is headed by the period's end, and its name.
+  Pick it under **Budget**, among the budgets of the widget's projects. Amber at 80% of
+  the amount, red at 100%, so it has no **Amber at**, **Red at**, **Low values are
+  bad**, **Compare with** or sparkline of its own. A share link shows the budget's name only when it was given one.
+- **AI error rate**: the share of AI calls that failed, of every key in scope or of the
+  one picked under **Key**. Amber at 1%, red at 5%. It has no sparkline.
+
+AI cost, AI tokens and AI error rate are kept by the hour, and the current period holds
+the part of its last hour gone by, so what they are compared with holds as much of one
+more hour: at half past, half of it.
+
 - **Data source**: a number from a project's data source. See
   [Data source](#data-source).
 
@@ -200,10 +223,14 @@ One value on a half circle, the arc colored by its limits.
 
 ![Orders placed against a target](./screenshots/widget-gauge-activity.png)
 
+![An AI budget's share used](./screenshots/widget-gauge-ai-budget.png)
+
+![The AI error rate](./screenshots/widget-gauge-ai-error-rate.png)
+
 **Shows**: **Requests per minute**, **Error rate**, **p95 response time**, **Apdex**,
 **Host CPU**, **Host memory**, **Host disk** (the busiest host), **Queue size**,
-**Database connections in use**, **Health uptime**, **Activity** and **Data source**. The
-defaults match the stat's, plus:
+**Database connections in use**, **Health uptime**, **Activity**, **AI budget used**, **AI
+error rate** and **Data source**. The defaults match the stat's, plus:
 
 - **Database connections in use**: the database using the largest share of its maximum.
   Amber at 80%, red at 90%.
@@ -212,6 +239,8 @@ defaults match the stat's, plus:
 - **Activity**: how often the activity in scope happened over the period, against a
   target of your own: set **Red at** (and **Amber at**) to the least you expect, such as
   50 sign-ups a day. Low values are bad, so the arc turns red when it falls short.
+- **AI budget used**: the share of the picked budget's amount used, from 0 to 100% or
+  past it. Amber at 80%, red at 100%.
 
 **Scale**:
 
@@ -233,11 +262,16 @@ host, activity or project.
 
 ![Activity split per activity](./screenshots/widget-chart-activity.png)
 
+![AI cost per model](./screenshots/widget-chart-ai-cost.png)
+
 **Shows**: **Requests and errors** (errors in red), **Requests**, **Requests per
 minute**, **Error rate**, **p95 response time**, **Apdex**, **Users affected**, **Queue
 size**, **Queue workers**, **Queue wait** (how long jobs waited before they ran),
 **Failed jobs**, **Host CPU**, **Host memory**, **Host disk**, **LCP p75**, **Database
-size**, **Database connections**, **Activity** and **Data source**.
+size**, **Database connections**, **Activity**, **AI cost per model**, **AI tokens per
+model** and **Data source**. The AI charts draw a line for each of the five costliest
+models over the projects in scope and one for the rest, in hours or days as the AI
+totals are kept; **Split by** does not apply to them.
 
 **Chart**:
 
@@ -267,6 +301,8 @@ down and back up.
 
 ![The latest activity](./screenshots/widget-list-activity-latest.png)
 
+![The keys that cost the most](./screenshots/widget-list-ai-spenders.png)
+
 **Shows**:
 
 - **Latest issues**: each issue's short id, title, status, count and age. Escalating and
@@ -287,6 +323,13 @@ down and back up.
   with its group, count and when it last happened.
 - **Latest activity**: the newest occurrences, with the actor and subjects. A share link
   leaves the actor and subjects out.
+- **Top AI spenders**: the keys, key owners or actors (**Spenders**) that cost the most
+  in the period, costliest first, with their cost and tokens. A key shows by its name,
+  label or short id, never its fingerprint; a share link shows a key's short id only and
+  numbers owners and actors (**Owner 1**, **Actor 1**). An owner or actor is one row over
+  every project in scope, added up from each project's costliest, so over several
+  projects one just short of that in each can be missing. Usage that names none is **No
+  owner** or **No actor**. Actors are counted by day.
 - **Data source**: one row per item of an array in a data source.
 - **Calendar events**: a calendar's events. See [Calendars](#calendars).
 

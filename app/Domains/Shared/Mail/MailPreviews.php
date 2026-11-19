@@ -7,6 +7,15 @@ namespace App\Domains\Shared\Mail;
 use App\Domains\Administration\Models\SystemSample;
 use App\Domains\Administration\Notifications\AccountMails;
 use App\Domains\Administration\Notifications\SystemDiskNotification;
+use App\Domains\Ai\Data\AiBudgetUsage;
+use App\Domains\Ai\Enums\AiBudgetBasis;
+use App\Domains\Ai\Enums\AiBudgetPeriod;
+use App\Domains\Ai\Enums\AiBudgetScope;
+use App\Domains\Ai\Models\AiBudget;
+use App\Domains\Ai\Models\AiBudgetTarget;
+use App\Domains\Alerts\Data\AiBudgetAlert;
+use App\Domains\Alerts\Data\AiErrorRateAlert;
+use App\Domains\Alerts\Data\AiErrorRateSettings;
 use App\Domains\Alerts\Data\BulkStatusChangeAlert;
 use App\Domains\Alerts\Data\HealthCheckAlert;
 use App\Domains\Alerts\Data\IssueAlert;
@@ -122,6 +131,14 @@ final class MailPreviews
                 new QueueBacklogAlert($this->project, 'redis', 'emails', 1240, 720, new QueueBacklogSettings(), now()->subMinutes(6)->toImmutable(), false, route('jobs.index', $this->project)),
                 [$this->rule(AlertRuleType::QueueBacklog, 'On call')],
             ))],
+            'ai-budget' => ['label' => 'AI budget', 'mail' => fn () => $mail(new AlertSummaryNotification(
+                new AiBudgetAlert($this->aiBudget(), new AiBudgetUsage(now()->startOfMonth()->toImmutable(), now()->startOfMonth()->addMonth()->toImmutable(), 82.4, 100, 0.6), 80, route('ai.budgets.index', $this->project)),
+                [$this->rule(AlertRuleType::AiBudget, 'On call')],
+            ))],
+            'ai-error-rate' => ['label' => 'AI error rate', 'mail' => fn () => $mail(new AlertSummaryNotification(
+                new AiErrorRateAlert($this->project, str_repeat('3f9a', 16), null, 42, 31, new AiErrorRateSettings(), now()->subMinutes(4)->toImmutable(), false, route('ai.index', $this->project)),
+                [$this->rule(AlertRuleType::AiErrorRate, 'On call')],
+            ))],
             'test' => ['label' => 'Test message', 'mail' => fn () => $mail(new TestAlertNotification($this->ops))],
             'mention' => ['label' => 'Mention', 'mail' => fn () => $mail(new MentionedInNoteNotification(
                 $this->note($issue, 'x'),
@@ -210,6 +227,16 @@ final class MailPreviews
         $rule->forceFill(['team_id' => 1]);
 
         return MailReason::rule($rule, $channel === 'Ops' ? $this->ops : new NotificationChannel(['name' => $channel]), $this->project);
+    }
+
+    private function aiBudget(): AiBudget
+    {
+        $budget = new AiBudget(['name' => 'Tenant 7, monthly', 'scope' => AiBudgetScope::Owner, 'period' => AiBudgetPeriod::Month, 'basis' => AiBudgetBasis::Cost, 'amount' => 100]);
+        $budget->forceFill(['id' => 1, 'uuid' => (string) Str::uuid(), 'project_id' => 1]);
+        $budget->setRelation('project', $this->project);
+        $budget->setRelation('targets', new Collection([new AiBudgetTarget(['ref_type' => 'tenant', 'ref_id' => '7'])]));
+
+        return $budget;
     }
 
     private function health(string $state, ?string $message): HealthCheckAlert

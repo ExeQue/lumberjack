@@ -3,14 +3,17 @@
 declare(strict_types=1);
 
 use App\Domains\Mcp\Models\McpToken;
+use App\Domains\Teams\Actions\SetTeamCurrencyAction;
+use App\Domains\Teams\Enums\TeamRole;
 use App\Domains\Teams\Http\Controllers\TeamController;
+use App\Domains\Teams\Http\Requests\SetTeamCurrencyRequest;
 use App\Domains\Teams\Http\Requests\StoreTeamRequest;
 use App\Domains\Teams\Models\Team;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Shared\ReadsQueryCounts;
 
-covers(TeamController::class, StoreTeamRequest::class);
+covers(TeamController::class, StoreTeamRequest::class, SetTeamCurrencyRequest::class, SetTeamCurrencyAction::class);
 
 uses(ReadsQueryCounts::class);
 
@@ -48,5 +51,26 @@ describe('the team page', function () {
 
         expect($this->queriesRunBy($page))->toBe($one);
         $page()->assertInertia(fn (Assert $page) => $page->has('tokens', 4)->where('tokens.0.usable', true));
+    });
+});
+
+describe('the team\'s currency', function () {
+    it('lets an administrator set it, and shares it with every page', function () {
+        $user = User::factory()->inTeam()->create();
+
+        $this->actingAs($user)->put(route('team.currency'), ['currency' => 'eur'])->assertRedirect();
+
+        expect($user->currentTeam->refresh()->currency)->toBe('EUR');
+        $this->actingAs($user)->get(route('team.show'))->assertInertia(fn (Assert $page) => $page->where('team.currency', 'EUR'));
+    });
+
+    it('refuses what is no currency code, and a member', function () {
+        $team = Team::factory()->create();
+        $admin = User::factory()->inTeam($team)->create();
+
+        $this->actingAs($admin)->put(route('team.currency'), ['currency' => 'EURO'])->assertSessionHasErrors('currency');
+        $this->actingAs(User::factory()->inTeam($team, TeamRole::Member)->create())->put(route('team.currency'), ['currency' => 'EUR'])->assertForbidden();
+
+        expect($team->refresh()->currency)->toBe('USD');
     });
 });

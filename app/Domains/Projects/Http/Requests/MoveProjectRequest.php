@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domains\Projects\Http\Requests;
 
+use App\Domains\Projects\Actions\MoveProjectToTeamAction;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Models\Team;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class MoveProjectRequest extends FormRequest
 {
@@ -44,6 +47,23 @@ class MoveProjectRequest extends FormRequest
     public function messages(): array
     {
         return ['issue_prefix.regex' => __('projects.issue_prefix_invalid')];
+    }
+
+    /**
+     * Its own AI prices are amounts in its team's currency, so the team it moves to must
+     * use the same one.
+     *
+     * @return list<Closure(Validator): void>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $target = $this->target();
+
+            if ($target !== null && MoveProjectToTeamAction::currencyBlocks($this->project(), $target)) {
+                $validator->errors()->add('team', __('projects.move_currency', ['from' => $this->project()->team->currency, 'to' => $target->currency]));
+            }
+        }];
     }
 
     /** @return array<string, mixed> */

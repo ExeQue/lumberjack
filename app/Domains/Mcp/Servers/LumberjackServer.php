@@ -4,6 +4,17 @@ declare(strict_types=1);
 
 namespace App\Domains\Mcp\Servers;
 
+use App\Domains\Mcp\Tools\Ai\DeleteAiBudget;
+use App\Domains\Mcp\Tools\Ai\DeleteAiPrice;
+use App\Domains\Mcp\Tools\Ai\GetAiKey;
+use App\Domains\Mcp\Tools\Ai\GetAiUsage;
+use App\Domains\Mcp\Tools\Ai\ListAiBudgets;
+use App\Domains\Mcp\Tools\Ai\ListAiPrices;
+use App\Domains\Mcp\Tools\Ai\ListAiSpenders;
+use App\Domains\Mcp\Tools\Ai\SaveAiBudget;
+use App\Domains\Mcp\Tools\Ai\SaveAiPrice;
+use App\Domains\Mcp\Tools\Ai\SetAiDefaultPayer;
+use App\Domains\Mcp\Tools\Ai\UpdateAiKey;
 use App\Domains\Mcp\Tools\Alerts\CreateAlertTopic;
 use App\Domains\Mcp\Tools\Alerts\DeleteAlertTopic;
 use App\Domains\Mcp\Tools\Alerts\ListAlertRules;
@@ -218,6 +229,18 @@ class LumberjackServer extends Server
         AssignDisplay::class,
         SetScreenShare::class,
         DeleteScreen::class,
+        // AI usage
+        GetAiUsage::class,
+        ListAiSpenders::class,
+        GetAiKey::class,
+        ListAiBudgets::class,
+        ListAiPrices::class,
+        SaveAiBudget::class,
+        SaveAiPrice::class,
+        UpdateAiKey::class,
+        SetAiDefaultPayer::class,
+        DeleteAiBudget::class,
+        DeleteAiPrice::class,
         // Project settings
         GetProjectOverview::class,
         GetProjectSettings::class,

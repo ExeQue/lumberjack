@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Drivers;
 
+use App\Domains\Ai\Enums\AiBudgetBasis;
+use App\Domains\Ai\Enums\AiBudgetScope;
 use App\Domains\Alerts\Contracts\Alert;
 use App\Domains\Alerts\Contracts\ChannelDriver;
+use App\Domains\Alerts\Data\AiBudgetAlert;
+use App\Domains\Alerts\Data\AiErrorRateAlert;
 use App\Domains\Alerts\Data\BulkStatusChangeAlert;
 use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Data\HealthCheckAlert;
@@ -124,6 +128,62 @@ class WebhookDriver implements ChannelDriver
                     'overrun_minutes' => $alert->overrunMinutes(),
                     'url' => $alert->url,
                 ],
+            ], $alert);
+
+            return;
+        }
+
+        if ($alert instanceof AiBudgetAlert) {
+            $budget = $alert->budget;
+
+            $this->post($channel, [
+                'event' => AlertRuleType::AiBudget->value,
+                'project' => ['id' => $budget->project->uuid, 'slug' => $budget->project->slug, 'name' => $budget->project->name],
+                'budget' => [
+                    'id' => $budget->uuid,
+                    'name' => $budget->title(),
+                    'scope' => $budget->scope->value,
+                    // What it counts, by its scope: keys (never a fingerprint), or owners or actors by type and id.
+                    'keys' => array_map(fn (string $fingerprint): array => [
+                        'id' => $budget->keys()->get($fingerprint)?->uuid,
+                        'short_id' => substr($fingerprint, 0, 8),
+                        'name' => $budget->keys()->get($fingerprint)?->name,
+                        'label' => $budget->keys()->get($fingerprint)?->label,
+                    ], $budget->fingerprints()),
+                    'owners' => $budget->scope === AiBudgetScope::Owner ? $budget->references() : [],
+                    'actors' => $budget->scope === AiBudgetScope::Actor ? $budget->references() : [],
+                    'period' => $budget->period->value,
+                    'basis' => $budget->basis->value,
+                    'currency' => $budget->basis === AiBudgetBasis::Cost ? $budget->project->team->currency : null,
+                    // The share passed, in percent; null when it is on course to go over.
+                    'threshold' => $alert->threshold,
+                    ...$alert->usage->toArray(),
+                    // A period that ended has no pace left.
+                    'projected' => $alert->usage->ended() ? null : $alert->usage->projected(),
+                    'url' => $alert->url,
+                ],
+            ], $alert);
+
+            return;
+        }
+
+        if ($alert instanceof AiErrorRateAlert) {
+            $this->post($channel, [
+                'event' => AlertRuleType::AiErrorRate->value,
+                'project' => ['id' => $alert->project->uuid, 'slug' => $alert->project->slug, 'name' => $alert->project->name],
+                'key' => [
+                    'id' => $alert->key?->uuid,
+                    'short_id' => substr($alert->fingerprint, 0, 8),
+                    'name' => $alert->key?->name,
+                    'label' => $alert->key?->label,
+                    'provider' => $alert->key?->provider,
+                    'state' => $alert->recovered ? 'recovered' : 'started',
+                    'calls' => $alert->calls,
+                    'errors' => $alert->errors,
+                    'since' => $alert->since->toIso8601String(),
+                    'url' => $alert->url,
+                ],
+                'thresholds' => $alert->settings->toArray(),
             ], $alert);
 
             return;

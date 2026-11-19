@@ -109,6 +109,8 @@ type Props = {
     environments: string[];
     checks: Catalog['checks'];
     data_sources: Catalog['data_sources'];
+    ai_budgets?: Catalog['ai_budgets'];
+    ai_keys?: Catalog['ai_keys'];
     /** Known filter names per project uuid, then per kind. */
     filters?: Record<string, Record<string, string[]>>;
     /** What some filter names are shown as, such as an activity's readable name. */
@@ -523,6 +525,8 @@ export default function EditScreen(props: Props) {
         data_sources: props.data_sources?.filter((s) =>
             inScope(s.project_uuid),
         ),
+        ai_budgets: props.ai_budgets?.filter((b) => inScope(b.project_uuid)),
+        ai_keys: props.ai_keys?.filter((k) => inScope(k.project_uuid)),
         screen: props.screen.uuid,
         periods: PERIODS,
         filters,

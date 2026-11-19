@@ -28,6 +28,21 @@ beforeEach(function () {
 });
 
 describe('a screen\'s data', function () {
+    it('leaves out AI widgets for a reader who may not see AI usage, and a source no longer known to its own failure', function () {
+        $this->screen->update(['widgets' => [
+            ['id' => 'ai', 'type' => 'stat', 'source' => 'ai_cost', 'rotate' => [], 'w' => 1, 'h' => 1, 'title' => null, 'options' => [], 'scope' => []],
+            ['id' => 'gone', 'type' => 'stat', 'source' => 'retired_source', 'rotate' => [], 'w' => 1, 'h' => 1, 'title' => null, 'options' => [], 'scope' => []],
+            ['id' => 'requests', 'type' => 'stat', 'source' => 'requests', 'rotate' => [], 'w' => 1, 'h' => 1, 'title' => null, 'options' => [], 'scope' => []],
+        ]]);
+
+        $data = app(ResolveScreenDataAction::class)->execute($this->screen, readsAi: fn (): bool => false);
+
+        expect($data['ai']['ai_cost'])->toBeNull()
+            ->and($data['gone']['retired_source'])->toBeNull()
+            ->and($data['requests']['requests'])->toMatchArray(['source' => 'requests'])
+            ->and(app(ResolveScreenDataAction::class)->execute($this->screen, 'ai', readsAi: fn (): bool => true)['ai']['ai_cost'])->toMatchArray(['source' => 'ai_cost']);
+    });
+
     it('takes each widget\'s own scope over the screen\'s, within the screen\'s projects', function () {
         $action = app(ResolveScreenDataAction::class);
 
@@ -40,6 +55,24 @@ describe('a screen\'s data', function () {
             ->and($own->projects)->toBe([$this->project->uuid])
             ->and($own->environment)->toBeNull()
             ->and($own->period)->toBe(Period::Hour);
+    });
+
+    it('leaves out the options a source does not take', function () {
+        $passed = [];
+        $this->mock(ResolveWidgetDataAction::class)->shouldReceive('execute')
+            ->andReturnUsing(function (Team $team, WidgetType $type, string $source, WidgetScope $scope, array $options) use (&$passed): array {
+                $passed[$source] = $options;
+
+                return [];
+            });
+        $stat = fn (string $id, string $source): array => ['id' => $id, 'type' => 'stat', 'source' => $source, 'rotate' => [], 'w' => 1, 'h' => 1, 'title' => null, 'options' => ['compare' => 'yesterday', 'sparkline' => false, 'amber' => 5, 'ai_budget' => '00000000-0000-0000-0000-000000000001'], 'scope' => []];
+        $this->screen->update(['widgets' => [$stat('budget', 'ai_budget'), $stat('rate', 'ai_error_rate'), $stat('cost', 'ai_cost')]]);
+
+        app(ResolveScreenDataAction::class)->execute($this->screen);
+
+        expect(array_keys($passed['ai_budget']))->toBe(['ai_budget'])
+            ->and(array_keys($passed['ai_error_rate']))->toBe(['amber', 'compare'])
+            ->and(array_keys($passed['ai_cost']))->toBe(['ai_payer', 'amber', 'compare', 'sparkline']);
     });
 
     it('asks once per source with the options the data depends on, and caches the answer', function () {

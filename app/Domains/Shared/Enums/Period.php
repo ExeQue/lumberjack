@@ -13,13 +13,15 @@ enum Period: string
     case Week = '7d';
     case Month = '30d';
 
-    public function since(): CarbonImmutable
+    public function since(?CarbonImmutable $now = null): CarbonImmutable
     {
+        $now ??= now()->toImmutable();
+
         return match ($this) {
-            self::Hour => now()->subHour(),
-            self::Day => now()->subDay(),
-            self::Week => now()->subDays(7),
-            self::Month => now()->subDays(30),
+            self::Hour => $now->subHour(),
+            self::Day => $now->subDay(),
+            self::Week => $now->subDays(7),
+            self::Month => $now->subDays(30),
         };
     }
 

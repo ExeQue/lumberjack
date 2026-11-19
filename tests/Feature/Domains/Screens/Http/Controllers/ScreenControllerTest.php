@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domains\Activity\Models\ActivityCount;
+use App\Domains\Ai\Models\AiBudget;
+use App\Domains\Ai\Models\AiKey;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Health\Models\HealthCheck;
@@ -207,13 +209,41 @@ describe('the pages', function () {
         $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
             ->component('screens/edit')
             ->has('schema.health')
-            ->has('sources.stat', 20)
+            ->has('sources.stat', 24)
             ->where("filters.{$this->project->uuid}.queue", ['emails'])
             ->where("filters.{$this->project->uuid}.activity", ['billing:invoice.paid'])
             ->where('filter_labels', ['billing:invoice.paid' => 'Billing: Invoice paid'])
             ->has('environments')
             ->has('checks')
             ->where('limits.max_cols', Screen::MAX_COLS));
+    });
+
+    it('offers AI budgets and keys to pick by name, never a key\'s fingerprint', function () {
+        $key = AiKey::factory()->forProject($this->project)->create(['name' => 'Night jobs']);
+        AiBudget::factory()->forProject($this->project)->create(['name' => 'Monthly']);
+        AiKey::factory()->create();
+
+        $page = $this->actingAs($this->user)->get(route('screens.edit', $this->screen));
+
+        $page->assertInertia(fn (Assert $page) => $page
+            ->where('ai_budgets.0.name', 'Monthly')
+            ->where('ai_keys', [['uuid' => $key->uuid, 'name' => 'Night jobs', 'provider' => $key->provider, 'project' => $this->project->name, 'project_uuid' => $this->project->uuid]]));
+        expect($page->getContent())->not->toContain($key->fingerprint);
+    });
+
+    it('offers each project\'s keys used most lately, the first made first among equals, at most AI_KEYS of each', function () {
+        // The two tied keys must be seen at the very same moment.
+        $this->freezeTime();
+        $other = Project::factory()->for($this->project->team)->create();
+        AiKey::factory()->forProject($other)->count(ScreenPresenter::AI_KEYS + 1)->lastSeen(now()->subYear())->create();
+        $oldest = AiKey::factory()->forProject($this->project)->lastSeen(now()->subMonth())->create(['name' => 'oldest']);
+        $first = AiKey::factory()->forProject($this->project)->lastSeen(now()->subHour())->create(['name' => 'tied first']);
+        $second = AiKey::factory()->forProject($this->project)->lastSeen(now()->subHour())->create(['name' => 'tied second']);
+        $latest = AiKey::factory()->forProject($this->project)->lastSeen(now())->create(['name' => 'latest']);
+
+        $this->actingAs($this->user)->get(route('screens.edit', $this->screen))->assertInertia(fn (Assert $page) => $page
+            ->where('ai_keys', fn ($keys): bool => collect($keys)->where('project_uuid', $this->project->uuid)->pluck('uuid')->all() === [$latest->uuid, $first->uuid, $second->uuid, $oldest->uuid]
+                && collect($keys)->where('project_uuid', $other->uuid)->count() === ScreenPresenter::AI_KEYS));
     });
 
     it('tells the designer the group of a data source, and none for one without', function () {

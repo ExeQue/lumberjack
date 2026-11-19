@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
-import { formatBytes, formatNumber, formatPercent } from '@/lib/format';
+import {
+    formatBytes,
+    formatCompact,
+    formatNumber,
+    formatPercent,
+} from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -869,6 +874,16 @@ function Stat({
     textSize,
     colored,
 }: BodyProps & { colored: boolean }) {
+    const budget = data.budget as
+        | {
+              name: string | null;
+              amount: number;
+              share: number;
+              projected: number | null;
+              overrun: boolean;
+              period: string;
+          }
+        | undefined;
     const release = data.release as
         | {
               since: string;
@@ -884,7 +899,8 @@ function Stat({
     const extra =
         (compare !== 'none' && change !== null) ||
         (spark?.length ?? 0) > 0 ||
-        !!release;
+        !!release ||
+        !!budget;
     const value = formatValue(
         data.value,
         String(data.unit),
@@ -921,6 +937,40 @@ function Stat({
                         formatPercent(Math.abs(change), 0) +
                         ' ' +
                         t(`screens.trend.${compare}`)}
+                </span>
+            )}
+            {budget && (
+                <span className="lj-tile-small flex flex-wrap gap-x-[0.6em]">
+                    <span>
+                        {t('screens.budget.of', {
+                            share: formatPercent(budget.share, 0),
+                            amount: formatValue(
+                                budget.amount,
+                                String(data.unit),
+                            ),
+                            period: t(
+                                `screens.budget.periods.${budget.period}`,
+                            ),
+                        })}
+                    </span>
+                    {budget.projected !== null && (
+                        <span
+                            style={{
+                                color:
+                                    colored && budget.overrun
+                                        ? 'var(--s-amber)'
+                                        : undefined,
+                            }}
+                        >
+                            {t('screens.budget.projected', {
+                                amount: formatValue(
+                                    budget.projected,
+                                    String(data.unit),
+                                ),
+                            })}
+                        </span>
+                    )}
+                    {budget.name && <span>{budget.name}</span>}
                 </span>
             )}
             {release && (
@@ -1759,6 +1809,14 @@ function rowText(
                         .join(' · ') || undefined,
             };
         }
+        case 'ai_spenders':
+            return {
+                main: String(row.label ?? t('screens.list.ai_unnamed')),
+                tag: { text: formatValue(row.value, unit), tone },
+                count: t('screens.list.ai_tokens', {
+                    tokens: formatCompact(Number(row.tokens ?? 0)),
+                }),
+            };
         case 'external_json':
             return {
                 main: String(row.label ?? ''),

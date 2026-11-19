@@ -62,6 +62,16 @@ import {
     ROTATING_KINDS,
 } from './types';
 
+/** An AI budget or key a widget can pick, by its name and project. */
+type AiPick = {
+    uuid: string;
+    name: string;
+    project: string | null;
+    project_uuid?: string | null;
+    /** A key's provider, which it is filed under. */
+    provider?: string | null;
+};
+
 export type Catalog = {
     schema: Schema;
     sources: Sources;
@@ -95,6 +105,9 @@ export type Catalog = {
         /** The periods a connected service can answer for; null for all. */
         periods?: string[] | null;
     }[];
+    /** The team's AI budgets and the keys used most lately, which AI widgets pick from. */
+    ai_budgets?: AiPick[];
+    ai_keys?: AiPick[];
     /** The screen's uuid, for the External JSON preview; without it there is none. */
     screen?: string;
     periods: string[];
@@ -1171,6 +1184,74 @@ export function WidgetInspector({
                     </div>
                 );
             }
+            case 'ai_budget':
+            case 'ai_key': {
+                // Only the widget's projects: a budget or key of another shows nothing.
+                const picked = ((
+                    scopeTarget.values as Record<string, unknown> | undefined
+                )?.projects ?? scopeTarget.inherited?.projects) as
+                    | string[]
+                    | undefined;
+                // Its own projects within the screen's, else the screen's, else the team's (null).
+                const screenProjects = catalog.projects.map((p) => p.uuid);
+                const allowed = picked?.length
+                    ? catalog.scoped
+                        ? picked.filter((uuid) => screenProjects.includes(uuid))
+                        : picked
+                    : catalog.scoped
+                      ? screenProjects
+                      : null;
+                const all = (
+                    (field.type === 'ai_budget'
+                        ? catalog.ai_budgets
+                        : catalog.ai_keys) ?? []
+                ).filter(
+                    (pick) =>
+                        allowed === null ||
+                        allowed.includes(pick.project_uuid ?? ''),
+                );
+
+                return (
+                    <div
+                        key={field.key}
+                        className="col-span-2 flex flex-col gap-1"
+                    >
+                        <Label
+                            htmlFor={id(field.key)}
+                            className="text-xs text-ink-2"
+                        >
+                            {fieldLabel(field.key)}
+                        </Label>
+                        <TreeSelect
+                            id={id(field.key)}
+                            label={fieldLabel(field.key)}
+                            options={all.map((pick) => ({
+                                value: pick.uuid,
+                                label: pick.name,
+                                path: [
+                                    pick.project ?? '',
+                                    ...(pick.provider ? [pick.provider] : []),
+                                ],
+                            }))}
+                            value={String(raw ?? '')}
+                            // One picked before it left the list: kept, by what is known of it.
+                            optionFor={(value) => ({
+                                value,
+                                label: t(`screens.fields.${field.key}.unknown`),
+                            })}
+                            onChange={(uuid) => target.set(field.key, uuid)}
+                            placeholder={t(`screens.fields.${field.key}.none`)}
+                            searchPlaceholder={t(
+                                'screens.fields.data_source.search',
+                            )}
+                            noMatches={t(
+                                'screens.fields.data_source.no_matches',
+                            )}
+                            clearLabel={t(`screens.fields.${field.key}.clear`)}
+                        />
+                    </div>
+                );
+            }
             case 'checks': {
                 const picked = (raw as string[] | undefined) ?? [];
                 const groups = Object.entries(
@@ -1871,21 +1952,23 @@ export function WidgetInspector({
                 </div>
             )}
 
-            {(widget.type === 'stat' || widget.type === 'gauge') && (
-                <p className="text-xs text-ink-3">
-                    {t(
-                        lowIsBad
-                            ? 'screens.inspector.limits_below'
-                            : 'screens.inspector.limits_above',
-                    )}
-                    {valueSource?.unit === 'ratio' &&
-                        ' ' + t('screens.inspector.ratio_hint')}
-                    {valueSource?.unit === 'ms' &&
-                        ' ' + t('screens.inspector.ms_hint')}
-                    {valueSource?.unit === 'bytes' &&
-                        ' ' + t('screens.inspector.bytes_hint')}
-                </p>
-            )}
+            {(widget.type === 'stat' || widget.type === 'gauge') &&
+                // An AI budget's limits are its own, not set here.
+                valueSource?.id !== 'ai_budget' && (
+                    <p className="text-xs text-ink-3">
+                        {t(
+                            lowIsBad
+                                ? 'screens.inspector.limits_below'
+                                : 'screens.inspector.limits_above',
+                        )}
+                        {valueSource?.unit === 'ratio' &&
+                            ' ' + t('screens.inspector.ratio_hint')}
+                        {valueSource?.unit === 'ms' &&
+                            ' ' + t('screens.inspector.ms_hint')}
+                        {valueSource?.unit === 'bytes' &&
+                            ' ' + t('screens.inspector.bytes_hint')}
+                    </p>
+                )}
 
             {valueSection && (
                 <Section
@@ -1897,8 +1980,11 @@ export function WidgetInspector({
                         // External JSON's fields only for an External JSON value.
                         .filter(
                             (field) =>
-                                !field.sources ||
-                                field.sources.includes(valueSource?.id ?? ''),
+                                (!field.sources ||
+                                    field.sources.includes(
+                                        valueSource?.id ?? '',
+                                    )) &&
+                                !field.except?.includes(valueSource?.id ?? ''),
                         )
                         .map((field) =>
                             renderField(
@@ -1925,6 +2011,9 @@ export function WidgetInspector({
                                 (field) =>
                                     field.key !== 'period' &&
                                     (field.key !== 'filter' || filterOn) &&
+                                    // AI usage knows no releases.
+                                    (field.key !== 'release' ||
+                                        valueSource?.topic !== 'ai') &&
                                     (field.key !== 'domain' ||
                                         filterOn === 'route'),
                             )

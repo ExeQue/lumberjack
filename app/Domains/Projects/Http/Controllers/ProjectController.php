@@ -8,6 +8,7 @@ use App\Domains\Issues\Models\Issue;
 use App\Domains\Projects\Actions\CreateProjectAction;
 use App\Domains\Projects\Actions\DeleteProjectAction;
 use App\Domains\Projects\Actions\MoveProjectToTeamAction;
+use App\Domains\Projects\Exceptions\CurrencyMismatchException;
 use App\Domains\Projects\Http\Requests\MoveProjectRequest;
 use App\Domains\Projects\Http\Requests\StoreProjectRequest;
 use App\Domains\Projects\Models\Project;
@@ -127,7 +128,13 @@ class ProjectController
     {
         /** @var Team $target validated */
         $target = $request->target();
-        $action->execute($project, $target, $request->string('slug')->toString(), $request->string('issue_prefix')->toString(), $request->user());
+
+        try {
+            $action->execute($project, $target, $request->string('slug')->toString(), $request->string('issue_prefix')->toString(), $request->user());
+        } catch (CurrencyMismatchException $exception) {
+            // A currency changed between the request's check and the move.
+            return back()->withErrors(['team' => $exception->getMessage()]);
+        }
 
         // Opening it there makes the new team the current one (FollowProjectTeam).
         return redirect()->route('projects.settings', $project)->with('status', __('projects.moved', ['team' => $target->name]));

@@ -20,6 +20,9 @@ enum RetentionCategory: string
     case Logs = 'logs';
     case Activity = 'activity';
     case ActivityCounts = 'activity_counts';
+    case AiCalls = 'ai_calls';
+    case AiUsageHourly = 'ai_usage_hourly';
+    case AiUsageDaily = 'ai_usage_daily';
     case HealthResults = 'health_results';
     case HealthOutages = 'health_outages';
     case DataSourceFetches = 'data_source_fetches';
@@ -49,6 +52,7 @@ enum RetentionCategory: string
             self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns => 'jobs',
             self::Logs => 'logs',
             self::Activity, self::ActivityCounts => 'activity',
+            self::AiCalls, self::AiUsageHourly, self::AiUsageDaily => 'ai',
             self::HealthResults, self::HealthOutages, self::DataSourceFetches => 'health',
             self::QueueSamples, self::HostSamples => 'infrastructure',
             self::AlertSends, self::CustomAlerts => 'alerts',
@@ -65,10 +69,12 @@ enum RetentionCategory: string
             self::Occurrences, self::AlertSends, self::Notifications => 90,
             self::Requests, self::Queries, self::Spans, self::Logs, self::HealthResults => 14,
             // Data source history feeds screen charts, whose longest period is 30 days.
-            self::WebVitals, self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::QueueSamples, self::DataSourceFetches, self::CustomAlerts, self::Activity => 30,
+            self::WebVitals, self::JobRuns, self::ScheduledTaskRuns, self::CommandRuns, self::QueueSamples, self::DataSourceFetches, self::CustomAlerts, self::Activity, self::AiCalls => 30,
             self::HostSamples, self::SystemSamples => 7,
             // The hourly counts feed charts and widgets long after the events they count are gone.
             self::HealthOutages, self::AuditLog, self::ActivityCounts => 365,
+            // A year of AI usage, with a month to spare, so this month compares with the same month last year.
+            self::AiUsageHourly, self::AiUsageDaily => 400,
         };
     }
 
@@ -106,7 +112,8 @@ enum RetentionCategory: string
             self::QueueSamples, self::HostSamples, self::SystemSamples => 'sampled_at',
             self::AlertSends => 'sent_at',
             self::DataSourceFetches => 'fetched_at',
-            self::ActivityCounts => 'hour',
+            self::ActivityCounts, self::AiUsageHourly => 'hour',
+            self::AiUsageDaily => 'day',
             default => 'occurred_at',
         };
     }

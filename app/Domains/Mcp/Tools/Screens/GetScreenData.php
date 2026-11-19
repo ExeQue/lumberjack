@@ -8,7 +8,9 @@ use App\Domains\Mcp\Attributes\RequiresPermission;
 use App\Domains\Mcp\Enums\McpArea;
 use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Tools\Concerns\UsesScreens;
+use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Actions\ResolveScreenDataAction;
+use App\Domains\Screens\Data\WidgetScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -48,6 +50,12 @@ class GetScreenData extends Tool
 
         $input = $request->validate(['widget' => ['nullable', 'string', 'max:40']]);
 
-        return Response::json(['data' => (object) $this->resolve->execute($screen, $input['widget'] ?? null, aggregatesOnly: false)]);
+        // AI usage only where the token may read it, in every project the widget covers.
+        $token = $this->context()->token();
+        $readsAi = fn (WidgetScope $scope): bool => $screen->team->projects
+            ->when($scope->projects !== [])->whereIn('uuid', $scope->projects)
+            ->every(fn (Project $project): bool => $token->permits('get_ai_usage', $project));
+
+        return Response::json(['data' => (object) $this->resolve->execute($screen, $input['widget'] ?? null, aggregatesOnly: false, readsAi: $readsAi)]);
     }
 }

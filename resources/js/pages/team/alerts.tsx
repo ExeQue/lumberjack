@@ -1,7 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ChannelsCard, RulesCard } from '@/components/lj/alerts';
 import type { Channel } from '@/components/lj/alerts';
-import { SentAlertsCard, TopicsCard } from '@/components/lj/custom-alerts';
+import { SentAlertsCard } from '@/components/lj/custom-alerts';
 import type { AlertTopic, SentAlert } from '@/components/lj/custom-alerts';
 import { LiveNotice } from '@/components/lj/live-notice';
 import { TopBar } from '@/components/lj/top-bar';
@@ -61,11 +61,6 @@ export default function Alerts({
                 <RulesCard
                     scope="team"
                     rules={rules}
-                    channels={channels}
-                    canAdminister={can_administer}
-                />
-
-                <TopicsCard
                     topics={topics}
                     channels={channels}
                     canAdminister={can_administer}

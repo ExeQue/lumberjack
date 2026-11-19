@@ -143,6 +143,8 @@ export type SchemaField = {
         | 'url'
         | 'urls'
         | 'timezones'
+        | 'ai_budget'
+        | 'ai_key'
         | 'datetime'
         | 'textarea'
         | 'number'
@@ -169,6 +171,8 @@ export type SchemaField = {
     span: number;
     /** Shown only for these sources (the External JSON fields). */
     sources?: string[];
+    /** Sources it does not show for, such as the limits of an AI budget. */
+    except?: string[];
     /** Shown only while these options have one of the values (the QR code's per content). */
     when?: Record<string, string[]>;
 };

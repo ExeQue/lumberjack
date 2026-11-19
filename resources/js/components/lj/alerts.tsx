@@ -1,8 +1,9 @@
 import { Relative } from '@/components/lj/relative';
-import { Form, router } from '@inertiajs/react';
+import { Form, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { ChannelPicker } from '@/components/lj/channel-picker';
+import type { AlertTopic } from '@/components/lj/custom-alerts';
 import { ConfirmButton } from '@/components/lj/confirm-button';
 import {
     Badge,
@@ -37,9 +38,15 @@ import {
     reset as ruleReset,
     update as ruleUpdate,
 } from '@/routes/alerts/rules';
+import {
+    destroy as topicDestroy,
+    store as topicStore,
+} from '@/routes/alerts/topics';
 import type {
     AlertRule,
     ProjectAlertRule,
+    AiBudgetSettings,
+    AiErrorRateSettings,
     QueueBacklogSettings,
     WeeklySummarySettings,
 } from '@/types/lumberjack';
@@ -489,22 +496,59 @@ function ChannelDialog({
     );
 }
 
+/** The groups rules are listed under, in this order; AlertRuleType::group() puts each type in one. */
+const RULE_GROUPS = [
+    'issues',
+    'releases',
+    'health',
+    'queues',
+    'ai',
+    'summary',
+    'custom',
+] as const;
+
+/** One rule card in a group, with whether it is on and, for a topic, whether it drops alerts. */
+type GroupedRule = {
+    group: string;
+    enabled: boolean;
+    lost?: boolean;
+    /** Name and description, lowercased, for the search. */
+    text: string;
+    node: ReactNode;
+};
+
+const groupsKey = (scope: string) => `lj:alert-rule-groups:${scope}`;
+
+function readOpenGroups(scope: string): Record<string, boolean> {
+    try {
+        return JSON.parse(
+            window.localStorage.getItem(groupsKey(scope)) ?? '{}',
+        ) as Record<string, boolean>;
+    } catch {
+        return {};
+    }
+}
+
 /**
- * Alert rules: which kinds of alert go to which channels. The team's are edited as
- * they are; a project's show, per type, the team's (read only, to customize) or the
- * project's own (editable, to drop again).
+ * Alert rules: which kinds of alert go to which channels, in collapsible groups. The team's
+ * are edited as they are, its custom alert topics as one more group; a project's show, per
+ * type, the team's (read only, to customize) or the project's own (editable, to drop again).
  */
 export function RulesCard(
     props: {
         channels: Channel[];
         canAdminister: boolean;
     } & (
-        | { scope: 'team'; rules: AlertRule[] }
+        | { scope: 'team'; rules: AlertRule[]; topics: AlertTopic[] }
         | { scope: 'project'; project: string; rules: ProjectAlertRule[] }
     ),
 ) {
     const t = useT();
     const { channels, canAdminister } = props;
+    const [query, setQuery] = useState('');
+    const [openGroups, setOpenGroups] = useState(() =>
+        readOpenGroups(props.scope),
+    );
     // Team rules on without a team channel; projects can still add their own, so one line, not a warning per rule.
     const silent =
         props.scope === 'team' && channels.length > 0
@@ -512,10 +556,7 @@ export function RulesCard(
                   .length
             : 0;
 
-    const projectRows = props.scope === 'project' ? props.rules : [];
     const projectUuid = props.scope === 'project' ? props.project : '';
-    const standard = projectRows.filter((row) => row.topic === undefined);
-    const topics = projectRows.filter((row) => row.topic !== undefined);
     const renderRow = ({ project: own, ...row }: ProjectAlertRule) =>
         own ? (
             <RuleRow
@@ -556,6 +597,98 @@ export function RulesCard(
             />
         );
 
+    const grouped: GroupedRule[] =
+        props.scope === 'team'
+            ? [
+                  ...props.rules.map((rule) => ({
+                      group: rule.group,
+                      enabled: rule.enabled,
+                      text: `${rule.label} ${rule.description}`.toLowerCase(),
+                      node: (
+                          <RuleRow
+                              key={ruleKey(rule)}
+                              rule={rule}
+                              channels={channels}
+                              disabled={!canAdminister}
+                              teamLevel
+                          />
+                      ),
+                  })),
+                  ...props.topics.map((topic) => ({
+                      group: 'custom',
+                      enabled: topic.enabled,
+                      text: `${topic.topic} ${topic.deletable ? '' : t('alerts.topics.default_description')}`.toLowerCase(),
+                      lost:
+                          topic.enabled &&
+                          topic.channels.length === 0 &&
+                          topic.last_day > 0,
+                      node: (
+                          <RuleRow
+                              key={`${topic.id}:${topic.channels.join(',')}:${topic.enabled}`}
+                              rule={{
+                                  ...topic,
+                                  description: !topic.deletable
+                                      ? t('alerts.topics.default_description')
+                                      : t(
+                                            'alerts.topics.count',
+                                            {},
+                                            topic.last_day,
+                                        ),
+                              }}
+                              channels={channels}
+                              disabled={!canAdminister}
+                              teamLevel
+                              actions={
+                                  canAdminister &&
+                                  topic.deletable && (
+                                      <ConfirmButton
+                                          variant="default"
+                                          question={t(
+                                              'alerts.topics.delete_question',
+                                              { topic: topic.topic },
+                                          )}
+                                          confirmLabel={t('common.delete')}
+                                          onConfirm={() =>
+                                              router.delete(
+                                                  topicDestroy(topic.id).url,
+                                                  { preserveScroll: true },
+                                              )
+                                          }
+                                      >
+                                          {t('common.delete')}
+                                          <span className="sr-only">
+                                              {' '}
+                                              {topic.topic}
+                                          </span>
+                                      </ConfirmButton>
+                                  )
+                              }
+                          />
+                      ),
+                  })),
+              ]
+            : props.rules.map((row) => ({
+                  group: row.group,
+                  enabled: (row.project ?? row.team)?.enabled === true,
+                  text: `${row.label} ${row.description}`.toLowerCase(),
+                  node: renderRow(row),
+              }));
+
+    const needle = query.trim().toLowerCase();
+    const toggleGroup = (group: string, open: boolean) => {
+        const next = { ...openGroups, [group]: open };
+        setOpenGroups(next);
+
+        try {
+            window.localStorage.setItem(
+                groupsKey(props.scope),
+                JSON.stringify(next),
+            );
+        } catch {
+            // Without storage the groups just start as they would anyway.
+        }
+    };
+
     return (
         <Card aria-labelledby="h-rules">
             <CardHeader
@@ -573,43 +706,177 @@ export function RulesCard(
                         )}
                     </p>
                 )}
-                {props.rules.length === 0 ? (
+                {grouped.length === 0 && props.scope === 'project' ? (
                     <EmptyState title={t('alerts.rules.empty')} />
-                ) : props.scope === 'team' ? (
-                    props.rules.map((rule) => (
-                        <RuleRow
-                            key={ruleKey(rule)}
-                            rule={rule}
-                            channels={channels}
-                            disabled={!canAdminister}
-                            teamLevel
-                        />
-                    ))
                 ) : (
                     <>
-                        {standard.map(renderRow)}
-                        {topics.length > 0 && (
-                            <details className="rounded-lg border border-line">
-                                <summary className="cursor-pointer p-3.5 font-semibold">
-                                    {t('alerts.topics.title')}{' '}
-                                    <span className="text-xs font-normal text-ink-3">
-                                        {t(
-                                            'alerts.topics.count_label',
-                                            {},
-                                            topics.length,
-                                        )}
-                                    </span>
-                                </summary>
-                                <div className="flex flex-col gap-3 p-3.5 pt-0">
-                                    {topics.map(renderRow)}
-                                </div>
-                            </details>
-                        )}
+                        <Input
+                            type="search"
+                            aria-label={t('alerts.rules.search')}
+                            placeholder={t('alerts.rules.search_placeholder')}
+                            className="max-w-sm"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                        />
+                        <div className="flex flex-col">
+                            {RULE_GROUPS.map((group) => {
+                                const all = grouped.filter(
+                                    (rule) => rule.group === group,
+                                );
+                                const members =
+                                    needle === ''
+                                        ? all
+                                        : all.filter((rule) =>
+                                              rule.text.includes(needle),
+                                          );
+                                // The team's custom alerts group holds the form for a new topic, so it shows while empty.
+                                const creates =
+                                    props.scope === 'team' &&
+                                    group === 'custom' &&
+                                    needle === '';
+
+                                if (members.length === 0 && !creates) {
+                                    return null;
+                                }
+
+                                const on = all.filter(
+                                    (rule) => rule.enabled,
+                                ).length;
+                                const lost = all.filter(
+                                    (rule) => rule.lost,
+                                ).length;
+                                // A search opens the groups it finds rules in; otherwise each stays as the viewer left it.
+                                const open =
+                                    needle !== '' || openGroups[group] === true;
+
+                                return (
+                                    <section
+                                        key={group}
+                                        aria-labelledby={`h-rules-${group}`}
+                                        className="border-t border-line first:border-t-0"
+                                    >
+                                        <h3
+                                            id={`h-rules-${group}`}
+                                            className="text-[13px]"
+                                        >
+                                            <button
+                                                type="button"
+                                                aria-expanded={open}
+                                                aria-controls={`rules-${group}`}
+                                                disabled={needle !== ''}
+                                                onClick={() =>
+                                                    toggleGroup(group, !open)
+                                                }
+                                                className="flex w-full cursor-pointer flex-wrap items-center gap-2.5 py-3 text-left hover:text-amber focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-default disabled:hover:text-inherit"
+                                            >
+                                                <span
+                                                    aria-hidden="true"
+                                                    className={cn(
+                                                        'text-ink-3 transition-transform',
+                                                        open && 'rotate-90',
+                                                    )}
+                                                >
+                                                    ▸
+                                                </span>
+                                                <span className="font-semibold">
+                                                    {t(
+                                                        `alerts.rules.groups.${group}`,
+                                                    )}
+                                                </span>
+                                                <span className="text-xs font-normal text-ink-3">
+                                                    {t(
+                                                        'alerts.rules.group_on',
+                                                        {
+                                                            on,
+                                                            total: all.length,
+                                                        },
+                                                    )}
+                                                </span>
+                                                {lost > 0 && (
+                                                    <Badge tone="warn">
+                                                        {t(
+                                                            'alerts.topics.not_delivered',
+                                                            {},
+                                                            lost,
+                                                        )}
+                                                    </Badge>
+                                                )}
+                                            </button>
+                                        </h3>
+                                        <div
+                                            id={`rules-${group}`}
+                                            hidden={!open}
+                                            className="flex flex-col gap-3 pb-4"
+                                        >
+                                            {creates && (
+                                                <TopicCreator
+                                                    canAdminister={
+                                                        canAdminister
+                                                    }
+                                                />
+                                            )}
+                                            {members.map((rule) => rule.node)}
+                                        </div>
+                                    </section>
+                                );
+                            })}
+                            {needle !== '' &&
+                                grouped.every(
+                                    (rule) => !rule.text.includes(needle),
+                                ) && (
+                                    <p className="text-ink-3">
+                                        {t('alerts.rules.no_matches')}
+                                    </p>
+                                )}
+                        </div>
                     </>
                 )}
                 <p className="text-xs text-ink-3">{t('alerts.rules.hint')}</p>
             </div>
         </Card>
+    );
+}
+
+/** The form for a new custom alert topic, atop the team's custom alerts group. */
+function TopicCreator({ canAdminister }: { canAdminister: boolean }) {
+    const t = useT();
+    const form = useForm({ name: '' });
+
+    return (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+            <p className="max-w-[70ch] text-xs text-ink-3">
+                {t('alerts.topics.description')}
+            </p>
+            {canAdminister && (
+                <form
+                    className="flex flex-wrap items-center gap-2"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        form.post(topicStore().url, {
+                            preserveScroll: true,
+                            onSuccess: () => form.reset(),
+                        });
+                    }}
+                >
+                    <Input
+                        aria-label={t('alerts.topics.name')}
+                        placeholder={t('alerts.topics.placeholder')}
+                        maxLength={64}
+                        className="w-44 font-mono"
+                        value={form.data.name}
+                        onChange={(e) => form.setData('name', e.target.value)}
+                    />
+                    <Button type="submit" disabled={form.processing}>
+                        {t('alerts.topics.create')}
+                    </Button>
+                    {form.errors.name && (
+                        <p role="alert" className="basis-full text-xs text-err">
+                            {form.errors.name}
+                        </p>
+                    )}
+                </form>
+            )}
+        </div>
     );
 }
 
@@ -668,13 +935,15 @@ function TeamRuleSummary({
                           })
                         : t('alerts.rules.nowhere')}
                 </span>
-                {rule && rule.environments.length > 0 && (
-                    <span>
-                        {t('alerts.rules.only_in', {
-                            environments: rule.environments.join(', '),
-                        })}
-                    </span>
-                )}
+                {rule &&
+                    rule.type !== 'ai_budget' &&
+                    rule.environments.length > 0 && (
+                        <span>
+                            {t('alerts.rules.only_in', {
+                                environments: rule.environments.join(', '),
+                            })}
+                        </span>
+                    )}
                 {rule && extra.length > 0 && (
                     <div className="mt-1.5 flex flex-col gap-1">
                         <span>
@@ -776,6 +1045,24 @@ export function RuleRow({
         age_minutes: String(queue?.age_minutes ?? ''),
         sustain_minutes: String(queue?.sustain_minutes ?? ''),
     });
+    const budget =
+        rule.type === 'ai_budget'
+            ? (rule.settings as AiBudgetSettings | null)
+            : null;
+    const errorRate =
+        rule.type === 'ai_error_rate'
+            ? (rule.settings as AiErrorRateSettings | null)
+            : null;
+    const [budgetSettings, setBudgetSettings] = useState({
+        thresholds: budget?.thresholds ?? [80, 100],
+        projected: budget?.projected ?? true,
+    });
+    // Number inputs as typed.
+    const [errorSettings, setErrorSettings] = useState({
+        rate: String(errorRate?.rate ?? ''),
+        min_calls: String(errorRate?.min_calls ?? ''),
+        minutes: String(errorRate?.minutes ?? ''),
+    });
     const [schedule, setSchedule] = useState({
         day: weekly?.day ?? 1,
         time: weekly?.time ?? '08:00',
@@ -796,6 +1083,15 @@ export function RuleRow({
                 channels: selected,
                 environments: envs.length > 0 ? envs : null,
                 ...(weekly && { settings: schedule }),
+                ...(budget && { settings: budgetSettings }),
+                ...(errorRate && {
+                    settings: Object.fromEntries(
+                        Object.entries(errorSettings).map(([key, value]) => [
+                            key,
+                            Number(value),
+                        ]),
+                    ),
+                }),
                 ...(queue && {
                     settings: Object.fromEntries(
                         Object.entries(thresholds).map(([key, value]) => [
@@ -815,6 +1111,27 @@ export function RuleRow({
         );
     };
 
+    const environmentsField = (
+        <Field
+            label={
+                <span className="text-xs font-normal text-ink-3">
+                    {t('alerts.rules.environments')}
+                </span>
+            }
+            htmlFor={`rule-env-${rule.id}`}
+            hint={t('alerts.rules.environments_hint')}
+            className="flex-[1_1_180px]"
+        >
+            <Input
+                id={`rule-env-${rule.id}`}
+                className="font-mono"
+                placeholder={t('alerts.rules.environments_placeholder')}
+                value={environments}
+                disabled={disabled}
+                onChange={(e) => setEnvironments(e.target.value)}
+            />
+        </Field>
+    );
     const firstError = Object.values(errors)[0];
     // Save shows once something differs from the stored rule.
     const dirty =
@@ -827,7 +1144,15 @@ export function RuleRow({
                 (key) => thresholds[key] !== String(queue[key] ?? ''),
             )) ||
         (weekly !== null &&
-            (schedule.day !== weekly.day || schedule.time !== weekly.time));
+            (schedule.day !== weekly.day || schedule.time !== weekly.time)) ||
+        (budget !== null &&
+            (budgetSettings.projected !== budget.projected ||
+                budgetSettings.thresholds.join() !==
+                    budget.thresholds.join())) ||
+        (errorRate !== null &&
+            (['rate', 'min_calls', 'minutes'] as const).some(
+                (key) => errorSettings[key] !== String(errorRate[key]),
+            ));
 
     return (
         <form
@@ -940,6 +1265,99 @@ export function RuleRow({
                         {t('alerts.rules.weekly.hint')}
                     </p>
                 </fieldset>
+            ) : budget ? (
+                <fieldset
+                    className="flex flex-[1_1_180px] flex-col gap-2"
+                    disabled={disabled}
+                >
+                    <legend className="mb-1 text-xs text-ink-3">
+                        {t('alerts.rules.ai_budget.title')}
+                    </legend>
+                    {[50, 80, 100].map((percent) => (
+                        <label
+                            key={percent}
+                            className="flex items-center gap-2 text-sm"
+                        >
+                            <input
+                                type="checkbox"
+                                checked={budgetSettings.thresholds.includes(
+                                    percent,
+                                )}
+                                onChange={(e) =>
+                                    setBudgetSettings({
+                                        ...budgetSettings,
+                                        thresholds: e.target.checked
+                                            ? [
+                                                  ...budgetSettings.thresholds,
+                                                  percent,
+                                              ].sort((a, b) => a - b)
+                                            : budgetSettings.thresholds.filter(
+                                                  (p) => p !== percent,
+                                              ),
+                                    })
+                                }
+                            />
+                            {t('alerts.rules.ai_budget.threshold', {
+                                percent,
+                            })}
+                        </label>
+                    ))}
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            checked={budgetSettings.projected}
+                            onChange={(e) =>
+                                setBudgetSettings({
+                                    ...budgetSettings,
+                                    projected: e.target.checked,
+                                })
+                            }
+                        />
+                        {t('alerts.rules.ai_budget.projected')}
+                    </label>
+                    <p className="text-xs text-ink-3">
+                        {t('alerts.rules.ai_budget.hint')}
+                    </p>
+                </fieldset>
+            ) : errorRate ? (
+                <fieldset
+                    className="flex flex-[1_1_180px] flex-col gap-2"
+                    disabled={disabled}
+                >
+                    <legend className="mb-1 text-xs text-ink-3">
+                        {t('alerts.rules.ai_error_rate.title')}
+                    </legend>
+                    {(['rate', 'min_calls', 'minutes'] as const).map((key) => (
+                        <Field
+                            key={key}
+                            label={
+                                <span className="text-xs font-normal text-ink-3">
+                                    {t(`alerts.rules.ai_error_rate.${key}`)}
+                                </span>
+                            }
+                            htmlFor={`rule-${key}-${rule.id}`}
+                        >
+                            <Input
+                                id={`rule-${key}-${rule.id}`}
+                                type="number"
+                                min={1}
+                                max={key === 'rate' ? 99 : undefined}
+                                required
+                                className="font-mono"
+                                value={errorSettings[key]}
+                                onChange={(e) =>
+                                    setErrorSettings({
+                                        ...errorSettings,
+                                        [key]: e.target.value,
+                                    })
+                                }
+                            />
+                        </Field>
+                    ))}
+                    <p className="text-xs text-ink-3">
+                        {t('alerts.rules.ai_error_rate.hint')}
+                    </p>
+                </fieldset>
             ) : queue ? (
                 <fieldset
                     className="flex flex-[1_1_180px] flex-col gap-2"
@@ -985,26 +1403,10 @@ export function RuleRow({
                     </p>
                 </fieldset>
             ) : (
-                <Field
-                    label={
-                        <span className="text-xs font-normal text-ink-3">
-                            {t('alerts.rules.environments')}
-                        </span>
-                    }
-                    htmlFor={`rule-env-${rule.id}`}
-                    hint={t('alerts.rules.environments_hint')}
-                    className="flex-[1_1_180px]"
-                >
-                    <Input
-                        id={`rule-env-${rule.id}`}
-                        className="font-mono"
-                        placeholder={t('alerts.rules.environments_placeholder')}
-                        value={environments}
-                        disabled={disabled}
-                        onChange={(e) => setEnvironments(e.target.value)}
-                    />
-                </Field>
+                environmentsField
             )}
+            {/* The error rate rule counts only its environments' calls, beside its thresholds. */}
+            {errorRate && environmentsField}
             {!disabled && (dirty || firstError || actions) && (
                 <div className="flex w-full flex-wrap items-center justify-end gap-3">
                     {firstError && (

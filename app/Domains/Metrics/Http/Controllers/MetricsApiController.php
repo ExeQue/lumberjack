@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Metrics\Http\Controllers;
 
+use App\Domains\Metrics\Enums\Metric;
 use App\Domains\Metrics\Http\Requests\ReadMetricsRequest;
 use App\Domains\Metrics\Http\Requests\ReadSeriesRequest;
 use App\Domains\Metrics\Queries\MetricSeriesQuery;
@@ -43,8 +44,8 @@ class MetricsApiController
 
         return response()->json($this->credential->remember(
             'summary',
-            [$project->id, $request->period()->value, $request->environment()],
-            fn (): array => $summary->get($project, $request->period(), $request->environment())
+            [$project->id, $request->period()->value, $request->environment(), $ai = $this->credential->readsAi($project)],
+            fn (): array => $summary->get($project, $request->period(), $request->environment(), $ai)
         ));
     }
 
@@ -52,15 +53,18 @@ class MetricsApiController
     {
         $project = $this->project($project);
         $metric = $request->metric();
-        $window = $request->window();
+        abort_if($metric->isAi() && ! $this->credential->readsAi($project), 403, __('metrics.ai.forbidden'));
+        $filter = $request->filter($project);
+        $window = $series->window($metric, $filter, $request->window());
 
         return response()->json($this->credential->remember('series', [$project->id, ...array_values($request->cacheArgs())], fn (): array => [
             'metric' => $metric->value,
             'unit' => $metric->unit(),
+            ...$metric === Metric::AiCost ? ['currency' => $project->team->currency] : [],
             'interval' => $window->interval(),
             'from' => $window->from->toIso8601ZuluString(),
             'to' => $window->to->toIso8601ZuluString(),
-            'points' => $series->series($metric, $request->filter($project), $window, $request->top()),
+            'points' => $series->series($metric, $filter, $window, $request->top()),
         ]));
     }
 
@@ -134,8 +138,9 @@ class MetricsApiController
     public function prometheus(Request $request, PrometheusExporter $exporter): Response
     {
         $projects = $this->credential->projects();
+        $ai = array_values($projects->filter(fn (Project $project): bool => $this->credential->readsAi($project))->map(fn (Project $project): int => $project->id)->all());
 
-        return response($this->credential->remember('prometheus', $projects->modelKeys(), fn (): string => $exporter->render($projects)))
+        return response($this->credential->remember('prometheus', [$projects->modelKeys(), $ai], fn (): string => $exporter->render($projects, $ai)))
             ->header('Content-Type', RenderTextFormat::MIME_TYPE);
     }
 

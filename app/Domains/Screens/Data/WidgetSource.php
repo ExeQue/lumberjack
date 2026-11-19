@@ -41,11 +41,12 @@ final readonly class WidgetSource
 
     /**
      * What it is about, to group the designer's list: traffic, issues, jobs, infrastructure,
-     * databases, activity, health or external.
+     * databases, activity, AI usage (ai), health or external.
      */
     public function topic(): string
     {
         return match (true) {
+            str_starts_with($this->id, 'ai_') => 'ai',
             in_array($this->id, ['external_json', 'calendar'], true) => 'external',
             in_array($this->id, ['open_issues', 'users_affected', 'latest_issues', 'alert_feed'], true) => 'issues',
             str_contains($this->id, 'job') || str_starts_with($this->id, 'queue') || $this->id === 'scheduled_tasks' => 'jobs',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\OpenTelemetry\Actions\Concerns;
 
+use App\Domains\Ai\Support\AiKeyFingerprint;
 use App\Domains\Ingest\Http\Requests\IngestBatchRequest;
 use App\Domains\Ingest\Jobs\ProcessIngestBatch;
 use App\Domains\OpenTelemetry\Exceptions\TooManyEventsException;
@@ -142,7 +143,7 @@ trait MapsOtlpData
 
         foreach ($batches as $batch) {
             foreach (array_chunk($batch['events'], IngestBatchRequest::MAX_EVENTS) as $events) {
-                ProcessIngestBatch::dispatch($project->id, ['v' => 1, ...$batch['envelope'], 'events' => $events]);
+                ProcessIngestBatch::dispatch($project->id, ['v' => 1, ...$batch['envelope'], 'events' => AiKeyFingerprint::seal($project, $events)]);
             }
         }
     }

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Ai\Models\AiCall;
 use App\Domains\Health\Enums\HealthStatus;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Health\Models\HealthCheckHost;
@@ -359,6 +360,16 @@ describe('browser ingest', function () {
             ->assertJson(['accepted' => 1]);
 
         expect(Issue::count())->toBe(1);
+    });
+
+    it('refuses an AI call from a browser, which only the server token may send', function () {
+        $call = ['type' => 'ai_call', 'provider' => 'openai', 'model' => 'gpt-4.1', 'tokens' => ['input' => 10]];
+
+        $this->postJson('/api/ingest/browser?key='.$this->project->public_key, $this->batch([$call]), ['Origin' => 'https://app.example.test'])
+            ->assertUnprocessable();
+        $this->postJson('/api/ingest', $this->batch([$call]), $this->auth)->assertStatus(202);
+
+        expect(AiCall::query()->count())->toBe(1);
     });
 
     it('stores web vitals from a browser, drops absurd values and groups ids in the path', function () {

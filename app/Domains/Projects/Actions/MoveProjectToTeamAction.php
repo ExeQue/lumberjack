@@ -6,6 +6,9 @@ namespace App\Domains\Projects\Actions;
 
 use App\Domains\Administration\Actions\RecordAdminAuditAction;
 use App\Domains\Administration\Enums\AdminAction;
+use App\Domains\Ai\Models\AiBudget;
+use App\Domains\Ai\Models\AiPrice;
+use App\Domains\Projects\Exceptions\CurrencyMismatchException;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Actions\SaveScreenAction;
 use App\Domains\Screens\Data\WidgetScope;
@@ -16,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Moves a project, with all its data, to another team. Telemetry and project settings
- * carry only the project and go along; what tied it to the old team is let go: its
+ * carry only the project and go along, its own AI prices too; what tied it to the old team is let go: its
  * screens, its team-wide alert rules and channels, MCP tokens, and people not in the new team.
  */
 class MoveProjectToTeamAction
@@ -32,9 +35,20 @@ class MoveProjectToTeamAction
      */
     public function execute(Project $project, Team $target, string $slug, string $issuePrefix, User $by): Project
     {
+        if (self::currencyBlocks($project, $target)) {
+            throw new CurrencyMismatchException(__('projects.move_currency', ['from' => $project->team->currency, 'to' => $target->currency]));
+        }
+
         DB::transaction(function () use ($project, $target, $slug, $issuePrefix, $by): void {
             $project = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
-            $from = $project->team;
+            // Again under the locks: either team's currency may have changed since the check above.
+            $from = Team::query()->whereKey($project->team_id)->sharedLock()->firstOrFail();
+            $project->setRelation('team', $from);
+            $target = Team::query()->whereKey($target->id)->sharedLock()->firstOrFail();
+
+            if (self::currencyBlocks($project, $target)) {
+                throw new CurrencyMismatchException(__('projects.move_currency', ['from' => $from->currency, 'to' => $target->currency]));
+            }
 
             // Its own channels go with it; the old team's are no longer its to send to.
             DB::table('notification_channels')->where('project_id', $project->id)->update(['team_id' => $target->id]);
@@ -47,6 +61,9 @@ class MoveProjectToTeamAction
                 ->where(fn ($q) => $q->whereIn('alert_rule_id', DB::table('alert_rules')->where('project_id', $project->id)->select('id'))->whereIn('notification_channel_id', $staleChannels))
                 ->orWhere(fn ($q) => $q->whereIn('alert_rule_id', $staleRules)->whereIn('notification_channel_id', DB::table('notification_channels')->where('project_id', $project->id)->select('id')))
                 ->delete();
+
+            // Its own AI prices go with it; its old team's no longer apply.
+            DB::table('ai_prices')->where('project_id', $project->id)->update(['team_id' => $target->id]);
 
             // Tokens of the new team get no access by themselves.
             DB::table('mcp_token_project')->where('project_id', $project->id)->delete();
@@ -65,6 +82,16 @@ class MoveProjectToTeamAction
         $project->refresh()->setRelation('team', $target);
 
         return $project;
+    }
+
+    /**
+     * Whether the project's own AI prices or cost budgets, in its team's currency, would land
+     * in a team with another one.
+     */
+    public static function currencyBlocks(Project $project, Team $target): bool
+    {
+        return $project->team->currency !== $target->currency
+            && (AiPrice::query()->where('project_id', $project->id)->exists() || AiBudget::query()->whereProject($project)->whereCost()->exists());
     }
 
     /**

@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Domains\Ai\Models\AiKey;
+use App\Domains\Ai\Models\AiPrice;
+use App\Domains\Ai\Models\AiUsageHourly;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Models\QueueSample;
+use App\Domains\Mcp\Enums\McpArea;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Metrics\Http\Controllers\MetricsApiController;
 use App\Domains\Metrics\Http\Middleware\AuthenticateMetricsCredential;
@@ -366,5 +370,72 @@ describe('the Prometheus page', function () {
 
         $this->get("/api/v1/public/{$key}/metrics")->assertOk();
         expect(DB::table('projects')->whereNotNull('stats_key')->count())->toBe(1);
+    });
+});
+
+describe('AI usage', function () {
+    beforeEach(function () {
+        $this->project = Project::factory()->create(['slug' => 'shop']);
+        $this->project->team->update(['currency' => 'EUR']);
+        AiPrice::factory()->forTeamOf($this->project)->costing(3, 15)->create();
+        $tenants = AiKey::factory()->forProject($this->project)->ownedBy('tenant', 7)->create();
+        AiUsageHourly::factory()->forProject($this->project)->create(['hour' => now()->subHour(), 'calls' => 3, 'errors' => 1, 'input_tokens' => 1_000_000, 'output_tokens' => 0]);
+        AiUsageHourly::factory()->forKey($tenants)->create(['hour' => now()->subHour(), 'calls' => 2, 'input_tokens' => 2_000_000, 'output_tokens' => 100_000]);
+    });
+
+    it('serves cost in the team currency, split by payer', function () {
+        $this->withToken($this->createMetricsToken($this->project))
+            ->getJson('/api/v1/projects/shop/series/ai_cost?group_by=payer&interval=5m')
+            ->assertOk()
+            ->assertJsonPath('unit', 'currency')
+            ->assertJsonPath('currency', 'EUR')
+            ->assertJsonPath('interval', '1h')
+            ->assertJsonCount(48, 'points')
+            ->assertJsonPath('points.46', ['t' => now()->setTime(11, 0)->format('Y-m-d\TH:i:s\Z'), 'series' => 'customer', 'value' => 7.5])
+            ->assertJsonPath('points.47', ['t' => now()->setTime(11, 0)->format('Y-m-d\TH:i:s\Z'), 'series' => 'us', 'value' => 3]);
+    });
+
+    it('is refused to a token without AI access and to public stats', function () {
+        $key = $this->enablePublicStats($this->project);
+
+        $this->withToken($this->createMetricsTokenWithout(McpArea::Ai, $this->project))
+            ->getJson('/api/v1/projects/shop/series/ai_tokens_input')->assertForbidden();
+        $this->getJson("/api/v1/public/{$key}/projects/shop/series/ai_calls")
+            ->assertUnprocessable()->assertJsonValidationErrors('metric');
+    });
+
+    it('adds AI totals to the summary only where the token reads AI usage', function () {
+        $key = $this->enablePublicStats($this->project);
+
+        $this->withToken($this->createMetricsToken($this->project))->getJson('/api/v1/projects/shop/summary')
+            ->assertOk()
+            ->assertJsonPath('ai.currency', 'EUR')
+            ->assertJsonPath('ai.calls', 5)
+            ->assertJsonPath('ai.cost_ours', 3)
+            ->assertJsonPath('ai.cost_customer', 7.5);
+        $this->withToken($this->createMetricsTokenWithout(McpArea::Ai, $this->project))->getJson('/api/v1/projects/shop/summary')
+            ->assertOk()->assertJsonPath('ai', null);
+        $this->getJson("/api/v1/public/{$key}/projects/shop/summary")->assertOk()->assertJsonPath('ai', null);
+    });
+
+    it('exposes AI gauges of the last complete hour per environment, provider and model to a token that reads them', function () {
+        $labels = 'project="shop",environment="production",provider="anthropic",model="claude-sonnet-4-5"';
+        $key = $this->enablePublicStats($this->project);
+        // The hour still filling up, and the one before the last complete hour, count for neither.
+        AiUsageHourly::factory()->forProject($this->project)->create(['hour' => now()->startOfHour(), 'calls' => 50]);
+        AiUsageHourly::factory()->forProject($this->project)->create(['hour' => now()->subHours(2), 'calls' => 70]);
+
+        $content = $this->withToken($this->createMetricsToken($this->project))->get('/api/v1/metrics')->assertOk()->getContent();
+
+        expect($content)
+            ->toContain('# HELP lumberjack_ai_calls AI calls in the last complete hour, per status.')
+            ->toContain('# TYPE lumberjack_ai_calls gauge')
+            ->toContain("lumberjack_ai_calls{{$labels},status=\"ok\"} 4")
+            ->toContain("lumberjack_ai_calls{{$labels},status=\"error\"} 1")
+            ->toContain("lumberjack_ai_tokens{{$labels},direction=\"input\"} 3000000")
+            ->toContain("lumberjack_ai_cost{{$labels},payer=\"us\",currency=\"EUR\"} 3")
+            ->toContain("lumberjack_ai_cost{{$labels},payer=\"customer\",currency=\"EUR\"} 7.5")
+            ->and($this->get("/api/v1/public/{$key}/metrics")->assertOk()->getContent())->not->toContain('lumberjack_ai_calls{')
+            ->and($this->withToken($this->createMetricsTokenWithout(McpArea::Ai, $this->project))->get('/api/v1/metrics')->getContent())->not->toContain('lumberjack_ai_calls{');
     });
 });

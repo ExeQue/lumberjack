@@ -105,6 +105,12 @@ return [
         'open' => 'Open jobs in :project',
     ],
 
+    'ai' => [
+        'budget' => ['kind' => 'AI budget', 'open' => 'Open AI budgets'],
+        'errors' => ['kind' => 'AI calls failing', 'open' => 'Open the key\'s failed calls'],
+        'recovered' => ['kind' => 'AI calls working again', 'open' => 'Open the key'],
+    ],
+
     'weekly' => [
         'subject' => 'Weekly summary, :period',
         'title' => 'Your week, :period',

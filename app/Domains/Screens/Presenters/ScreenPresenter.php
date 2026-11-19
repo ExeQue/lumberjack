@@ -6,6 +6,8 @@ namespace App\Domains\Screens\Presenters;
 
 use App\Domains\Activity\Models\ActivityCount;
 use App\Domains\Activity\Models\ActivityLabel;
+use App\Domains\Ai\Models\AiBudget;
+use App\Domains\Ai\Models\AiKey;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Health\Models\HealthCheck;
@@ -30,6 +32,9 @@ use Illuminate\Database\Eloquent\Collection;
 
 class ScreenPresenter
 {
+    /** AI keys the designer offers to pick from per project, the latest used first. */
+    public const int AI_KEYS = 200;
+
     public function __construct(
         private readonly ProjectEnvironmentsQuery $environments,
     ) {
@@ -289,6 +294,9 @@ class ScreenPresenter
             // External values pick one; names, formats and the app's host, never a full URL or header.
             'data_sources' => DataSource::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->with('dataSourceConnection:id,url,kind,environment,name')->orderBy('name')->get(['uuid', 'project_id', 'name', 'group_path', 'format', 'shape', 'environment', 'data_source_connection_id'])
                 ->map(fn (DataSource $s): array => ['uuid' => $s->uuid, 'name' => $s->name, 'group' => $s->pickerGroup(), 'host' => $s->pickerHost(), 'format' => $s->format->value, 'shape' => $s->shape?->value, 'environment' => $s->environment !== '' && $s->dataSourceConnection?->isFor(ConnectionKind::App) !== false ? $s->environment : null, 'project' => $projects->find($s->project_id)?->name, 'project_uuid' => $projects->find($s->project_id)?->uuid, 'periods' => $s->dataSourceConnection !== null ? array_map(fn (Period $p): string => $p->value, $s->dataSourceConnection->kind->periods()) : null])->values()->all(),
+            // An AI budget's or key's widget picks one: by name, never a key's fingerprint.
+            'ai_budgets' => $this->aiBudgets($projects),
+            'ai_keys' => $this->aiKeys($projects),
             // Names a filter can pick from, so a queue, host, domain or database check is chosen, not
             // typed; per project uuid, so the designer offers only those of the screen's projects.
             'filters' => $filters = $this->filterNames($projects),
@@ -296,5 +304,38 @@ class ScreenPresenter
             'filter_labels' => $this->activityLabels($projects, $filters),
             'limits' => ['min_cols' => Screen::MIN_COLS, 'max_cols' => Screen::MAX_COLS, 'min_rows' => Screen::MIN_ROWS, 'max_rows' => Screen::MAX_ROWS, 'max_widgets' => WidgetSchema::MAX_WIDGETS],
         ];
+    }
+
+    /**
+     * The team's AI budgets by their titles, the keys those name looked up at once.
+     *
+     * @param  Collection<int, Project>  $projects
+     * @return list<array{uuid: string, name: string, project: string|null, project_uuid: string|null}>
+     */
+    private function aiBudgets(Collection $projects): array
+    {
+        $budgets = AiBudget::query()->whereProjectIn($projects)->with('targets')->get();
+        $fingerprints = array_values(array_unique(array_merge([], ...$budgets->map(fn (AiBudget $b): array => $b->fingerprints())->all())));
+        $keys = $fingerprints === [] ? new Collection() : AiKey::query()->whereProjectIn($projects)->whereFingerprint($fingerprints)->get();
+
+        return array_values($budgets
+            ->each(fn (AiBudget $b): AiBudget => $b->usingKeys($keys->where('project_id', $b->project_id)))
+            ->map(fn (AiBudget $b): array => ['uuid' => $b->uuid, 'name' => $b->title(), 'project' => $projects->find($b->project_id)?->name, 'project_uuid' => $projects->find($b->project_id)?->uuid])
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all());
+    }
+
+    /**
+     * The keys each project used most lately, AI_KEYS of each, in one query.
+     *
+     * @param  Collection<int, Project>  $projects
+     * @return list<array{uuid: string, name: string, provider: string|null, project: string|null, project_uuid: string|null}>
+     */
+    private function aiKeys(Collection $projects): array
+    {
+        $ranked = AiKey::query()->whereProjectIn($projects)->toBase()
+            ->select('*')->selectRaw('ROW_NUMBER() OVER (PARTITION BY project_id ORDER BY last_seen_at DESC NULLS LAST, id) AS rank_in_project');
+
+        return array_values(AiKey::query()->fromSub($ranked, 'ai_keys')->where('rank_in_project', '<=', self::AI_KEYS)->orderByRaw('last_seen_at DESC NULLS LAST')->orderBy('id')->get()
+            ->map(fn (AiKey $k): array => ['uuid' => $k->uuid, 'name' => $k->displayName(), 'provider' => $k->provider, 'project' => $projects->find($k->project_id)?->name, 'project_uuid' => $projects->find($k->project_id)?->uuid])->all());
     }
 }

@@ -139,6 +139,7 @@ export default defineConfig({
                     },
                     { text: 'Releases', link: '/docs/releases' },
                     { text: 'Activity', link: '/docs/activity' },
+                    { text: 'AI usage', link: '/docs/ai' },
                     { text: 'Health', link: '/docs/health' },
                     { text: 'Status screens', link: '/docs/screens' },
                     { text: 'Widgets', link: '/docs/widgets' },

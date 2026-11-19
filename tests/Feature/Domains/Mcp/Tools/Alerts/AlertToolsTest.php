@@ -50,12 +50,15 @@ beforeEach(function () {
 describe('reading alerts', function () {
     it('lists the team\'s rules and a project\'s own next to them', function () {
         $team = $this->toolResult($this->callTool('lj_mcp_secret', 'list_alert_rules')->assertOk());
-        expect(collect($team['rules'])->firstWhere('type', 'new_issue')['channels'])->toBe([$this->shared->id]);
+        expect(collect($team['rules'])->firstWhere('type', 'new_issue')['channels'])->toBe([$this->shared->id])
+            ->and(collect($team['rules'])->pluck('group', 'type')->only(['new_issue', 'queue_backlog', 'ai_budget'])->all())
+            ->toBe(['new_issue' => 'issues', 'queue_backlog' => 'queues', 'ai_budget' => 'ai']);
 
         AlertRule::factory()->for($this->project)->create(['type' => AlertRuleType::NewIssue, 'enabled' => false]);
         $project = $this->toolResult($this->callTool('lj_mcp_secret', 'list_alert_rules', ['project' => 'shop'])->assertOk());
 
-        expect(collect($project['rules'])->firstWhere('type', 'new_issue')['project']['enabled'])->toBeFalse();
+        expect(collect($project['rules'])->firstWhere('type', 'new_issue')['project']['enabled'])->toBeFalse()
+            ->and(collect($project['rules'])->firstWhere('type', 'new_issue')['group'])->toBe('issues');
     });
 
     it('lists channels and what sends to them, never their URL', function () {

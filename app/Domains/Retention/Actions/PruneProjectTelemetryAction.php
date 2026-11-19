@@ -34,9 +34,14 @@ class PruneProjectTelemetryAction
         $days = fn (RetentionCategory $c, ?string $job = null, ?int $channel = null): ?int => $this->resolve->execute($c, $project, $job, $channel, $policies)->days;
         $deleted = array_fill_keys(array_map(fn (RetentionCategory $c): string => $c->value, RetentionCategory::forTeams()), 0);
 
+        // AI budgets count this month and look back once at the last one, from the totals and the
+        // keys (who pays): those are kept from the start of last month whatever their retention.
+        $aiFloor = (int) ceil(now()->subMonthNoOverflow()->startOfMonth()->diffInDays(now()));
+
         foreach (RetentionCategory::forTeams() as $category) {
             $deleted[$category->value] = match ($category) {
                 RetentionCategory::JobRuns, RetentionCategory::ScheduledTaskRuns, RetentionCategory::CommandRuns, RetentionCategory::Logs => 0,
+                RetentionCategory::AiUsageHourly, RetentionCategory::AiUsageDaily => $this->prune($project, $category, $this->longer($days($category), $aiFloor)),
                 default => $this->prune($project, $category, $days($category)),
             };
         }
@@ -52,6 +57,9 @@ class PruneProjectTelemetryAction
             $statuses = $failed[$category->value];
             $deleted[$category->value] += $this->prune($project, $category, $this->longer($occurrences, $days($category)), fn (Builder $q) => $q->whereIn('status', $statuses));
         }
+
+        // A key is forgotten once neither total holds a call of it any more.
+        $this->prune($project, RetentionCategory::AiUsageDaily, $this->longer($this->longer($days(RetentionCategory::AiUsageDaily), $days(RetentionCategory::AiUsageHourly)), $aiFloor), table: 'ai_keys', column: 'last_seen_at');
 
         $overridden = $policies->filter(fn (RetentionPolicy $p): bool => $p->project_id === $project->id && $p->job_class !== null)->pluck('job_class');
 

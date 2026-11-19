@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Domains\Ai\Models\AiBudget;
 use App\Domains\DataSources\Models\DataSource;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Enums\ScreenFit;
@@ -28,7 +29,7 @@ class ShowcaseWidgetsSeeder extends Seeder
     /** Eight columns as on a 1920 x 1080 TV with four rows; the gallery has more rows of the same size. */
     private const int COLS = 8;
 
-    private const int ROWS = 19;
+    private const int ROWS = 22;
 
     private const string TIMEZONE = 'Europe/Copenhagen';
 
@@ -55,7 +56,7 @@ class ShowcaseWidgetsSeeder extends Seeder
             'theme' => ScreenTheme::Dark,
             'timezone' => self::TIMEZONE,
             'scope' => ['projects' => [], 'environment' => 'production', 'period' => '24h'],
-            'widgets' => $this->widgets($project, $calendar),
+            'widgets' => $this->widgets($project, $calendar, $team),
         ]);
     }
 
@@ -130,7 +131,7 @@ class ShowcaseWidgetsSeeder extends Seeder
      *
      * @return list<array<string, mixed>>
      */
-    private function widgets(?Project $project, ?DataSource $calendar): array
+    private function widgets(?Project $project, ?DataSource $calendar, Team $team): array
     {
         $widget = fn (string $id, string $type, ?string $source, int $x, int $y, int $w, int $h, ?string $title = null, array $options = [], array $scope = []): array => [
             'id' => $id, 'type' => $type, 'source' => $source, 'rotate' => [], 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
@@ -204,6 +205,23 @@ class ShowcaseWidgetsSeeder extends Seeder
             // QR codes in a style of their own: modules, eyes apart, colors and a filter.
             $widget('qr-styled', 'qr', null, 4, 17, 2, 2, options: ['url' => 'https://lumberjack.test', 'caption' => 'Status page', 'qr_module' => 'dots-medium', 'qr_eyes' => 'custom', 'qr_outer' => 'circle', 'qr_inner' => 'heart', 'qr_filters' => ['mixed-rotation']]),
             $widget('qr-colors', 'qr', null, 6, 17, 2, 2, options: ['url' => 'https://lumberjack.test', 'caption' => 'Our docs', 'qr_logo' => false, 'qr_color' => '#1e1b4b', 'qr_background' => '#ffffff', 'qr_module' => 'flowing-soft', 'qr_eyes' => 'leaf']),
+
+            // AI usage, from ShowcaseAiSeeder and ShowcaseAiBudgetsSeeder.
+            $widget('stat-ai-cost', 'stat', 'ai_cost', 0, 19, 2, 1, options: ['compare' => 'previous', 'align' => 'center']),
+            $widget('stat-ai-tokens', 'stat', 'ai_tokens', 2, 19, 1, 1, options: [...$plain, ...$centered]),
+            $widget('stat-ai-budget', 'stat', 'ai_budget', 3, 19, 2, 1, options: $budget = ['ai_budget' => $this->budget($team), 'align' => 'center']),
+            $widget('gauge-ai-budget', 'gauge', 'ai_budget', 5, 19, 1, 1, options: ['ai_budget' => $budget['ai_budget']]),
+            $widget('gauge-ai-error-rate', 'gauge', 'ai_error_rate', 6, 19, 1, 1),
+            $widget('chart-ai-cost', 'chart', 'ai_cost', 0, 20, 4, 2, 'AI cost per model', ['legend' => true]),
+            $widget('list-ai-spenders', 'list', 'ai_spenders', 4, 20, 4, 2, options: ['show_project' => true]),
         ];
+    }
+
+    /** The budget the AI budget widgets show: the team's whole-project one, else its first. */
+    private function budget(Team $team): ?string
+    {
+        $budgets = AiBudget::query()->whereIn('project_id', $team->projects()->pluck('id'))->orderBy('id')->get(['uuid', 'name']);
+
+        return ($budgets->firstWhere('name', 'Monthly AI spend') ?? $budgets->first())?->uuid;
     }
 }

@@ -35,6 +35,7 @@ return [
         'scheduled_tasks' => ['label' => 'Scheduled tasks', 'description' => 'A scheduled task fails or is missed. Told here instead of under new issues.'],
         'agents' => ['label' => 'Agents', 'description' => 'An agent stops sending its heartbeat.'],
         'releases' => ['label' => 'Releases', 'description' => 'A server reports a release for the first time.'],
+        'ai' => ['label' => 'AI budgets and errors', 'description' => 'An AI budget passes a threshold or is on course to go over, and an AI key\'s calls fail too often.'],
     ],
     'push' => [
         'title' => 'Browser notifications',
@@ -257,6 +258,7 @@ return [
             'jobs' => 'Jobs',
             'logs' => 'Logs',
             'activity' => 'Activity',
+            'ai' => 'AI usage',
             'health' => 'Health',
             'infrastructure' => 'Infrastructure',
             'alerts' => 'Alerts',

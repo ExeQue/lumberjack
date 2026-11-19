@@ -16,6 +16,33 @@ export function formatCompact(value: number): string {
     }).format(value);
 }
 
+/**
+ * An amount in an ISO 4217 currency, to its minor units (2 for EUR, 0 for JPY), or to the
+ * fraction digits asked for. Under one unit it keeps two more digits, so the cost of a few
+ * calls does not read as zero.
+ */
+export function formatMoney(
+    value: number,
+    currency: string,
+    fractionDigits?: number,
+): string {
+    const minor =
+        new Intl.NumberFormat(locale(), {
+            style: 'currency',
+            currency,
+        }).resolvedOptions().maximumFractionDigits ?? 2;
+    const digits =
+        fractionDigits ??
+        (value !== 0 && Math.abs(value) < 1 ? minor + 2 : minor);
+
+    return new Intl.NumberFormat(locale(), {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: fractionDigits ?? minor,
+        maximumFractionDigits: digits,
+    }).format(value);
+}
+
 /** Bytes in B, KB, MB, GB or TB (1024 each), one decimal past bytes. */
 export function formatBytes(bytes: number, fractionDigits?: number): string {
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];

@@ -53,26 +53,33 @@ this server or the network behind it. Redirects are not followed. Set
 A rule is on or off, sends to the channels you pick, and can be limited to some
 environments (comma separated, empty for all). There is one rule per type:
 
-| Rule                   | Sends                                                                   | Default |
-| ---------------------- | ----------------------------------------------------------------------- | ------- |
-| New issue              | The first occurrence of a new issue.                                    | On      |
-| Regression             | A new occurrence of a resolved issue, or an ignored issue coming back.  | On      |
-| Escalation             | An issue that suddenly happens far more often than usual.               | On      |
-| Note                   | Every note written on an issue, by a person or an agent.                | Off     |
-| Resolved or ignored    | Every issue someone resolves or ignores.                                | Off     |
-| New release            | An environment reports a release for the first time.                    | On      |
-| Queue backlog          | A queue with too many jobs waiting, or one waiting too long.            | On      |
-| Health check degraded  | A [health check](./health#alerts) that keeps warning or starts failing. | On      |
-| Health check down      | A health check that keeps failing.                                      | On      |
-| Health check recovered | A health check that is ok again.                                        | On      |
-| Maintenance overrun    | A [maintenance window](./health#expected-end-and-overrun) past its end. | On      |
-| Weekly summary         | Each project's past week, at the day and time you pick.                 | Off     |
+| Rule                   | Sends                                                                      | Default |
+| ---------------------- | -------------------------------------------------------------------------- | ------- |
+| New issue              | The first occurrence of a new issue.                                       | On      |
+| Regression             | A new occurrence of a resolved issue, or an ignored issue coming back.     | On      |
+| Escalation             | An issue that suddenly happens far more often than usual.                  | On      |
+| Note                   | Every note written on an issue, by a person or an agent.                   | Off     |
+| Resolved or ignored    | Every issue someone resolves or ignores.                                   | Off     |
+| New release            | An environment reports a release for the first time.                       | On      |
+| Queue backlog          | A queue with too many jobs waiting, or one waiting too long.               | On      |
+| Health check degraded  | A [health check](./health#alerts) that keeps warning or starts failing.    | On      |
+| Health check down      | A health check that keeps failing.                                         | On      |
+| Health check recovered | A health check that is ok again.                                           | On      |
+| Maintenance overrun    | A [maintenance window](./health#expected-end-and-overrun) past its end.    | On      |
+| Weekly summary         | Each project's past week, at the day and time you pick.                    | Off     |
+| AI budget              | An [AI budget](./ai#budgets) passing 80% or 100%, or on course to go over. | On      |
+| AI error rate          | An AI key whose recent calls fail too often.                               | On      |
 
 Alerts your own code sends have their own topics, see [Custom alerts](#custom-alerts).
 
 On a team that existed before the upgrade, **Maintenance overrun** starts on but with no
 channels, and **Weekly summary** off with none, as new shared channels are not added to
 it. Pick their channels to hear from them.
+
+The rules are listed in groups: Issues, Releases, Health, Queues and maintenance, AI,
+Summary and Custom alerts (the [topics](#custom-alerts)). Each group starts folded and
+says how many of its rules are on, such as 3 of 5 on; the groups you open stay open in your browser. The
+search above them finds rules by name or description and opens the groups they are in.
 
 A rule shows how many channels it sends to. Click the number to pick them, grouped by
 type.
@@ -139,6 +146,35 @@ settings list them under the rules. The alert names the thresholds it used, with
 "(this queue)" when they are the queue's own. Setting them needs the right to change
 the project.
 
+### AI budget
+
+Checks every [AI budget](./ai#budgets) of the project every 5 minutes. It tells once per
+budget and period (day or month) as the budget passes each of its thresholds, **80%** and
+**100%** by default; tick 50% too, or untick any, on the rule. When several are passed
+at once it tells only the highest. With **On course to go over** on (the default) it also
+tells once per period when the budget, at its pace so far, would be over by the period's
+end; it waits until a tenth of the period has gone by, so one busy minute after midnight
+does not count. The period just ended is measured once more to its end, five minutes after
+it, so spend in its last minutes is told too; that alert names the day or month it was
+about. During a [maintenance window](#maintenance) it tells nothing; what was passed
+meanwhile within the current period is told after, also an alert still waiting to go out
+when it began. Turning the rule off forgets what it
+told, so it starts over when turned on again. A budget counts every environment, so the
+rule has no environments setting. On a team from before the upgrade it is on but has no
+channels until you pick them.
+
+### AI error rate
+
+Every minute, per AI key, the share of its calls in the last **15 minutes** that failed.
+It fires when more than **50%** failed out of at least **10** calls (change any of the
+three on the rule), so a single failure on a quiet key says nothing. With environments set
+on the rule it counts only their calls. A window of an hour or more is counted from the
+hourly totals for its whole hours. It sends once when it
+starts and once when the key works again (or goes quiet), and starts again at most once
+every 30 minutes. Calls without a key are not counted. Any maintenance window of the
+project mutes it, whatever its environment. On a team from before the upgrade it is on
+but has no channels until you pick them.
+
 ### Maintenance overrun
 
 Fires as soon as a [maintenance window](./health#maintenance-windows) is still open past
@@ -193,8 +229,8 @@ the project.
 
 Your app can send its own alerts, with the
 [Laravel library](./libraries) or as an [`alert` event](./api#alert-events). The code
-names a **topic**; which channels a topic reaches is picked under **Custom alert
-topics** on the Alerts page, so moving an alert to another channel needs no deploy.
+names a **topic**; which channels a topic reaches is picked in the **Custom alerts**
+group of the rules on the Alerts page, so moving an alert to another channel needs no deploy.
 
 - A topic appears the first time an app sends to it, without channels. **Create topic**
   makes one ahead of time. An alert with no topic goes to `default`.
@@ -249,7 +285,7 @@ A webhook channel POSTs JSON to your endpoint.
 
 `new_issue`, `regression`, `escalation`, `status_change`, `note`, `bulk_status_change`,
 `queue_backlog`, `health_degraded`, `health_down`, `health_recovered`,
-`maintenance_overrun`, `weekly_summary`.
+`maintenance_overrun`, `weekly_summary`, `ai_budget`, `ai_error_rate`.
 
 Every body except a `test` also has `maintenance`: the window the alert was sent
 during, or `null` outside one.
@@ -308,6 +344,69 @@ with `state` either `started` or `recovered`:
         "url": "https://lumberjack.example.com/projects/.../jobs"
     },
     "thresholds": { "size": 1000, "age_minutes": 10, "sustain_minutes": 5 }
+}
+```
+
+An AI budget carries the budget and where it stands in its period. `threshold` is the
+share passed, in percent, or `null` when it is on course to go over. What it counts is in
+`keys` (each with its id, null for a key the project forgot, short id, name and label;
+never the key or its fingerprint), `owners` or `actors` (each a type and an id), by its
+scope; the others are empty. `currency` is `null` for a token budget, and `projected` is
+`null` for a period that ended:
+
+```json
+{
+    "version": "1",
+    "sent_at": "2026-11-16T10:05:00+00:00",
+    "event": "ai_budget",
+    "project": { "id": "...", "slug": "shop", "name": "Shop" },
+    "budget": {
+        "id": "...",
+        "name": "Key owners tenant:7, tenant:12",
+        "scope": "owner",
+        "keys": [],
+        "owners": [
+            { "type": "tenant", "id": "7" },
+            { "type": "tenant", "id": "12" }
+        ],
+        "actors": [],
+        "period": "month",
+        "basis": "cost",
+        "currency": "EUR",
+        "threshold": 80,
+        "start": "2026-11-01T00:00:00+00:00",
+        "end": "2026-12-01T00:00:00+00:00",
+        "spent": 82.5,
+        "amount": 100,
+        "percent": 82.5,
+        "projected": 165,
+        "url": "https://lumberjack.example.com/projects/.../ai/budgets"
+    }
+}
+```
+
+An AI error rate carries the key (never the key itself, only its id, short id, name and label),
+with `state` either `started` or `recovered`, and the rule's thresholds:
+
+```json
+{
+    "version": "1",
+    "sent_at": "2026-11-16T10:05:00+00:00",
+    "event": "ai_error_rate",
+    "project": { "id": "...", "slug": "shop", "name": "Shop" },
+    "key": {
+        "id": "...",
+        "short_id": "3f9a12bc",
+        "name": "Shop assistant",
+        "label": "prod-primary",
+        "provider": "openai",
+        "state": "started",
+        "calls": 40,
+        "errors": 30,
+        "since": "2026-11-16T10:01:00+00:00",
+        "url": "https://lumberjack.example.com/projects/.../ai/keys/...?errors=1"
+    },
+    "thresholds": { "minutes": 15, "rate": 50, "min_calls": 10 }
 }
 ```
 
@@ -469,14 +568,16 @@ An SDK may verify these for you; see its docs.
 
 ## Limits
 
-| What                                   | Limit                                                                           |
-| -------------------------------------- | ------------------------------------------------------------------------------- |
-| **Send test**                          | 6 a minute per person                                                           |
-| New issue and Escalation messages      | 1 per issue, rule and channel every 30 minutes                                  |
-| Queue backlog messages                 | 1 new backlog per queue every 30 minutes                                        |
-| Maintenance overrun messages           | 1 per window per **Repeat overrun alert** interval (5–1440 minutes, default 30) |
-| Weekly summary messages                | 1 per channel and rule a week                                                   |
-| Issues, routes and outages per summary | 5 each, per project                                                             |
-| Issues named in a bulk summary message | 10                                                                              |
-| Custom alerts sent                     | 60 a minute per project, the rest only listed                                   |
-| Discord sender name                    | 80 characters                                                                   |
+| What                                   | Limit                                                                              |
+| -------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Send test**                          | 6 a minute per person                                                              |
+| New issue and Escalation messages      | 1 per issue, rule and channel every 30 minutes                                     |
+| Queue backlog messages                 | 1 new backlog per queue every 30 minutes                                           |
+| Maintenance overrun messages           | 1 per window per **Repeat overrun alert** interval (5 to 1440 minutes, default 30) |
+| Weekly summary messages                | 1 per channel and rule a week                                                      |
+| AI budget messages                     | 1 per budget, threshold and period, and 1 projected overrun per budget and period  |
+| AI error rate messages                 | 1 new failing streak per key every 30 minutes                                      |
+| Issues, routes and outages per summary | 5 each, per project                                                                |
+| Issues named in a bulk summary message | 10                                                                                 |
+| Custom alerts sent                     | 60 a minute per project, the rest only listed                                      |
+| Discord sender name                    | 80 characters                                                                      |

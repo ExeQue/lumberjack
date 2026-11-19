@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Domains\Ai\Models\AiKey;
+use App\Domains\Ai\Models\AiUsageDaily;
+use App\Domains\Ai\Models\AiUsageHourly;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Jobs\Models\JobRun;
@@ -102,6 +105,38 @@ describe('pruning', function () {
 
         expect($this->retentionRows(RetentionCategory::HostSamples))->toBe(1)
             ->and($this->retentionRows(RetentionCategory::AlertSends))->toBe(1);
+    });
+
+    it('forgets an AI key once neither AI usage total holds a call of it', function () {
+        RetentionPolicy::factory()->create(['project_id' => $this->project->id, 'category' => RetentionCategory::AiUsageDaily, 'days' => 100]);
+        RetentionPolicy::factory()->create(['project_id' => $this->project->id, 'category' => RetentionCategory::AiUsageHourly, 'days' => 200]);
+        $gone = AiKey::factory()->forProject($this->project)->lastSeen(now()->subDays(201))->create();
+        $kept = AiKey::factory()->forProject($this->project)->lastSeen(now()->subDays(150))->create();
+        $elsewhere = AiKey::factory()->lastSeen(now()->subDays(500))->create();
+
+        app(PruneProjectTelemetryAction::class)->execute($this->project);
+
+        expect(AiKey::query()->orderBy('id')->pluck('id')->all())->toBe([$kept->id, $elsewhere->id])
+            ->and($gone->fresh())->toBeNull();
+    });
+
+    it('keeps the AI totals and keys from the start of last month, which AI budgets count', function () {
+        $this->travelTo('2026-11-20 12:00:00');
+
+        foreach ([RetentionCategory::AiUsageHourly, RetentionCategory::AiUsageDaily] as $category) {
+            RetentionPolicy::factory()->create(['project_id' => $this->project->id, 'category' => $category, 'days' => 2]);
+        }
+
+        $hours = [AiUsageHourly::factory()->forProject($this->project)->create(['hour' => '2026-10-01 00:00:00']), AiUsageHourly::factory()->forProject($this->project)->create(['hour' => '2026-09-29 23:00:00'])];
+        $days = [AiUsageDaily::factory()->forProject($this->project)->create(['day' => '2026-10-01']), AiUsageDaily::factory()->forProject($this->project)->create(['day' => '2026-09-29'])];
+        $keys = [AiKey::factory()->forProject($this->project)->lastSeen(now()->parse('2026-10-01 01:00:00'))->create(), AiKey::factory()->forProject($this->project)->lastSeen(now()->parse('2026-09-29 12:00:00'))->create()];
+
+        app(PruneProjectTelemetryAction::class)->execute($this->project);
+
+        foreach ([$hours, $days, $keys] as [$kept, $pruned]) {
+            expect($kept->fresh())->not->toBeNull()
+                ->and($pruned->fresh())->toBeNull();
+        }
     });
 
     it('keeps a failed job run as long as occurrences are kept', function () {

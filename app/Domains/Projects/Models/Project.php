@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Projects\Models;
 
+use App\Domains\Ai\Enums\AiPayer;
+use App\Domains\Ai\Models\AiBudget;
+use App\Domains\Ai\Models\AiKey;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSource;
@@ -41,6 +44,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string $token_hash
  * @property string $token_last_four
  * @property string $public_key
+ * @property string $ai_key_secret what AI key fingerprints are made with; never rotated
+ * @property AiPayer $ai_default_payer who pays for an AI key that does not say
  * @property list<string>|null $allowed_origins
  * @property list<string>|null $scrub_keys
  * @property string|null $stats_key
@@ -50,8 +55,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['team_id', 'name', 'slug', 'issue_prefix', 'token_hash', 'token_last_four', 'public_key', 'allowed_origins', 'scrub_keys', 'stats_key', 'stats_include_titles', 'maintenance_expected_minutes', 'maintenance_repeat_minutes'])]
-#[Hidden(['token_hash'])]
+#[Fillable(['team_id', 'name', 'slug', 'issue_prefix', 'token_hash', 'token_last_four', 'public_key', 'ai_key_secret', 'ai_default_payer', 'allowed_origins', 'scrub_keys', 'stats_key', 'stats_include_titles', 'maintenance_expected_minutes', 'maintenance_repeat_minutes'])]
+#[Hidden(['token_hash', 'ai_key_secret'])]
 #[UseFactory(ProjectFactory::class)]
 class Project extends Model
 {
@@ -60,7 +65,7 @@ class Project extends Model
     use HasUuids;
 
     /** The columns' defaults, so a project created in this request knows them too. */
-    protected $attributes = ['maintenance_expected_minutes' => 30, 'maintenance_repeat_minutes' => 30];
+    protected $attributes = ['maintenance_expected_minutes' => 30, 'maintenance_repeat_minutes' => 30, 'ai_default_payer' => 'us'];
 
     /** @return list<string> */
     public function uniqueIds(): array
@@ -79,6 +84,8 @@ class Project extends Model
             'allowed_origins' => 'array',
             'scrub_keys' => 'array',
             'stats_include_titles' => 'boolean',
+            'ai_key_secret' => 'encrypted',
+            'ai_default_payer' => AiPayer::class,
         ];
     }
 
@@ -112,6 +119,18 @@ class Project extends Model
     public function scheduledTasks(): HasMany
     {
         return $this->hasMany(ScheduledTask::class);
+    }
+
+    /** @return HasMany<AiKey, $this> */
+    public function aiKeys(): HasMany
+    {
+        return $this->hasMany(AiKey::class);
+    }
+
+    /** @return HasMany<AiBudget, $this> */
+    public function aiBudgets(): HasMany
+    {
+        return $this->hasMany(AiBudget::class);
     }
 
     /** @return HasMany<HealthCheck, $this> */

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domains\Alerts\Notifications;
 
 use App\Domains\Alerts\Contracts\Alert;
+use App\Domains\Alerts\Data\AiBudgetAlert;
+use App\Domains\Alerts\Data\AiErrorRateAlert;
 use App\Domains\Alerts\Data\BulkStatusChangeAlert;
 use App\Domains\Alerts\Data\CustomAlertMessage;
 use App\Domains\Alerts\Data\HealthCheckAlert;
@@ -58,6 +60,8 @@ class AlertSummaryNotification extends Notification
             $this->alert instanceof BulkStatusChangeAlert => $this->bulkCard($this->alert),
             $this->alert instanceof CustomAlertMessage => $this->customCard($this->alert),
             $this->alert instanceof WeeklySummaryAlert => $this->weeklyCard($this->alert),
+            $this->alert instanceof AiBudgetAlert => $this->aiCard($this->alert, $this->alert->budget->project->name, $this->alert->threshold !== null && $this->alert->threshold >= 100 ? 'red' : 'amber', 'mail.ai.budget'),
+            $this->alert instanceof AiErrorRateAlert => $this->aiCard($this->alert, $this->alert->project->name, $this->alert->recovered ? 'green' : 'red', $this->alert->recovered ? 'mail.ai.recovered' : 'mail.ai.errors'),
             default => $this->genericCard(),
         };
     }
@@ -223,6 +227,28 @@ class AlertSummaryNotification extends Notification
             lead: trans_choice('mail.weekly.lead', count($alert->projects)),
             after: new HtmlString(implode('', $sections)),
             button: ['label' => (string) __('alerts.open_issue'), 'url' => $alert->url],
+            reasons: $this->reasons,
+        );
+    }
+
+    /**
+     * An AI budget filling up, or a key whose calls fail: the headline as the kind, the
+     * budget or key as the title.
+     */
+    private function aiCard(AiBudgetAlert|AiErrorRateAlert $alert, string $project, string $tone, string $key): MailCard
+    {
+        $summary = $alert->summary();
+
+        return new MailCard(
+            subject: MailCard::subject($project, $summary['title'].': '.$summary['subject']),
+            preheader: implode(' ', $summary['body']),
+            title: $summary['subject'],
+            kind: (string) __($key.'.kind'),
+            tone: $tone,
+            pill: $project,
+            lead: implode(' ', $summary['body']),
+            facts: $alert->facts(),
+            button: ['label' => (string) __($key.'.open'), 'url' => $alert->url()],
             reasons: $this->reasons,
         );
     }

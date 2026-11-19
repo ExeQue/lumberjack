@@ -4,15 +4,20 @@ declare(strict_types=1);
 
 namespace App\Domains\Metrics\Queries;
 
+use App\Domains\Ai\Enums\AiPayer;
+use App\Domains\Ai\Models\AiKey;
+use App\Domains\Ai\Queries\AiCostQuery;
 use App\Domains\Metrics\Data\MetricFilter;
 use App\Domains\Metrics\Data\MetricWindow;
 use App\Domains\Metrics\Enums\Metric;
 use App\Domains\Metrics\Enums\MetricGroup;
 use App\Domains\Performance\Queries\RouteStatisticsQuery;
 use App\Domains\Performance\Support\RequestTraffic;
+use App\Domains\Projects\Models\Project;
 use App\Domains\Shared\Support\Sampling;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use LogicException;
 
 /**
@@ -28,7 +33,9 @@ use LogicException;
  * of reported health checks: a check's largest figure per bucket (several hosts report
  * the same database), summed over checks, and the highest share of connections in use.
  * Activity reads its hourly counts when the buckets are whole hours, the activity itself
- * (kept for less time) when they are shorter.
+ * (kept for less time) when they are shorter. AI usage reads its hourly totals (the daily
+ * ones with an actor) through AiCostQuery, priced as on the AI pages, so its buckets are
+ * whole hours (or days).
  */
 class MetricSeriesQuery
 {
@@ -38,14 +45,20 @@ class MetricSeriesQuery
     /** Series name for rows without a value of the split, e.g. no environment. */
     public const string NONE = '(none)';
 
+    public function __construct(
+        private readonly AiCostQuery $aiCosts,
+    ) {
+    }
+
     /**
      * @return list<array{t: string, series: string, value: float|null}>
      */
     public function series(Metric $metric, MetricFilter $filter, MetricWindow $window, int $top = self::TOP): array
     {
         $group = $filter->groupBy !== null && in_array($filter->groupBy, $metric->groups(), true) ? $filter->groupBy : null;
+        $window = $this->window($metric, $filter, $window);
 
-        $rows = match ($metric) {
+        $rows = $metric->isAi() ? $this->ai($metric, $filter, $window, $group) : match ($metric) {
             Metric::Apdex => $this->apdex($filter, $window, $group),
             Metric::QueueSize, Metric::QueueWorkers => $this->queueSeries($metric, $filter, $window, $group),
             Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed => $this->databaseSeries($metric, $filter, $window, $group),
@@ -57,7 +70,7 @@ class MetricSeriesQuery
 
     public function value(Metric $metric, MetricFilter $filter, MetricWindow $window): ?float
     {
-        $value = match ($metric) {
+        $value = $metric->isAi() ? ($this->ai($metric, $filter, $this->window($metric, $filter, $window), null, bucketed: false)[0]['value'] ?? null) : match ($metric) {
             Metric::Apdex => $this->apdex($filter, $window, null, bucketed: false)[0]['value'] ?? null,
             Metric::QueueSize, Metric::QueueWorkers => $this->queueNow($metric, $filter, $window),
             Metric::CpuLoad, Metric::MemoryUsed, Metric::DiskUsed => $this->hostNow($metric, $filter, $window),
@@ -70,6 +83,21 @@ class MetricSeriesQuery
         };
 
         return $value !== null ? $this->round($metric, (float) $value) : ($metric->isCount() ? 0.0 : null);
+    }
+
+    /**
+     * The window as the metric is served: AI usage is summed per hour (per day with an
+     * actor), so its buckets are whole hours (or days).
+     */
+    public function window(Metric $metric, MetricFilter $filter, MetricWindow $window): MetricWindow
+    {
+        if (! $metric->isAi()) {
+            return $window;
+        }
+
+        $step = $this->aiDaily($filter) ? 86400 : 3600;
+
+        return new MetricWindow($window->from, $window->to, (int) ceil($window->bucketSeconds / $step) * $step);
     }
 
     /**
@@ -176,7 +204,8 @@ class MetricSeriesQuery
                 $this->column($group, nullableEnvironment: true),
             ],
             Metric::Activity => $this->activity($filter, $window, $group),
-            Metric::Apdex, Metric::QueueSize, Metric::QueueWorkers, Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed => throw new LogicException("{$metric->value} has its own query."),
+            Metric::Apdex, Metric::QueueSize, Metric::QueueWorkers, Metric::DbSize, Metric::DbConnections, Metric::DbConnectionsUsed,
+            Metric::AiCalls, Metric::AiErrors, Metric::AiTokensInput, Metric::AiTokensOutput, Metric::AiTokensCacheRead, Metric::AiTokensCacheWrite, Metric::AiTokensReasoning, Metric::AiCost => throw new LogicException("{$metric->value} has its own query."),
         };
     }
 
@@ -206,6 +235,146 @@ class MetricSeriesQuery
                 default => null,
             },
         ];
+    }
+
+    /**
+     * AI usage per bucket and series, summed over the projects. Cost is the payer's share
+     * when the filter names one; split by payer, each side is its own series.
+     *
+     * ponytail: one AiCostQuery per project; the API asks for one, a screen for a few.
+     *
+     * @return list<array{bucket: int, series: string, value: float}>
+     */
+    private function ai(Metric $metric, MetricFilter $filter, MetricWindow $window, ?MetricGroup $group, bool $bucketed = true): array
+    {
+        $daily = $this->aiDaily($filter);
+        // The first bucket counts whole; a day's totals count the whole day.
+        $from = $window->from->setTimestamp($window->buckets()[0]);
+        $until = $daily ? $window->to->subSecond()->startOfDay()->addDay() : $window->to;
+        $byModel = $filter->provider !== null || $filter->model !== null || in_array($group, [MetricGroup::Provider, MetricGroup::Model], true);
+        $by = array_values(array_filter([
+            $bucketed ? 'bucket' : null,
+            $byModel ? 'model' : null,
+            match ($group) {
+                MetricGroup::Environment => 'environment',
+                MetricGroup::Key => 'fingerprint',
+                MetricGroup::Owner => 'owner',
+                MetricGroup::Actor => 'actor',
+                default => null,
+            },
+        ]));
+        $only = array_filter(['owner' => self::references($filter->owner), 'actor' => self::references($filter->actor)]);
+        $sums = [];
+
+        foreach (Project::query()->whereKey($filter->projectIds)->get() as $project) {
+            if ($filter->key !== null) {
+                $only['fingerprint'] = array_values($project->aiKeys()->whereNamed($filter->key)->pluck('fingerprint')->map(strval(...))->all());
+            }
+
+            $rows = $this->aiCosts->get($project, $daily ? AiCostQuery::DAILY : AiCostQuery::HOURLY, $from, $until, $filter->environment, $by, $only, $window->bucketSeconds);
+            $fingerprints = array_values(array_filter(array_column($rows, 'fingerprint')));
+            $keys = $group === MetricGroup::Key && $fingerprints !== []
+                ? $project->aiKeys()->whereFingerprint($fingerprints)->get()->keyBy('fingerprint')
+                : collect();
+
+            foreach ($rows as $row) {
+                if (! self::matches($row['provider'], $filter->provider) || ! self::matches($row['model'], $filter->model)) {
+                    continue;
+                }
+
+                $values = $metric === Metric::AiCost && $group === MetricGroup::Payer
+                    ? [AiPayer::Us->value => $row['cost_ours'], AiPayer::Customer->value => $row['cost_customer']]
+                    : [self::aiSeries($row, $group, $keys->all()) => self::aiValue($metric, $row, $filter->payer)];
+
+                foreach ($values as $series => $value) {
+                    $sums[(int) $row['bucket']][$series] = ($sums[(int) $row['bucket']][$series] ?? 0.0) + $value;
+                }
+            }
+        }
+
+        $points = [];
+
+        foreach ($sums as $bucket => $series) {
+            foreach ($series as $name => $value) {
+                $points[] = ['bucket' => $bucket, 'series' => (string) $name, 'value' => $value];
+            }
+        }
+
+        return $points;
+    }
+
+    /**
+     * With an actor, AI usage reads the daily totals, the only ones that carry it.
+     */
+    private function aiDaily(MetricFilter $filter): bool
+    {
+        return $filter->actor !== null || $filter->groupBy === MetricGroup::Actor;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @param  array<string, AiKey>  $keys  by fingerprint
+     */
+    private static function aiSeries(array $row, ?MetricGroup $group, array $keys): string
+    {
+        $reference = fn (string $prefix): string => ($row[$prefix.'_type'] ?? '') !== '' ? $row[$prefix.'_type'].':'.$row[$prefix.'_id'] : '';
+        $fingerprint = (string) ($row['fingerprint'] ?? '');
+
+        return match ($group) {
+            MetricGroup::Environment => (string) $row['environment'],
+            MetricGroup::Provider => (string) $row['provider'],
+            MetricGroup::Model => (string) $row['model'],
+            // A key's name, never its fingerprint.
+            MetricGroup::Key => isset($keys[$fingerprint]) ? $keys[$fingerprint]->displayName() : substr($fingerprint, 0, 8),
+            MetricGroup::Owner => $reference('owner'),
+            MetricGroup::Actor => $reference('actor'),
+            default => '',
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private static function aiValue(Metric $metric, array $row, ?AiPayer $payer): float
+    {
+        return (float) match ($metric) {
+            Metric::AiCalls => $row['calls'],
+            Metric::AiErrors => $row['errors'],
+            Metric::AiTokensInput => $row['input_tokens'],
+            Metric::AiTokensOutput => $row['output_tokens'],
+            Metric::AiTokensCacheRead => $row['cache_read_tokens'],
+            Metric::AiTokensCacheWrite => $row['cache_write_tokens'],
+            Metric::AiTokensReasoning => $row['reasoning_tokens'],
+            default => match ($payer) {
+                AiPayer::Us => $row['cost_ours'],
+                AiPayer::Customer => $row['cost_customer'],
+                null => $row['cost'],
+            },
+        };
+    }
+
+    /**
+     * An owner or actor as type:id, in the shape AiCostQuery filters by.
+     *
+     * @return list<array{type: string, id: string}>|null
+     */
+    private static function references(?string $value): ?array
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        [$type, $id] = [...explode(':', $value, 2), ''];
+
+        return [['type' => $type, 'id' => $id]];
+    }
+
+    /**
+     * A value matching exactly, or a pattern where * is anything, ignoring case, as match() does.
+     */
+    private static function matches(?string $value, ?string $pattern): bool
+    {
+        return $pattern === null || (str_contains($pattern, '*') ? Str::is(mb_strtolower($pattern), mb_strtolower((string) $value)) : $value === $pattern);
     }
 
     /**
@@ -543,7 +712,7 @@ class MetricSeriesQuery
             MetricGroup::Host => 'host',
             MetricGroup::Queue => 'queue',
             MetricGroup::Release => 'release',
-            MetricGroup::Check, MetricGroup::Activity, null => null,
+            MetricGroup::Check, MetricGroup::Activity, MetricGroup::Provider, MetricGroup::Model, MetricGroup::Key, MetricGroup::Owner, MetricGroup::Actor, MetricGroup::Payer, null => null,
         };
     }
 
@@ -552,6 +721,7 @@ class MetricSeriesQuery
         return round($value, match ($metric->unit()) {
             'ms' => 1,
             'count', 'bytes' => 0,
+            'currency' => 6,
             default => 4,
         });
     }

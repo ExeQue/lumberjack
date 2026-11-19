@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('team', [TeamController::class, 'show'])->name('team.show');
 Route::post('teams', [TeamController::class, 'store'])->name('teams.store');
 Route::put('teams/{team}/switch', [TeamController::class, 'switch'])->name('teams.switch');
+Route::put('team/currency', [TeamController::class, 'currency'])->name('team.currency');
 Route::put('team/retention', [RetentionController::class, 'team'])->name('team.retention');
 Route::get('team/retention', [RetentionController::class, 'teamShow'])->name('team.retention.show');
 Route::put('team/members/{member}', [MemberController::class, 'update'])->name('members.update');

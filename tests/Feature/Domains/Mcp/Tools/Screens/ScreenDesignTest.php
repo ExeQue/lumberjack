@@ -2,13 +2,18 @@
 
 declare(strict_types=1);
 
+use App\Domains\Ai\Models\AiUsageHourly;
 use App\Domains\DataSources\Models\DataSource;
+use App\Domains\Mcp\Data\McpAreaGrant;
 use App\Domains\Mcp\Data\McpPermissions;
+use App\Domains\Mcp\Enums\McpArea;
 use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Mcp\Servers\LumberjackServer;
 use App\Domains\Mcp\Support\ScreenAccess;
+use App\Domains\Mcp\Tools\Screens\GetScreenData;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Screens\Actions\ResolveScreenDataAction;
 use App\Domains\Screens\Actions\SaveScreenAction;
 use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Models\ScreenVersion;
@@ -16,7 +21,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\URL;
 use Tests\Support\Mcp\CallsMcpTools;
 
-covers(LumberjackServer::class, ScreenAccess::class, SaveScreenAction::class);
+covers(LumberjackServer::class, ScreenAccess::class, SaveScreenAction::class, GetScreenData::class, ResolveScreenDataAction::class);
 
 uses(CallsMcpTools::class);
 
@@ -188,4 +193,31 @@ it('asks the designer to reload on a conflict', function () {
     $this->screen->update(['revision' => 2]);
 
     $this->actingAs($this->user)->putJson(route('screens.update', $this->screen), ['name' => 'X', 'revision' => 1])->assertStatus(409);
+});
+
+describe('AI widgets', function () {
+    it('shows AI usage only to a token that may read it', function () {
+        AiUsageHourly::factory()->forProject($this->project)->create(['calls' => 4, 'errors' => 1]);
+        $this->screen->update(['widgets' => [[...($this->stat)(), 'id' => 'ai', 'source' => 'ai_error_rate']]]);
+        $data = fn (): array => $this->toolResult($this->callTool('lj_mcp_design', 'get_screen_data', ['screen' => $this->screen->uuid])->assertOk())['data'];
+
+        expect($data()['ai']['ai_error_rate'])->toMatchArray(['source' => 'ai_error_rate', 'value' => 0.25]);
+
+        $this->token->update(['permissions' => $this->token->permissions->with(McpArea::Ai, new McpAreaGrant(McpLevel::None))]);
+
+        expect($data()['ai']['ai_error_rate'])->toBeNull();
+    });
+
+    it('shows a widget over several projects only when the token reads AI usage in each', function () {
+        $this->token->projects()->attach($this->other, ['permissions' => McpPermissions::fromArray(['ai' => ['level' => 'none']])]);
+        $this->screen->update(['scope' => ['projects' => [$this->project->uuid, $this->other->uuid], 'environment' => 'production', 'period' => '7d'], 'widgets' => [
+            [...($this->stat)(), 'id' => 'both', 'source' => 'ai_error_rate'],
+            [...($this->stat)(['projects' => [$this->project->uuid]]), 'id' => 'mine', 'x' => 2, 'source' => 'ai_error_rate'],
+        ]]);
+
+        $data = $this->toolResult($this->callTool('lj_mcp_design', 'get_screen_data', ['screen' => $this->screen->uuid])->assertOk())['data'];
+
+        expect($data['both']['ai_error_rate'])->toBeNull()
+            ->and($data['mine']['ai_error_rate'])->toMatchArray(['source' => 'ai_error_rate']);
+    });
 });

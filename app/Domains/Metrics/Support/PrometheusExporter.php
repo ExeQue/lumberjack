@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Metrics\Support;
 
+use App\Domains\Ai\Enums\AiPayer;
+use App\Domains\Ai\Queries\AiCostQuery;
 use App\Domains\Health\Models\HealthCheck;
 use App\Domains\Jobs\Queries\QueueStatisticsQuery;
 use App\Domains\Metrics\Queries\ProjectSummaryQuery;
@@ -19,6 +21,9 @@ use Prometheus\Storage\InMemory;
  * The current gauges of a credential's projects in the Prometheus text format, for
  * scraping and alerting. Counts and rates cover the last hour. A fresh in-memory
  * registry per scrape: nothing is kept between requests.
+ *
+ * AI usage is per environment, provider and model, priced as on the AI pages. Keys,
+ * owners and actors are left out: a project can have thousands, one series each.
  */
 class PrometheusExporter
 {
@@ -27,13 +32,15 @@ class PrometheusExporter
     public function __construct(
         private readonly ProjectSummaryQuery $summary,
         private readonly QueueStatisticsQuery $queues,
+        private readonly AiCostQuery $aiCosts,
     ) {
     }
 
     /**
      * @param  Collection<int, Project>  $projects
+     * @param  list<int>  $aiProjectIds  the projects whose AI usage the credential may read
      */
-    public function render(Collection $projects): string
+    public function render(Collection $projects, array $aiProjectIds = []): string
     {
         $registry = new CollectorRegistry(new InMemory(), false);
         $gauge = fn (string $name, string $help, array $labels = []) => $registry->registerGauge(self::NAMESPACE, $name, $help, ['project', ...$labels]);
@@ -55,6 +62,13 @@ class PrometheusExporter
             'connections' => $gauge('database_connections', 'Open database connections, as its health check reported last.', ['environment', 'check']),
             'max_connections' => $gauge('database_max_connections', 'Connections the database allows, as its health check reported last.', ['environment', 'check']),
         ];
+        $aiLabels = ['environment', 'provider', 'model'];
+        $aiCalls = $gauge('ai_calls', 'AI calls in the last complete hour, per status.', [...$aiLabels, 'status']);
+        $aiTokens = $gauge('ai_tokens', 'AI tokens in the last complete hour, per direction. Input counts cached tokens, output reasoning ones.', [...$aiLabels, 'direction']);
+        $aiCost = $gauge('ai_cost', 'What AI calls cost in the last complete hour, in the team currency, per payer.', [...$aiLabels, 'payer', 'currency']);
+        // The hourly totals of the last complete hour: the current one is still filling up.
+        $aiUntil = now()->toImmutable()->startOfHour();
+        $aiFrom = $aiUntil->subHour();
         $databaseChecks = HealthCheck::query()->whereIn('project_id', $projects->modelKeys())->whereNotArchived()->whereReportsDatabase()
             ->with('hosts')->get()->groupBy('project_id');
 
@@ -90,6 +104,22 @@ class PrometheusExporter
                     if (isset($metrics[$name])) {
                         $figure->set($metrics[$name], [...$label, $check->environment, (string) $check->slug]);
                     }
+                }
+            }
+
+            if (in_array($project->id, $aiProjectIds, true)) {
+                foreach ($this->aiCosts->get($project, AiCostQuery::HOURLY, $aiFrom, $aiUntil, null, ['environment', 'model']) as $row) {
+                    $ai = [...$label, (string) $row['environment'], (string) $row['provider'], (string) $row['model']];
+
+                    $aiCalls->set($row['calls'] - $row['errors'], [...$ai, 'ok']);
+                    $aiCalls->set($row['errors'], [...$ai, 'error']);
+
+                    foreach (['input', 'output', 'cache_read', 'cache_write', 'reasoning'] as $direction) {
+                        $aiTokens->set($row[$direction.'_tokens'], [...$ai, $direction]);
+                    }
+
+                    $aiCost->set($row['cost_ours'], [...$ai, AiPayer::Us->value, $project->team->currency]);
+                    $aiCost->set($row['cost_customer'], [...$ai, AiPayer::Customer->value, $project->team->currency]);
                 }
             }
 

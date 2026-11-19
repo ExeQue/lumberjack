@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Alerts\Http\Requests;
 
+use App\Domains\Alerts\Actions\CheckAiErrorRatesAction;
+use App\Domains\Alerts\Data\AiBudgetSettings;
 use App\Domains\Alerts\Enums\AlertRuleType;
 use App\Domains\Alerts\Models\AlertRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -30,8 +32,9 @@ class UpdateAlertRuleRequest extends FormRequest
 
     /**
      * The rules without the request, for MCP tools that take the same input. Settings are
-     * the type's own: a queue backlog's thresholds (at least one of size and age), or a
-     * weekly summary's day and time; any other type has none.
+     * the type's own: a queue backlog's thresholds (at least one of size and age), a
+     * weekly summary's day and time, an AI budget rule's thresholds or an AI error rate
+     * rule's window, rate and least calls; any other type has none.
      *
      * @return array<string, mixed>
      */
@@ -54,6 +57,18 @@ class UpdateAlertRuleRequest extends FormRequest
                     'settings' => ['nullable', 'array:day,time'],
                     'settings.day' => ['required_with:settings', 'integer', 'between:1,7'],
                     'settings.time' => ['required_with:settings', 'date_format:H:i'],
+                ],
+                AlertRuleType::AiBudget => [
+                    'settings' => ['nullable', 'array:thresholds,projected'],
+                    'settings.thresholds' => ['exclude_without:settings', 'present', 'array'],
+                    'settings.thresholds.*' => ['integer', 'in:'.implode(',', AiBudgetSettings::THRESHOLDS), 'distinct'],
+                    'settings.projected' => ['required_with:settings', 'boolean'],
+                ],
+                AlertRuleType::AiErrorRate => [
+                    'settings' => ['nullable', 'array:minutes,rate,min_calls'],
+                    'settings.minutes' => ['required_with:settings', 'integer', 'min:1', 'max:'.CheckAiErrorRatesAction::MAX_MINUTES],
+                    'settings.rate' => ['required_with:settings', 'integer', 'min:1', 'max:99'],
+                    'settings.min_calls' => ['required_with:settings', 'integer', 'min:1', 'max:100000'],
                 ],
                 default => ['settings' => ['prohibited']],
             },

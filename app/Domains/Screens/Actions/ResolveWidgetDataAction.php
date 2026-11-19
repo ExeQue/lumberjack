@@ -62,7 +62,7 @@ use stdClass;
  * only_problems for health; new_issues and stale_as for the overview; slo_target,
  * slo_custom_target and threshold_ms for an SLO; data_source, json_path, and for a list label_path and value_path,
  * for External JSON; data_source, days_before, days_after, upcoming_only and timezone for a
- * calendar. Display options are the widget's own business.
+ * calendar; the AI sources' in ResolveAiWidgetDataAction. Display options are the widget's own business.
  */
 class ResolveWidgetDataAction
 {
@@ -100,6 +100,7 @@ class ResolveWidgetDataAction
         private readonly HealthChecksQuery $health,
         private readonly DataSourceValuesQuery $dataSources,
         private readonly ConnectedDataSourceQuery $connectedSources,
+        private readonly ResolveAiWidgetDataAction $ai,
     ) {
         $this->memo = new LruCache(200);
     }
@@ -134,6 +135,7 @@ class ResolveWidgetDataAction
         $data = match (true) {
             $source->id === 'external_json' => $this->external($team, $type, $scope, $options, $limits, $aggregatesOnly),
             $source->id === 'calendar' => $this->calendar($team, $scope, $options, $aggregatesOnly),
+            $source->topic() === 'ai' => $this->ai->execute($team, $type, $source, $projects, $scope, $options, $limits, $aggregatesOnly),
             $type === WidgetType::Stat => $this->stat($source, $projects, $scope, $options, $limits),
             $type === WidgetType::Gauge => $this->gauge($source, $projects, $scope, $options, $limits),
             $type === WidgetType::Chart => $this->chart($source, $projects, $scope, $options, $aggregatesOnly),
@@ -150,6 +152,7 @@ class ResolveWidgetDataAction
         // The period it covers, for the tile's corner label; health and the latest report are now.
         $period = $type === WidgetType::Health || $source->snapshot ? 'now' : $scope->period->value;
 
+        // An AI cost names its currency in its own unit.
         return ['type' => $type->value, 'source' => $source->id, 'unit' => $source->id === 'external_json' ? $this->dataSourceUnit($options, $source) : $source->unit, 'period' => $period, 'as_of' => $period === 'now' ? $this->asOf($source, $projects) : null, ...$data];
     }
 

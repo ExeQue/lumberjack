@@ -6,6 +6,7 @@ import {
     Eye,
     Layers,
     Rocket,
+    Sparkles,
     Server,
     UserCheck,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ export const NOTIFICATION_KINDS: Record<string, LucideIcon> = {
     scheduled_tasks: CalendarClock,
     agents: Server,
     releases: Rocket,
+    ai: Sparkles,
 };
 
 export type CenterNotification = {

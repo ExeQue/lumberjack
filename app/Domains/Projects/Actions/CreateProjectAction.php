@@ -30,6 +30,7 @@ class CreateProjectAction
                 'token_hash' => ProjectKeys::hash($token),
                 'token_last_four' => substr($token, -4),
                 'public_key' => ProjectKeys::newPublicKey(),
+                'ai_key_secret' => ProjectKeys::newAiKeySecret(),
                 'allowed_origins' => [],
             ]);
 

@@ -179,6 +179,14 @@ return [
         // Button; resets the form to the saved values
         'discard' => 'Discard',
     ],
+    'currency' => [
+        'title' => 'Currency',
+        'description' => 'What AI prices are entered in and AI cost is shown in, as an ISO 4217 code such as USD or EUR. Prices are not converted when it changes.',
+        'label' => 'Currency',
+        // Button
+        'save' => 'Save',
+        'saved' => 'Currency saved.',
+    ],
     'create' => [
         'title' => 'Create a team',
         'description' => 'A new team starts empty, with you as the owner.',

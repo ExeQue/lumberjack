@@ -13,6 +13,7 @@ use App\Domains\Screens\Models\Screen;
 use App\Domains\Screens\Support\ScreenQr;
 use App\Domains\Screens\Support\WidgetSchema;
 use App\Domains\Screens\Support\WidgetSources;
+use Closure;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
@@ -35,9 +36,10 @@ class ResolveScreenDataAction
     }
 
     /**
-     * @return array<string, array<string, array<string, mixed>|null>>  by widget id, then source id (source#index for a repeated one); null where it failed
+     * @param  (Closure(WidgetScope): bool)|null  $readsAi  whether the reader may see AI usage over a scope; null for anyone who may see the screen
+     * @return array<string, array<string, array<string, mixed>|null>>  by widget id, then source id (source#index for a repeated one); null where it failed or may not be read
      */
-    public function execute(Screen $screen, ?string $widgetId = null, bool $aggregatesOnly = false): array
+    public function execute(Screen $screen, ?string $widgetId = null, bool $aggregatesOnly = false, ?Closure $readsAi = null): array
     {
         $data = [];
 
@@ -90,6 +92,15 @@ class ResolveScreenDataAction
                 if ($source === 'calendar') {
                     $options['timezone'] = $screen->timezone ?? config('app.timezone');
                 }
+
+                // A token without the AI area sees no AI usage, whatever screen shows it.
+                // A source no longer known is left to the widget's own resolve, which fails for it alone.
+                if ($readsAi !== null && WidgetSources::has($type, $source) && WidgetSources::find($type, $source)->topic() === 'ai' && ! $readsAi($scope)) {
+                    $data[$widget['id']][$at] = null;
+
+                    continue;
+                }
+
                 $key = 'screen-data:'.md5(serialize([$screen->team_id, $type->value, $source, $scope, $options, $aggregatesOnly]));
 
                 $data[$widget['id']][$at] = Cache::remember($key, self::CACHE_SECONDS, function () use ($screen, $type, $source, $scope, $options, $aggregatesOnly): ?array {
@@ -175,7 +186,7 @@ class ResolveScreenDataAction
     private function options(WidgetType $type, string $source, array $stored): array
     {
         $fields = WidgetSchema::fields($type->value);
-        $options = array_intersect_key(WidgetSchema::options($type->value, $stored), array_filter($fields, fn (array $f): bool => $f['data'] && in_array($source, $f['sources'] ?? [$source], true)));
+        $options = array_intersect_key(WidgetSchema::options($type->value, $stored), array_filter($fields, fn (array $f): bool => $f['data'] && in_array($source, $f['sources'] ?? [$source], true) && ! in_array($source, $f['except'] ?? [], true)));
 
         if (($options['limit'] ?? null) === 'auto') {
             $options['limit'] = WidgetSchema::LIST_FIT_LIMIT;

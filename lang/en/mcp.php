@@ -24,6 +24,7 @@ return [
         'alerts' => ['label' => 'Alerts', 'description' => 'Alert rules, topics and queue thresholds. Channels stay in the UI.'],
         'data_sources' => ['label' => 'Data sources', 'description' => 'Pulled sources and app connections that feed screens.'],
         'screens' => ['label' => 'Screens', 'description' => 'Screen design, versions, displays and sharing.'],
+        'ai' => ['label' => 'AI usage', 'description' => 'AI tokens and cost, keys, budgets and prices.'],
         'project' => ['label' => 'Project settings', 'description' => 'Name, environments, log channels, retention, public stats. No secrets.'],
         'team' => ['label' => 'Team', 'description' => 'Who is on the team, for assigning and mentions. Members are managed in the UI.'],
     ],
@@ -137,6 +138,19 @@ return [
         'set_screen_share' => 'Public share link',
         'delete_screen' => 'Delete a screen',
 
+        // AI usage
+        'get_ai_usage' => 'AI tokens and cost, per model',
+        'list_ai_spenders' => 'Costliest keys, owners or actors',
+        'get_ai_key' => 'One key with prices and calls',
+        'list_ai_budgets' => 'Budgets and how far each is',
+        'list_ai_prices' => 'Prices and the default payer',
+        'save_ai_budget' => 'Add or change a budget',
+        'save_ai_price' => 'Add or change a price',
+        'update_ai_key' => 'Name a key or set its payer',
+        'set_ai_default_payer' => 'Who pays for keys that do not say',
+        'delete_ai_budget' => 'Delete a budget',
+        'delete_ai_price' => 'Delete a price',
+
         // Project settings
         'get_project_overview' => 'Health of the project at a glance',
         'get_project_settings' => 'Settings without secrets',
@@ -148,6 +162,15 @@ return [
 
         // Team
         'list_members' => 'Members and roles',
+    ],
+
+    // Tool errors of the AI usage tools
+    'ai' => [
+        'unknown_key' => 'Unknown AI key in project :project; give its uuid or short id, see list_ai_spenders.',
+        'ambiguous_key' => 'More than one key has this short id; give its uuid.',
+        'unknown_budget' => 'Unknown budget in project :project; see list_ai_budgets.',
+        'unknown_price' => 'Unknown price for project :project; see list_ai_prices.',
+        'price_denied' => 'The token\'s owner may not change this price from this project.',
     ],
 
     'validation' => [

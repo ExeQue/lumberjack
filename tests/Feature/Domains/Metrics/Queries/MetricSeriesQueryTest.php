@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 use App\Domains\Activity\Models\Activity;
 use App\Domains\Activity\Models\ActivityCount;
+use App\Domains\Ai\Enums\AiPayer;
+use App\Domains\Ai\Models\AiKey;
+use App\Domains\Ai\Models\AiPrice;
+use App\Domains\Ai\Models\AiUsageDaily;
+use App\Domains\Ai\Models\AiUsageHourly;
+use App\Domains\Ai\Queries\AiCostQuery;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Jobs\Models\JobRun;
@@ -163,5 +169,94 @@ describe('windows', function () {
         expect(MetricWindow::between(now()->subHour(), now())->bucketSeconds)->toBe(60)
             ->and(MetricWindow::between(now()->subDays(7), now())->interval())->toBe('1h')
             ->and(MetricWindow::between(now()->subYears(2), now())->bucketSeconds)->toBe(86400);
+    });
+});
+
+describe('AI usage', function () {
+    beforeEach(function () {
+        AiPrice::factory()->forTeamOf($this->project)->costing(3, 15)->create();
+        $this->split = fn (Metric $metric, MetricGroup $group, array $filter = []): array => collect(app(MetricSeriesQuery::class)
+            ->series($metric, new MetricFilter([$this->project->id], ...$filter, groupBy: $group), $this->day))
+            ->groupBy('series')->map->sum('value')->all();
+    });
+
+    it('serves the same tokens, calls and cost per hour as the AI pages', function () {
+        $key = AiKey::factory()->forProject($this->project)->create();
+        AiUsageHourly::factory()->forKey($key)->create(['hour' => now()->subHours(3), 'calls' => 4, 'errors' => 1, 'input_tokens' => 1_000_000, 'output_tokens' => 100_000]);
+        AiUsageHourly::factory()->forKey($key)->create(['hour' => now()->subHour(), 'input_tokens' => 2_000_000, 'output_tokens' => 0, 'cache_read_tokens' => 500_000]);
+        $total = app(AiCostQuery::class)->total($this->project, AiCostQuery::HOURLY, $this->day->from->startOfHour());
+        $series = fn (Metric $metric): array => app(MetricSeriesQuery::class)->series($metric, new MetricFilter([$this->project->id]), $this->day);
+
+        $cost = collect($series(Metric::AiCost));
+
+        expect($cost)->toHaveCount(24)
+            ->and($cost->sum('value'))->toEqualWithDelta($total['cost'], 0.000001)
+            ->and($cost->firstWhere('t', now()->subHours(3)->format('Y-m-d\TH:i:s\Z'))['value'])->toEqualWithDelta(4.5, 0.000001)
+            ->and(collect($series(Metric::AiTokensInput))->sum('value'))->toEqual($total['input_tokens'])
+            ->and(collect($series(Metric::AiTokensCacheRead))->sum('value'))->toEqual($total['cache_read_tokens'])
+            ->and(collect($series(Metric::AiCalls))->sum('value'))->toEqual($total['calls'])
+            ->and(($this->value)(Metric::AiErrors))->toEqual(1)
+            ->and(($this->value)(Metric::AiCost))->toEqualWithDelta($total['cost'], 0.000001);
+    });
+
+    it('splits cost by who pays, or keeps one payer\'s share', function () {
+        $ours = AiKey::factory()->forProject($this->project)->create();
+        $tenants = AiKey::factory()->forProject($this->project)->ownedBy('tenant', 7)->create();
+        AiUsageHourly::factory()->forKey($ours)->create(['hour' => now()->subHour(), 'input_tokens' => 1_000_000, 'output_tokens' => 0]);
+        AiUsageHourly::factory()->forKey($tenants)->create(['hour' => now()->subHour(), 'input_tokens' => 2_000_000, 'output_tokens' => 0]);
+
+        expect(($this->split)(Metric::AiCost, MetricGroup::Payer))->toEqual(['us' => 3.0, 'customer' => 6.0])
+            ->and(($this->value)(Metric::AiCost, ['payer' => AiPayer::Us]))->toEqualWithDelta(3.0, 0.000001)
+            ->and(($this->value)(Metric::AiCost, ['payer' => AiPayer::Customer]))->toEqualWithDelta(6.0, 0.000001)
+            ->and(($this->value)(Metric::AiCost))->toEqualWithDelta(9.0, 0.000001);
+    });
+
+    it('counts only the projects asked for, of its team or another', function () {
+        $sibling = Project::factory()->create(['team_id' => $this->project->team_id]);
+        $foreign = Project::factory()->create();
+        AiUsageHourly::factory()->forProject($this->project)->create(['hour' => now()->subHour(), 'calls' => 2]);
+        AiUsageHourly::factory()->forProject($sibling)->create(['hour' => now()->subHour(), 'calls' => 30]);
+        AiUsageHourly::factory()->forProject($foreign)->create(['hour' => now()->subHour(), 'calls' => 400]);
+
+        expect(($this->value)(Metric::AiCalls))->toEqual(2)
+            ->and(app(MetricSeriesQuery::class)->value(Metric::AiCalls, new MetricFilter([$this->project->id, $sibling->id]), $this->day))->toEqual(32);
+    });
+
+    it('names a key by its name or short id, never its fingerprint, and filters by either', function () {
+        $named = AiKey::factory()->forProject($this->project)->create(['name' => 'checkout bot']);
+        $plain = AiKey::factory()->forProject($this->project)->create();
+        AiUsageHourly::factory()->forKey($named)->create(['hour' => now()->subHour(), 'calls' => 3]);
+        AiUsageHourly::factory()->forKey($plain)->create(['hour' => now()->subHour(), 'calls' => 2]);
+
+        expect(($this->split)(Metric::AiCalls, MetricGroup::Key))->toEqual(['checkout bot' => 3, $plain->shortId() => 2])
+            ->and(($this->value)(Metric::AiCalls, ['key' => 'checkout bot']))->toEqual(3)
+            ->and(($this->value)(Metric::AiCalls, ['key' => $plain->shortId()]))->toEqual(2)
+            ->and(($this->value)(Metric::AiCalls, ['key' => $plain->fingerprint]))->toEqual(0);
+    });
+
+    it('filters and splits by provider, model and owner', function () {
+        $tenants = AiKey::factory()->forProject($this->project)->ownedBy('tenant', 7)->create();
+        AiUsageHourly::factory()->forKey($tenants)->create(['hour' => now()->subHour(), 'calls' => 5]);
+        AiUsageHourly::factory()->forProject($this->project)->create(['hour' => now()->subHour(), 'provider' => 'openai', 'model' => 'gpt-5', 'calls' => 1]);
+
+        expect(($this->split)(Metric::AiCalls, MetricGroup::Model))->toEqual(['claude-sonnet-4-5' => 5, 'gpt-5' => 1])
+            ->and(($this->split)(Metric::AiCalls, MetricGroup::Owner))->toEqual(['tenant:7' => 5, MetricSeriesQuery::NONE => 1])
+            ->and(($this->value)(Metric::AiCalls, ['model' => 'CLAUDE-*']))->toEqual(5)
+            ->and(($this->value)(Metric::AiCalls, ['provider' => 'openai']))->toEqual(1)
+            ->and(($this->value)(Metric::AiCalls, ['owner' => 'tenant:7']))->toEqual(5);
+    });
+
+    it('counts actors per day from the daily totals', function () {
+        AiUsageDaily::factory()->forProject($this->project)->byActor('user', 1)->create(['calls' => 4]);
+        AiUsageDaily::factory()->forProject($this->project)->byActor('user', 2)->create(['calls' => 1]);
+        $filter = new MetricFilter([$this->project->id], groupBy: MetricGroup::Actor);
+        $window = MetricWindow::between(now()->subDay(), now(), 300);
+
+        $points = app(MetricSeriesQuery::class)->series(Metric::AiCalls, $filter, $window);
+
+        expect(app(MetricSeriesQuery::class)->window(Metric::AiCalls, $filter, $window)->interval())->toBe('1d')
+            ->and(app(MetricSeriesQuery::class)->window(Metric::AiCalls, new MetricFilter([$this->project->id]), $window)->interval())->toBe('1h')
+            ->and(collect($points)->groupBy('series')->map->sum('value')->all())->toEqual(['user:1' => 4, 'user:2' => 1])
+            ->and(($this->value)(Metric::AiCalls, ['actor' => 'user:2']))->toEqual(1);
     });
 });

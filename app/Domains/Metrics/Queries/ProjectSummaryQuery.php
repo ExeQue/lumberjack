@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Metrics\Queries;
 
+use App\Domains\Ai\Presenters\AiUsagePresenter;
 use App\Domains\Metrics\Data\MetricFilter;
 use App\Domains\Metrics\Data\MetricWindow;
 use App\Domains\Metrics\Enums\Metric;
@@ -13,20 +14,22 @@ use App\Domains\Shared\Enums\Period;
 
 /**
  * A project's headline figures for a period: the overview page's numbers (the same
- * query and cache), plus Apdex and users affected. Durations in milliseconds.
+ * query and cache), plus Apdex and users affected. Durations in milliseconds. With AI,
+ * the AI usage page's totals too, cost in the team's currency.
  */
 class ProjectSummaryQuery
 {
     public function __construct(
         private readonly ProjectOverviewQuery $overview,
         private readonly MetricSeriesQuery $metrics,
+        private readonly AiUsagePresenter $ai,
     ) {
     }
 
     /**
-     * @return array{project: string, period: string, environment: string|null, requests: int, errors: int, error_rate: float, p50: float, p95: float, p99: float, apdex: float|null, open_issues: int, users: int, job_runs: int, failed_jobs: int, stuck_jobs: int, sample_rate: float|null, health: array<string, int>, previous: array{requests: int, errors: int, p95: float, failed_jobs: int}}
+     * @return array{project: string, period: string, environment: string|null, requests: int, errors: int, error_rate: float, p50: float, p95: float, p99: float, apdex: float|null, open_issues: int, users: int, job_runs: int, failed_jobs: int, stuck_jobs: int, sample_rate: float|null, health: array<string, int>, previous: array{requests: int, errors: int, p95: float, failed_jobs: int}, ai: array<string, mixed>|null}
      */
-    public function get(Project $project, Period $period, ?string $environment): array
+    public function get(Project $project, Period $period, ?string $environment, bool $withAi = false): array
     {
         $overview = $this->overview->get($project, $period, $environment);
         $filter = new MetricFilter([$project->id], $environment);
@@ -58,6 +61,7 @@ class ProjectSummaryQuery
                 'p95' => round($overview['previous']['p95'] / 1000, 1),
                 'failed_jobs' => (int) $overview['previous']['failed_jobs'],
             ],
+            'ai' => $withAi ? ['currency' => $project->team->currency, ...$this->ai->summary($project, $period, $environment)] : null,
         ];
     }
 }

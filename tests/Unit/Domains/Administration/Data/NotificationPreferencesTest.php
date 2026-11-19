@@ -17,6 +17,7 @@ test('someone with nothing stored gets the defaults: personal kinds mailed, proj
         'scheduled_tasks' => ['mail' => false, 'toast' => true, 'push' => false],
         'agents' => ['mail' => false, 'toast' => true, 'push' => false],
         'releases' => ['mail' => false, 'toast' => true, 'push' => false],
+        'ai' => ['mail' => false, 'toast' => true, 'push' => false],
     ])->and(NotificationPreferences::defaults()->toArray())->toBe(NotificationPreferences::DEFAULTS)
         ->and(array_keys(NotificationPreferences::DEFAULTS))->toBe(NotificationPreferences::KINDS);
 });

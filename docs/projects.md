@@ -246,6 +246,9 @@ a day.
 | Logs                 | 14 days  | Log lines. Can be set per channel                                                                               |
 | Activity             | 30 days  | Each [activity](./activity.md) your apps recorded, with its actor, subject and payload                          |
 | Activity counts      | 365 days | Hourly counts per activity, for charts and widgets                                                              |
+| AI calls             | 30 days  | Each call your apps made to an [AI model](./ai.md): tokens, model, key and who caused it                        |
+| Hourly AI usage      | 400 days | Hourly AI totals per model and key. Kept at least from the start of last month, for AI budgets                  |
+| Daily AI usage       | 400 days | Daily AI totals per model, key, key owner and actor. Kept at least from the start of last month, for AI budgets |
 | Health results       | 14 days  | Each health check result and its latency                                                                        |
 | Health outages       | 365 days | Periods a check was down or degraded. Uptime is counted from them                                               |
 | Data source history  | 30 days  | What each [data source](./data-sources.md) answered, for charts                                                 |
@@ -286,10 +289,17 @@ also:
 
 - moves the project's own alert rules and channels, and drops links to the old team's;
   the project then follows the new team's rules and channels;
+- moves the project's own [AI prices](./ai#prices) along, while its old team's
+  team-wide prices stay behind and the new team's apply;
+- keeps the project's [AI budgets](./ai#budgets);
 - takes the project out of MCP tokens: give a token access again where it should have it;
 - takes it out of the old team's screens; a screen or widget left with no project shows
   nothing;
 - clears assignees and watchers of its issues who are not in the new team.
+
+Prices and cost budgets are in the team's currency, so a project with AI prices or cost
+budgets of its own cannot move to a team with another currency: change one of the
+currencies, or the project's prices and budgets, first.
 
 Each move is in the [audit log](./administration).
 

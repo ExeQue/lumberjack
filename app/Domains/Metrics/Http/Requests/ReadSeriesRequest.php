@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Metrics\Http\Requests;
 
+use App\Domains\Ai\Enums\AiPayer;
 use App\Domains\Metrics\Data\MetricFilter;
 use App\Domains\Metrics\Data\MetricWindow;
 use App\Domains\Metrics\Enums\Metric;
@@ -66,6 +67,12 @@ class ReadSeriesRequest extends FormRequest
             'release' => ['sometimes', 'nullable', 'string', 'max:64'],
             'check' => ['sometimes', 'nullable', 'string', 'max:100'],
             'activity' => ['sometimes', 'nullable', 'string', 'max:200'],
+            'provider' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'model' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'key' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'owner' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[^:]+:.+$/'],
+            'actor' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[^:]+:.+$/'],
+            'payer' => ['sometimes', 'nullable', Rule::enum(AiPayer::class)],
             'group_by' => ['sometimes', 'nullable', Rule::enum(MetricGroup::class)],
             'top' => ['sometimes', 'integer', 'min:1', 'max:50'],
         ];
@@ -87,6 +94,12 @@ class ReadSeriesRequest extends FormRequest
             // Request counts carry no host: a host filter there would quietly cover every host.
             if ($metric !== null && $this->filled('host') && ! in_array(MetricGroup::Host, $metric->groups(), true)) {
                 $validator->errors()->add('host', "{$metric->value} cannot be filtered by host.");
+            }
+
+            // AI usage is a team token's, checked for get_ai_usage per project: public stats and
+            // anything else reading through this request (an MCP tool) are turned away.
+            if ($metric !== null && $metric->isAi() && ! app(MetricsCredential::class)->hasToken()) {
+                $validator->errors()->add('metric', __('metrics.ai.token_only'));
             }
 
             // Public stats leave hosts out.
@@ -131,6 +144,12 @@ class ReadSeriesRequest extends FormRequest
             check: $value('check'),
             domain: $value('domain') !== null ? mb_strtolower((string) $value('domain')) : null,
             activity: $value('activity'),
+            provider: $value('provider'),
+            model: $value('model'),
+            key: $value('key'),
+            owner: $value('owner'),
+            actor: $value('actor'),
+            payer: AiPayer::tryFrom($this->string('payer')->toString()),
         );
     }
 

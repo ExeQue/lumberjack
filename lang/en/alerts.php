@@ -20,6 +20,8 @@ return [
         'new_release' => ['label' => 'New release', 'description' => 'An environment reports a release for the first time, with the version, environment and host. Once per release and environment; an environment\'s very first release sends nothing.'],
         'maintenance_overrun' => ['label' => 'Maintenance overrun', 'description' => 'A maintenance window still open past its expected end: at once, then again every project\'s repeat interval (30 minutes by default) until it ends. Tells once more, with how long it ran over, when it ends.'],
         'weekly_summary' => ['label' => 'Weekly summary', 'description' => 'Every week at the day and time set here, the past 7 days of each project against the 7 before: traffic, errors and speed, issues, slower routes, uptime, maintenance, jobs, scheduled tasks and releases. One message per channel; projects with nothing in the week are left out.'],
+        'ai_budget' => ['label' => 'AI budget', 'description' => 'An AI budget of the project passes a share of itself (80% and 100% unless changed) in its day or month, and when it is on course to go over before the period ends. Each once per budget and period.'],
+        'ai_error_rate' => ['label' => 'AI error rate', 'description' => 'An AI key whose recent calls fail too often: more than half of at least 10 calls in 15 minutes unless changed. Tells again when it works.'],
         'queue_backlog' => ['label' => 'Queue backlog', 'description' => 'A queue with too many jobs waiting, or one waiting too long, for a while, from the sizes the agents report. Catches dead workers, which start no job to measure. Tells again when it is back under.'],
     ],
     'messages' => [
@@ -43,6 +45,10 @@ return [
         'via_mcp' => ':token (MCP)',
         'unknown_author' => 'Someone',
         'new_release' => 'New release in :project',
+        'ai_budget' => 'AI budget :threshold% used in :project',
+        'ai_budget_projected' => 'AI budget on course to go over in :project',
+        'ai_error_rate' => 'AI calls failing in :project',
+        'ai_error_rate_recovered' => 'AI calls working again in :project',
         'queue_backlog' => 'Queue backlog in :project',
         'queue_backlog_recovered' => 'Queue backlog cleared in :project',
         'health_check_down' => 'Health check down in :project',
@@ -79,6 +85,30 @@ return [
     'bulk_status' => [
         'more' => '+:count more',
         'facts' => ['status' => 'Status', 'issues' => 'Issues', 'environment' => 'Environment'],
+    ],
+    'ai_budget' => [
+        'titles' => [
+            'project' => 'The whole project',
+            'key' => 'Key :key',
+            'keys' => '{1} Key :keys|[2,*] Keys :keys',
+            'owners' => '{1} Key owner :references|[2,*] Key owners :references',
+            'actors' => '{1} Actor :references|[2,*] Actors :references',
+            'more' => ':names and :count more',
+        ],
+        'periods' => ['day' => 'the day', 'month' => 'the month'],
+        // A period that ended, by its start, for Carbon's translatedFormat().
+        'dates' => ['day' => 'j F Y', 'month' => 'F Y'],
+        'per' => ['day' => 'a day', 'month' => 'a month'],
+        'tokens' => '{1} 1 token|[0,*] :count tokens',
+        'used' => ':spent of :amount used (:percent%) for :period.',
+        'projected' => ':spent of :amount used; at this pace :projected by the end of :period.',
+        'facts' => ['used' => 'Used', 'budget' => 'Budget', 'projected' => 'At this pace'],
+    ],
+    'ai_error_rate' => [
+        'threshold' => 'Over :rate% of at least :calls calls failed in :minutes minutes',
+        'started' => ':errors of :calls calls (:rate%) failed in the last :minutes minutes.',
+        'recovered' => 'Back to :errors of :calls calls failing in the last :minutes minutes.',
+        'facts' => ['failed' => 'Failed', 'provider' => 'Provider', 'threshold' => 'Threshold'],
     ],
     'queue_backlog' => [
         'threshold_size' => '{1} more than 1 job|[2,*] more than :size jobs',

@@ -58,6 +58,13 @@ return [
         'full_name_named' => ':device, :name',
     ],
 
+    // An owner or actor on a shared screen's Top AI spenders, numbered costliest first.
+    'ai_spenders' => [
+        'owners' => 'Owner :number',
+        'actors' => 'Actor :number',
+        // Usage that names no owner or actor, a row of its own.
+        'none' => ['owners' => 'No owner', 'actors' => 'No actor'],
+    ],
     // Source names in the designer and as widget titles.
     'sources' => [
         'stat' => [
@@ -80,6 +87,10 @@ return [
             'db_size' => 'Database size',
             'db_connections' => 'Database connections',
             'activity' => 'Activity',
+            'ai_cost' => 'AI cost',
+            'ai_tokens' => 'AI tokens',
+            'ai_budget' => 'AI budget',
+            'ai_error_rate' => 'AI error rate',
             'external_json' => 'Data source',
         ],
         'gauge' => [
@@ -94,6 +105,8 @@ return [
             'db_connections' => 'Database connections in use',
             'health_uptime' => 'Health uptime',
             'activity' => 'Activity',
+            'ai_budget' => 'AI budget used',
+            'ai_error_rate' => 'AI error rate',
             'external_json' => 'Data source',
         ],
         'chart' => [
@@ -115,6 +128,8 @@ return [
             'db_size' => 'Database size',
             'db_connections' => 'Database connections',
             'activity' => 'Activity',
+            'ai_cost' => 'AI cost per model',
+            'ai_tokens' => 'AI tokens per model',
             'external_json' => 'Data source',
         ],
         'list' => [
@@ -128,6 +143,7 @@ return [
             'agents' => 'Agents',
             'top_activity' => 'Most frequent activity',
             'latest_activity' => 'Latest activity',
+            'ai_spenders' => 'Top AI spenders',
             'external_json' => 'Data source',
             'calendar' => 'Calendar events',
         ],

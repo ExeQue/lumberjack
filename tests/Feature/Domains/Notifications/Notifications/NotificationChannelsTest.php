@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domains\Administration\Data\NotificationPreferences;
 use App\Domains\Notifications\Data\PushMessage;
 use App\Domains\Notifications\Notifications\AgentOfflineNotification;
+use App\Domains\Notifications\Notifications\AiAlertNotification;
 use App\Domains\Notifications\Notifications\AssignmentNotification;
 use App\Domains\Notifications\Notifications\Concerns\SendsByPreference;
 use App\Domains\Notifications\Notifications\HealthCheckNotification;
@@ -31,6 +32,7 @@ dataset('project kinds', [
     'scheduled tasks' => [ScheduledTaskNotification::class],
     'agents' => [AgentOfflineNotification::class],
     'releases' => [ReleaseNotification::class],
+    'AI budgets and errors' => [AiAlertNotification::class],
 ]);
 
 dataset('personal kinds', [
@@ -108,7 +110,7 @@ describe('what a notification says', function () {
 });
 
 test('every kind of the preferences has a notification class', function () {
-    $classes = [NewIssueNotification::class, HealthCheckNotification::class, QueueBacklogNotification::class, ScheduledTaskNotification::class, AgentOfflineNotification::class, ReleaseNotification::class, WatchingNotification::class, MentionedNotification::class, AssignmentNotification::class];
+    $classes = [AiAlertNotification::class, NewIssueNotification::class, HealthCheckNotification::class, QueueBacklogNotification::class, ScheduledTaskNotification::class, AgentOfflineNotification::class, ReleaseNotification::class, WatchingNotification::class, MentionedNotification::class, AssignmentNotification::class];
 
     expect(collect($classes)->map(fn (string $c): string => $c::KIND)->sort()->values()->all())->toBe(collect(NotificationPreferences::KINDS)->sort()->values()->all());
 });

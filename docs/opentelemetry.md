@@ -90,6 +90,7 @@ Keep the batch processor's batches under the body limit below, e.g. with
 | Consumer span                                                                       | A job run: the span's name, queue from `messaging.destination.name`, else `default`, failed when the span's status is error                                                                                                          |
 | Span with `db.system.name` (or `db.system`) and `db.query.text` (or `db.statement`) | A query, on the connection named by `db.namespace` or `db.name`                                                                                                                                                                      |
 | Span with `db.system` `redis`                                                       | A Redis span on the trace                                                                                                                                                                                                            |
+| Span with `gen_ai.provider.name`, `gen_ai.system` or `gen_ai.operation.name`        | An [AI call](./ai.md), not an outgoing HTTP span; see below                                                                                                                                                                          |
 | Client span with `http.request.method`                                              | An outgoing HTTP span on the trace                                                                                                                                                                                                   |
 | Span event `exception`                                                              | An issue: title from `exception.type`, message from `exception.message`, frames from `exception.stacktrace`                                                                                                                          |
 | Log record                                                                          | A log line in the `default` channel: severity as the level, body as the message, attributes as the context                                                                                                                           |
@@ -105,6 +106,30 @@ Keep the batch processor's batches under the body limit below, e.g. with
   calls) are not stored. There is no OpenTelemetry convention for an artisan command or a
   scheduled task, so neither is made from a span.
 - Attributes Lumberjack does not use are ignored, never rejected.
+
+### AI calls
+
+A GenAI span becomes an AI call with the span's duration, failed when the span's status is
+error or it has `error.type`, which is then the error. The first attribute of each row that
+holds a value is used:
+
+| AI call   | Attributes                                                                                                                                                                                                                                                        |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Provider  | `gen_ai.provider.name`, `gen_ai.system`                                                                                                                                                                                                                           |
+| Model     | `gen_ai.response.model`, `gen_ai.request.model`                                                                                                                                                                                                                   |
+| Operation | `gen_ai.operation.name`: `embeddings` is `embeddings`, any other model call (`chat`, `text_completion`, `generate_content` and the rest) is `text`                                                                                                                |
+| Tokens    | `gen_ai.usage.input_tokens` (else `gen_ai.usage.prompt_tokens`), `gen_ai.usage.output_tokens` (else `gen_ai.usage.completion_tokens`), `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_creation.input_tokens`, `gen_ai.usage.reasoning.output_tokens` |
+| Key       | `lumberjack.ai.key.sha256`, `lumberjack.ai.key.label`, `lumberjack.ai.key.owner.type`, `lumberjack.ai.key.owner.id`                                                                                                                                               |
+| Actor     | `lumberjack.ai.actor.type` and `lumberjack.ai.actor.id`, else (either missing) `user.id` as an actor of type `user`                                                                                                                                               |
+
+As the GenAI conventions count them, `gen_ai.usage.input_tokens` includes the cached
+tokens (cache reads and writes) and `gen_ai.usage.output_tokens` the reasoning tokens;
+Lumberjack prices them that way, see [Cost](./ai.md#cost).
+
+The key's hash is turned into its fingerprint before the spans are queued, so the hash is
+never stored, not even in the queue. A span without a provider or a model is not stored. Agent and tool spans
+(`invoke_agent`, `create_agent`, `execute_tool`) are not stored either: they wrap the model
+calls under them, whose tokens they would count a second time.
 
 ## Responses
 

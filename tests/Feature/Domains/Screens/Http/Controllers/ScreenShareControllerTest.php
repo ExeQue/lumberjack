@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Domains\Administration\Enums\AdminAction;
 use App\Domains\Administration\Models\AdminAuditEntry;
+use App\Domains\Ai\Models\AiKey;
+use App\Domains\Ai\Models\AiUsageHourly;
+use App\Domains\Projects\Models\Project;
 use App\Domains\Screens\Actions\DuplicateScreenAction;
 use App\Domains\Screens\Actions\ResolveScreenDataAction;
 use App\Domains\Screens\Actions\RotateScreenShareKeyAction;
@@ -164,6 +167,20 @@ describe('a screen by its share link', function () {
 
         $this->getJson('/s/'.$this->shared->share_key.'/data?widget=requests')->assertOk()->assertJsonPath('data', []);
     })->with(['counts only' => false, 'with titles' => true]);
+
+    it('serves AI widgets without naming keys by more than their short id, or owners at all', function () {
+        $project = Project::factory()->for($this->shared->team)->create();
+        $key = AiKey::factory()->forProject($project)->ownedBy('tenant', 7)->create(['name' => 'Night jobs']);
+        AiUsageHourly::factory()->forKey($key)->create();
+        $spenders = fn (string $kind): array => ['id' => $kind, 'type' => 'list', 'source' => 'ai_spenders', 'x' => 0, 'y' => 0, 'w' => 2, 'h' => 2, 'options' => ['ai_spenders' => $kind], 'scope' => []];
+        $this->shared->update(['widgets' => [$spenders('keys'), $spenders('owners')]]);
+
+        $response = $this->getJson('/s/'.$this->shared->share_key.'/data')->assertOk();
+
+        expect($response->json('data.keys.ai_spenders.rows.0.label'))->toBe($key->shortId())
+            ->and($response->json('data.owners.ai_spenders.rows.0.label'))->toBe('Owner 1')
+            ->and($response->getContent())->not->toContain('Night jobs')->not->toContain('tenant:7')->not->toContain($key->fingerprint);
+    });
 
     it('knows no made up key', function () {
         $this->get('/s/ls_'.str_repeat('0', 40))->assertNotFound();

@@ -47,13 +47,13 @@ See the [metrics API](./metrics-api) and [MCP](./mcp) pages for those endpoints,
 }
 ```
 
-| Field         | Required | Notes                                                                                                                                                                              |
-| ------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `v`           | yes      | Always `1`.                                                                                                                                                                        |
-| `environment` | no       | At most 64 characters.                                                                                                                                                             |
-| `release`     | no       | At most 64 characters.                                                                                                                                                             |
-| `host`        | no       | At most 255 characters.                                                                                                                                                            |
-| `events`      | yes      | At most 5,000 events, each of type `request`, `request_counts`, `query`, `exception`, `job`, `log`, `schedule`, `command`, `span`, `health`, `alert`, `maintenance` or `activity`. |
+| Field         | Required | Notes                                                                                                                                                                                         |
+| ------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `v`           | yes      | Always `1`.                                                                                                                                                                                   |
+| `environment` | no       | At most 64 characters.                                                                                                                                                                        |
+| `release`     | no       | At most 64 characters.                                                                                                                                                                        |
+| `host`        | no       | At most 255 characters.                                                                                                                                                                       |
+| `events`      | yes      | At most 5,000 events, each of type `request`, `request_counts`, `query`, `exception`, `job`, `log`, `schedule`, `command`, `span`, `health`, `alert`, `maintenance`, `activity` or `ai_call`. |
 
 ### Requests
 
@@ -241,6 +241,65 @@ An event of type `activity` records an [activity](./activity.md):
 `DELETE /api/activity/actor` with the server token and a JSON body of the actor's `type`
 and `id` deletes all activity of that actor in the project, and answers
 `{"deleted": <count>}`. The hourly counts are kept.
+
+## AI call events
+
+An event of type `ai_call` records one call to an [AI model](./ai.md). The prompt and the
+answer are never sent, and neither is the API key:
+
+```json
+{
+    "type": "ai_call",
+    "source": "laravel-ai",
+    "provider": "anthropic",
+    "driver": "anthropic",
+    "model": "claude-sonnet-4-5-20250929",
+    "operation": "text",
+    "tokens": {
+        "input": 1200,
+        "output": 300,
+        "cache_read": 800,
+        "cache_write": 0,
+        "reasoning": null
+    },
+    "duration_ms": 1834.2,
+    "status": "ok",
+    "error": null,
+    "key": {
+        "sha256": "<64 hex characters>",
+        "label": "prod-primary",
+        "owner": { "type": "tenant", "id": "42" }
+    },
+    "actor": { "type": "App\\Models\\User", "id": "1337" },
+    "invocation_id": "01JD3QK8V7",
+    "step": 2,
+    "trace_id": "4bf92f3577b34da6",
+    "timestamp": 1763025600.123
+}
+```
+
+| Field           | Notes                                                                                                                                                                                                                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provider`      | Required, at most 64 characters. Otherwise the call is skipped. Stored lowercase.                                                                                                                                                                                                                          |
+| `model`         | Required, at most 128 characters. Otherwise the call is skipped.                                                                                                                                                                                                                                           |
+| `driver`        | The integration's driver, at most 64 characters. Stored lowercase.                                                                                                                                                                                                                                         |
+| `source`        | `laravel-ai`, `prism`, `manual` or `otel`. Anything else is `manual`.                                                                                                                                                                                                                                      |
+| `operation`     | `text`, `structured`, `stream`, `embeddings`, `image`, `audio`, `transcription` or `rerank`. Anything else is `text`.                                                                                                                                                                                      |
+| `tokens`        | `input` (all input, cached tokens included), `output`, `cache_read`, `cache_write` and `reasoning`: whole numbers from 0 to 10,000,000,000, or `null` when unknown; a count above that is dropped as unknown.                                                                                              |
+| `duration_ms`   | How long the call took, in milliseconds.                                                                                                                                                                                                                                                                   |
+| `status`        | `ok` or `error`. Without it, `error` when `error` is set, else `ok`.                                                                                                                                                                                                                                       |
+| `error`         | The error's name, at most 255 characters.                                                                                                                                                                                                                                                                  |
+| `key.sha256`    | `sha256(driver + ":" + key)` as 64 hex characters, where the driver is the vendor in lowercase (`openai`, `anthropic`), not a connection name; the Laravel library lowercases it before hashing. Only an HMAC of it is stored, as the key's fingerprint; anything else and the call is kept without a key. |
+| `key.label`     | The key's name, at most 255 characters.                                                                                                                                                                                                                                                                    |
+| `key.owner`     | Whose key it is: a `type` (at most 128 characters) and an `id` (at most 64). Left out without both.                                                                                                                                                                                                        |
+| `actor`         | Who caused the call, like the owner.                                                                                                                                                                                                                                                                       |
+| `invocation_id` | The agent run it belongs to, at most 64 characters.                                                                                                                                                                                                                                                        |
+| `step`          | The step of that run.                                                                                                                                                                                                                                                                                      |
+| `trace_id`      | The trace it was made in.                                                                                                                                                                                                                                                                                  |
+| `timestamp`     | When it was made.                                                                                                                                                                                                                                                                                          |
+
+A value out of range (a negative token count, an unknown operation) is dropped or replaced
+as the table says; the call itself is kept. Browsers cannot send it.
 
 ## Browser
 

@@ -7,14 +7,17 @@ namespace App\Domains\Teams\Http\Controllers;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Mcp\Presenters\McpTokenPresenter;
 use App\Domains\Teams\Actions\CreateTeamAction;
+use App\Domains\Teams\Actions\SetTeamCurrencyAction;
 use App\Domains\Teams\Actions\SwitchTeamAction;
 use App\Domains\Teams\Http\Middleware\UseTabTeam;
+use App\Domains\Teams\Http\Requests\SetTeamCurrencyRequest;
 use App\Domains\Teams\Http\Requests\StoreTeamRequest;
 use App\Domains\Teams\Models\Team;
 use App\Domains\Teams\Models\TeamInvitation;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -64,6 +67,19 @@ class TeamController
         $action->execute($request->user(), $request->string('name')->toString());
 
         return redirect()->route('projects.index')->with(UseTabTeam::SWITCHED, true);
+    }
+
+    /**
+     * The currency of the team's AI prices.
+     */
+    public function currency(SetTeamCurrencyRequest $request, SetTeamCurrencyAction $action): RedirectResponse
+    {
+        $team = $request->user()->currentTeam;
+        Gate::authorize('administer', $team);
+
+        $action->execute($team, $request->string('currency')->toString());
+
+        return back()->with('status', __('ui/team.currency.saved'));
     }
 
     public function switch(Request $request, Team $team, SwitchTeamAction $action): RedirectResponse

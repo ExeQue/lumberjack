@@ -30,6 +30,7 @@ class MetricsCredential
     public function authenticateToken(McpToken $token): void
     {
         $this->token = $token;
+        $this->publicProject = null;
         $this->projects = $token->readableProjects()
             ->filter(fn (Project $project): bool => $token->permits('get_metric_series', $project))
             ->values();
@@ -38,6 +39,7 @@ class MetricsCredential
     public function authenticatePublic(Project $project): void
     {
         $this->publicProject = $project;
+        $this->token = null;
         $this->projects = new Collection([$project]);
     }
 
@@ -64,6 +66,20 @@ class MetricsCredential
     public function readsIssues(Project $project): bool
     {
         return $this->token === null || $this->token->permits('list_issues', $project);
+    }
+
+    /**
+     * Whether the credential may read the project's AI usage: a token only where it may use
+     * get_ai_usage; never public stats, as cost and who caused it are the team's own.
+     */
+    public function readsAi(Project $project): bool
+    {
+        return $this->token !== null && $this->token->permits('get_ai_usage', $project);
+    }
+
+    public function hasToken(): bool
+    {
+        return $this->token !== null;
     }
 
     public function isPublic(): bool

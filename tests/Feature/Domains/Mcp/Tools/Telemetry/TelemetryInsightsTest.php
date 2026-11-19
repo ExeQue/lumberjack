@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Domains\Ai\Models\AiUsageHourly;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Issues\Models\IssueEvent;
 use App\Domains\Issues\Models\Occurrence;
 use App\Domains\Jobs\Models\QueueSample;
+use App\Domains\Mcp\Data\McpAreaGrant;
 use App\Domains\Mcp\Data\McpPermissions;
+use App\Domains\Mcp\Enums\McpArea;
+use App\Domains\Mcp\Enums\McpLevel;
 use App\Domains\Mcp\Models\McpToken;
 use App\Domains\Mcp\Tools\Telemetry\GetMetricSeries;
 use App\Domains\Mcp\Tools\Telemetry\GetRelease;
@@ -71,6 +75,19 @@ describe('reading telemetry over MCP', function () {
         expect($result['unit'])->toBe('us')
             ->and(collect($result['points'])->pluck('value')->filter()->values()->all())->toBe([250_000])
             ->and($this->wasRefused($this->callTool('lj_mcp_secret', 'get_metric_series', ['project' => 'shop', 'metric' => 'nope'])))->toBeTrue();
+    });
+
+    it('returns AI usage only where the token may read it', function () {
+        AiUsageHourly::factory()->forProject($this->project)->create(['hour' => now()->startOfHour(), 'calls' => 4]);
+        $this->token->update(['permissions' => $this->token->permissions->with(McpArea::Ai, new McpAreaGrant(McpLevel::Read))]);
+
+        expect(collect(($this->call)('get_metric_series', ['metric' => 'ai_calls', 'interval' => '1h'])['points'])->sum('value'))->toEqual(4);
+
+        $this->token->update(['permissions' => $this->token->permissions->with(McpArea::Ai, new McpAreaGrant(McpLevel::None))]);
+        $refused = $this->callTool('lj_mcp_secret', 'get_metric_series', ['project' => 'shop', 'metric' => 'ai_calls']);
+
+        expect($this->wasRefused($refused))->toBeTrue()
+            ->and($refused->json('result.content.0.text'))->toBe(__('metrics.ai.forbidden'));
     });
 
     it('lists queues with their depth', function () {

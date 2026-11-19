@@ -56,4 +56,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+        // A key's hashes (Find a key) are not put back in the session after a failed lookup.
+        $exceptions->dontFlash(['hashes']);
     })->create();

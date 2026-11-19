@@ -8,10 +8,13 @@ namespace App\Domains\Metrics\Enums;
  * Every time series the metrics API serves. Durations are in milliseconds, shares
  * (error rate, host use) are fractions from 0 to 1, sizes in bytes. The database
  * metrics read what reported health checks send as size_bytes, connections and
- * max_connections. Activity counts how often apps recorded an activity.
+ * max_connections. Activity counts how often apps recorded an activity. The ai_* metrics
+ * read the AI usage totals, cost in the team's currency.
  */
 enum Metric: string
 {
+    private const array AI_GROUPS = [MetricGroup::Environment, MetricGroup::Provider, MetricGroup::Model, MetricGroup::Key, MetricGroup::Owner, MetricGroup::Actor];
+
     case Requests = 'requests';
     case Errors = 'errors';
     case ErrorRate = 'error_rate';
@@ -37,6 +40,14 @@ enum Metric: string
     case DbConnections = 'db_connections';
     case DbConnectionsUsed = 'db_connections_used';
     case Activity = 'activity';
+    case AiCalls = 'ai_calls';
+    case AiErrors = 'ai_errors';
+    case AiTokensInput = 'ai_tokens_input';
+    case AiTokensOutput = 'ai_tokens_output';
+    case AiTokensCacheRead = 'ai_tokens_cache_read';
+    case AiTokensCacheWrite = 'ai_tokens_cache_write';
+    case AiTokensReasoning = 'ai_tokens_reasoning';
+    case AiCost = 'ai_cost';
 
     public function unit(): string
     {
@@ -45,6 +56,7 @@ enum Metric: string
             self::ErrorRate, self::CpuLoad, self::MemoryUsed, self::DiskUsed, self::DbConnectionsUsed => 'ratio',
             self::DbSize => 'bytes',
             self::Apdex, self::ClsP75 => 'score',
+            self::AiCost => 'currency',
             default => 'count',
         };
     }
@@ -54,7 +66,7 @@ enum Metric: string
      */
     public function isCount(): bool
     {
-        return $this->unit() === 'count' && ! in_array($this, [self::QueueSize, self::QueueWorkers, self::DbConnections], true);
+        return in_array($this->unit(), ['count', 'currency'], true) && ! in_array($this, [self::QueueSize, self::QueueWorkers, self::DbConnections], true);
     }
 
     /**
@@ -75,6 +87,16 @@ enum Metric: string
             self::CpuLoad, self::MemoryUsed, self::DiskUsed => [MetricGroup::Host],
             self::DbSize, self::DbConnections, self::DbConnectionsUsed => [MetricGroup::Environment, MetricGroup::Check],
             self::Activity => [MetricGroup::Environment, MetricGroup::Activity],
+            self::AiCost => [...self::AI_GROUPS, MetricGroup::Payer],
+            self::AiCalls, self::AiErrors, self::AiTokensInput, self::AiTokensOutput, self::AiTokensCacheRead, self::AiTokensCacheWrite, self::AiTokensReasoning => self::AI_GROUPS,
         };
+    }
+
+    /**
+     * Read from the AI usage totals: a team token's, where it may use get_ai_usage.
+     */
+    public function isAi(): bool
+    {
+        return str_starts_with($this->value, 'ai_');
     }
 }

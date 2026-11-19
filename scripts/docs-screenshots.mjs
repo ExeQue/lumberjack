@@ -7,6 +7,8 @@
 // DOCS_EMAIL         who signs in (the seeded admin@lumberjack)
 // DOCS_PASSWORD      their password (password)
 // DOCS_PROJECT       the project to show (the seeded Storefront)
+// DOCS_AI_PROJECT    the project whose AI usage to show, by name or /projects/<uuid> (the
+//                    seeded Customer Portal, else DOCS_PROJECT)
 // CHROME_PATH        a Chrome or Chromium to use instead of the one Puppeteer downloads
 //
 // It only reads: it opens pages and dialogs but never saves or submits anything.
@@ -121,6 +123,18 @@ const project = await page.evaluate((name) => {
 if (!project) {
     throw new Error(`No project named ${PROJECT} on /projects.`);
 }
+// AI usage is shown from the project with the most of it: keys, budgets and actors.
+// It may sit in another team than the one signed in to, so a path (/projects/<uuid>) works too.
+const AI_PROJECT = process.env.DOCS_AI_PROJECT ?? 'Customer Portal';
+const aiProject = AI_PROJECT.startsWith('/')
+    ? AI_PROJECT
+    : await page.evaluate((name) => {
+          const link = [
+              ...document.querySelectorAll('a[href*="/projects/"]'),
+          ].find((a) => a.textContent?.includes(name));
+          return link ? new URL(link.href).pathname : null;
+      }, AI_PROJECT);
+const ai = `${aiProject ?? project}/ai`;
 await open(`${project}/issues`);
 // Issues with a stacktrace (the row shows a file and line), those with notes first.
 const issues = await page.evaluate(() =>
@@ -171,7 +185,7 @@ const pairCode = await page
 
 // It fills its display: 1920 px wide gives each cell the width an 8-column screen has on a
 // 1920 x 1080 TV, and rows as tall as that make a 1 x 1 tile square.
-const galleryView = { width: 1920, height: 240 * 19 };
+const galleryView = { width: 1920, height: 240 * 22 };
 // Health first: the seeded checks' agents report no more, and go stale within minutes.
 const galleryTiles = [
     'health-cards',
@@ -193,6 +207,13 @@ const galleryTiles = [
     'list-calendar',
     'list-activity',
     'list-activity-latest',
+    'stat-ai-cost',
+    'stat-ai-tokens',
+    'stat-ai-budget',
+    'gauge-ai-budget',
+    'gauge-ai-error-rate',
+    'chart-ai-cost',
+    'list-ai-spenders',
     'slo-availability',
     'slo-latency',
     'clock-world',
@@ -320,8 +341,43 @@ const shots = {
         fullPage: true,
         maxHeight: 1700,
     },
+    'ai-usage': { path: ai, fullPage: true, maxHeight: 2200 },
+    'ai-key': {
+        path: ai,
+        // The key that costs the most, from the usage page's list.
+        before: async () => {
+            await click('a[href*="/ai/keys/"]');
+            await page.waitForNetworkIdle();
+            await sleep(800);
+        },
+        fullPage: true,
+        maxHeight: 1300,
+    },
+    'ai-budgets': { path: `${ai}/budgets` },
+    // A budget over several key owners, being edited.
+    'ai-budget-form': {
+        path: `${ai}/budgets`,
+        before: async () => {
+            await page.evaluate(() => {
+                const row = [...document.querySelectorAll('tbody tr')].find(
+                    (tr) => tr.textContent?.includes('key owners'),
+                );
+                [...(row?.querySelectorAll('button') ?? [])]
+                    .find((button) => button.textContent?.trim() === 'Edit')
+                    ?.click();
+            });
+            await sleep(600);
+        },
+        element: '[role=dialog]',
+    },
+    'ai-prices': { path: `${ai}/prices`, fullPage: true },
     'settings-agents': { path: `${project}/settings#agents` },
-    'settings-alerts': { path: `${project}/settings#alerts`, fullPage: true },
+    // Rule groups start folded; one opened shows the rules in it.
+    'settings-alerts': {
+        path: `${project}/settings#alerts`,
+        before: () => click('[aria-controls="rules-issues"]'),
+        fullPage: true,
+    },
     'settings-retention': {
         path: `${project}/settings#retention`,
         fullPage: true,
@@ -334,7 +390,7 @@ const shots = {
     },
     'team-alerts': {
         path: '/team/alerts',
-        before: () => click('::-p-text(Custom alert topics)'),
+        before: () => click('[aria-controls="rules-issues"]'),
         fullPage: true,
         maxHeight: 4600,
     },
@@ -527,5 +583,8 @@ for (const [name, shot] of Object.entries(shots)) {
     }
 }
 
+// Opening a project of another team makes that team the current one; back to the project's,
+// so the next run finds its project on /projects again.
+await open(project);
 await browser.close();
 process.exitCode = failed > 0 ? 1 : 0;

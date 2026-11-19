@@ -26,17 +26,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property string $uuid
  * @property string $name
+ * @property string $currency ISO 4217, of every AI price of the team
  * @property-read Membership $pivot  set when loaded through a user's teams
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['name'])]
+#[Fillable(['name', 'currency'])]
 #[UseFactory(TeamFactory::class)]
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
     use HasFactory;
     use HasUuids;
+
+    protected $attributes = ['currency' => 'USD'];
 
     /** @return list<string> */
     public function uniqueIds(): array

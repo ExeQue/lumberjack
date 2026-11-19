@@ -208,6 +208,8 @@ export type Paginated<T> = {
 export type TeamShared = {
     uuid: string;
     name: string;
+    /** ISO 4217, of the team's AI prices and cost. */
+    currency: string;
     role: 'owner' | 'admin' | 'member' | null;
     visiting?: boolean;
     can_administer: boolean;
@@ -365,22 +367,43 @@ export type WeeklySummarySettings = {
     time: string;
 };
 
+/** When an AI budget rule tells: at these shares (percent), and when on course to go over. */
+export type AiBudgetSettings = {
+    thresholds: number[];
+    projected: boolean;
+};
+
+/** When an AI error rate rule tells about a key. */
+export type AiErrorRateSettings = {
+    minutes: number;
+    rate: number;
+    min_calls: number;
+};
+
 /** A team's alert rule, or a project's own that overrides the team's of that type. */
 export type AlertRule = {
     id: number;
     type: string;
+    /** The group the rule is listed under, see AlertRuleType::group(). */
+    group: string;
     label: string;
     description: string;
     enabled: boolean;
     channels: number[];
     environments: string[];
-    /** A queue backlog rule's thresholds or a weekly summary's day and time; null for other rules. */
-    settings: QueueBacklogSettings | WeeklySummarySettings | null;
+    /** A queue backlog rule's thresholds, a weekly summary's day and time or an AI rule's settings; null for other rules. */
+    settings:
+        | QueueBacklogSettings
+        | WeeklySummarySettings
+        | AiBudgetSettings
+        | AiErrorRateSettings
+        | null;
 };
 
 /** One type on a project: the team's rule, and the project's own when it customized it. */
 export type ProjectAlertRule = {
     type: string;
+    group: string;
     /** Set on custom alert topics. */
     topic?: string;
     label: string;

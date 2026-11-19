@@ -12,6 +12,9 @@ import { index as browserIndex } from '@/routes/browser';
 import { index as commandsIndex } from '@/routes/commands';
 import { index as dataSourcesIndex } from '@/routes/data-sources';
 import { index as activityIndex } from '@/routes/activity';
+import { index as aiIndex } from '@/routes/ai';
+import { index as aiBudgets } from '@/routes/ai/budgets';
+import { index as aiPrices } from '@/routes/ai/prices';
 import { index as healthIndex } from '@/routes/health';
 import { index as issuesIndex } from '@/routes/issues';
 import { index as jobsIndex } from '@/routes/jobs';
@@ -197,6 +200,21 @@ export function useNavigation(
               ]),
               item(t('common.nav.logs'), logsIndex(project.uuid).url),
               item(t('common.nav.activity'), activityIndex(project.uuid).url),
+              group(t('common.nav.ai'), [
+                  {
+                      ...item(
+                          t('common.nav.ai_usage'),
+                          aiIndex(project.uuid).url,
+                      ),
+                      // Its keys, owners and actors too, but not the prices and budgets beside it.
+                      active:
+                          isAt(aiIndex(project.uuid).url) &&
+                          !isAt(aiPrices(project.uuid).url) &&
+                          !isAt(aiBudgets(project.uuid).url),
+                  },
+                  item(t('common.nav.ai_budgets'), aiBudgets(project.uuid).url),
+                  item(t('common.nav.ai_prices'), aiPrices(project.uuid).url),
+              ]),
               item(t('common.nav.health'), healthIndex(project.uuid).url, {
                   count: counts?.health,
               }),
@@ -322,6 +340,7 @@ const sections: Record<string, (project: string) => { url: string }> = {
     commands: commandsIndex,
     logs: logsIndex,
     activity: activityIndex,
+    ai: aiIndex,
     health: healthIndex,
     connectors: connectorsIndex,
     'data-sources': dataSourcesIndex,

@@ -17,6 +17,7 @@ enum McpArea: string
     case Alerts = 'alerts';
     case DataSources = 'data_sources';
     case Screens = 'screens';
+    case Ai = 'ai';
     case Project = 'project';
     case Team = 'team';
 

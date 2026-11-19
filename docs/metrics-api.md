@@ -1,8 +1,8 @@
 # Metrics API
 
 A read-only JSON API for charting Lumberjack's data in Grafana or reading it from any
-HTTP client: requests, errors, latency, issues, jobs, queues, hosts, web vitals and
-releases. It also serves the current gauges in the Prometheus text format, for scraping
+HTTP client: requests, errors, latency, issues, jobs, queues, hosts, web vitals,
+releases and AI usage. It also serves the current gauges in the Prometheus text format, for scraping
 and alerting.
 
 ## Authentication
@@ -10,7 +10,8 @@ and alerting.
 - **A team token**, sent as `Authorization: Bearer lj_mcp_...`. Create it under **API
   and MCP tokens** on the team page, as described in [MCP](./mcp#tokens). The token
   reads the projects it covers that its creator may see, where it may use
-  `get_metric_series`. `issues` also needs `list_issues` in that project.
+  `get_metric_series`. `issues` also needs `list_issues` in that project, and the
+  [AI metrics](#ai-usage) need `get_ai_usage`.
 - **Public stats**, without a header. An owner or admin turns on **Public stats** in a
   project's **Settings, Keys**. That creates a secret URL,
   `https://your-lumberjack/api/v1/public/ps_.../`, which serves the same endpoints for
@@ -19,7 +20,8 @@ and alerting.
 
 Public stats show aggregates only. They leave out issue messages, stack traces, user
 ids, query strings and host names. Hosts show as `host 1`, `host 2`. Issue titles are
-left out unless **Include issue titles** is ticked.
+left out unless **Include issue titles** is ticked. AI usage is never public: its
+series answer `422`, and the summary and Prometheus page leave it out.
 
 Paths below are relative to `https://your-lumberjack/api/v1` with a token, or to the
 public stats URL without one.
@@ -36,6 +38,7 @@ public stats URL without one.
 | Status | When                                                                  |
 | ------ | --------------------------------------------------------------------- |
 | `401`  | The token is wrong or missing.                                        |
+| `403`  | The token may not read issues, or AI usage, in this project.          |
 | `404`  | The public key is unknown, or the credential cannot read the project. |
 | `422`  | A parameter is invalid.                                               |
 
@@ -43,18 +46,18 @@ Data past a project's [retention](./projects#retention) is deleted and does not 
 
 ## Endpoints
 
-| Endpoint                            | Returns                                                                                                                                                                                               |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /projects`                     | The projects the credential reads: `uuid`, `slug`, `name`.                                                                                                                                            |
-| `GET /projects/{p}/summary`         | Requests, errors, error rate, p50/p95/p99, Apdex, open issues, users affected, job runs, failed and stuck jobs, health check counts, and the previous period's requests, errors, p95 and failed jobs. |
-| `GET /projects/{p}/series/{metric}` | A time series, see below.                                                                                                                                                                             |
-| `GET /projects/{p}/routes`          | Per route: name, domain (with several), requests, p50/p95/p99, error rate, Apdex.                                                                                                                     |
-| `GET /projects/{p}/issues`          | Open issues, last seen first: reference, title, status, occurrences, users.                                                                                                                           |
-| `GET /projects/{p}/jobs`            | Per job class: runs, failures, failure rate, p50/p95 duration, p95 wait.                                                                                                                              |
-| `GET /projects/{p}/queues`          | Per queue: latest size, oldest age, p95 wait.                                                                                                                                                         |
-| `GET /projects/{p}/hosts`           | Per agent: online, last seen, CPU load per core, memory and disk in use.                                                                                                                              |
-| `GET /projects/{p}/releases`        | Release health: requests, error rate, p95, occurrences, new issues, regressions.                                                                                                                      |
-| `GET /metrics`                      | Prometheus text format of the current gauges of every project.                                                                                                                                        |
+| Endpoint                            | Returns                                                                                                                                                                                                                                                              |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /projects`                     | The projects the credential reads: `uuid`, `slug`, `name`.                                                                                                                                                                                                           |
+| `GET /projects/{p}/summary`         | Requests, errors, error rate, p50/p95/p99, Apdex, open issues, users affected, job runs, failed and stuck jobs, health check counts, and the previous period's requests, errors, p95 and failed jobs. Under `ai`, the AI usage page's totals (see below), or `null`. |
+| `GET /projects/{p}/series/{metric}` | A time series, see below.                                                                                                                                                                                                                                            |
+| `GET /projects/{p}/routes`          | Per route: name, domain (with several), requests, p50/p95/p99, error rate, Apdex.                                                                                                                                                                                    |
+| `GET /projects/{p}/issues`          | Open issues, last seen first: reference, title, status, occurrences, users.                                                                                                                                                                                          |
+| `GET /projects/{p}/jobs`            | Per job class: runs, failures, failure rate, p50/p95 duration, p95 wait.                                                                                                                                                                                             |
+| `GET /projects/{p}/queues`          | Per queue: latest size, oldest age, p95 wait.                                                                                                                                                                                                                        |
+| `GET /projects/{p}/hosts`           | Per agent: online, last seen, CPU load per core, memory and disk in use.                                                                                                                                                                                             |
+| `GET /projects/{p}/releases`        | Release health: requests, error rate, p95, occurrences, new issues, regressions.                                                                                                                                                                                     |
+| `GET /metrics`                      | Prometheus text format of the current gauges of every project.                                                                                                                                                                                                       |
 
 `{p}` is a project's slug or uuid. The summary and tables take:
 
@@ -85,25 +88,29 @@ Tables come as typed columns and rows:
 
 `GET /projects/{p}/series/{metric}`, where `{metric}` is one of:
 
-| Metric                                 | Unit  | Splits by                                 |
-| -------------------------------------- | ----- | ----------------------------------------- |
-| `requests`, `errors` (5xx)             | count | environment, route, domain, release       |
-| `error_rate`                           | ratio | environment, route, domain, release       |
-| `p50`, `p95`, `p99`                    | ms    | environment, route, domain, host, release |
-| `apdex`                                | score | environment, route, domain, release       |
-| `occurrences`, `users`                 | count | environment, host, release                |
-| `new_issues`                           | count | environment, release                      |
-| `job_runs`, `job_failures`             | count | environment, queue, host                  |
-| `queue_wait` (p95)                     | ms    | environment, queue, host                  |
-| `queue_size`                           | count | queue, host                               |
-| `queue_workers`                        | count | queue, host                               |
-| `cpu_load`, `memory_used`, `disk_used` | ratio | host                                      |
-| `lcp_p75`, `inp_p75`                   | ms    | environment, route, release               |
-| `cls_p75`                              | score | environment, route, release               |
-| `db_size`                              | bytes | environment, check                        |
-| `db_connections`                       | count | environment, check                        |
-| `db_connections_used`                  | ratio | environment, check                        |
-| `activity`                             | count | environment, activity                     |
+| Metric                                                                 | Unit     | Splits by                                              |
+| ---------------------------------------------------------------------- | -------- | ------------------------------------------------------ |
+| `requests`, `errors` (5xx)                                             | count    | environment, route, domain, release                    |
+| `error_rate`                                                           | ratio    | environment, route, domain, release                    |
+| `p50`, `p95`, `p99`                                                    | ms       | environment, route, domain, host, release              |
+| `apdex`                                                                | score    | environment, route, domain, release                    |
+| `occurrences`, `users`                                                 | count    | environment, host, release                             |
+| `new_issues`                                                           | count    | environment, release                                   |
+| `job_runs`, `job_failures`                                             | count    | environment, queue, host                               |
+| `queue_wait` (p95)                                                     | ms       | environment, queue, host                               |
+| `queue_size`                                                           | count    | queue, host                                            |
+| `queue_workers`                                                        | count    | queue, host                                            |
+| `cpu_load`, `memory_used`, `disk_used`                                 | ratio    | host                                                   |
+| `lcp_p75`, `inp_p75`                                                   | ms       | environment, route, release                            |
+| `cls_p75`                                                              | score    | environment, route, release                            |
+| `db_size`                                                              | bytes    | environment, check                                     |
+| `db_connections`                                                       | count    | environment, check                                     |
+| `db_connections_used`                                                  | ratio    | environment, check                                     |
+| `activity`                                                             | count    | environment, activity                                  |
+| `ai_calls`, `ai_errors`                                                | count    | environment, provider, model, key, owner, actor        |
+| `ai_tokens_input`, `ai_tokens_output`                                  | count    | environment, provider, model, key, owner, actor        |
+| `ai_tokens_cache_read`, `ai_tokens_cache_write`, `ai_tokens_reasoning` | count    | environment, provider, model, key, owner, actor        |
+| `ai_cost`                                                              | currency | environment, provider, model, key, owner, actor, payer |
 
 Query parameters, which match Grafana's macros:
 
@@ -119,8 +126,13 @@ Query parameters, which match Grafana's macros:
   `billing:invoice.paid`) take `*` as a wildcard (`/api/*`, `*.example.com`). `route` matches a
   route's URI or its name (`orders.*`). A filter that does not apply to a metric is ignored, except `host`, which is
   rejected with 422.
-- `group_by`: one series per environment, route, domain, host, queue, release, check or
-  activity (as `group:name`).
+- `provider`, `model`, `key`, `owner`, `actor`, `payer`: filters of the AI metrics.
+  `provider` and `model` take `*` as a wildcard (`claude-*`). `key` is a key's name or
+  its short id, never its fingerprint. `owner` and `actor` are `type:id`, such as
+  `tenant:7`. `payer` is `us` or `customer` and narrows `ai_cost` to that payer's share.
+- `group_by`: one series per environment, route, domain, host, queue, release, check,
+  activity (as `group:name`), or for the AI metrics provider, model, key (its name, else
+  its short id), owner, actor (both as `type:id`) or payer (`us` and `customer`).
   Only the busiest `top` are returned, 10 by default and at most 50.
 
 ```json
@@ -137,7 +149,8 @@ Query parameters, which match Grafana's macros:
 ```
 
 In a bucket without data, counts are zero and other metrics have no point. Without
-`group_by`, `series` is the metric's name.
+`group_by`, `series` is the metric's name. `ai_cost` adds `currency`, the team's currency (ISO 4217,
+such as `EUR`).
 
 #### How the numbers are counted
 
@@ -158,29 +171,53 @@ In a bucket without data, counts are zero and other metrics have no point. Witho
   interval counts the activity itself, kept for less time. With hourly buckets, the
   first hour of the range counts whole.
 
+#### AI usage
+
+The `ai_*` metrics read the [AI usage](./ai) totals, so they agree with the AI pages:
+
+- They are counted per hour, so their interval is whole hours (`5m` becomes `1h`) and
+  the first hour of the range counts whole.
+- With an `actor` filter or split they read the daily totals, the only ones that carry
+  actors. The interval is then whole days (UTC) and the first and last day count whole.
+- `ai_cost` is priced when it is read, with the prices as they are now, in the team's
+  currency, as on the AI pages. Tokens without a price cost nothing. A call is paid by
+  `customer` when its key (or the call) has an owner or the key says so, else by the
+  project's default payer.
+- `ai_tokens_input` includes cached tokens and `ai_tokens_output` reasoning ones, so
+  `input` plus `output` is every token once.
+- Only a team token where it may use `get_ai_usage` reads them. Any other token gets
+  `403`, public stats `422`.
+
 ### Prometheus
 
 `GET /metrics` serves gauges for every project the credential reads, labeled with the
 project's slug. Counts and rates cover the last hour. The database gauges show each
-database check's latest report.
+database check's latest report. The AI gauges cover the last complete hour (12:00 to
+13:00 when scraped at 13:20), so a value does not grow while its hour fills up, and only
+show for a token that may use `get_ai_usage`. They
+have no key, owner or actor label: a project can have thousands of keys, and each would
+be a series of its own. Split by those in a series instead.
 
-| Gauge                                     | Labels                            |
-| ----------------------------------------- | --------------------------------- |
-| `lumberjack_requests`                     | `project`                         |
-| `lumberjack_error_rate`                   | `project`                         |
-| `lumberjack_request_duration_p95_seconds` | `project`                         |
-| `lumberjack_apdex`                        | `project`                         |
-| `lumberjack_open_issues`                  | `project`                         |
-| `lumberjack_users_affected`               | `project`                         |
-| `lumberjack_failed_jobs`                  | `project`                         |
-| `lumberjack_health_checks`                | `project`, `state`                |
-| `lumberjack_queue_size`                   | `project`, `connection`, `queue`  |
-| `lumberjack_queue_workers`                | `project`, `connection`, `queue`  |
-| `lumberjack_queue_oldest_age_seconds`     | `project`, `connection`, `queue`  |
-| `lumberjack_agents_online`                | `project`                         |
-| `lumberjack_database_size_bytes`          | `project`, `environment`, `check` |
-| `lumberjack_database_connections`         | `project`, `environment`, `check` |
-| `lumberjack_database_max_connections`     | `project`, `environment`, `check` |
+| Gauge                                     | Labels                                                                                                                   |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `lumberjack_requests`                     | `project`                                                                                                                |
+| `lumberjack_error_rate`                   | `project`                                                                                                                |
+| `lumberjack_request_duration_p95_seconds` | `project`                                                                                                                |
+| `lumberjack_apdex`                        | `project`                                                                                                                |
+| `lumberjack_open_issues`                  | `project`                                                                                                                |
+| `lumberjack_users_affected`               | `project`                                                                                                                |
+| `lumberjack_failed_jobs`                  | `project`                                                                                                                |
+| `lumberjack_health_checks`                | `project`, `state`                                                                                                       |
+| `lumberjack_queue_size`                   | `project`, `connection`, `queue`                                                                                         |
+| `lumberjack_queue_workers`                | `project`, `connection`, `queue`                                                                                         |
+| `lumberjack_queue_oldest_age_seconds`     | `project`, `connection`, `queue`                                                                                         |
+| `lumberjack_agents_online`                | `project`                                                                                                                |
+| `lumberjack_database_size_bytes`          | `project`, `environment`, `check`                                                                                        |
+| `lumberjack_database_connections`         | `project`, `environment`, `check`                                                                                        |
+| `lumberjack_database_max_connections`     | `project`, `environment`, `check`                                                                                        |
+| `lumberjack_ai_calls`                     | `project`, `environment`, `provider`, `model`, `status` (`ok`, `error`)                                                  |
+| `lumberjack_ai_tokens`                    | `project`, `environment`, `provider`, `model`, `direction` (`input`, `output`, `cache_read`, `cache_write`, `reasoning`) |
+| `lumberjack_ai_cost`                      | `project`, `environment`, `provider`, `model`, `payer` (`us`, `customer`), `currency`                                    |
 
 ```yaml
 scrape_configs:
@@ -216,6 +253,21 @@ For public stats, drop `authorization` and set `metrics_path` to
 
 3. For a table, use format **Table**, a URL such as `.../projects/shop/routes?period=24h`,
    and **Rows / root** `rows`.
+
+For AI cost per model, use a URL such as
+
+```
+https://your-lumberjack/api/v1/projects/shop/series/ai_cost?from=${__from}&to=${__to}&interval=${__interval}&group_by=model
+```
+
+and set the panel's unit to the currency the answer names. Add `&payer=us` for what
+your own keys cost.
+
+In Prometheus, what customers' keys cost per model in the last complete hour is
+
+```promql
+sum by (model) (lumberjack_ai_cost{project="shop", payer="customer"})
+```
 
 For alerting on gauges, use a Prometheus that scrapes `/api/v1/metrics` as above.
 

@@ -48,6 +48,7 @@ class ProcessIngestBatch implements ShouldQueue
             return;
         }
 
-        $action->execute($project, $this->payload, $this->fromBrowser);
+        // The job's uuid stays the same on every attempt, so a retry can tell what it already stored.
+        $action->execute($project, $this->payload, $this->fromBrowser, $this->job?->uuid());
     }
 }

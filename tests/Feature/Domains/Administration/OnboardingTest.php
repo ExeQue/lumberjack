@@ -135,6 +135,7 @@ describe('the presets', function () {
             'scheduled_tasks' => ['mail' => false, 'toast' => false, 'push' => false],
             'agents' => ['mail' => false, 'toast' => false, 'push' => false],
             'releases' => ['mail' => false, 'toast' => false, 'push' => false],
+            'ai' => ['mail' => false, 'toast' => false, 'push' => false],
         ]],
         'balanced: the defaults' => ['balanced', NotificationPreferences::DEFAULTS],
         'everything: in app and browser, mail as balanced' => ['everything', [
@@ -147,6 +148,7 @@ describe('the presets', function () {
             'scheduled_tasks' => ['mail' => false, 'toast' => true, 'push' => true],
             'agents' => ['mail' => false, 'toast' => true, 'push' => true],
             'releases' => ['mail' => false, 'toast' => true, 'push' => true],
+            'ai' => ['mail' => false, 'toast' => true, 'push' => true],
         ]],
     ]);
 });

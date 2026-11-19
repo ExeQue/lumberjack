@@ -12,6 +12,7 @@ use App\Domains\Metrics\Enums\Metric;
 use App\Domains\Metrics\Enums\MetricGroup;
 use App\Domains\Metrics\Http\Requests\ReadSeriesRequest;
 use App\Domains\Metrics\Queries\MetricSeriesQuery;
+use App\Domains\Metrics\Support\MetricsCredential;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Mcp\Request;
@@ -27,7 +28,7 @@ class GetMetricSeries extends Tool
 
     protected string $name = 'get_metric_series';
 
-    protected string $description = 'A time series of one metric, as the metrics API serves it: points of {t, series, value}, optionally filtered (route, queue, job, host, release, check, domain, activity; * is a wildcard) and split by group_by. Durations are in microseconds, rates and shares from 0 to 1. Defaults to the last 24 hours.';
+    protected string $description = 'A time series of one metric, as the metrics API serves it: points of {t, series, value}, optionally filtered (route, queue, job, host, release, check, domain, activity; * is a wildcard) and split by group_by. Durations are in microseconds, rates and shares from 0 to 1, ai_cost in the team\'s currency. The ai_* metrics take get_ai_usage too. Defaults to the last 24 hours.';
 
     public function __construct(private readonly MetricSeriesQuery $series)
     {
@@ -63,6 +64,15 @@ class GetMetricSeries extends Tool
             return $project;
         }
 
+        // AI usage takes get_ai_usage too, as on the metrics API; the request reads the token from the credential.
+        $token = $this->context()->token();
+
+        if (Metric::tryFrom((string) $request->get('metric'))?->isAi() === true && ! $token->permits('get_ai_usage', $project)) {
+            return Response::error(__('metrics.ai.forbidden'));
+        }
+
+        app(MetricsCredential::class)->authenticateToken($token);
+
         // The metrics API's own request, so the names, limits and checks stay the same.
         $form = ReadSeriesRequest::create('/', 'GET', array_filter($request->all(), fn (mixed $value, string $key): bool => $key !== 'project' && $value !== null, ARRAY_FILTER_USE_BOTH));
         Validator::make($form->all(), $form->rules())->after($form->after())->validate();
@@ -73,6 +83,7 @@ class GetMetricSeries extends Tool
 
         return Response::json([
             'metric' => $metric->value,
+            ...$metric === Metric::AiCost ? ['currency' => $project->team->currency] : [],
             'unit' => $micro ? 'us' : $metric->unit(),
             'interval' => $window->interval(),
             'from' => $window->from->toIso8601ZuluString(),

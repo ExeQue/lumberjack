@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Domains\Logs\Models\LogChannel;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Projects\Support\ProjectKeys;
 use App\Domains\Teams\Models\Team;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -27,6 +28,7 @@ class ProjectFactory extends Factory
             'token_hash' => hash('sha256', $token),
             'token_last_four' => substr($token, -4),
             'public_key' => 'pk_'.Str::lower(Str::random(24)),
+            'ai_key_secret' => ProjectKeys::newAiKeySecret(),
             'allowed_origins' => ['https://'.$name.'.test'],
         ];
     }

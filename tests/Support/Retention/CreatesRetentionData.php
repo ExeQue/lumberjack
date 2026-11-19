@@ -8,6 +8,9 @@ use App\Domains\Activity\Models\Activity;
 use App\Domains\Activity\Models\ActivityCount;
 use App\Domains\Administration\Models\AdminAuditEntry;
 use App\Domains\Administration\Models\SystemSample;
+use App\Domains\Ai\Models\AiCall;
+use App\Domains\Ai\Models\AiUsageDaily;
+use App\Domains\Ai\Models\AiUsageHourly;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\CustomAlert;
 use App\Domains\Alerts\Models\NotificationChannel;
@@ -55,6 +58,10 @@ trait CreatesRetentionData
             RetentionCategory::Logs => LogEntry::factory()->for($project->logChannels()->sole(), 'channel')->create($time),
             RetentionCategory::Activity => Activity::factory()->forProject($project)->create($time),
             RetentionCategory::ActivityCounts => ActivityCount::factory()->forProject($project)->create(['hour' => $at]),
+            RetentionCategory::AiCalls => AiCall::factory()->forProject($project)->create($time),
+            RetentionCategory::AiUsageHourly => AiUsageHourly::factory()->forProject($project)->create(['hour' => $at->startOfHour()]),
+            // The day before: a cutoff falling on a day keeps that day's total.
+            RetentionCategory::AiUsageDaily => AiUsageDaily::factory()->forProject($project)->create(['day' => $at->subDay()->toDateString()]),
             RetentionCategory::HealthResults => DB::table('health_check_results')->insert(['health_check_id' => HealthCheck::factory()->for($project)->create(['slug' => 'r-'.uniqid()])->id, 'project_id' => $project->id, 'status' => 'ok', 'checked_at' => $at]),
             RetentionCategory::HealthOutages => DB::table('health_outages')->insert(['health_check_id' => HealthCheck::factory()->for($project)->create(['slug' => 'o-'.uniqid()])->id, 'project_id' => $project->id, 'status' => 'down', 'started_at' => $at->copy()->subHour(), 'ended_at' => $at]),
             RetentionCategory::DataSourceFetches => DB::table('data_source_fetches')->insert(['project_id' => $project->id, 'data_source_id' => DataSource::factory()->for($project)->create()->id, 'body' => '{}', 'fetched_at' => $at]),

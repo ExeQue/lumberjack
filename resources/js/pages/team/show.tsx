@@ -40,6 +40,7 @@ import {
     transfer as memberTransfer,
     update as memberUpdate,
 } from '@/routes/members';
+import { currency as teamCurrency } from '@/routes/team';
 import { store as teamStore } from '@/routes/teams';
 import type { TeamShared } from '@/types/lumberjack';
 
@@ -710,6 +711,66 @@ export default function TeamShow({
                             />
                         )}
                     </div>
+                </Card>
+
+                <Card aria-labelledby="h-currency">
+                    <CardHeader
+                        id="h-currency"
+                        title={t('team.currency.title')}
+                        description={t('team.currency.description')}
+                    />
+                    {admin ? (
+                        <Form
+                            {...teamCurrency.form()}
+                            options={{ preserveScroll: true }}
+                            className="flex flex-wrap items-start gap-3 p-4"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <Field
+                                        label={t('team.currency.label')}
+                                        htmlFor="team-currency"
+                                        error={errors.currency}
+                                        className="w-40"
+                                    >
+                                        <Input
+                                            id="team-currency"
+                                            name="currency"
+                                            required
+                                            minLength={3}
+                                            maxLength={3}
+                                            pattern="[A-Za-z]{3}"
+                                            list="team-currencies"
+                                            defaultValue={team.currency}
+                                            autoComplete="off"
+                                            className="font-mono uppercase"
+                                        />
+                                        <datalist id="team-currencies">
+                                            {Intl.supportedValuesOf(
+                                                'currency',
+                                            ).map((code) => (
+                                                <option
+                                                    key={code}
+                                                    value={code}
+                                                />
+                                            ))}
+                                        </datalist>
+                                    </Field>
+                                    <Button
+                                        type="submit"
+                                        disabled={processing}
+                                        className="mt-6"
+                                    >
+                                        {t('team.currency.save')}
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
+                    ) : (
+                        <p className="p-4 font-mono text-[13px]">
+                            {team.currency}
+                        </p>
+                    )}
                 </Card>
 
                 {can_create_team && (

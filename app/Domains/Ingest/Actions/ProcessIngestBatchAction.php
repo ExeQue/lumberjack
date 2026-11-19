@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Ingest\Actions;
 
 use App\Domains\Activity\Actions\RecordActivityAction;
+use App\Domains\Ai\Actions\RecordAiCallAction;
 use App\Domains\Alerts\Actions\RecordCustomAlertAction;
 use App\Domains\Commands\Actions\RecordCommandEventAction;
 use App\Domains\Health\Actions\RecordReportedHealthAction;
@@ -64,13 +65,15 @@ class ProcessIngestBatchAction
         private readonly SymbolicateFramesAction $symbolicateFramesAction,
         private readonly RecordMaintenanceEventAction $recordMaintenanceEventAction,
         private readonly RecordActivityAction $recordActivityAction,
+        private readonly RecordAiCallAction $recordAiCallAction,
     ) {
     }
 
     /**
      * @param  array<string, mixed>  $payload
+     * @param  string|null  $batch  the same on every attempt at the batch
      */
-    public function execute(Project $project, array $payload, bool $fromBrowser = false): void
+    public function execute(Project $project, array $payload, bool $fromBrowser = false, ?string $batch = null): void
     {
         $envelope = Envelope::fromPayload($payload);
         $events = is_array($payload['events'] ?? null) ? $payload['events'] : [];
@@ -94,6 +97,8 @@ class ProcessIngestBatchAction
                 continue;
             }
 
+            $kept = null;
+
             try {
                 match ($type) {
                     'request' => $requests[] = $this->requestRow($project, $event, $envelope),
@@ -110,11 +115,17 @@ class ProcessIngestBatchAction
                     'alert' => $this->recordCustomAlertAction->execute($project, $event, $envelope),
                     'maintenance' => $this->recordMaintenance($project, $event, $envelope),
                     'activity' => $this->recordActivityAction->execute($project, $event, $envelope),
+                    'ai_call' => $kept = $this->recordAiCallAction->execute($project, $event, $envelope),
                     default => null,
                 };
             } catch (Throwable $e) {
                 report($e);
 
+                continue;
+            }
+
+            // A skipped AI call (no provider or model) changes nothing a page shows.
+            if ($type === 'ai_call' && $kept !== true) {
                 continue;
             }
 
@@ -150,7 +161,17 @@ class ProcessIngestBatchAction
             $this->recordReleaseEnvironmentAction->execute($project, $envelope->release, $envelope->environment, $envelope->host);
         }
 
-        $this->broadcastChanges($project, $touched);
+        // Last, in one transaction, and nothing after it may fail the job: AI calls are
+        // accounting, and a batch retried after its AI totals were added would add them twice.
+        // Anything that fails before this point is retried with no AI written yet; a worker
+        // killed after it, before the job was acknowledged, is caught by the batch's id.
+        $this->recordAiCallAction->flush($batch);
+
+        try {
+            $this->broadcastChanges($project, $touched);
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     /**
@@ -327,6 +348,10 @@ class ProcessIngestBatchAction
 
         if (isset($touched['activity'])) {
             $kinds[] = ChangeKind::Activity;
+        }
+
+        if (isset($touched['ai_call'])) {
+            $kinds[] = ChangeKind::Ai;
         }
 
         if (isset($touched['request']) || isset($touched['request_counts']) || isset($touched['query']) || isset($touched['vital'])) {

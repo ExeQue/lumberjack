@@ -154,10 +154,10 @@ return [
 
     // What each type is for, under its name in the palette.
     'hints' => [
-        'stat' => 'One number: requests, errors, jobs, queues, agents',
+        'stat' => 'One number: requests, errors, jobs, queues, agents, AI cost',
         'gauge' => 'One value against its limits',
         'chart' => 'Any metric over the period',
-        'list' => 'Issues, alerts, jobs, tasks, routes, queues, hosts',
+        'list' => 'Issues, alerts, jobs, tasks, routes, queues, hosts, AI spenders',
         'health' => 'All checks, or pick one for its timeline',
         'overview' => 'Every project as a traffic light',
         'slo' => 'An objective and its error budget',
@@ -241,6 +241,7 @@ return [
         'databases' => 'Databases',
         'activity' => 'Activity',
         'health' => 'Health',
+        'ai' => 'AI usage',
         'external' => 'External',
     ],
     'inspector' => [
@@ -456,6 +457,11 @@ return [
         'auto_scroll' => ['label' => 'Scroll slowly through rows that do not fit'],
         'view' => ['label' => 'Show as', 'options' => ['auto' => 'Automatic', 'summary' => 'Summary', 'list' => 'List', 'cards' => 'Cards']],
         'checks' => ['label' => 'Checks'],
+        'ai_payer' => ['label' => 'Paid by', 'options' => ['all' => 'Anyone', 'us' => 'Us', 'customer' => 'Customers']],
+        'ai_tokens' => ['label' => 'Tokens', 'options' => ['total' => 'All', 'input' => 'Input', 'output' => 'Output']],
+        'ai_spenders' => ['label' => 'Spenders', 'options' => ['keys' => 'Keys', 'owners' => 'Key owners', 'actors' => 'Actors']],
+        'ai_budget' => ['label' => 'Budget', 'none' => 'Pick a budget', 'clear' => 'No budget', 'unknown' => 'A budget no longer there'],
+        'ai_key' => ['label' => 'Key', 'none' => 'Every key', 'clear' => 'Every key', 'unknown' => 'A key not used lately'],
         'data_source' => ['label' => 'Data source', 'none' => 'Pick a data source', 'search' => 'Search name or group', 'clear' => 'No data source', 'no_matches' => 'No data source matches.', 'empty' => 'No data sources yet; add one on a project\'s Data sources page.'],
         'json_path' => ['label' => 'JSONPath', 'placeholder' => '$.data.total', 'selector' => 'Selector', 'selector_placeholder' => 'sum by (status) (http_requests_total{method="GET"})', 'help' => [
             'matches' => 'Matches: :value',
@@ -611,6 +617,12 @@ return [
         ],
     ],
 
+    // Under a budget's amount used: its share of the amount, where it is headed, its name.
+    'budget' => [
+        'of' => ':share of :amount a :period',
+        'projected' => 'heading for :amount',
+        'periods' => ['day' => 'day', 'month' => 'month'],
+    ],
     'release' => [
         'since' => 'out for :age',
         'previous' => 'after :release',
@@ -627,6 +639,9 @@ return [
         'usage' => ['cpu' => 'CPU :value', 'memory' => 'Memory :value', 'disk' => 'Disk :value'],
         // A calendar row: the all-day label stands in for a start time, now marks an event on.
         'calendar' => ['all_day' => 'All day', 'now' => 'Now', 'until' => 'until :time', 'busy' => 'Busy'],
+        // A key the project no longer knows, and a row's tokens on Top AI spenders.
+        'ai_unnamed' => 'Unknown key',
+        'ai_tokens' => ':tokens tokens',
         'escalating' => 'Escalating',
         'regressed' => 'Regressed',
         'task_status' => [
@@ -647,6 +662,7 @@ return [
             'agents' => ['default' => ''],
             'top_activity' => ['default' => 'most frequent first'],
             'latest_activity' => ['default' => 'newest first'],
+            'ai_spenders' => ['default' => 'costliest first'],
             'calendar' => ['default' => ''],
             'external_json' => ['default' => ''],
         ],

@@ -41,7 +41,7 @@ class UpdateAlertRule extends Tool
             'enabled' => $schema->boolean()->required(),
             'channels' => $schema->array()->items($schema->integer())->description('Channel ids: the team\'s shared ones and the project\'s own. Others are dropped.')->required(),
             'environments' => $schema->array()->items($schema->string())->description('Empty or omitted: every environment.'),
-            'settings' => $schema->object()->description('Only for queue_backlog: {size, age_minutes, sustain_minutes}; for weekly_summary: {day (1 is Monday, 7 Sunday), time (HH:MM, in the app time zone)}. Omit to keep them.'),
+            'settings' => $schema->object()->description('Only for queue_backlog: {size, age_minutes, sustain_minutes}; for weekly_summary: {day (1 is Monday, 7 Sunday), time (HH:MM, in the app time zone)}; for ai_budget: {thresholds (percents from 50, 80, 100), projected (bool: warn when on course to go over)}; for ai_error_rate: {minutes, rate (percent failing), min_calls}. Omit to keep them.'),
         ];
     }
 

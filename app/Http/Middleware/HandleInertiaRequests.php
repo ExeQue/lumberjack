@@ -77,6 +77,8 @@ class HandleInertiaRequests extends Middleware
             'team' => fn (): ?array => ($team = $user?->currentTeam) === null ? null : [
                 'uuid' => $team->uuid,
                 'name' => $team->name,
+                // What AI cost is shown in.
+                'currency' => $team->currency,
                 'role' => $user->roleIn($team)?->value,
                 'can_administer' => $user->canAdministerTeam($team),
                 // A system administrator looking into a team they are not in.

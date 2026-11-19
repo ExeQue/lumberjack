@@ -33,7 +33,7 @@ class BroadcastProjectChangeAction
     {
         return match ($kind) {
             ChangeKind::Performance => 10,
-            ChangeKind::Logs, ChangeKind::Activity => 2,
+            ChangeKind::Logs, ChangeKind::Activity, ChangeKind::Ai => 2,
             default => self::WINDOW_SECONDS,
         };
     }

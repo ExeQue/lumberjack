@@ -76,6 +76,11 @@ final class WidgetSources
             new WidgetSource($stat, 'db_size', 'bytes', metric: Metric::DbSize, filterOn: 'check', snapshot: true),
             new WidgetSource($stat, 'db_connections', 'count', metric: Metric::DbConnections, filterOn: 'check', snapshot: true),
             new WidgetSource($stat, 'activity', 'count', metric: Metric::Activity, filterOn: 'activity'),
+            // AI usage (see ResolveAiWidgetDataAction): cost in the team's currency, one budget's use.
+            new WidgetSource($stat, 'ai_cost', 'currency'),
+            new WidgetSource($stat, 'ai_tokens', 'count'),
+            new WidgetSource($stat, 'ai_budget', 'currency', 0.8, 1.0, snapshot: true),
+            new WidgetSource($stat, 'ai_error_rate', 'ratio', 0.01, 0.05),
             // A project's data source, read with the widget's JSONPath (see DataSourceValuesQuery).
             new WidgetSource($stat, 'external_json', 'number', snapshot: true),
 
@@ -92,6 +97,8 @@ final class WidgetSources
             // Against a target of the widget's own: red when it falls short.
             new WidgetSource($gauge, 'activity', 'count', lowIsBad: true, metric: Metric::Activity, filterOn: 'activity'),
             new WidgetSource($gauge, 'health_uptime', 'ratio', 0.999, 0.99, lowIsBad: true),
+            new WidgetSource($gauge, 'ai_budget', 'ratio', 0.8, 1.0, snapshot: true),
+            new WidgetSource($gauge, 'ai_error_rate', 'ratio', 0.01, 0.05),
             new WidgetSource($gauge, 'external_json', 'number', snapshot: true),
 
             // Chart: one series (or a split) over the period.
@@ -113,6 +120,9 @@ final class WidgetSources
             new WidgetSource($chart, 'db_size', 'bytes', metric: Metric::DbSize, filterOn: 'check'),
             new WidgetSource($chart, 'db_connections', 'count', metric: Metric::DbConnections, filterOn: 'check'),
             new WidgetSource($chart, 'activity', 'count', metric: Metric::Activity, filterOn: 'activity'),
+            // One line per model, the costliest five, the rest as one.
+            new WidgetSource($chart, 'ai_cost', 'currency'),
+            new WidgetSource($chart, 'ai_tokens', 'count'),
             new WidgetSource($chart, 'external_json', 'number'),
 
             // List: rows, worst or newest first.
@@ -127,6 +137,8 @@ final class WidgetSources
             // Activity: the most frequent of the period, or the newest occurrences.
             new WidgetSource($list, 'top_activity', 'rows', filterOn: 'activity'),
             new WidgetSource($list, 'latest_activity', 'rows', filterOn: 'activity'),
+            // The keys, key owners or actors that cost the most.
+            new WidgetSource($list, 'ai_spenders', 'rows'),
             new WidgetSource($list, 'external_json', 'rows', snapshot: true),
             // An iCalendar data source's events (see Ical).
             new WidgetSource($list, 'calendar', 'rows', snapshot: true),

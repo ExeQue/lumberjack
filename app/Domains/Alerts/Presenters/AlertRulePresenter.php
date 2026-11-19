@@ -21,6 +21,7 @@ class AlertRulePresenter
         return [
             'id' => $rule->id,
             'type' => $rule->type->value,
+            'group' => $rule->type->group(),
             'label' => $rule->type->label(),
             'description' => $rule->type->description(),
             'enabled' => $rule->enabled,
@@ -29,6 +30,8 @@ class AlertRulePresenter
             'settings' => match ($rule->type) {
                 AlertRuleType::QueueBacklog => $rule->queueBacklogSettings()->toArray(),
                 AlertRuleType::WeeklySummary => $rule->weeklySummarySettings()->toArray(),
+                AlertRuleType::AiBudget => $rule->aiBudgetSettings()->toArray(),
+                AlertRuleType::AiErrorRate => $rule->aiErrorRateSettings()->toArray(),
                 default => null,
             },
         ];
@@ -60,6 +63,7 @@ class AlertRulePresenter
 
         $rows = array_map(fn (AlertRuleType $t): array => [
             'type' => $t->value,
+            'group' => $t->group(),
             'label' => $t->label(),
             'description' => $t->description(),
             'team' => ($rule = $team->get($t->value)) !== null ? $this->present($rule) : null,
@@ -72,6 +76,7 @@ class AlertRulePresenter
 
         return [...$rows, ...$topics->map(fn (AlertRule $rule): array => [
             'type' => $rule->type->value,
+            'group' => $rule->type->group(),
             'topic' => $rule->topic,
             'label' => $rule->topic,
             'description' => (string) __('alerts.custom.topic_description'),

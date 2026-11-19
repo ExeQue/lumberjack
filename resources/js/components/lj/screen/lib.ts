@@ -1,6 +1,7 @@
 import {
     formatBytes,
     formatCompact,
+    formatMoney,
     formatNumber,
     formatPercent,
 } from '@/lib/format';
@@ -350,6 +351,11 @@ export function formatValue(
         return !text || /^[/%]/.test(text)
             ? number + text
             : `${number} ${text}`;
+    }
+
+    // An AI cost, in the team's currency: currency:<ISO 4217 code>.
+    if (unit.startsWith('currency:')) {
+        return formatMoney(n, unit.slice(9) || 'USD', fixed);
     }
 
     if (unit === 'percent') {

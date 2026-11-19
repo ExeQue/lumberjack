@@ -9,6 +9,7 @@ export type LiveKind =
     | 'commands.changed'
     | 'logs.changed'
     | 'activity.changed'
+    | 'ai.changed'
     | 'performance.changed'
     | 'agents.changed'
     | 'health.changed'

@@ -23,7 +23,7 @@ class ListAlertRules extends Tool
 
     protected string $name = 'list_alert_rules';
 
-    protected string $description = 'The team\'s alert rules (on or off, channel ids, environments, queue backlog thresholds). Pass a project to get, per type and custom topic, the team\'s rule, the channels the project adds to it (add_ons) and the project\'s own rule when it customized one, which then counts instead; see list_notification_channels for the channel ids.';
+    protected string $description = 'The team\'s alert rules (on or off, the group it is listed under, channel ids, environments, queue backlog thresholds). Pass a project to get, per type and custom topic, the team\'s rule, the channels the project adds to it (add_ons) and the project\'s own rule when it customized one, which then counts instead; see list_notification_channels for the channel ids.';
 
     public function __construct(
         private readonly AlertRulePresenter $rules,

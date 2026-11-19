@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\OpenTelemetry\Actions;
 
+use App\Domains\Ai\Enums\AiCallSource;
+use App\Domains\Ai\Enums\AiCallStatus;
+use App\Domains\Ai\Enums\AiOperation;
 use App\Domains\Ingest\Actions\ProcessIngestBatchAction;
 use App\Domains\OpenTelemetry\Actions\Concerns\MapsOtlpData;
 use App\Domains\OpenTelemetry\Support\StackTraceParser;
@@ -15,12 +18,15 @@ use Opentelemetry\Proto\Trace\V1\Span\SpanKind;
 use Opentelemetry\Proto\Trace\V1\Status\StatusCode;
 
 /**
- * Spans sent over OTLP, as the request, job, query, span and exception events of an ingest batch.
+ * Spans sent over OTLP, as the request, job, query, span, AI call and exception events of an ingest batch.
  * See docs/opentelemetry.md for the mapping.
  */
 class IngestTracesAction
 {
     use MapsOtlpData;
+
+    /** GenAI operations that wrap model calls rather than make one. */
+    public const array AI_WRAPPER_OPERATIONS = ['invoke_agent', 'create_agent', 'execute_tool'];
 
     public function __construct(
         private readonly StackTraceParser $stackTraceParser,
@@ -62,6 +68,8 @@ class IngestTracesAction
         $status = (int) $this->first($attributes, 'http.response.status_code', 'http.status_code');
 
         $events = match (true) {
+            // A model call over HTTP is an AI call, not an outgoing request.
+            $this->first($attributes, 'gen_ai.provider.name', 'gen_ai.system', 'gen_ai.operation.name') !== null => $this->aiCall($span, $base, $attributes),
             // A server span without a status code answered as its own status says.
             $span->getKind() === SpanKind::SPAN_KIND_SERVER && $method !== null => [$this->request(
                 $base,
@@ -139,6 +147,60 @@ class IngestTracesAction
             [...$job, 'status' => 'processing', 'timestamp' => $base['timestamp']],
             [...$job, 'status' => $failed ? 'failed' : 'processed', 'timestamp' => $this->seconds($span->getEndTimeUnixNano()), 'duration_ms' => $base['duration_ms']],
         ];
+    }
+
+    /**
+     * A GenAI span as an AI call. Agent and tool spans wrap the model calls under them, whose
+     * tokens they would count a second time, so they are skipped.
+     *
+     * @param  array<string, mixed>  $base
+     * @param  array<string, mixed>  $attributes
+     * @return list<array<string, mixed>>
+     */
+    private function aiCall(Span $span, array $base, array $attributes): array
+    {
+        $name = $this->first($attributes, 'gen_ai.operation.name');
+
+        if (in_array($name, self::AI_WRAPPER_OPERATIONS, true)) {
+            return [];
+        }
+
+        // Any other operation is a model call: one Lumberjack has no name for counts as text.
+        $operation = $name === 'embeddings' ? AiOperation::Embeddings : AiOperation::Text;
+
+        $error = $this->first($attributes, 'error.type');
+        $failed = $error !== null || $span->getStatus()?->getCode() === StatusCode::STATUS_CODE_ERROR;
+        $actorType = $this->first($attributes, 'lumberjack.ai.actor.type');
+        $actorId = $this->first($attributes, 'lumberjack.ai.actor.id');
+        $userId = $this->first($attributes, 'user.id');
+
+        return [[
+            ...$base,
+            'type' => 'ai_call',
+            'source' => AiCallSource::Otel->value,
+            'provider' => $this->first($attributes, 'gen_ai.provider.name', 'gen_ai.system'),
+            'model' => $this->first($attributes, 'gen_ai.response.model', 'gen_ai.request.model'),
+            'operation' => $operation->value,
+            'tokens' => [
+                // The older names first came as prompt and completion tokens.
+                'input' => $this->first($attributes, 'gen_ai.usage.input_tokens', 'gen_ai.usage.prompt_tokens'),
+                'output' => $this->first($attributes, 'gen_ai.usage.output_tokens', 'gen_ai.usage.completion_tokens'),
+                'cache_read' => $attributes['gen_ai.usage.cache_read.input_tokens'] ?? null,
+                'cache_write' => $attributes['gen_ai.usage.cache_creation.input_tokens'] ?? null,
+                'reasoning' => $attributes['gen_ai.usage.reasoning.output_tokens'] ?? null,
+            ],
+            'status' => ($failed ? AiCallStatus::Error : AiCallStatus::Ok)->value,
+            'error' => $error,
+            'key' => [
+                'sha256' => $this->first($attributes, 'lumberjack.ai.key.sha256'),
+                'label' => $this->first($attributes, 'lumberjack.ai.key.label'),
+                'owner' => ['type' => $this->first($attributes, 'lumberjack.ai.key.owner.type'), 'id' => $this->first($attributes, 'lumberjack.ai.key.owner.id')],
+            ],
+            // The signed in user, when the app names no whole actor of its own.
+            'actor' => $actorType !== null && $actorId !== null
+                ? ['type' => $actorType, 'id' => $actorId]
+                : ['type' => $userId !== null ? 'user' : null, 'id' => $userId],
+        ]];
     }
 
     /**

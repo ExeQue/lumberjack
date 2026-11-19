@@ -29,7 +29,8 @@ use Throwable;
  * WidgetType cases and show a source of WidgetSources; the LAYOUT_TYPES need none (a qr
  * code's picture comes with the data all the same, drawn on the server). Options
  * live in sections of fields: select (one of its values), toggle, text, number, checks
- * (health check uuids), data_source (a data source uuid). A field with sources shows only
+ * (health check uuids), data_source (a data source uuid), ai_budget and ai_key (an AI budget's
+ * or key's uuid). A field with except shows for every source but those; one with sources shows only
  * for those sources (the External JSON fields), one with when only while those options
  * have one of the listed values (the QR code's fields per content). A field marked data is read by ResolveWidgetDataAction, so a
  * change to it refetches the widget; the rest only change how it draws. Scope fields are
@@ -274,7 +275,7 @@ final class WidgetSchema
                 'toggle' => ['nullable', 'boolean'],
                 'number' => ['nullable', 'numeric', ...(isset($field['min']) ? ['min:'.$field['min'], 'max:'.$field['max']] : [])],
                 'checks' => ['nullable', 'array', 'max:50'],
-                'data_source' => ['nullable', 'string', 'uuid'],
+                'data_source', 'ai_budget', 'ai_key' => ['nullable', 'string', 'uuid'],
                 'timezone' => ['nullable', 'timezone:all_with_bc', 'not_in:Factory'],
                 // Media addresses, one a line: long ones (signed links) too, only ever http(s).
                 'urls' => ['bail', 'nullable', 'string', 'max:20000', function (string $attribute, mixed $value, Closure $fail): void {
@@ -520,7 +521,8 @@ final class WidgetSchema
             // How long the widget's own source shows; set on its row under Rotate through.
             ['key' => 'source_seconds', 'type' => 'number', 'default' => null, 'data' => false, 'span' => 1, 'min' => 1, 'max' => self::MAX_ROTATE_SECONDS],
         ]);
-        $limits = [$number('amber'), $number('red'), $toggle('low_is_bad', null, true)];
+        // A budget's limits are its amount's 80% and 100%, not the widget's.
+        $limits = array_map(fn (array $field): array => [...$field, 'except' => ['ai_budget']], [$number('amber'), $number('red'), $toggle('low_is_bad', null, true)]);
         // Where an External JSON value reads from: the source, and a JSONPath to one number, or for a list to its items.
         $external = fn (bool $rows = false): array => array_map(fn (array $field): array => [...$field, 'data' => true, 'span' => 2, 'sources' => ['external_json']], [
             ['key' => 'data_source', 'type' => 'data_source', 'default' => null],
@@ -532,21 +534,33 @@ final class WidgetSchema
             [...$number('unit_divisor'), 'min' => 0.000001, 'max' => 1000000000000000, 'when' => ['unit' => ['custom']]],
         ]);
 
+        // What an AI source counts: whose cost, which tokens, which budget, which key.
+        $ai = fn (array $fields): array => array_values(array_map(fn (array $field): array => [...$field, 'data' => true], $fields));
+        $budget = ['key' => 'ai_budget', 'type' => 'ai_budget', 'default' => null, 'span' => 2, 'sources' => ['ai_budget']];
+        $key = ['key' => 'ai_key', 'type' => 'ai_key', 'default' => null, 'span' => 2, 'sources' => ['ai_error_rate']];
+
         return [
             'stat' => [
                 $section('value', [
                     ...$external(),
+                    ...$ai([
+                        [...$select('ai_payer', ['all', 'us', 'customer'], 'all', true, 2), 'sources' => ['ai_cost']],
+                        [...$select('ai_tokens', ['total', 'input', 'output'], 'total', true, 2), 'sources' => ['ai_tokens']],
+                        $budget,
+                        $key,
+                    ]),
                     ...$limits,
-                    $select('compare', ['none', 'previous', 'yesterday', 'last_week'], 'previous', true, 2),
+                    // A budget has no trend; an error rate no line.
+                    [...$select('compare', ['none', 'previous', 'yesterday', 'last_week'], 'previous', true, 2), 'except' => ['ai_budget']],
                     $select('decimals', ['auto', '0', '1', '2'], 'auto'),
-                    $toggle('sparkline', true, true),
+                    [...$toggle('sparkline', true, true), 'except' => ['ai_budget', 'ai_error_rate']],
                     $text('prefix'),
                     $text('suffix'),
                 ]),
                 $rotation, $scope(true), $display(true),
             ],
             'gauge' => [
-                $section('scale', [...$external(), $number('min'), $number('max'), ...$limits, $toggle('show_limits', true), $toggle('show_red_limit', true)]),
+                $section('scale', [...$external(), ...$ai([$budget, $key]), $number('min'), $number('max'), ...$limits, $toggle('show_limits', true), $toggle('show_red_limit', true)]),
                 $rotation, $scope(true), $display(true),
             ],
             'chart' => [
@@ -578,6 +592,7 @@ final class WidgetSchema
                         ['key' => 'days_after', 'type' => 'select', 'options' => ['0', '1', '7', '30'], 'default' => '7', 'span' => 1],
                         ['key' => 'upcoming_only', 'type' => 'toggle', 'default' => true, 'span' => 2],
                     ]),
+                    ...$ai([[...$select('ai_spenders', ['keys', 'owners', 'actors'], 'keys', true, 2), 'sources' => ['ai_spenders']]]),
                     $select('limit', ['auto', '3', '5', '10', '20'], 'auto', true),
                     $select('sort', ['newest', 'worst', 'last_seen', 'most_frequent'], 'newest', true),
                     $toggle('only_problems', false, true),

@@ -2,26 +2,34 @@
 
 declare(strict_types=1);
 
+use App\Domains\Ai\Enums\AiCallSource;
+use App\Domains\Ai\Enums\AiCallStatus;
+use App\Domains\Ai\Enums\AiOperation;
+use App\Domains\Ai\Models\AiCall;
+use App\Domains\Ai\Models\AiKey;
 use App\Domains\Ingest\Http\Requests\IngestBatchRequest;
+use App\Domains\Ingest\Jobs\ProcessIngestBatch;
 use App\Domains\Issues\Enums\IssueSource;
 use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Enums\JobRunStatus;
 use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Logs\Enums\LogLevel;
 use App\Domains\Logs\Models\LogEntry;
+use App\Domains\OpenTelemetry\Actions\IngestTracesAction;
 use App\Domains\OpenTelemetry\Http\Controllers\OpenTelemetryController;
 use App\Domains\OpenTelemetry\Http\Requests\OtlpExportRequest;
 use App\Domains\Performance\Models\QueryRun;
 use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceResponse;
 use Opentelemetry\Proto\Logs\V1\SeverityNumber;
 use Opentelemetry\Proto\Trace\V1\Span\SpanKind;
 use Opentelemetry\Proto\Trace\V1\Status\StatusCode;
 use Tests\Support\OpenTelemetry\BuildsOtlpPayloads;
 
-covers(OpenTelemetryController::class, OtlpExportRequest::class);
+covers(OpenTelemetryController::class, OtlpExportRequest::class, IngestTracesAction::class);
 
 uses(BuildsOtlpPayloads::class);
 
@@ -163,6 +171,113 @@ describe('traces', function () {
         $this->otlp('traces', $this->protobufTraces([$span], [...$this->otlpResource(), 'k8s.pod.name' => 'web-1-abc']))->assertOk();
 
         expect(RequestRun::count())->toBe(1);
+    });
+});
+
+describe('AI calls', function () {
+    beforeEach(function () {
+        $this->aiSpan = fn (array $attributes = [], int $status = StatusCode::STATUS_CODE_UNSET) => $this->protobufSpan(SpanKind::SPAN_KIND_CLIENT, [
+            'gen_ai.provider.name' => 'openai',
+            'gen_ai.operation.name' => 'chat',
+            'gen_ai.request.model' => 'gpt-4.1',
+            'gen_ai.response.model' => 'gpt-4.1-2025-04-14',
+            'gen_ai.usage.input_tokens' => 1200,
+            'gen_ai.usage.output_tokens' => 300,
+            'gen_ai.usage.cache_read.input_tokens' => 800,
+            'gen_ai.usage.cache_creation.input_tokens' => 100,
+            'gen_ai.usage.reasoning.output_tokens' => 120,
+            'http.request.method' => 'POST',
+            'url.full' => 'https://api.openai.com/v1/chat/completions',
+            ...$attributes,
+        ], 'chat gpt-4.1', 1834.2, status: $status);
+    });
+
+    it('stores a GenAI span as an AI call, not as an outgoing HTTP call', function () {
+        $this->otlp('traces', $this->protobufTraces([($this->aiSpan)([
+            'lumberjack.ai.key.sha256' => hash('sha256', 'openai:sk-secret'),
+            'lumberjack.ai.key.label' => 'prod',
+            'lumberjack.ai.key.owner.type' => 'tenant',
+            'lumberjack.ai.key.owner.id' => '42',
+            'lumberjack.ai.actor.type' => 'App\\Models\\User',
+            'lumberjack.ai.actor.id' => '7',
+            'user.id' => '99',
+        ])]))->assertOk();
+
+        $call = AiCall::query()->sole();
+        expect(DB::table('span_runs')->count())->toBe(0)
+            ->and([$call->provider, $call->model, $call->operation])->toBe(['openai', 'gpt-4.1-2025-04-14', AiOperation::Text])
+            ->and([$call->input_tokens, $call->output_tokens, $call->cache_read_tokens, $call->cache_write_tokens, $call->reasoning_tokens])->toBe([1200, 300, 800, 100, 120])
+            ->and($call->duration_ms)->toBe(1834.2)
+            ->and([$call->source, $call->status])->toBe([AiCallSource::Otel, AiCallStatus::Ok])
+            ->and([$call->owner_type, $call->owner_id, $call->actor_type, $call->actor_id])->toBe(['tenant', '42', 'App\\Models\\User', '7'])
+            ->and($call->fingerprint)->toBe(AiKey::query()->sole()->fingerprint)
+            ->and(AiKey::query()->sole()->label)->toBe('prod')
+            ->and([$call->trace_id, $call->environment, $call->release])->toBe([$this->traceId, 'production', '2.4.1']);
+    });
+
+    it('takes the signed in user as the actor when the app names none, and the older provider attribute', function () {
+        $this->otlp('traces', $this->protobufTraces([($this->aiSpan)(['gen_ai.provider.name' => '', 'gen_ai.system' => 'anthropic', 'user.id' => '99'])]))->assertOk();
+
+        $call = AiCall::query()->sole();
+        expect($call->provider)->toBe('anthropic')
+            ->and([$call->actor_type, $call->actor_id])->toBe(['user', '99']);
+    });
+
+    it('takes the signed in user as the actor when the app names only half of one', function (array $actor) {
+        $this->otlp('traces', $this->protobufTraces([($this->aiSpan)([...$actor, 'user.id' => '99'])]))->assertOk();
+
+        expect(AiCall::query()->sole()->only(['actor_type', 'actor_id']))->toBe(['actor_type' => 'user', 'actor_id' => '99']);
+    })->with([
+        'a type without an id' => [['lumberjack.ai.actor.type' => 'App\\Models\\User']],
+        'an id without a type' => [['lumberjack.ai.actor.id' => '7']],
+    ]);
+
+    it('stores a failed GenAI span as a failed call, with its error type', function () {
+        $this->otlp('traces', $this->protobufTraces([($this->aiSpan)(['error.type' => 'RateLimitError'], StatusCode::STATUS_CODE_ERROR)]))->assertOk();
+
+        $call = AiCall::query()->sole();
+        expect([$call->status, $call->error])->toBe([AiCallStatus::Error, 'RateLimitError']);
+    });
+
+    it('stores no call for agent and tool spans, whose tokens their model calls already count', function (string $operation) {
+        $this->otlp('traces', $this->protobufTraces([($this->aiSpan)(['gen_ai.operation.name' => $operation])]))->assertOk();
+
+        expect(AiCall::query()->count())->toBe(0)
+            ->and(DB::table('span_runs')->count())->toBe(0);
+    })->with(['invoke_agent', 'execute_tool', 'create_agent']);
+
+    it('stores embeddings as embeddings', function () {
+        $this->otlp('traces', $this->protobufTraces([($this->aiSpan)(['gen_ai.operation.name' => 'embeddings'])]))->assertOk();
+
+        expect(AiCall::query()->sole()->operation)->toBe(AiOperation::Embeddings);
+    });
+
+    it('counts any other model call as text', function () {
+        $this->otlp('traces', $this->protobufTraces([($this->aiSpan)(['gen_ai.operation.name' => 'generate_speech'])]))->assertOk();
+
+        expect(AiCall::query()->sole()->operation)->toBe(AiOperation::Text);
+    });
+
+    it('reads the older prompt and completion token names', function () {
+        $this->otlp('traces', $this->protobufTraces([($this->aiSpan)([
+            'gen_ai.usage.input_tokens' => null,
+            'gen_ai.usage.output_tokens' => null,
+            'gen_ai.usage.prompt_tokens' => 70,
+            'gen_ai.usage.completion_tokens' => 30,
+        ])]))->assertOk();
+
+        $call = AiCall::query()->sole();
+        expect([$call->input_tokens, $call->output_tokens])->toBe([70, 30]);
+    });
+
+    it('queues the key\'s fingerprint, never its hash', function () {
+        Queue::fake();
+        $sha256 = hash('sha256', 'openai:sk-secret');
+
+        $this->otlp('traces', $this->protobufTraces([($this->aiSpan)(['lumberjack.ai.key.sha256' => $sha256])]))->assertOk();
+
+        Queue::assertPushed(ProcessIngestBatch::class, fn (ProcessIngestBatch $job): bool => ! str_contains((string) json_encode($job->payload), $sha256)
+            && $job->payload['events'][0]['key']['fingerprint'] === hash_hmac('sha256', $sha256, $this->project->ai_key_secret));
     });
 });
 
