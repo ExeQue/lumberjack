@@ -134,6 +134,11 @@ const aiProject = AI_PROJECT.startsWith('/')
           ].find((a) => a.textContent?.includes(name));
           return link ? new URL(link.href).pathname : null;
       }, AI_PROJECT);
+if (!aiProject) {
+    console.warn(
+        `No project named ${AI_PROJECT} on /projects; AI usage is shown from ${PROJECT}. Set DOCS_AI_PROJECT=/projects/<uuid> for one in another team.`,
+    );
+}
 const ai = `${aiProject ?? project}/ai`;
 await open(`${project}/issues`);
 // Issues with a stacktrace (the row shows a file and line), those with notes first.
