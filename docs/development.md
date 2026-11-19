@@ -110,13 +110,14 @@ npm run docs:screenshots -- issues jobs # only these
 
 The script only opens pages and dialogs. It reads these environment variables:
 
-| Variable         | Default                         | Used for                            |
-| ---------------- | ------------------------------- | ----------------------------------- |
-| `LUMBERJACK_URL` | `https://lumberjack.test`       | The Lumberjack to open              |
-| `DOCS_EMAIL`     | `admin@lumberjack`              | Sign-in email                       |
-| `DOCS_PASSWORD`  | `password`                      | Sign-in password                    |
-| `DOCS_PROJECT`   | `Storefront`                    | The project to show                 |
-| `CHROME_PATH`    | the Chrome Puppeteer downloaded | A Chrome or Chromium to use instead |
+| Variable          | Default                                | Used for                                                                                      |
+| ----------------- | -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `LUMBERJACK_URL`  | `https://lumberjack.test`              | The Lumberjack to open                                                                        |
+| `DOCS_EMAIL`      | `admin@lumberjack`                     | Sign-in email                                                                                 |
+| `DOCS_PASSWORD`   | `password`                             | Sign-in password                                                                              |
+| `DOCS_PROJECT`    | `Storefront`                           | The project to show                                                                           |
+| `DOCS_AI_PROJECT` | `Customer Portal`, else `DOCS_PROJECT` | The project whose AI usage to show, by name or `/projects/<uuid>` (it may be in another team) |
+| `CHROME_PATH`     | the Chrome Puppeteer downloaded        | A Chrome or Chromium to use instead                                                           |
 
 ```bash
 CHROME_PATH=/usr/bin/chromium npm run docs:screenshots
@@ -127,6 +128,45 @@ Reduce the images to 256 colors with ImageMagick before you commit them:
 ```bash
 for f in docs/screenshots/*.png; do convert "$f" -dither None -colors 256 "PNG8:$f"; done
 ```
+
+## Promo video
+
+`npm run docs:video` makes a 90-second film of Lumberjack: the app in a browser window, with
+titles, zooms, highlights and transitions. It needs `ffmpeg` with libx264.
+
+```bash
+php artisan migrate:fresh --seed   # the film is cut for the showcase data
+npm run docs:video                 # storage/app/promo/lumberjack-promo.mp4
+```
+
+It runs in two steps, and each can run alone:
+
+1. `node scripts/promo/capture.mjs` signs in and takes sharp stills of the pages, and notes
+   where in them the film points (`storage/app/promo/shots`). It only opens pages and
+   dialogs. Seed right before it: the seeded health checks go stale within minutes.
+2. `node scripts/promo/render.mjs` draws the film frame by frame over those stills and
+   encodes it at 1920 x 1080 and 60 frames a second. Lumberjack does not have to run for it.
+
+The film itself is `scripts/promo/stage.js` (texts, timing, camera) and
+`scripts/promo/stage.css` (its look). While you work on it:
+
+```bash
+node scripts/promo/render.mjs --at 12,28.5,37   # single frames, as storage/app/promo/at-<seconds>.jpg
+node scripts/promo/render.mjs --from 31 --to 41 --fps 30 --out /tmp/part.mp4
+```
+
+Or open `storage/app/promo/stage.html#play` in a browser after one render to watch it play;
+`#play=31` starts at 31 seconds.
+
+Capturing reads the same environment variables as the screenshots, with `maja@lumberjack` as
+the default `DOCS_EMAIL`. Rendering reads `CHROME_PATH` and:
+
+| Variable      | Default              | Used for                  |
+| ------------- | -------------------- | ------------------------- |
+| `FFMPEG_PATH` | `ffmpeg` on the PATH | The ffmpeg to encode with |
+
+In the film the demo team is called Nordic Goods. Only the stills say so; nothing is
+changed in the database.
 
 ## Docs site
 
