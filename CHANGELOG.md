@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-19
+
 ### Changed
 
 - The number next to **Commands** in the sidebar counts the commands whose last run failed, instead of every failed run in the last day, so a command that runs fine again drops off at once.
@@ -360,7 +362,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.14.1...HEAD
+[0.14.1]: https://github.com/ExeQue/lumberjack/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/ExeQue/lumberjack/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/ExeQue/lumberjack/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/ExeQue/lumberjack/compare/v0.12.0...v0.13.0
