@@ -4,10 +4,13 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-19
+
 ### Added
 
 - A tour of Lumberjack on film (1:49) at the top of the README and the docs: one night from the first alert to the fix. It is made with Remotion in `video/` and lands in `art/`.
-- Inertia and Livewire requests are told apart: requests and request counts carry a `kind` (`inertia`, `inertia-partial`, `inertia-prefetch`, `livewire`), and each kind of a route is its own row on the Requests page with a badge and a **Kind** picker. A Livewire update arrives as its component and method (`livewire:cart.checkout@save`) instead of `/livewire/update`. A request event can carry a `context` with the Inertia component and partial props or the Livewire components and calls, shown on its trace, and Livewire calls and renders are `livewire` spans on the timeline. An unknown kind is stored as an ordinary request.
+- Inertia and Livewire requests are told apart: requests and request counts carry a `kind` (`inertia`, `inertia-partial`, `inertia-prefetch`, `livewire`), and each kind of a route is its own row on the Requests page with a badge and a **Kind** picker. A Livewire update arrives as its component and method (`livewire:cart.checkout@save`) instead of `/livewire/update`. A request event can carry a `context` with the Inertia component and partial props or the Livewire components and calls, shown on its trace, and Livewire calls and renders are `livewire` spans on the timeline. An unknown kind is stored as an ordinary request. Sent by Laravel Lumberjack 0.13.0 and newer.
+- The showcase has a Livewire project (Helpdesk) and an Inertia project (Planner), and the docs show their Requests pages and a Livewire trace.
 
 ## [0.13.1] - 2026-11-19
 
@@ -349,7 +352,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.13.1...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/ExeQue/lumberjack/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/ExeQue/lumberjack/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/ExeQue/lumberjack/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/ExeQue/lumberjack/compare/v0.11.1...v0.12.0
