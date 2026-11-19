@@ -9,6 +9,7 @@ use App\Domains\Performance\Models\RequestRun;
 use App\Domains\Performance\Queries\RouteStatisticsQuery;
 use App\Domains\Performance\Support\RequestTraffic;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Shared\Enums\Period;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Performance\CreatesRequestCounts;
@@ -151,6 +152,25 @@ describe('request kinds', function () {
                 ->where('routes.2', fn ($r) => $r['route'] === 'livewire:cart.checkout@save' && $r['kind'] === 'livewire')
                 ->where('detail.kind', 'inertia-partial')
                 ->has('detail.slowest', 2));
+    });
+
+    it('opens an ordinary row by itself, and every kind of a route for a link without one', function (?string $routeKind, int $slowest) {
+        $this->actingAs($this->user)
+            ->get(route('routes.index', ['project' => $this->project, 'route' => '/dashboard', 'method' => 'GET', 'route_kind' => $routeKind]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.route_kind', $routeKind)
+                ->where('detail.kind', null)
+                ->has('detail.slowest', $slowest));
+    })->with([
+        'the ordinary row' => ['none', 3],
+        'a link from before kinds' => [null, 5],
+    ]);
+
+    it('keeps a route whole outside the routes page', function () {
+        $routes = collect(app(RouteStatisticsQuery::class)->get($this->project->id, Period::Day))->keyBy('route');
+
+        expect($routes)->toHaveCount(2)
+            ->and($routes['/dashboard'])->toMatchArray(['kind' => null, 'requests' => 15]);
     });
 
     it('narrows the table to one kind, or to ordinary requests', function (string $kind, string $route, ?string $expected) {

@@ -13,9 +13,10 @@ namespace App\Domains\Performance\Support;
  */
 final class RequestContext
 {
-    public const int MAX_ITEMS = 50;
+    /** Components, calls and props kept: with MAX_LENGTH, a context stays under about 40 KB. */
+    public const int MAX_ITEMS = 20;
 
-    public const int MAX_LENGTH = 255;
+    public const int MAX_LENGTH = 100;
 
     /**
      * @return Context|null
@@ -70,7 +71,10 @@ final class RequestContext
 
     private static function string(mixed $value): ?string
     {
-        return is_string($value) && $value !== '' ? mb_substr($value, 0, self::MAX_LENGTH) : null;
+        // jsonb takes no NUL character: one would fail the whole batch's insert.
+        $value = is_string($value) ? str_replace("\0", '', $value) : null;
+
+        return $value !== null && $value !== '' ? mb_substr($value, 0, self::MAX_LENGTH) : null;
     }
 
     /**

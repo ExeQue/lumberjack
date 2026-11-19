@@ -41,13 +41,14 @@ class RouteController
         $routeDomain = is_string($routeDomain) && $routeDomain !== '' ? mb_strtolower(mb_substr($routeDomain, 0, 255)) : null;
         // A kind to narrow the table to ('none' is ordinary requests), and the open route's own.
         $kind = $this->kind($request->query('kind'));
-        $routeKind = $this->kind($request->query('route_kind')) ?? '';
+        // An ordinary row's is 'none'; none at all is every kind, as before kinds were told apart.
+        $routeKind = $this->kind($request->query('route_kind'));
 
         return Inertia::render('routes/index', [
             'project' => $presenter->header($project, $request->user()),
-            'filters' => [...$this->filters($request), 'sort' => $sort, 'search' => $search, 'route' => $selected, 'method' => $method, 'domain' => $domain, 'route_domain' => $routeDomain, 'kind' => $kind === '' ? 'none' : $kind, 'route_kind' => $routeKind === '' ? null : $routeKind],
+            'filters' => [...$this->filters($request), 'sort' => $sort, 'search' => $search, 'route' => $selected, 'method' => $method, 'domain' => $domain, 'route_domain' => $routeDomain, 'kind' => $kind === '' ? 'none' : $kind, 'route_kind' => $routeKind === '' ? 'none' : $routeKind],
             'domains' => fn (): array => $query->domains($project->id, $period, $environment),
-            'routes' => fn (): array => $this->withSeries($project, $period, $environment, $domain, $query->get($project->id, $period, $environment, $sort, $search, domain: $domain, kind: $kind)),
+            'routes' => fn (): array => $this->withSeries($project, $period, $environment, $domain, $query->get($project->id, $period, $environment, $sort, $search, domain: $domain, kind: $kind, byKind: true)),
             'sample_rate' => fn (): ?float => $query->sampleRate($project->id, $period, $environment, $domain),
             'detail' => fn (): ?array => $selected === '' ? null : $this->detail($project, $period, $environment, $domain ?? $routeDomain, $routeKind, $method, $selected),
         ]);
@@ -64,7 +65,7 @@ class RouteController
     /**
      * @return array<string, mixed>
      */
-    private function detail(Project $project, Period $period, ?string $environment, ?string $domain, string $kind, string $method, string $route): array
+    private function detail(Project $project, Period $period, ?string $environment, ?string $domain, ?string $kind, string $method, string $route): array
     {
         $since = $period->since();
         $size = $period->bucketSeconds();
@@ -77,7 +78,7 @@ class RouteController
             ->when(! $named)->where('url', $route)
             ->when($environment !== null)->where('environment', $environment)
             ->when($domain !== null)->where('domain', $domain)
-            ->when($kind !== '')->where('kind', $kind)
+            ->when($kind !== null && $kind !== '')->where('kind', $kind)
             ->when($kind === '')->whereNull('kind');
 
         // Percentiles from the runs the SDK picked; a run kept only for being slow would skew them.
@@ -106,7 +107,7 @@ class RouteController
             'method' => $method,
             'route' => $route,
             'domain' => $domain,
-            'kind' => $kind === '' ? null : $kind,
+            'kind' => $kind !== '' ? $kind : null,
             'route_name' => RequestRun::query()->tap($scope)->whereNotNull('route_name')->latest('occurred_at')->value('route_name'),
             'hourly' => $hourly,
             'slowest' => $slowest->map(fn (RequestRun $r): array => [

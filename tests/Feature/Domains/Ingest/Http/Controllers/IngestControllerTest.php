@@ -481,6 +481,14 @@ describe('request kinds and context', function () {
             ->and($inertia['prefetch'])->toBeFalse();
     });
 
+    it('drops a NUL character from the context instead of failing the batch', function () {
+        $this->postJson('/api/ingest', $this->batch([
+            ['type' => 'request', 'method' => 'GET', 'route' => '/dashboard', 'url' => 'https://x.test/dashboard', 'status' => 200, 'duration_ms' => 1, 'kind' => 'inertia', 'context' => ['inertia' => ['component' => "Dash\0board"]]],
+        ]), $this->auth)->assertStatus(202);
+
+        expect(RequestRun::sole()->context['inertia']['component'])->toBe('Dashboard');
+    });
+
     it('stores a Livewire call as a span on its trace', function () {
         $this->postJson('/api/ingest', $this->batch([
             ['type' => 'span', 'trace_id' => 't1', 'kind' => 'livewire', 'name' => 'call', 'target' => 'cart.checkout@save', 'duration_ms' => 12],

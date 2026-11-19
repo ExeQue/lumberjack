@@ -56,6 +56,7 @@ class ListRoutes extends Tool
             (string) $request->get('sort', 'p95'),
             $request->get('search'),
             50,
+            byKind: true,
         )]);
     }
 }

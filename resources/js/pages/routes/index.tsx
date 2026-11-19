@@ -57,7 +57,8 @@ type Filters = DashboardFilters & {
     route_domain: string | null;
     /** A kind to narrow the table to; 'none' is ordinary requests. */
     kind: RequestKind | 'none' | null;
-    route_kind: RequestKind | null;
+    /** The open route's kind: 'none' for an ordinary one, null for all of its kinds. */
+    route_kind: RequestKind | 'none' | null;
 };
 
 type Detail = {
@@ -137,7 +138,8 @@ export default function RoutesIndex({
     const isSelected = (r: RouteStat) =>
         r.route === filters.route &&
         r.method === filters.method &&
-        r.kind === filters.route_kind &&
+        (filters.route_kind === null ||
+            (r.kind ?? 'none') === filters.route_kind) &&
         (r.domain === null || r.domain === (filters.route_domain ?? ''));
     const pick = (r: RouteStat) =>
         isSelected(r)
@@ -155,7 +157,7 @@ export default function RoutesIndex({
                       route: r.route,
                       method: r.method,
                       route_domain: r.domain,
-                      route_kind: r.kind,
+                      route_kind: r.kind ?? 'none',
                   },
                   ['detail', 'filters'],
               );
