@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-11-19
+
 ### Fixed
 
 - A new AI price is valid from the start of the day of the oldest AI call kept instead of from now, so usage recorded before it was added gets a cost too. Calls made before a price's **valid from** show no cost; move it back to price them.
@@ -342,7 +344,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/ExeQue/lumberjack/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/ExeQue/lumberjack/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/ExeQue/lumberjack/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/ExeQue/lumberjack/compare/v0.11.0...v0.11.1
