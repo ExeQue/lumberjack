@@ -7,6 +7,7 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 ### Added
 
 - A project can have custom alert topics of its own, created in its settings and marked **This project only**; other projects never see them.
+- The team and project switchers show how much needs a look in each team and project, the sidebar's numbers added up.
 
 ### Changed
 

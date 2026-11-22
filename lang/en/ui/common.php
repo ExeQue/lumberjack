@@ -67,6 +67,7 @@ return [
     'no_team' => 'No team',
     'switch_team' => 'Switch team',
     'switch_project' => 'Switch project',
+    'needs_attention' => '{1} 1 thing needs a look|[2,*] :count things need a look',
     'choose_project' => 'Choose project',
     'profile' => 'Profile and settings',
     'log_out' => 'Log out',

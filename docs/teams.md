@@ -31,6 +31,11 @@ Anyone can **Create a team**, with them as the owner. The team switcher at the t
 the sidebar moves between teams. Each browser tab keeps its own team and project, also
 after a reload; a new tab starts with the team picked last.
 
+In the team and project switchers, a red number next to a name says how much in it needs
+a look: open issues, failed or stuck jobs, scheduled tasks and health checks that need
+attention, and commands whose last run failed, the sidebar's numbers added up. A team's
+number covers all its projects.
+
 ## Invitations
 
 An invitation link opens a page to join the team:

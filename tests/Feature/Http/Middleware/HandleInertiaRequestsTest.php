@@ -8,11 +8,35 @@ use App\Domains\Issues\Models\Issue;
 use App\Domains\Jobs\Enums\JobRunStatus;
 use App\Domains\Jobs\Models\JobRun;
 use App\Domains\Projects\Models\Project;
+use App\Domains\Teams\Enums\TeamRole;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 covers(HandleInertiaRequests::class);
+
+describe('the switchers', function () {
+    it('add up what needs a look in each project and team', function () {
+        $project = Project::factory()->create(['name' => 'a']);
+        Project::factory()->for($project->team)->create(['name' => 'b']);
+        $user = User::factory()->inTeam($project->team)->create();
+        $other = Project::factory()->create();
+        $other->team->members()->attach($user, ['role' => TeamRole::Member->value]);
+
+        Issue::factory()->for($project)->count(2)->create();
+        JobRun::factory()->for($project)->failed()->create();
+        Issue::factory()->for($other)->create();
+
+        $this->actingAs($user)
+            ->get(route('issues.index', $project))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('team.projects.0.attention', 3)
+                ->where('team.projects.1.attention', 0)
+                ->where('teams', fn ($teams) => collect($teams)->pluck('attention', 'uuid')->sortKeys()->all()
+                    === collect([$project->team->uuid => 3, $other->team->uuid => 1])->sortKeys()->all()));
+    });
+});
 
 describe('the sidebar project', function () {
     it('counts open issues and the job runs that failed or got stuck in the last day', function () {

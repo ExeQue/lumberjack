@@ -252,7 +252,8 @@ export type TeamShared = {
     role: 'owner' | 'admin' | 'member' | null;
     visiting?: boolean;
     can_administer: boolean;
-    projects: { uuid: string; slug: string; name: string }[];
+    /** `attention`: what needs a look in the project, its sidebar counts added up. */
+    projects: { uuid: string; slug: string; name: string; attention: number }[];
 };
 
 export type WebVitalStat = {

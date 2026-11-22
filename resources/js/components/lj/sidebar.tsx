@@ -153,13 +153,31 @@ function NavGroup({
     );
 }
 
+/** How much needs a look in a team or project, next to its name in a switcher. */
+function Attention({ count }: { count: number }) {
+    const t = useT();
+
+    if (count === 0) {
+        return null;
+    }
+
+    const label = t('common.needs_attention', { count }, count);
+
+    return (
+        <span className="font-mono text-[11px] text-err" title={label}>
+            <span aria-hidden="true">{count > 99 ? '99+' : count}</span>
+            <span className="sr-only">{label}</span>
+        </span>
+    );
+}
+
 /** `bell`: whether the notification bell sits in the header; the top bar has it otherwise. */
 export function Sidebar({ bell = true }: { bell?: boolean }) {
     const t = useT();
     const [sound, setSound] = useSoundSetting();
     const page = usePage<{
         team: TeamShared | null;
-        teams: { uuid: string; name: string }[];
+        teams: { uuid: string; name: string; attention: number }[];
         project?: ProjectHeader;
         sidebar_project:
             | (Pick<ProjectHeader, 'uuid' | 'name' | 'can_administer'> & {
@@ -277,7 +295,10 @@ export function Sidebar({ bell = true }: { bell?: boolean }) {
                                     router.put(switchTeam(item.uuid).url)
                                 }
                             >
-                                {item.name}
+                                <span className="flex-1 truncate">
+                                    {item.name}
+                                </span>
+                                <Attention count={item.attention} />
                             </DropdownMenuItem>
                         ))}
                     </DropdownMenuContent>
@@ -306,7 +327,10 @@ export function Sidebar({ bell = true }: { bell?: boolean }) {
                                             href={switchTo(item.uuid)}
                                             className="font-mono text-xs"
                                         >
-                                            {item.name}
+                                            <span className="flex-1 truncate">
+                                                {item.name}
+                                            </span>
+                                            <Attention count={item.attention} />
                                         </Link>
                                     </DropdownMenuItem>
                                 ))}

@@ -83,11 +83,17 @@ class HandleInertiaRequests extends Middleware
                 'can_administer' => $user->canAdministerTeam($team),
                 // A system administrator looking into a team they are not in.
                 'visiting' => $user->isAdmin() && ! $team->members()->whereKey($user->id)->exists(),
-                'projects' => $team->projects()->orderBy('name')->get(['uuid', 'slug', 'name'])->toArray(),
+                // `attention`: what needs a look in it, the sidebar's counts added up.
+                'projects' => $team->projects()->orderBy('name')->get(['id', 'uuid', 'slug', 'name'])
+                    ->map(fn (Project $project): array => [...$project->only('uuid', 'slug', 'name'), 'attention' => array_sum(self::projectCounts($project->id))])->all(),
             ],
             'sidebar_project' => fn (): ?array => $this->sidebarProject($request),
             // An administrator can open every team.
-            'teams' => fn (): array => ($user?->isAdmin() ? Team::query() : $user?->teams())?->orderBy('name')->get(['teams.uuid', 'teams.name'])->map(fn ($t): array => ['uuid' => $t->uuid, 'name' => $t->name])->all() ?? [],
+            'teams' => fn (): array => ($user?->isAdmin() ? Team::query() : $user?->teams())?->with('projects:id,team_id')->orderBy('name')->get(['teams.id', 'teams.uuid', 'teams.name'])->map(fn (Team $t): array => [
+                'uuid' => $t->uuid,
+                'name' => $t->name,
+                'attention' => $t->projects->sum(fn (Project $project): int => array_sum(self::projectCounts($project->id))),
+            ])->all() ?? [],
             'is_admin' => fn (): bool => $user?->isAdmin() ?? false,
             // The bell's badge; the list itself loads when it opens.
             'notifications_unread' => fn (): int => $user?->unreadNotifications()->count() ?? 0,
@@ -136,19 +142,29 @@ class HandleInertiaRequests extends Middleware
             'can_administer' => $user->can('update', $project),
             // A connector is under Connectors only once connected, its connections below it when several.
             'connectors' => $this->sidebarConnectors($project),
-            // Reused for half a minute, and forgotten when a live broadcast says they changed.
-            'counts' => Cache::remember(self::sidebarCountsKey($project->id), self::SIDEBAR_COUNTS_SECONDS, fn (): array => [
-                'issues' => Issue::query()->where('project_id', $project->id)->whereOpen()->count(),
-                // Runs that need a look: failed or stuck in the last day.
-                'jobs' => JobRun::query()->where('project_id', $project->id)->where('created_at', '>=', now()->subDay())
-                    ->whereStatus(JobRunStatus::Failed, JobRunStatus::Stuck)->count(),
-                'schedule' => ScheduledTask::query()->where('project_id', $project->id)->whereNeedsAttention()->count(),
-                'health' => HealthCheck::query()->where('project_id', $project->id)->whereNotArchived()->whereUnhealthy()->count(),
-                // Commands whose last run failed: one that runs fine again drops off.
-                'commands' => CommandRun::query()->where('project_id', $project->id)->whereLatestOfItsCommand()
-                    ->where('status', CommandRunStatus::Failed->value)->count(),
-            ]),
+            'counts' => self::projectCounts($project->id),
         ];
+    }
+
+    /**
+     * What needs a look in a project, by sidebar entry. Reused for half a minute, and
+     * forgotten when a live broadcast says they changed.
+     *
+     * @return array{issues: int, jobs: int, schedule: int, health: int, commands: int}
+     */
+    private static function projectCounts(int $projectId): array
+    {
+        return Cache::remember(self::sidebarCountsKey($projectId), self::SIDEBAR_COUNTS_SECONDS, fn (): array => [
+            'issues' => Issue::query()->where('project_id', $projectId)->whereOpen()->count(),
+            // Runs that need a look: failed or stuck in the last day.
+            'jobs' => JobRun::query()->where('project_id', $projectId)->where('created_at', '>=', now()->subDay())
+                ->whereStatus(JobRunStatus::Failed, JobRunStatus::Stuck)->count(),
+            'schedule' => ScheduledTask::query()->where('project_id', $projectId)->whereNeedsAttention()->count(),
+            'health' => HealthCheck::query()->where('project_id', $projectId)->whereNotArchived()->whereUnhealthy()->count(),
+            // Commands whose last run failed: one that runs fine again drops off.
+            'commands' => CommandRun::query()->where('project_id', $projectId)->whereLatestOfItsCommand()
+                ->where('status', CommandRunStatus::Failed->value)->count(),
+        ]);
     }
 
     /**
