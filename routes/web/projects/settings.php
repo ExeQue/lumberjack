@@ -32,6 +32,7 @@ Route::delete('settings/agents/{agent}', [ProjectAgentController::class, 'destro
 Route::put('settings/labels/{label}', [LabelController::class, 'update'])->name('labels.update');
 Route::delete('settings/labels/{label}', [LabelController::class, 'destroy'])->name('labels.destroy');
 Route::put('settings/retention', [RetentionController::class, 'project'])->name('projects.retention');
+Route::post('settings/alert-topics', [AlertController::class, 'storeProjectTopic'])->name('alerts.topics.store-project');
 Route::post('settings/alert-rules/{type}/{topic?}', [AlertController::class, 'customizeRule'])->name('alerts.rules.customize');
 Route::put('settings/alert-rules/{rule}/add-ons', [AlertController::class, 'updateAddOns'])->withoutScopedBindings()->name('alerts.rules.add-ons');
 Route::put('settings/repository', [RepositoryController::class, 'update'])->name('repository.update');

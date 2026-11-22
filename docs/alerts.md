@@ -232,14 +232,17 @@ Your app can send its own alerts, with the
 names a **topic**; which channels a topic reaches is picked in the **Custom alerts**
 group of the rules on the Alerts page, so moving an alert to another channel needs no deploy.
 
-- A topic appears the first time an app sends to it, without channels. **Create topic**
+- A topic created on the team's **Alerts** page is every project's. **Create topic**
   makes one ahead of time. An alert with no topic goes to `default`.
+- A topic the team does not have becomes the sending project's own the first time an app
+  sends to it, without channels. Other projects never see it. A project can also create
+  a topic of its own ahead of time in its settings, marked **This project only**.
 - A topic can be turned off and limited to some environments, like a rule.
 - Deleting a topic keeps its sent alerts. If an app sends to it again, it comes back
-  without channels. `default` cannot be deleted.
-- A project takes its topics from the team. In the project's settings you can add
-  channels to a topic, or customize it to turn it off or send elsewhere for that project
-  only. Deleting the team's topic deletes the projects' versions too.
+  without channels.
+- In the project's settings you can add channels to a team topic, or customize it to
+  turn it off or send elsewhere for that project only. Deleting the team's topic deletes
+  the projects' versions too.
 - Every message names the project and the environment.
 
 The level sets the color and the urgency: `info`, `success`, `warning` or `critical`.

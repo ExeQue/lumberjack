@@ -68,6 +68,7 @@ return [
     ],
     'custom' => [
         'topic_description' => 'Custom alerts your apps send to this topic.',
+        'project_topic_description' => 'Custom alerts this project sends to this topic. Only this project has it.',
         'topic_exists' => 'The topic :topic already exists.',
         'topic_invalid' => 'Use letters or numbers in the topic name.',
         'topic_protected' => 'The default topic cannot be deleted.',
@@ -142,5 +143,6 @@ return [
     'test_sent' => 'Test message sent.',
     'rule_customized' => 'The rule is now the project\'s own.',
     'rule_reset' => 'The project uses the team\'s rule again.',
+    'topic_deleted' => 'The topic :topic is deleted.',
     'test_failed' => 'The test message could not be delivered.',
 ];

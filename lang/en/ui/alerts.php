@@ -155,7 +155,7 @@ return [
         'count_label' => '{1} 1 topic|[2,*] :count topics',
         'summary' => '{1} 1 topic, :delivering delivering|[2,*] :count topics, :delivering delivering',
         'not_delivered' => '{1} 1 not delivered|[2,*] :count not delivered',
-        'description' => 'Create a topic ahead of time, or let it appear the first time an app sends an alert to it. Pick its channels here; the app\'s code never names a channel.',
+        'description' => 'A topic created here is every project\'s. A topic an app sends to that the team does not have becomes that project\'s own, in its settings. Pick its channels here; the app\'s code never names a channel.',
         'name' => 'Topic name',
         'placeholder' => 'e.g. signups',
         // Button
@@ -163,6 +163,10 @@ return [
         'default_description' => 'Alerts sent without a topic. This topic cannot be deleted.',
         'count' => '{0} No alerts in the last 24 hours.|{1} 1 alert in the last 24 hours.|[2,*] :count alerts in the last 24 hours.',
         'delete_question' => 'Delete :topic? Sent alerts stay in the list. If an app sends to it again, it comes back without channels.',
+        'project_description' => 'A topic created here, or one this project sends to that the team does not have, is only this project\'s. Pick its channels here; the app\'s code never names a channel.',
+        // Badge on a topic only this project has.
+        'own' => 'This project only',
+        'delete_own_question' => 'Delete :topic? Sent alerts stay in the list. If the app sends to it again, it comes back without channels.',
     ],
     'sent' => [
         'title' => 'Sent alerts',

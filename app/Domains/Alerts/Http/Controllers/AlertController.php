@@ -17,6 +17,7 @@ use App\Domains\Alerts\Enums\ChannelType;
 use App\Domains\Alerts\Exceptions\AlertExceptionInterface;
 use App\Domains\Alerts\Http\Requests\SaveNotificationChannelRequest;
 use App\Domains\Alerts\Http\Requests\StoreAlertTopicRequest;
+use App\Domains\Alerts\Http\Requests\StoreProjectAlertTopicRequest;
 use App\Domains\Alerts\Http\Requests\UpdateAlertRuleAddOnsRequest;
 use App\Domains\Alerts\Http\Requests\UpdateAlertRuleRequest;
 use App\Domains\Alerts\Models\AlertRule;
@@ -55,6 +56,16 @@ class AlertController
     public function storeTopic(StoreAlertTopicRequest $request, CreateAlertTopicAction $action): RedirectResponse
     {
         if ($action->execute($request->user()->currentTeam, $request->string('name')->toString()) === null) {
+            return back()->withErrors(['name' => $action->reasons[0] ?? '']);
+        }
+
+        return back();
+    }
+
+    /** A topic only the project has. */
+    public function storeProjectTopic(StoreProjectAlertTopicRequest $request, Project $project, CreateAlertTopicAction $action): RedirectResponse
+    {
+        if ($action->execute($project->team, $request->string('name')->toString(), $project) === null) {
             return back()->withErrors(['name' => $action->reasons[0] ?? '']);
         }
 
@@ -145,8 +156,11 @@ class AlertController
     {
         abort_if($rule->project === null, 404);
         Gate::authorize('update', $rule->project);
+        // A topic only the project has goes altogether: there is no team rule to go back to.
+        $ownTopic = $rule->type === AlertRuleType::CustomAlert
+            && ! AlertRule::query()->whereForTeam($rule->project->team)->whereType($rule->type)->where('topic', $rule->topic)->exists();
         $action->execute($rule);
 
-        return back()->with('status', __('alerts.rule_reset'));
+        return back()->with('status', $ownTopic ? __('alerts.topic_deleted', ['topic' => $rule->topic]) : __('alerts.rule_reset'));
     }
 }

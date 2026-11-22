@@ -53,10 +53,8 @@ class RecordCustomAlertAction
 
         $topic = Str::limit(Str::slug((string) Envelope::short($event['topic'] ?? null, 64)), 64, '') ?: AlertRule::DEFAULT_TOPIC;
         $rule = AlertRule::query()->whereEffectiveFor($project)->whereType(AlertRuleType::CustomAlert)->where('topic', $topic)->first()
-            ?? AlertRule::query()->firstOrCreate(
-                ['team_id' => $project->team_id, 'type' => AlertRuleType::CustomAlert, 'topic' => $topic],
-                ['enabled' => true],
-            );
+            // A topic first heard from one project is that project's own, not every project's.
+            ?? $project->alertRules()->firstOrCreate(['type' => AlertRuleType::CustomAlert, 'topic' => $topic], ['enabled' => true]);
 
         $alert = CustomAlert::query()->create([
             'project_id' => $project->id,

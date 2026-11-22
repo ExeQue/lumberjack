@@ -12,6 +12,7 @@ use App\Domains\Alerts\Jobs\SendCustomAlert;
 use App\Domains\Alerts\Models\AlertRule;
 use App\Domains\Alerts\Models\CustomAlert;
 use App\Domains\Alerts\Models\NotificationChannel;
+use App\Domains\Alerts\Presenters\AlertRulePresenter;
 use App\Domains\Ingest\Data\Envelope;
 use App\Domains\Projects\Models\Project;
 use App\Domains\Teams\Enums\TeamRole;
@@ -39,10 +40,11 @@ describe('recording an alert', function () {
             ->and(CustomAlert::count())->toBe(0);
     });
 
-    it('goes to the default topic without one, and makes a new topic it has not seen', function () {
+    it('goes to the default topic without one, and makes a new topic of the project\'s own it has not seen', function () {
         expect(($this->record)(['title' => 'A'])->topic)->toBe('default')
             ->and(($this->record)(['title' => 'B', 'topic' => 'Big Payments'])->topic)->toBe('big-payments')
-            ->and(($this->topic)('big-payments')->channels()->count())->toBe(0);
+            ->and($this->project->alertRules()->where('topic', 'big-payments')->sole()->channels()->count())->toBe(0)
+            ->and(AlertRule::query()->whereForTeam($this->project->team)->where('topic', 'big-payments')->exists())->toBeFalse();
 
         Bus::assertDispatchedTimes(SendCustomAlert::class, 2);
     });
@@ -189,6 +191,7 @@ describe('managing topics', function () {
 
     it('deletes a topic and keeps its sent alerts', function () {
         Bus::fake([SendCustomAlert::class]);
+        app(CreateAlertTopicAction::class)->execute($this->project->team, 'pay');
         $alert = ($this->record)(['title' => 'A', 'topic' => 'pay']);
 
         $this->actingAs($this->admin)->delete(route('alerts.topics.destroy', ($this->topic)('pay')))->assertSessionHasNoErrors();
@@ -216,12 +219,41 @@ describe('managing topics', function () {
 
     it('takes a project\'s version of a topic with it when the team deletes the topic', function () {
         Bus::fake([SendCustomAlert::class]);
+        app(CreateAlertTopicAction::class)->execute($this->project->team, 'pay');
         ($this->record)(['title' => 'A', 'topic' => 'pay']);
         $this->actingAs($this->admin)->post(route('alerts.rules.customize', ['project' => $this->project, 'type' => 'custom_alert', 'topic' => 'pay']));
 
         $this->actingAs($this->admin)->delete(route('alerts.topics.destroy', ($this->topic)('pay')))->assertSessionHasNoErrors();
 
         expect(AlertRule::query()->where('topic', 'pay')->exists())->toBeFalse();
+    });
+
+    it('keeps a topic one project sends to off the team\'s other projects', function () {
+        Bus::fake([SendCustomAlert::class]);
+        $other = Project::factory()->for($this->project->team)->create();
+        ($this->record)(['title' => 'A', 'topic' => 'imports']);
+        $topics = fn (Project $project): array => collect(app(AlertRulePresenter::class)->forProject($project))->where('type', 'custom_alert')->keyBy('topic')->all();
+
+        expect($topics($this->project)['imports']['team'])->toBeNull()
+            ->and($topics($this->project)['imports']['project']['id'])->toBe($this->project->alertRules()->where('topic', 'imports')->sole()->id)
+            ->and($topics($other))->not->toHaveKey('imports');
+    });
+
+    it('lets a project create a topic of its own, but not one the team has', function () {
+        $this->actingAs($this->admin)->post(route('alerts.topics.store-project', $this->project), ['name' => 'Imports'])->assertSessionHasNoErrors();
+        $this->actingAs($this->admin)->post(route('alerts.topics.store-project', $this->project), ['name' => 'default'])->assertSessionHasErrors('name');
+        $this->actingAs($this->member)->post(route('alerts.topics.store-project', $this->project), ['name' => 'other'])->assertForbidden();
+
+        expect($this->project->alertRules()->where('topic', 'imports')->sole()->enabled)->toBeTrue()
+            ->and(AlertRule::query()->whereForTeam($this->project->team)->where('topic', 'imports')->exists())->toBeFalse();
+    });
+
+    it('deletes a project\'s own topic altogether', function () {
+        $own = app(CreateAlertTopicAction::class)->execute($this->project->team, 'imports', $this->project);
+
+        $this->actingAs($this->admin)->delete(route('alerts.rules.reset', $own))->assertSessionHas('status', 'The topic imports is deleted.');
+
+        expect(AlertRule::query()->where('topic', 'imports')->exists())->toBeFalse();
     });
 
     it('will not delete the default topic or a rule of another kind', function () {

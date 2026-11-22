@@ -4,6 +4,18 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- A project can have custom alert topics of its own, created in its settings and marked **This project only**; other projects never see them.
+
+### Changed
+
+- A topic an app sends to that the team does not have becomes the sending project's own topic instead of a team topic, so it no longer shows up on every other project in the team.
+
+### Fixed
+
+- A project's customized custom alert topic is shown by its topic name instead of "Custom alert".
+
 ## [0.14.1] - 2026-11-19
 
 ### Changed

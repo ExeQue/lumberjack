@@ -83,7 +83,17 @@ class AlertRulePresenter
             'team' => $this->present($rule),
             'add_ons' => $addOns->get($rule->id, collect())->pluck('notification_channel_id')->map(fn ($id): int => (int) $id)->values()->all(),
             'project' => $ownTopics->has($rule->topic) ? $this->present($ownTopics->get($rule->topic)) : null,
-        ])->all()];
+        ])->all(), ...$ownTopics->except($topics->pluck('topic')->all())->sortKeys()->map(fn (AlertRule $rule): array => [
+            // A topic of this project's own: no team rule behind it.
+            'type' => $rule->type->value,
+            'group' => $rule->type->group(),
+            'topic' => $rule->topic,
+            'label' => $rule->topic,
+            'description' => (string) __('alerts.custom.project_topic_description'),
+            'team' => null,
+            'add_ons' => [],
+            'project' => $this->present($rule),
+        ])->values()->all()];
     }
 
     /**

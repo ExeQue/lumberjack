@@ -41,6 +41,7 @@ import {
 import {
     destroy as topicDestroy,
     store as topicStore,
+    storeProject as topicStoreProject,
 } from '@/routes/alerts/topics';
 import type {
     AlertRule,
@@ -558,10 +559,46 @@ export function RulesCard(
 
     const projectUuid = props.scope === 'project' ? props.project : '';
     const renderRow = ({ project: own, ...row }: ProjectAlertRule) =>
-        own ? (
+        own && row.team === null ? (
+            // A topic of the project's own: nothing of the team's to go back to, so it is deleted.
             <RuleRow
                 key={ruleKey(own)}
-                rule={own}
+                rule={{
+                    ...own,
+                    label: row.label,
+                    description: row.description,
+                }}
+                channels={channels}
+                disabled={!canAdminister}
+                badge={<Badge tone="amber">{t('alerts.topics.own')}</Badge>}
+                actions={
+                    canAdminister && (
+                        <ConfirmButton
+                            variant="default"
+                            question={t('alerts.topics.delete_own_question', {
+                                topic: row.label,
+                            })}
+                            confirmLabel={t('common.delete')}
+                            onConfirm={() =>
+                                router.delete(ruleReset(own.id).url, {
+                                    preserveScroll: true,
+                                })
+                            }
+                        >
+                            {t('common.delete')}
+                            <span className="sr-only"> {row.label}</span>
+                        </ConfirmButton>
+                    )
+                }
+            />
+        ) : own ? (
+            <RuleRow
+                key={ruleKey(own)}
+                rule={{
+                    ...own,
+                    label: row.label,
+                    description: row.description,
+                }}
                 channels={channels}
                 disabled={!canAdminister}
                 badge={
@@ -729,11 +766,9 @@ export function RulesCard(
                                         : all.filter((rule) =>
                                               rule.text.includes(needle),
                                           );
-                                // The team's custom alerts group holds the form for a new topic, so it shows while empty.
+                                // The custom alerts group holds the form for a new topic, so it shows while empty.
                                 const creates =
-                                    props.scope === 'team' &&
-                                    group === 'custom' &&
-                                    needle === '';
+                                    group === 'custom' && needle === '';
 
                                 if (members.length === 0 && !creates) {
                                     return null;
@@ -810,6 +845,12 @@ export function RulesCard(
                                         >
                                             {creates && (
                                                 <TopicCreator
+                                                    project={
+                                                        props.scope ===
+                                                        'project'
+                                                            ? props.project
+                                                            : null
+                                                    }
                                                     canAdminister={
                                                         canAdminister
                                                     }
@@ -837,25 +878,40 @@ export function RulesCard(
     );
 }
 
-/** The form for a new custom alert topic, atop the team's custom alerts group. */
-function TopicCreator({ canAdminister }: { canAdminister: boolean }) {
+/** The form for a new custom alert topic, atop the custom alerts group: the team's, or only the project's. */
+function TopicCreator({
+    project,
+    canAdminister,
+}: {
+    project: string | null;
+    canAdminister: boolean;
+}) {
     const t = useT();
     const form = useForm({ name: '' });
 
     return (
         <div className="flex flex-wrap items-start justify-between gap-3">
             <p className="max-w-[70ch] text-xs text-ink-3">
-                {t('alerts.topics.description')}
+                {t(
+                    project
+                        ? 'alerts.topics.project_description'
+                        : 'alerts.topics.description',
+                )}
             </p>
             {canAdminister && (
                 <form
                     className="flex flex-wrap items-center gap-2"
                     onSubmit={(e) => {
                         e.preventDefault();
-                        form.post(topicStore().url, {
-                            preserveScroll: true,
-                            onSuccess: () => form.reset(),
-                        });
+                        form.post(
+                            project
+                                ? topicStoreProject(project).url
+                                : topicStore().url,
+                            {
+                                preserveScroll: true,
+                                onSuccess: () => form.reset(),
+                            },
+                        );
                     }}
                 >
                     <Input
