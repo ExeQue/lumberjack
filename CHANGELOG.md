@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-22
+
 ### Added
 
 - A project can have custom alert topics of its own, created in its settings and marked **This project only**; other projects never see them.
@@ -376,7 +378,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.14.1...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/ExeQue/lumberjack/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/ExeQue/lumberjack/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/ExeQue/lumberjack/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/ExeQue/lumberjack/compare/v0.13.0...v0.13.1
