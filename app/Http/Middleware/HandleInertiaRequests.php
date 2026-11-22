@@ -18,6 +18,7 @@ use App\Domains\Schedule\Models\ScheduledTask;
 use App\Domains\Shared\Support\AppVersion;
 use App\Domains\Shared\Support\Translations;
 use App\Domains\Teams\Models\Team;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -84,16 +85,23 @@ class HandleInertiaRequests extends Middleware
                 // A system administrator looking into a team they are not in.
                 'visiting' => $user->isAdmin() && ! $team->members()->whereKey($user->id)->exists(),
                 // `attention`: what needs a look in it, the sidebar's counts added up.
-                'projects' => $team->projects()->orderBy('name')->get(['id', 'uuid', 'slug', 'name'])
-                    ->map(fn (Project $project): array => [...$project->only('uuid', 'slug', 'name'), 'attention' => array_sum(self::projectCounts($project->id))])->all(),
+                'projects' => ($projects = $team->projects()->orderBy('name')->get(['id', 'uuid', 'slug', 'name']))
+                    ->each(self::withAttention($projects))->map(fn (Project $project): array => $project->only('uuid', 'slug', 'name', 'attention'))->all(),
             ],
             'sidebar_project' => fn (): ?array => $this->sidebarProject($request),
             // An administrator can open every team.
-            'teams' => fn (): array => ($user?->isAdmin() ? Team::query() : $user?->teams())?->with('projects:id,team_id')->orderBy('name')->get(['teams.id', 'teams.uuid', 'teams.name'])->map(fn (Team $t): array => [
-                'uuid' => $t->uuid,
-                'name' => $t->name,
-                'attention' => $t->projects->sum(fn (Project $project): int => array_sum(self::projectCounts($project->id))),
-            ])->all() ?? [],
+            'teams' => function () use ($user): array {
+                $teams = ($user?->isAdmin() ? Team::query() : $user?->teams())?->with('projects:id,team_id')->orderBy('name')->get(['teams.id', 'teams.uuid', 'teams.name']);
+
+                if ($teams === null) {
+                    return [];
+                }
+
+                $projects = $teams->flatMap(fn (Team $t): Collection => $t->projects);
+                $projects->each(self::withAttention($projects));
+
+                return $teams->map(fn (Team $t): array => ['uuid' => $t->uuid, 'name' => $t->name, 'attention' => $t->projects->sum('attention')])->all();
+            },
             'is_admin' => fn (): bool => $user?->isAdmin() ?? false,
             // The bell's badge; the list itself loads when it opens.
             'notifications_unread' => fn (): int => $user?->unreadNotifications()->count() ?? 0,
@@ -142,29 +150,79 @@ class HandleInertiaRequests extends Middleware
             'can_administer' => $user->can('update', $project),
             // A connector is under Connectors only once connected, its connections below it when several.
             'connectors' => $this->sidebarConnectors($project),
-            'counts' => self::projectCounts($project->id),
+            // The team's other projects at once: the switchers want theirs too.
+            'counts' => self::projectCounts($team->projects()->pluck('id')->all())[$project->id],
         ];
     }
 
     /**
-     * What needs a look in a project, by sidebar entry. Reused for half a minute, and
-     * forgotten when a live broadcast says they changed.
+     * Sets `attention` on a project: what needs a look in it, its sidebar counts added up,
+     * counting all the given projects together.
      *
-     * @return array{issues: int, jobs: int, schedule: int, health: int, commands: int}
+     * @param  Collection<int, Project>  $projects
+     * @return Closure(Project): void
      */
-    private static function projectCounts(int $projectId): array
+    private static function withAttention(Collection $projects): Closure
     {
-        return Cache::remember(self::sidebarCountsKey($projectId), self::SIDEBAR_COUNTS_SECONDS, fn (): array => [
-            'issues' => Issue::query()->where('project_id', $projectId)->whereOpen()->count(),
+        $counts = self::projectCounts($projects->map(fn (Project $project): int => $project->id)->all());
+
+        return fn (Project $project) => $project->setAttribute('attention', array_sum($counts[$project->id]));
+    }
+
+    /**
+     * What needs a look in each project, by sidebar entry. Reused for half a minute, and
+     * forgotten when a live broadcast says they changed; the ones not cached are counted
+     * together, a few queries for all of them.
+     *
+     * @param  array<int>  $projectIds
+     * @return array<int, array{issues: int, jobs: int, schedule: int, health: int, commands: int}>
+     */
+    private static function projectCounts(array $projectIds): array
+    {
+        if ($projectIds === []) {
+            return [];
+        }
+
+        $keys = array_combine($projectIds, array_map(self::sidebarCountsKey(...), $projectIds));
+        $cached = Cache::many(array_values($keys));
+        $missing = array_values(array_filter($projectIds, fn (int $id): bool => $cached[$keys[$id]] === null));
+
+        if ($missing !== []) {
+            $count = fn ($query): array => $query->whereIn('project_id', $missing)->groupBy('project_id')
+                ->selectRaw('project_id, count(*) as aggregate')->pluck('aggregate', 'project_id')->all();
+
+            $issues = $count(Issue::query()->whereOpen());
             // Runs that need a look: failed or stuck in the last day.
-            'jobs' => JobRun::query()->where('project_id', $projectId)->where('created_at', '>=', now()->subDay())
-                ->whereStatus(JobRunStatus::Failed, JobRunStatus::Stuck)->count(),
-            'schedule' => ScheduledTask::query()->where('project_id', $projectId)->whereNeedsAttention()->count(),
-            'health' => HealthCheck::query()->where('project_id', $projectId)->whereNotArchived()->whereUnhealthy()->count(),
+            $jobs = $count(JobRun::query()->where('created_at', '>=', now()->subDay())->whereStatus(JobRunStatus::Failed, JobRunStatus::Stuck));
+            $schedule = $count(ScheduledTask::query()->whereNeedsAttention());
+            $health = $count(HealthCheck::query()->whereNotArchived()->whereUnhealthy());
             // Commands whose last run failed: one that runs fine again drops off.
-            'commands' => CommandRun::query()->where('project_id', $projectId)->whereLatestOfItsCommand()
-                ->where('status', CommandRunStatus::Failed->value)->count(),
-        ]);
+            $commands = $count(CommandRun::query()->whereLatestOfItsCommand()->where('status', CommandRunStatus::Failed->value));
+
+            $fresh = [];
+
+            foreach ($missing as $id) {
+                $fresh[$keys[$id]] = [
+                    'issues' => $issues[$id] ?? 0,
+                    'jobs' => $jobs[$id] ?? 0,
+                    'schedule' => $schedule[$id] ?? 0,
+                    'health' => $health[$id] ?? 0,
+                    'commands' => $commands[$id] ?? 0,
+                ];
+            }
+
+            Cache::putMany($fresh, self::SIDEBAR_COUNTS_SECONDS);
+            $cached = [...$cached, ...$fresh];
+        }
+
+        // A cache other than the array one hands the numbers back as strings.
+        return array_map(fn (string $key): array => [
+            'issues' => (int) $cached[$key]['issues'],
+            'jobs' => (int) $cached[$key]['jobs'],
+            'schedule' => (int) $cached[$key]['schedule'],
+            'health' => (int) $cached[$key]['health'],
+            'commands' => (int) $cached[$key]['commands'],
+        ], $keys);
     }
 
     /**
