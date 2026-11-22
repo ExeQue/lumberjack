@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 
 function Checkbox({
   className,
+  onKeyDown,
   ...props
 }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
   return (
@@ -16,6 +17,14 @@ function Checkbox({
         className
       )}
       {...props}
+      // Radix ignores Enter on a checkbox; like a native one, it submits the form it is in.
+      onKeyDown={(event) => {
+        onKeyDown?.(event)
+
+        if (event.key === "Enter" && !event.defaultPrevented) {
+          event.currentTarget.form?.requestSubmit()
+        }
+      }}
     >
       <CheckboxPrimitive.Indicator
         data-slot="checkbox-indicator"

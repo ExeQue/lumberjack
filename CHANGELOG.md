@@ -16,6 +16,7 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 ### Fixed
 
 - A project's customized custom alert topic is shown by its topic name instead of "Custom alert".
+- Pressing Enter on a checkbox, such as **Remember me** on the login page, submits its form like a native checkbox does.
 
 ## [0.14.1] - 2026-11-19
 
