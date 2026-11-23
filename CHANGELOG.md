@@ -4,6 +4,8 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-23
+
 ### Added
 
 - Connecting a GitHub repository can reuse a token the team already saved for another repository, picked under **Token** by the repositories it reads, instead of pasting it again.
@@ -382,7 +384,8 @@ No changes to the application. The install script and Docker images are now test
 
 First public release.
 
-[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/ExeQue/lumberjack/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/ExeQue/lumberjack/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/ExeQue/lumberjack/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/ExeQue/lumberjack/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/ExeQue/lumberjack/compare/v0.13.1...v0.14.0
