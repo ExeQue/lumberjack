@@ -4,6 +4,10 @@ All notable changes are written here, newest first, in the [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added
+
+- Connecting a GitHub repository can reuse a token the team already saved for another repository, picked under **Token** by the repositories it reads, instead of pasting it again.
+
 ## [0.15.0] - 2026-11-22
 
 ### Added

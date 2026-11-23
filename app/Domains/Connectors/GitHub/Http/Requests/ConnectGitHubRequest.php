@@ -10,8 +10,9 @@ use Illuminate\Foundation\Http\FormRequest;
 use Override;
 
 /**
- * A repository as owner/name, or its address on github.com, a token that reads it, and
- * optionally the branch to read instead of the default branch.
+ * A repository as owner/name, or its address on github.com, a token that reads it (or the
+ * connection whose saved token to use instead), and optionally the branch to read instead of
+ * the default branch.
  */
 class ConnectGitHubRequest extends FormRequest
 {
@@ -29,7 +30,8 @@ class ConnectGitHubRequest extends FormRequest
     {
         return [
             'repository' => ['required', 'string', 'max:200', 'regex:~^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$~'],
-            'token' => ['required', 'string', 'max:255'],
+            'token' => ['required_without:token_from', 'nullable', 'string', 'max:255'],
+            'token_from' => ['nullable', 'uuid'],
             'branch' => UpdateGitHubConnectionRequest::BRANCH_RULES,
         ];
     }
@@ -44,8 +46,15 @@ class ConnectGitHubRequest extends FormRequest
         }
     }
 
-    public function credentials(): GitHubCredentials
+    /** The connection whose saved token to use, or null when one was pasted. */
+    public function tokenFrom(): ?string
     {
-        return new GitHubCredentials($this->string('repository')->toString(), $this->string('token')->trim()->toString(), UpdateGitHubConnectionRequest::branchOf($this));
+        return $this->filled('token_from') ? $this->string('token_from')->toString() : null;
+    }
+
+    /** With $token, a saved one, in place of the token pasted. */
+    public function credentials(?string $token = null): GitHubCredentials
+    {
+        return new GitHubCredentials($this->string('repository')->toString(), $token ?? $this->string('token')->trim()->toString(), UpdateGitHubConnectionRequest::branchOf($this));
     }
 }

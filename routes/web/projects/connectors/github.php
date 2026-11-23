@@ -11,5 +11,6 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::post('github/connection', [GitHubConnectionController::class, 'store'])->name('connectors.github.connection.store');
+Route::get('github/tokens', [GitHubConnectionController::class, 'tokens'])->name('connectors.github.tokens');
 Route::get('github/{dataSourceConnection?}', GitHubController::class)->name('connectors.github.index');
 Route::put('github/{dataSourceConnection}', [GitHubConnectionController::class, 'update'])->name('connectors.github.connection.update');

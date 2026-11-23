@@ -53,6 +53,13 @@ read from the old one. Connections made before optional permissions existed have
 
 The token is stored encrypted, never shown again, and only ever sent to `api.github.com`.
 
+Once the team has a GitHub token saved, **Token** also offers **Saved token for** each one,
+named by the repositories it reads, across all the team's projects. Choose one to connect
+another repository with it instead of pasting it again; it is asked for its permissions on
+the new repository just as a pasted one, so its repository access must include that one too.
+Saved tokens are offered only to team owners and admins, and the repository integration's
+token is never among them.
+
 A project reads as many repositories as you connect, one connection each. Connecting a
 repository the project already reads renews its token, and sets its branch to the one given
 (empty for the default branch). With more than one, a picker beside

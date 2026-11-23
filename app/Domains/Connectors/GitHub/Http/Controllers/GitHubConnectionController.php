@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Connectors\GitHub\Http\Controllers;
 
 use App\Domains\Connectors\GitHub\Actions\ConnectGitHubAction;
+use App\Domains\Connectors\GitHub\Actions\ListSavedGitHubTokensAction;
 use App\Domains\Connectors\GitHub\Actions\UpdateGitHubConnectionAction;
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
 use App\Domains\Connectors\GitHub\Enums\GitHubPermission;
@@ -16,20 +17,40 @@ use App\Domains\DataSources\Enums\ConnectionKind;
 use App\Domains\DataSources\Models\DataSourceConnection;
 use App\Domains\Projects\Models\Project;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Connecting a project to a GitHub repository, and changing its settings;
- * the token never leaves the server again.
+ * Connecting a project to a GitHub repository, with a new token or one the team already
+ * saved, and changing its settings; the token never leaves the server again.
  */
 class GitHubConnectionController
 {
-    public function store(ConnectGitHubRequest $request, Project $project, ConnectGitHubAction $action): RedirectResponse
+    /** The tokens the team already saved, by the repositories each reads, without the tokens. */
+    public function tokens(Request $request, Project $project, ListSavedGitHubTokensAction $saved): JsonResponse
     {
+        Gate::authorize('update', $project);
+
+        return response()->json(['tokens' => array_map(
+            fn (array $token): array => ['connection' => $token['connection'], 'repositories' => $token['repositories']],
+            $saved->execute($project, $request->user()),
+        )]);
+    }
+
+    public function store(ConnectGitHubRequest $request, Project $project, ConnectGitHubAction $action, ListSavedGitHubTokensAction $saved): RedirectResponse
+    {
+        $token = null;
+
+        if (($from = $request->tokenFrom()) !== null) {
+            $token = collect($saved->execute($project, $request->user()))->firstWhere('connection', $from)['token']
+                ?? throw ValidationException::withMessages(['token' => __('connectors.github.errors.saved_token_gone')]);
+        }
+
         try {
-            $connection = $action->execute($project, $request->credentials());
+            $connection = $action->execute($project, $request->credentials($token));
         } catch (GitHubBranchNotFoundException $e) {
             throw ValidationException::withMessages(['branch' => $e->getMessage()]);
         } catch (GitHubExceptionInterface $e) {

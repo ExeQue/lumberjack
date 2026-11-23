@@ -1,7 +1,7 @@
 import { Form } from '@inertiajs/react';
 import { ExternalLink } from 'lucide-react';
-import { useState } from 'react';
-import { Button, buttonClass, Field, Input } from '@/components/lj/ui';
+import { useEffect, useState } from 'react';
+import { Button, buttonClass, Field, Input, Select } from '@/components/lj/ui';
 import {
     Dialog,
     DialogContent,
@@ -11,11 +11,40 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { useT } from '@/lib/i18n';
+import { tokens as savedTokensRoute } from '@/routes/connectors/github';
 import { store as connectionStore } from '@/routes/connectors/github/connection';
 
+/** A token the team already saved, by a connection holding it and the repositories it reads. */
+type SavedToken = { connection: string; repositories: string[] };
+
+/** The team's saved tokens; none until they are read, or when they cannot be. */
+function useSavedTokens(project: string): SavedToken[] {
+    const [saved, setSaved] = useState<SavedToken[]>([]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        fetch(savedTokensRoute(project).url, {
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+        })
+            .then((response) =>
+                response.ok ? response.json() : { tokens: [] },
+            )
+            .then((body: { tokens: SavedToken[] }) => setSaved(body.tokens))
+            .catch(() => undefined);
+
+        return () => controller.abort();
+    }, [project]);
+
+    return saved;
+}
+
 /**
- * Connecting a GitHub repository with a read-only token; GitHub is asked with it before the
- * connection is saved, so a missing permission is said on the field.
+ * Connecting a GitHub repository with a read-only token, pasted or one the team already
+ * saved; GitHub is asked with it before the connection is saved, so a missing permission is
+ * said on the field.
  */
 export function GitHubConnectDialog({
     project,
@@ -26,6 +55,9 @@ export function GitHubConnectDialog({
 }) {
     const t = useT();
     const [repository, setRepository] = useState('');
+    const saved = useSavedTokens(project);
+    // A saved token's connection, or empty to paste a new one.
+    const [tokenFrom, setTokenFrom] = useState('');
 
     // GitHub pre-fills a fine-grained token from these query parameters. GitHub has no
     // parameter for the repository itself, so it still has to be picked under
@@ -115,41 +147,92 @@ export function GitHubConnectDialog({
                             </Field>
                             <Field
                                 label={t('connectors.github.connect.token')}
-                                htmlFor="github-token"
-                                hint={t('connectors.github.connect.token_hint')}
-                                error={errors.token}
+                                htmlFor={
+                                    saved.length > 0
+                                        ? 'github-token-from'
+                                        : 'github-token'
+                                }
+                                hint={t(
+                                    tokenFrom === ''
+                                        ? 'connectors.github.connect.token_hint'
+                                        : 'connectors.github.connect.token_saved_hint',
+                                )}
+                                error={errors.token ?? errors.token_from}
                             >
-                                {/* Not a login: password managers keep out of it. */}
-                                <Input
-                                    id="github-token"
-                                    name="token"
-                                    type="password"
-                                    required
-                                    maxLength={255}
-                                    autoComplete="off"
-                                    data-1p-ignore
-                                    data-lpignore="true"
-                                    data-bwignore
-                                />
-                                <a
-                                    href={newTokenUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`${buttonClass('default')} self-start`}
-                                >
-                                    <ExternalLink
-                                        className="size-3.5"
-                                        aria-hidden="true"
-                                    />
-                                    {t(
-                                        'connectors.github.connect.create_token',
-                                    )}
-                                    <span className="sr-only">
-                                        {t(
-                                            'connectors.github.connect.opens_new_tab',
-                                        )}
-                                    </span>
-                                </a>
+                                {saved.length > 0 && (
+                                    <Select
+                                        id="github-token-from"
+                                        name="token_from"
+                                        value={tokenFrom}
+                                        onChange={(event) =>
+                                            setTokenFrom(event.target.value)
+                                        }
+                                    >
+                                        <option value="">
+                                            {t(
+                                                'connectors.github.connect.token_new',
+                                            )}
+                                        </option>
+                                        {saved.map((token) => (
+                                            <option
+                                                key={token.connection}
+                                                value={token.connection}
+                                            >
+                                                {t(
+                                                    'connectors.github.connect.token_saved',
+                                                    {
+                                                        repositories:
+                                                            token.repositories.join(
+                                                                ', ',
+                                                            ),
+                                                    },
+                                                )}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                )}
+                                {tokenFrom === '' && (
+                                    <>
+                                        {/* Not a login: password managers keep out of it. */}
+                                        <Input
+                                            id="github-token"
+                                            name="token"
+                                            type="password"
+                                            required
+                                            maxLength={255}
+                                            autoComplete="off"
+                                            aria-label={
+                                                saved.length > 0
+                                                    ? t(
+                                                          'connectors.github.connect.token_new',
+                                                      )
+                                                    : undefined
+                                            }
+                                            data-1p-ignore
+                                            data-lpignore="true"
+                                            data-bwignore
+                                        />
+                                        <a
+                                            href={newTokenUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={`${buttonClass('default')} self-start`}
+                                        >
+                                            <ExternalLink
+                                                className="size-3.5"
+                                                aria-hidden="true"
+                                            />
+                                            {t(
+                                                'connectors.github.connect.create_token',
+                                            )}
+                                            <span className="sr-only">
+                                                {t(
+                                                    'connectors.github.connect.opens_new_tab',
+                                                )}
+                                            </span>
+                                        </a>
+                                    </>
+                                )}
                             </Field>
                             <DialogFooter>
                                 <Button type="button" onClick={onClose}>

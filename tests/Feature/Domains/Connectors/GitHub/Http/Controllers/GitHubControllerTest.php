@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\Connectors\GitHub\Actions\ConnectGitHubAction;
+use App\Domains\Connectors\GitHub\Actions\ListSavedGitHubTokensAction;
 use App\Domains\Connectors\GitHub\Actions\UpdateGitHubConnectionAction;
 use App\Domains\Connectors\GitHub\Data\GitHubConfig;
 use App\Domains\Connectors\GitHub\Enums\GitHubFigure;
@@ -31,7 +32,7 @@ use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Connectors\FakesGitHub;
 
-covers(GitHubController::class, GitHubConnectionController::class, ConnectGitHubRequest::class, UpdateGitHubConnectionRequest::class, ConnectGitHubAction::class, UpdateGitHubConnectionAction::class, GitHubDashboardQuery::class, GitHubFigure::class, GitHubConfig::class);
+covers(GitHubController::class, GitHubConnectionController::class, ConnectGitHubRequest::class, ListSavedGitHubTokensAction::class, UpdateGitHubConnectionRequest::class, ConnectGitHubAction::class, UpdateGitHubConnectionAction::class, GitHubDashboardQuery::class, GitHubFigure::class, GitHubConfig::class);
 
 uses(FakesGitHub::class);
 
@@ -155,6 +156,49 @@ describe('connecting a repository', function () {
 
     it('is for those who administer the project', function () {
         $this->actingAs($this->member)->post(route('connectors.github.connection.store', $this->project), $this->input)->assertForbidden();
+    });
+});
+
+describe('reusing a saved token', function () {
+    beforeEach(function () {
+        $sibling = Project::factory()->for($this->project->team)->create();
+        $this->saved = DataSourceConnection::factory()->github()->for($sibling)->create(['name' => 'acme/api', 'config' => new GitHubConfig('acme/api', 'github_pat_saved')]);
+    });
+
+    it('lists the team\'s tokens once each, by the repositories they read, without the tokens', function () {
+        DataSourceConnection::factory()->github()->for($this->project)->create(['config' => new GitHubConfig('acme/shop', 'github_pat_saved')]);
+        $other = DataSourceConnection::factory()->github()->for($this->project)->create(['name' => 'acme/web', 'config' => new GitHubConfig('acme/web', 'github_pat_other')]);
+        $unreadable = DataSourceConnection::factory()->github()->for($this->project)->create(['name' => 'acme/old']);
+        DB::table('data_source_connections')->where('id', $unreadable->id)->update(['config' => 'not-decryptable']);
+        DataSourceConnection::factory()->github()->for(Project::factory())->create(['config' => new GitHubConfig('acme/shop', 'github_pat_another_team')]);
+
+        $this->actingAs($this->admin)->getJson(route('connectors.github.tokens', $this->project))
+            ->assertOk()
+            ->assertExactJson(['tokens' => [
+                ['connection' => $this->saved->uuid, 'repositories' => ['acme/api', 'acme/shop']],
+                ['connection' => $other->uuid, 'repositories' => ['acme/web']],
+            ]])
+            ->assertDontSee('github_pat_');
+    });
+
+    it('lists them only for team owners and admins', function () {
+        $this->actingAs($this->member)->getJson(route('connectors.github.tokens', $this->project))->assertForbidden();
+    });
+
+    it('connects a repository with the saved token', function () {
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), ['repository' => 'acme/shop', 'token_from' => $this->saved->uuid])
+            ->assertSessionHasNoErrors();
+
+        expect($this->project->gitHubConnections()->sole()->gitHubCredentials()->token)->toBe('github_pat_saved');
+    });
+
+    it('refuses a token saved in another team', function () {
+        $foreign = DataSourceConnection::factory()->github()->for(Project::factory())->create();
+
+        $this->actingAs($this->admin)->post(route('connectors.github.connection.store', $this->project), ['repository' => 'acme/shop', 'token_from' => $foreign->uuid])
+            ->assertSessionHasErrors(['token' => __('connectors.github.errors.saved_token_gone')]);
+
+        expect($this->project->gitHubConnections()->exists())->toBeFalse();
     });
 });
 

@@ -197,6 +197,10 @@ return [
             'token' => 'Token',
             'token_hint' => 'A fine-grained token for this repository with read-only Metadata, Pull requests, Actions and Contents. Optionally also Issues, Dependabot alerts, Code scanning alerts and Secret scanning alerts, for their figures. Not the token of the repository integration.',
             'create_token' => 'Create token on GitHub',
+            // The token field's choices when the team already saved one.
+            'token_new' => 'Paste a new token',
+            'token_saved' => 'Saved token for :repositories',
+            'token_saved_hint' => 'The token already saved for those repositories. It needs access to this repository too.',
             'opens_new_tab' => '(opens in a new tab)',
             'token_description' => 'Lets Lumberjack read pull requests, Actions and releases of :repository.',
             'branch' => 'Branch (optional)',

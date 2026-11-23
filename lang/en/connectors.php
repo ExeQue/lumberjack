@@ -137,6 +137,7 @@ return [
             'secret_unreadable' => 'The GitHub token cannot be decrypted (was APP_KEY changed?). Connect GitHub again.',
             'branch_not_found' => ':repository has no branch :branch. Check the name, or leave it empty for the default branch.',
             'not_github' => 'This connection does not read a GitHub repository.',
+            'saved_token_gone' => 'That saved token is no longer there. Choose another, or paste a new one.',
         ],
     ],
 
